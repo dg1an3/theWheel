@@ -70,6 +70,18 @@ public:
 	void LayoutNodes(CSpaceStateVector *pSSV, int nConstNodes);
 
 protected:
+
+	// optimal normalized distances
+	static const REAL OPT_DIST;
+
+	// scale for the sizes of the nodes
+	static const REAL SIZE_SCALE;
+
+	// constants for center repulsion
+	static const REAL CENTER_REP_MAX_ACT;
+	static const REAL CENTER_REP_SCALE;
+	static const REAL CENTER_REP_WEIGHT;
+
 	// pointer to the energy function's spaceview
 	CSpace *m_pSpace;
 
@@ -98,6 +110,9 @@ protected:
 	// caches energy value for the previous input vector
 	REAL m_energy;
 	REAL m_energyConst;
+
+	// flag to indicate that the center repulsion should be calculated
+	BOOL m_bCalcCenterRep;
 
 	// holds the current state
 	CVectorN<> m_vState;
