@@ -7,6 +7,7 @@
 #include "MainFrm.h"
 #include "SpaceTreeView.h"
 #include "SpaceView.h"
+#include "SpaceAndBrowserView.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -86,7 +87,7 @@ BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT /*lpcs*/,
 		return FALSE;
 
 	if (!m_wndSplitter.CreateView(0, 0, RUNTIME_CLASS(CSpaceTreeView), CSize(200, 100), pContext) ||
-		!m_wndSplitter.CreateView(0, 1, RUNTIME_CLASS(CSpaceView), CSize(100, 100), pContext))
+		!m_wndSplitter.CreateView(0, 1, RUNTIME_CLASS(CSpaceAndBrowserView), CSize(100, 100), pContext))
 	{
 		m_wndSplitter.DestroyWindow();
 		return FALSE;
@@ -127,7 +128,8 @@ void CMainFrame::Dump(CDumpContext& dc) const
 CSpaceView* CMainFrame::GetRightPane()
 {
 	CWnd* pWnd = m_wndSplitter.GetPane(0, 1);
-	CSpaceView* pView = DYNAMIC_DOWNCAST(CSpaceView, pWnd);
+	CSpaceAndBrowserView* pSplitterView = DYNAMIC_DOWNCAST(CSpaceAndBrowserView, pWnd);
+	CSpaceView *pView = (CSpaceView *) pSplitterView->m_wndSplitter.GetPane(0, 0);
 	return pView;
 }
 
