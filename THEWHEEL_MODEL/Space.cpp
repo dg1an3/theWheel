@@ -99,7 +99,7 @@ BOOL CSpace::OnNewDocument()
 
 	// add random children to the root node
 	AddChildren(&rootNode, 4, 3);
-	CrossLinkNodes(rootNode.GetDescendantCount() / 25);
+	CrossLinkNodes(rootNode.GetDescendantCount() / 50);
 
 	// initialize the node activations from the root node
 	rootNode.SetActivation(0.5);
