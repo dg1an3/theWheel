@@ -68,6 +68,7 @@ protected:
 	CRect GetTopBottomEllipseRect();
 	CRect GetLeftRightEllipseRect();
 
+public:
 	// drawing helper functions
 	void DrawElliptangle(CDC *pDC);
 	void DrawText(CDC *pDC, CRect& rectInner);

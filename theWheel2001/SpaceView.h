@@ -18,11 +18,7 @@
 
 #include "SpaceViewEnergyFunction.h"
 
-#ifdef USE_GRAD
-#include "ConjGradOptimizer.h"
-#else
-#include "PowellOptimizer.h"
-#endif
+#include <Optimizer.h>
 
 //////////////////////////////////////////////////////////////////////
 // class CSpaceView
@@ -76,6 +72,8 @@ public:
 	// activates a particular node by a particular scale factor
 	void ActivateNode(CNodeView *pNodeView, float scale);
 
+	BOOL InitDDraw();
+
 // Overrides
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(CSpaceView)
@@ -109,7 +107,7 @@ public:
 
 	// back buffer for drawing
 	CDC m_dcMem;
-	CBitmap m_bitmapBuffer;
+	CBitmap *m_pBuffer;
 	CBitmap *m_pOldBitmap;
 
 #ifdef _DEBUG
@@ -131,6 +129,8 @@ protected:
 	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnTimer(UINT nIDEvent);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg void OnPaint();
+	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 

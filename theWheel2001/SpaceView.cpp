@@ -15,6 +15,10 @@
 // the class definition
 #include "SpaceView.h"
 
+// the optimizers
+#include <ConjGradOptimizer.h>
+#include <PowellOptimizer.h>
+
 // the displayed model object
 #include <Space.h>
 
@@ -24,6 +28,8 @@
 // the new node dialog
 #include "EditNodeDlg.h"
 
+#include <ddraw.h>
+#include "ddutil.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -60,13 +66,14 @@ CSpaceView::CSpaceView()
 	isWaveMode(FALSE),
 	m_pRecentClick1(NULL),
 	m_pRecentClick2(NULL),
+	m_pBuffer(NULL),
 	m_pOldBitmap(NULL)
 {
 	// create the energy function
 	m_pEnergyFunc = new CSpaceViewEnergyFunction(this);
 
 	// create the optimizer
-#ifdef USE_GRAD
+#ifdef USE_GRADIENT
 	m_pOptimizer = new CConjGradOptimizer<SPV_STATE_DIM, SPV_STATE_TYPE>(m_pEnergyFunc);
 #else
 	m_pOptimizer = new CPowellOptimizer<SPV_STATE_DIM, SPV_STATE_TYPE>(m_pEnergyFunc);
@@ -97,7 +104,7 @@ CSpaceView::~CSpaceView()
 	m_dcMem.SelectObject(m_pOldBitmap);
 
 	// delete the bitmap buffer
-	m_bitmapBuffer.DeleteObject();
+	delete m_pBuffer;
 
 	// delete the device context
 	m_dcMem.DeleteDC();
@@ -388,6 +395,12 @@ void CSpaceView::ActivateNode(CNodeView *pNodeView, float scale)
 /////////////////////////////////////////////////////////////////////////////
 // CSpaceView drawing
 
+LPDIRECTDRAW		lpDD = NULL;			// DirectDraw object
+LPDIRECTDRAWSURFACE	lpDDSPrimary = NULL;	// DirectDraw primary surface
+LPDIRECTDRAWSURFACE	lpDDSOne = NULL;		// Offscreen surface 1
+LPDIRECTDRAWSURFACE	lpDDSBitmap = NULL;		// Offscreen surface 1
+LPDIRECTDRAWCLIPPER lpClipper = NULL;		// clipper for primary
+
 //////////////////////////////////////////////////////////////////////
 // CSpaceView::OnDraw
 // 
@@ -400,7 +413,7 @@ void CSpaceView::OnDraw(CDC* pDC)
 	GetClientRect(&rectClient);
 
 	CBrush brush(RGB(192, 192, 192));
-	m_dcMem.FillRect(&rectClient, &brush);
+	pDC->FillRect(&rectClient, &brush);
 
 	// create new node views
 	int nAtNodeView;
@@ -409,8 +422,8 @@ void CSpaceView::OnDraw(CDC* pDC)
 		CNodeView *pNodeView = (CNodeView *)nodeViews.Get(nAtNodeView);
 
 		CBrush greyBrush(RGB(160, 160, 160));
-		CBrush *pOldBrush = m_dcMem.SelectObject(&greyBrush);
-		CPen *pOldPen = (CPen *)m_dcMem.SelectStockObject(NULL_PEN);
+		CBrush *pOldBrush = pDC->SelectObject(&greyBrush);
+		CPen *pOldPen = (CPen *) pDC->SelectStockObject(NULL_PEN);
 
 		if (pNodeView->GetThresholdedActivation() > 0.0)
 		{
@@ -438,42 +451,113 @@ void CSpaceView::OnDraw(CDC* pDC)
 					ptPoly[4] = vFrom + vOffset - 3.0 * vNormal;
 					ptPoly[5] = vFrom - 12.0 * vNormal;
 
-					m_dcMem.Polygon(ptPoly, 6);
+					pDC->Polygon(ptPoly, 6);
 				}
 			}
 		}
 
-		m_dcMem.SelectObject(pOldPen);
-		m_dcMem.SelectObject(pOldBrush);
+		pDC->SelectObject(pOldPen);
+		pDC->SelectObject(pOldBrush);
 		greyBrush.DeleteObject();
 	} 
+
+	HRESULT ddrval = lpDDSOne->ReleaseDC(pDC->m_hDC);
+	ASSERT(ddrval == DD_OK);
+
 
 	// create new node views
 	for (nAtNodeView = nodeViews.GetSize()-1; nAtNodeView >= 0; nAtNodeView--)
 	{
 		CNodeView *pNodeView = (CNodeView *)nodeViews.Get(nAtNodeView);
-		pNodeView->Draw(&m_dcMem);
+
+		// get the inner rectangle for drawing the text
+		CRect rectInner = pNodeView->GetInnerRect();
+
+		// only draw if it has a substantial area
+		if (rectInner.Height() > 1)
+		{
+			// draw the elliptangle
+			// DrawElliptangle(pDC);
+			int x = (int)(pNodeView->GetSpringCenter()[0] - 233.0/2.0);
+			int y = (int)(pNodeView->GetSpringCenter()[1] - 176.0/2.0);
+			// ddrval = lpDDSOne->BltFast(x, y, lpDDSBitmap, CRect(0, 0, 233, 176), // DDBLTFAST_NOCOLORKEY); 
+			//	DDBLTFAST_SRCCOLORKEY);
+			ASSERT(ddrval == DD_OK);
+
+			// draw some stuff
+			HDC hdc;
+			HRESULT ddrval = lpDDSOne->GetDC(&hdc);
+			ASSERT(ddrval == DD_OK);
+
+			// draw the text
+			pNodeView->DrawText(CDC::FromHandle(hdc), rectInner);
+
+			ddrval = lpDDSOne->ReleaseDC(hdc);
+			ASSERT(ddrval == DD_OK);
+		}
+
+		// pNodeView->Draw(pDC);
 	} 
-
-	// Now blit the backbuffer to the screen
-	pDC->BitBlt(0, 0, rectClient.Width(), rectClient.Height(), &m_dcMem, 0, 0, SRCCOPY);
-
-	// clean up
-	// dcMem.DeleteDC();
-	// bitmapBuffer.DeleteObject();
 }
 
-
-CSpaceView *g_pView = NULL;
-
-void CALLBACK EXPORT UpdateProc(
-   HWND hWnd,      // handle of CWnd that called SetTimer
-   UINT nMsg,      // WM_TIMER
-   UINT nIDEvent,   // timer identification
-   DWORD dwTime    // system time
-)
+BOOL CSpaceView::InitDDraw()
 {
-	// g_pView->OnTimer(nIDEvent);
+    DDSURFACEDESC	ddsd;
+    HRESULT		ddrval;
+
+    /*
+     * create the main DirectDraw object
+     */
+    ddrval = DirectDrawCreate( NULL, &lpDD, NULL );
+    if( ddrval != DD_OK )
+    {
+		return FALSE;
+    }
+    ddrval = lpDD->SetCooperativeLevel( m_hWnd, DDSCL_NORMAL );
+
+    // Create the primary surface
+    ddsd.dwSize = sizeof( ddsd );
+    ddsd.dwFlags = DDSD_CAPS;
+    ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
+
+    ddrval = lpDD->CreateSurface( &ddsd, &lpDDSPrimary, NULL );
+    if( ddrval != DD_OK )
+    {
+		return FALSE;
+    }
+
+    // create a clipper for the primary surface
+    ddrval = lpDD->CreateClipper( 0, &lpClipper, NULL );
+    if( ddrval != DD_OK )
+    {
+		return FALSE;
+    }
+    
+    ddrval = lpClipper->SetHWnd( 0, m_hWnd);
+    if( ddrval != DD_OK )
+    {
+		return FALSE;
+    }
+
+    ddrval = lpDDSPrimary->SetClipper( lpClipper );
+    if( ddrval != DD_OK )
+    {
+		return FALSE;
+    }
+
+/*	lpDDSBitmap = DDLoadBitmap(lpDD, MAKEINTRESOURCE(IDB_NODEBUBBLE), 0, 0);
+	if (lpDDSBitmap == NULL)
+	{
+		return FALSE;
+	}
+
+	ddrval = DDSetColorKey(lpDDSBitmap, RGB(0, 0, 0));
+    if( ddrval != DD_OK )
+    {
+		return FALSE;
+    }
+*/
+    return TRUE;
 }
 
 
@@ -489,12 +573,6 @@ void CSpaceView::OnInitialUpdate()
 #if defined(_DEBUG)
 	GetDocument()->Dump(afxDump);
 #endif
-
-	g_pView = this;
-
-	// create a timer
- 	UINT m_nTimerID = SetTimer(7, 1, NULL);
-	ASSERT(m_nTimerID != 0);
 
 	// delete any old node views
 	nodeViews.RemoveAll();
@@ -626,6 +704,8 @@ BEGIN_MESSAGE_MAP(CSpaceView, CView)
 	ON_WM_RBUTTONDOWN()
 	ON_WM_TIMER()
 	ON_WM_SIZE()
+	ON_WM_PAINT()
+	ON_WM_CREATE()
 	//}}AFX_MSG_MAP
 	// Standard printing commands
 	ON_COMMAND(ID_FILE_PRINT, CView::OnFilePrint)
@@ -702,7 +782,7 @@ void CSpaceView::OnNewNode()
 	if (newDlg.DoModal() == IDOK)
 	{
 		CNode *pNewNode = 
-			new CNode(newDlg.m_strName, newDlg.m_strDesc);
+			new CNode(GetDocument(), newDlg.m_strName, newDlg.m_strDesc);
 		AddNodeToSpace(pNewNode);
 	}
 }
@@ -775,6 +855,8 @@ void CSpaceView::OnLButtonDown(UINT nFlags, CPoint point)
 		{
 			// if so, activate it
 			ActivateNode(pSelectedView, 0.333f);
+
+			// LayoutNodeViews();
 			break;
 		}
 	}
@@ -809,7 +891,7 @@ static DWORD g_dwNumTickCount = 0;
 
 void CSpaceView::OnTimer(UINT nIDEvent) 
 {
-// #define LOG_IDLE_TIME
+#define LOG_IDLE_TIME
 #ifdef LOG_IDLE_TIME
 	DWORD dwTickCount = ::GetTickCount();
 	if (g_dwPrevTickCount > 0)
@@ -824,72 +906,177 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 	g_dwPrevTickCount = dwTickCount;
 #endif
 	
-// #define TIME_LAYOUT
-#ifdef TIME_LAYOUT
-	LARGE_INTEGER freq;
-	QueryPerformanceFrequency(&freq);
-	ASSERT(freq.QuadPart != 0);
+#define TIME_LAYOUT TRUE
 
-	LARGE_INTEGER start;
-	QueryPerformanceCounter(&start);
-#endif
+	START_TIMER(TIME_LAYOUT)
 
 	LayoutNodeViews();
 
-#ifdef TIME_LAYOUT
-	LARGE_INTEGER end;
-	QueryPerformanceCounter(&end);
-
-	LOG_TRACE("Time to complete layout = %lf\n",
-		(double) (end.QuadPart - start.QuadPart) 
-			/ (double) freq.QuadPart);
-#endif
-
+	STOP_TIMER(TIME_LAYOUT, "Layout")
 
 	// update the privates
 	int nAt;
 	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 		nodeViews.Get(nAt)->UpdateSprings();
 
-#define TIME_REDRAW
-#ifdef TIME_REDRAW
-	LARGE_INTEGER freq;
-	QueryPerformanceFrequency(&freq);
-	ASSERT(freq.QuadPart != 0);
+#define TIME_REDRAW TRUE
 
-	LARGE_INTEGER start;
-	QueryPerformanceCounter(&start);
-#endif
+	START_TIMER(TIME_REDRAW)
 
 	RedrawWindow(NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
 
-#ifdef TIME_REDRAW
-	LARGE_INTEGER end;
-	QueryPerformanceCounter(&end);
-
-	LOG_TRACE("Time to redraw = %lf\n",
-		(double) (end.QuadPart - start.QuadPart) 
-			/ (double) freq.QuadPart);
-#endif
+	STOP_TIMER(TIME_REDRAW, "Redraw")
 
 	CView::OnTimer(nIDEvent);
+}
+
+/**********************************************************
+
+GetOptimalDIBFormat
+
+  Purpose:
+   Retrieves the optimal DIB format for a display 
+   device. The optimal DIB format is the format that 
+   exactly matches the format of the target device. 
+   Obtaining this is very important when dealing with 
+   16bpp modes because you need to know what bitfields 
+   value to use (555 or 565 for example).
+
+   You normally use this function to get the best
+   format to pass to CreateDIBSection() in order to
+   maximize blt'ing performance.
+
+  Input:
+   hdc - Device to get the optimal format for.
+   pbi - Pointer to a BITMAPINFO + color table
+         (room for 256 colors is assumed).
+
+  Output:
+   pbi - Contains the optimal DIB format. In the 
+         <= 8bpp case, the color table will contain the 
+         system palette. In the >=16bpp case, the "color 
+         table" will contain the correct bit fields (see 
+         BI_BITFIELDS in the Platform SDK documentation 
+         for more information).
+
+  Notes:
+   If you are going to use this function on a 8bpp device
+   you should make sure the color table contains a identity
+   palette for optimal blt'ing.
+
+**********************************************************/ 
+BOOL GetOptimalDIBFormat(HDC hdc, BITMAPINFOHEADER *pbi)
+{
+    HBITMAP hbm;
+    BOOL bRet = TRUE;
+    
+    // Create a memory bitmap that is compatible with the
+    // format of the target device.
+    hbm = CreateCompatibleBitmap(hdc, 1, 1);
+    if (!hbm)
+        return FALSE;
+    
+    // Initialize the header.
+    ZeroMemory(pbi, sizeof(BITMAPINFOHEADER));
+    pbi->biSize = sizeof(BITMAPINFOHEADER);
+
+    // First call to GetDIBits will fill in the optimal biBitCount.
+    bRet = GetDIBits(hdc, hbm, 0, 1, NULL, (BITMAPINFO*)pbi, DIB_RGB_COLORS);
+    
+    // Second call to GetDIBits will get the optimal color table, o
+    // or the optimal bitfields values.
+    if (bRet)
+        bRet = GetDIBits(hdc, hbm, 0, 1, NULL, (BITMAPINFO*)pbi, DIB_RGB_COLORS);
+    ASSERT(pbi->biCompression == BI_BITFIELDS);
+
+    // Clean up.
+    DeleteObject(hbm);
+
+    return bRet;
 }
 
 void CSpaceView::OnSize(UINT nType, int cx, int cy) 
 {
 	CView::OnSize(nType, cx, cy);
 
-	// select out the back buffer bitmap
-	if (m_pOldBitmap)
-		m_dcMem.SelectObject(m_pOldBitmap);
+	if (cx == 0 || cy == 0)
+		return;
 
-	// delete the back buffer bitmap
-	if (m_bitmapBuffer.m_hObject)
-		m_bitmapBuffer.DeleteObject();
+	if (lpDDSOne != NULL)
+	{
+		// free the surface
+		lpDDSOne->Release();
+	}
 
-	// create a new back buffer bitmap
-	m_bitmapBuffer.CreateBitmap(cx, cy, 1, 32, NULL); 
+	// create other surface
+    DDSURFACEDESC	ddsd;
+    ZeroMemory(&ddsd, sizeof(ddsd));
+    ddsd.dwSize = sizeof(ddsd);
+    ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT |DDSD_WIDTH;
+    ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;
+    ddsd.dwWidth = cx;
+    ddsd.dwHeight = cy;
 
-	// select it
-	m_pOldBitmap = m_dcMem.SelectObject(&m_bitmapBuffer);	
+    HRESULT ddrval = lpDD->CreateSurface(&ddsd, &lpDDSOne, NULL);
+	ASSERT(ddrval == DD_OK);
+}
+
+void CSpaceView::OnPaint() 
+{
+	if (lpDDSOne)
+	{
+		CRect rcRect;
+		GetClientRect(&rcRect);
+
+		CRect destRect;
+		GetClientRect( &destRect );
+
+		CPoint pt;
+		pt.x = pt.y = 0;
+		ClientToScreen( &pt );
+		destRect.OffsetRect(pt);
+		// OffsetRect(&destRect, pt.x, pt.y);
+
+		// draw some stuff
+		HDC hdc;
+		HRESULT ddrval = lpDDSOne->GetDC(&hdc);
+		ASSERT(ddrval == DD_OK);
+		
+		START_TIMER(TIME_DRAW)
+		OnDraw(CDC::FromHandle(hdc));
+		STOP_TIMER(TIME_DRAW, "Draw")
+
+		ddrval = lpDDSOne->ReleaseDC(hdc);
+		ASSERT(ddrval == DD_OK);
+
+		// ddrval = lpDDSOne->BltFast(100, 100, lpDDSBitmap, CRect(0, 0, 233, 176), // DDBLTFAST_NOCOLORKEY); 
+		//	DDBLTFAST_SRCCOLORKEY);
+		// ASSERT(ddrval == DD_OK);
+
+		START_TIMER(TIME_BITBLT)
+		ddrval = lpDDSPrimary->Blt( &destRect, lpDDSOne, &rcRect, 0, NULL );
+		STOP_TIMER(TIME_BITBLT, "Bitblt")
+
+		ASSERT(ddrval == DD_OK);
+	}
+
+	// validate the client rectangle
+	ValidateRect(NULL);
+	
+	// Do not call CView::OnPaint() for painting messages
+}
+
+int CSpaceView::OnCreate(LPCREATESTRUCT lpCreateStruct) 
+{
+	if (CView::OnCreate(lpCreateStruct) == -1)
+		return -1;
+
+	// initialize the direct-draw routines
+	InitDDraw();
+
+		// create a timer
+ 	UINT m_nTimerID = SetTimer(7, 10, NULL);
+	ASSERT(m_nTimerID != 0);
+
+	return 0;
 }
