@@ -106,13 +106,11 @@ int __cdecl CompareNodeViewActDiff(const void *elem1, const void *elem2 )
 	CNodeView *pNodeView2 = *(CNodeView **) elem2;
 
 	// factor for assessing the drawing order
-	REAL factor1 = pNodeView1->GetSpringActivation() 
-		* pNodeView1->GetSpringActivation() 
+	REAL factor1 = exp(pNodeView1->GetNode()->GetPrimaryActivation())
 			* (pNodeView1->GetThresholdedActivation() 
 				- pNodeView1->GetSpringActivation());
 
-	REAL factor2 = pNodeView2->GetSpringActivation() 
-		* pNodeView2->GetSpringActivation() 
+	REAL factor2 = exp(pNodeView2->GetNode()->GetPrimaryActivation())
 			* (pNodeView2->GetThresholdedActivation() 
 				- pNodeView2->GetSpringActivation());
 
@@ -166,6 +164,27 @@ CSpaceView::~CSpaceView()
 		delete m_arrNodeViews[nAt];
 	}
 	m_arrNodeViews.RemoveAll();
+
+	// delete the DirectDraw surfaces
+	if (m_lpDDSOne != NULL)
+	{
+		ASSERT_HRESULT(m_lpDDSOne->Release());
+	}
+
+	if (m_lpClipper != NULL)
+	{
+		ASSERT_HRESULT(m_lpClipper->Release());
+	}
+
+	if (m_lpDDSPrimary != NULL)
+	{
+		ASSERT_HRESULT(m_lpDDSPrimary->Release());
+	}
+
+	if (m_lpDD != NULL)
+	{
+		ASSERT_HRESULT(m_lpDD->Release());
+	}
 
 	// delete the tracker
 	delete m_pTracker;
@@ -394,8 +413,10 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt)
 
 	// construct a new node view for this node
 	CNodeView *pNewNodeView = new CNodeView(pParentNode, this);
-	pNewNodeView->GetNode()->SetPosition(CVectorD<3>(rectClient.CenterPoint()));
 	pParentNode->SetView(pNewNodeView);
+
+	// trigger loading of the DIB
+	pParentNode->GetDib();
 
 	// and add to the array
 	m_arrNodeViews.Add(pNewNodeView);
@@ -408,8 +429,8 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt)
 		CreateNodeViews(pParentNode->GetChildAt(nAtNode), pt);
 	}
 
-	// activate this node view after creating children (to maximize size)
-	ActivateNodeView(pNewNodeView, 0.5);
+	// sort the new node views
+	SortNodeViews();
 
 }	// CSpaceView::CreateNodeViews
 
@@ -484,6 +505,8 @@ void CSpaceView::CenterNodeViews()
 	CVectorD<3> vOffset = vMeanCenter 
 		- CVectorD<3>(rectWnd.CenterPoint());
 
+	GetDocument()->SetCenter(rectWnd.CenterPoint().x, rectWnd.CenterPoint().y);
+
 	// offset each node view by the difference between the mean and the 
 	//		window center
 	for (nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
@@ -547,21 +570,35 @@ void CSpaceView::OnDraw(CDC* pDC)
 		m_pTracker->OnDraw(pDC);
 	}
 
-	// draw the energy
-	CString strEnergy;
-	strEnergy.Format("%lf", GetDocument()->GetLayoutManager()->GetEnergy());
+	static BOOL bDrawEnergy = FALSE;
+	static BOOL bReadFlagFromRegistry = TRUE;
+	if (bReadFlagFromRegistry)
+	{
+		bDrawEnergy = 
+			::AfxGetApp()->GetProfileInt("Settings", "DrawEnergy", 0) == 1;
 
-	// get the inner rectangle for drawing the text
-	CRect rectClient;
-	GetClientRect(&rectClient);
+		bReadFlagFromRegistry = FALSE;
+	}
 
-	CRect rect;
-	rect.bottom = rectClient.bottom - 5;
-	rect.left = rectClient.right - 200;
-	rect.right = rectClient.right - 5;
-	rect.top = rectClient.bottom - 50;
+	// extract the flag from the registry
+	if (bDrawEnergy)
+	{
+		// draw the energy
+		CString strEnergy;
+		strEnergy.Format("%lf", GetDocument()->GetLayoutManager()->GetEnergy());
 
-	pDC->DrawText(strEnergy, rect, DT_CENTER);
+		// get the inner rectangle for drawing the text
+		CRect rectClient;
+		GetClientRect(&rectClient);
+
+		CRect rect;
+		rect.bottom = rectClient.bottom - 5;
+		rect.left = rectClient.right - 200;
+		rect.right = rectClient.right - 5;
+		rect.top = rectClient.bottom - 50;
+
+		pDC->DrawText(strEnergy, rect, DT_CENTER);
+	}
 
 }	// CSpaceView::OnDraw
 
@@ -596,18 +633,13 @@ void CSpaceView::OnInitialUpdate()
 	// make sure super node count + clusters = STATE_DIM
 	GetDocument()->SetMaxSuperNodeCount(
 		GetDocument()->GetLayoutManager()->GetStateDim() / 2);
-			// - GetDocument()->GetClusterCount());
 
 	// get rid of the node views
 	for (int nAt = 0; nAt < m_arrNodeViews.GetSize(); nAt++)
-		delete m_arrNodeViews[nAt];
-	m_arrNodeViews.RemoveAll();
-
-	// initialize the recent click list
-	for (nAt = 0; nAt < 2; nAt++)
 	{
-		m_pRecentActivated[nAt] = NULL;
+		delete m_arrNodeViews[nAt];
 	}
+	m_arrNodeViews.RemoveAll();
 
 	// create the child node views
 	CRect rect;
@@ -617,12 +649,21 @@ void CSpaceView::OnInitialUpdate()
 	// check to make sure all nodes have views
 	ASSERT(CheckNodeViews(GetDocument()->GetRootNode()));
 
+	// center the node views
+	CenterNodeViews();
+
 	// now snap the node views to the parameter values
 	int nAtNodeView;
 	for (nAtNodeView = 0; nAtNodeView < GetNodeViewCount(); nAtNodeView++)
 	{
 		CNodeView *pNodeView = GetNodeView(nAtNodeView);
-		pNodeView->UpdateSprings(0.0);
+		pNodeView->UpdateSprings(0.1);
+	}
+
+	// initialize the recent click list
+	for (nAt = 0; nAt < 2; nAt++)
+	{
+		m_pRecentActivated[nAt] = NULL;
 	}
 
 }	// CSpaceView::OnInitialUpdate
@@ -806,7 +847,7 @@ void CSpaceView::OnSize(UINT nType, int cx, int cy)
     ASSERT_HRESULT(m_lpDD->CreateSurface(&ddsd, &m_lpDDSOne, NULL));
 
 	// tell the skin the new client area
-	m_skin.SetClientArea(cx, cy);
+	m_skin.SetClientArea(cx, cy, m_colorBk);
 
 }	// CSpaceView::OnSize
 
@@ -832,55 +873,71 @@ void CSpaceView::OnPaint()
 		ASSERT_HRESULT(m_lpDDSOne->Blt(rectClient, NULL,
 			rectClient, DDBLT_COLORFILL, &ddBltFx));
 
-		// get a DC for the drawing surface
-		CDC dc;
-		GET_ATTACH_DC(m_lpDDSOne, dc);
-
-		// draw the node view links
-		int nAtNodeView;
-		for (nAtNodeView = GetVisibleNodeCount()-1; nAtNodeView >= 0; nAtNodeView--)
+		static BOOL bDrawNodes = FALSE;
+		static BOOL bReadFlagFromRegistry = TRUE;
+		if (bReadFlagFromRegistry)
 		{
-			// get the current node view
-			CNodeView *pNodeView = GetNodeView(nAtNodeView);
+			bDrawNodes = 
+				::AfxGetApp()->GetProfileInt("Settings", "DrawNodes", 1) == 1;
 
-			// draw the node view
-			pNodeView->DrawLinks(&dc, &m_skin);
-		} 
+			bReadFlagFromRegistry = FALSE;
+		}
 
-		// now create an array to hold the drawing-order for the nodeviews
-		CObArray arrNodeViewsToDraw;
-		arrNodeViewsToDraw.SetSize(GetVisibleNodeCount());
-		memcpy(arrNodeViewsToDraw.GetData(), m_arrNodeViews.GetData(), 
-			arrNodeViewsToDraw.GetSize() * sizeof(CObject *));
-
-		// sort by activation difference comparison
-		qsort(arrNodeViewsToDraw.GetData(), arrNodeViewsToDraw.GetSize(), 
-			sizeof(CObject *), CompareNodeViewActDiff);
-
-		// draw in sorted order
-		for (nAtNodeView = 0; nAtNodeView < arrNodeViewsToDraw.GetSize(); 
-				nAtNodeView++)
+		// extract the flag from the registry
+		if (bDrawNodes)
 		{
-			CNodeView *pNodeView = ((CNodeView *)arrNodeViewsToDraw[nAtNodeView]);
+
+			// get a DC for the drawing surface
+			CDC dc;
+			GET_ATTACH_DC(m_lpDDSOne, dc);
+
+			// draw the node view links
+			int nAtNodeView;
+			for (nAtNodeView = GetVisibleNodeCount()-1; nAtNodeView >= 0; nAtNodeView--)
+			{
+				// get the current node view
+				CNodeView *pNodeView = GetNodeView(nAtNodeView);
+
+				// draw the node view
+				pNodeView->DrawLinks(&dc, &m_skin);
+			} 
+
+			// now create an array to hold the drawing-order for the nodeviews
+			CObArray arrNodeViewsToDraw;
+			arrNodeViewsToDraw.SetSize(__min(GetVisibleNodeCount() * 2, m_arrNodeViews.GetSize()));
+			memcpy(arrNodeViewsToDraw.GetData(), m_arrNodeViews.GetData(), 
+				arrNodeViewsToDraw.GetSize() * sizeof(CObject *));
+
+			// sort by activation difference comparison
+			qsort(arrNodeViewsToDraw.GetData(), arrNodeViewsToDraw.GetSize(), 
+				sizeof(CObject *), CompareNodeViewActDiff);
+
+			// draw in sorted order
+			for (nAtNodeView = 0; nAtNodeView < arrNodeViewsToDraw.GetSize(); 
+					nAtNodeView++)
+			{
+				CNodeView *pNodeView = ((CNodeView *)arrNodeViewsToDraw[nAtNodeView]);
+
+				// release the DC
+				RELEASE_DETACH_DC(m_lpDDSOne, dc);
+
+				// render the skin
+				m_skin.BltSkin(m_lpDDSOne, pNodeView);
+
+				// get a DC for the drawing surface
+				GET_ATTACH_DC(m_lpDDSOne, dc);
+
+				// draw the min_diff node view
+				pNodeView->Draw(&dc);
+			} 
+
+			// now draw the space
+			OnDraw(&dc);
 
 			// release the DC
 			RELEASE_DETACH_DC(m_lpDDSOne, dc);
 
-			// render the skin
-			m_skin.BltSkin(m_lpDDSOne, pNodeView);
-
-			// get a DC for the drawing surface
-			GET_ATTACH_DC(m_lpDDSOne, dc);
-
-			// draw the min_diff node view
-			pNodeView->Draw(&dc);
-		} 
-
-		// now draw the space
-		OnDraw(&dc);
-
-		// release the DC
-		RELEASE_DETACH_DC(m_lpDDSOne, dc);
+		}
 
 		// form the destination (screen) rectangle
 		CRect rectDest = rectClient;
@@ -1086,6 +1143,16 @@ double CSpaceView::GetSpringConst()
 
 void CSpaceView::SetBkColor(COLORREF color)
 {
+	// store background color
 	m_colorBk = color;
-	m_skin.SetBkColor(color);
+
+	// get the client rectangle, if available
+	CRect rect(0, 0, 0, 0);
+	if (m_hWnd)
+	{
+		GetClientRect(&rect);
+	}
+
+	// tell skin about background color
+	m_skin.SetClientArea(rect.Width(), rect.Height(), m_colorBk);
 }
