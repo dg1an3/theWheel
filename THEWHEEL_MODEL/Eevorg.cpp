@@ -189,16 +189,16 @@ void CEevorg::Serialize(CArchive& ar)
 	if (ar.IsStoring())
 	{	
 		// write member variables to archive
-		ar << (WORD) m_nMaxValue;
-		ar << (WORD) m_nMaxRule;
+		ar << m_nMaxValue;
+		ar << m_nMaxRule;
 
 		m_arrRules.Serialize(ar);
 	} 
 	else
 	{	
 		// read member variables from archive
-		ar >> (WORD&) m_nMaxValue;
-		ar >> (WORD&) m_nMaxRule;
+		ar >> m_nMaxValue;
+		ar >> m_nMaxRule;
 
 		m_arrRules.Serialize(ar);
 	}

@@ -1,16 +1,28 @@
+//////////////////////////////////////////////////////////////////////
 // HTMLNode.cpp: implementation of the CHTMLNode class.
 //
+// Copyright (C) 1999-2002 Derek Graham Lane
+// $Id$
+// U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
 
+// pre-compiled headers
 #include "stdafx.h"
+
+// class declaration
 #include "HTMLNode.h"
 
+// HTML schema definition
 #include <mshtmdid.h> 
 
+// helper macro
 #define ODS(x) OutputDebugString(x) 
- 
 
+//////////////////////////////////////////////////////////////////////
+// GetScheme
+// 
 // Return the protocol associated with the specified URL 
+//////////////////////////////////////////////////////////////////////
 INTERNET_SCHEME GetScheme(LPCTSTR szURL) 
 { 
 	URL_COMPONENTS urlComponents; 
@@ -31,8 +43,12 @@ INTERNET_SCHEME GetScheme(LPCTSTR szURL)
 	return nScheme; 
 } 
  
+//////////////////////////////////////////////////////////////////////
+// GetScheme
+// 
 // Diagnostic helper to discover what ambient properties MSHTML 
 // asks of the host 
+//////////////////////////////////////////////////////////////////////
 void PrintDISPID(DISPID dispidMember) 
 { 
 	#define ALEN(x) (sizeof(x)/(sizeof(x[0]))) 
@@ -87,31 +103,34 @@ void PrintDISPID(DISPID dispidMember)
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::CHTMLNode
+// 
+// Constructs an HTML node
+//////////////////////////////////////////////////////////////////////
 CHTMLNode::CHTMLNode()
-:	m_dwRef(1),  
-	m_hrConnected(CONNECT_E_CANNOTCONNECT), 
-	m_dwCookie(0), 
-	m_pCP(NULL), 
-	m_lReadyState(READYSTATE_UNINITIALIZED) 
+	: m_dwRef(1),  
+		m_hrConnected(CONNECT_E_CANNOTCONNECT), 
+		m_dwCookie(0), 
+		m_pCP(NULL), 
+		m_lReadyState(READYSTATE_UNINITIALIZED) 
 {
-
 }
 
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::~CHTMLNode
+// 
+// Destroys the HTML node
+//////////////////////////////////////////////////////////////////////
 CHTMLNode::~CHTMLNode()
 {
-
 }
 
-const CString& CHTMLNode::GetUrl() const
-{
-	return m_strUrl;
-}
-
-void CHTMLNode::SetUrl(const CString& strUrl) 
-{ 
-	m_strUrl = strUrl; 
-}
-
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::QueryInterface
+// 
+// Retrieves an interface pointer for this object
+//////////////////////////////////////////////////////////////////////
 STDMETHODIMP CHTMLNode::QueryInterface(REFIID riid, LPVOID* ppv) 
 { 
 	*ppv = NULL; 
@@ -145,6 +164,11 @@ STDMETHODIMP CHTMLNode::QueryInterface(REFIID riid, LPVOID* ppv)
 	} 
 } 
  
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::AddRef
+// 
+// Increments the reference count for the node
+//////////////////////////////////////////////////////////////////////
 STDMETHODIMP_(ULONG) CHTMLNode::AddRef() 
 { 
 	TCHAR szBuff[255]; 
@@ -153,6 +177,11 @@ STDMETHODIMP_(ULONG) CHTMLNode::AddRef()
 	return ++m_dwRef; 
 } 
  
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::Release
+// 
+// Decrements the reference count, deleting if it reaches zero
+//////////////////////////////////////////////////////////////////////
 STDMETHODIMP_(ULONG) CHTMLNode::Release() 
 { 
 	TCHAR szBuff[255]; 
@@ -169,7 +198,11 @@ STDMETHODIMP_(ULONG) CHTMLNode::Release()
 	return m_dwRef; 
 } 
  
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::OnChanged
+// 
 // Fired on change of the value of a 'bindable' property 
+//////////////////////////////////////////////////////////////////////
 STDMETHODIMP CHTMLNode::OnChanged(DISPID dispID) 
 { 
 	HRESULT hr; 
@@ -231,6 +264,11 @@ STDMETHODIMP CHTMLNode::OnChanged(DISPID dispID)
 	return NOERROR; 
 } 
  
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::OnRequestEdit
+// 
+// OK to edit the object
+//////////////////////////////////////////////////////////////////////
 STDMETHODIMP CHTMLNode::OnRequestEdit(DISPID dispID) 
 { 
 	// Property changes are OK any time as far as this app is concerned 
@@ -241,7 +279,12 @@ STDMETHODIMP CHTMLNode::OnRequestEdit(DISPID dispID)
 	return NOERROR; 
 } 
  
-// Initialize the app. Load MSHTML, hook up property notification sink, etc 
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::Init
+// 
+// Initialize the app. Load MSHTML, hook up property notification 
+//		sink, etc 
+//////////////////////////////////////////////////////////////////////
 HRESULT CHTMLNode::Init() 
 { 
 	HRESULT hr; 
@@ -289,7 +332,11 @@ Error:
 	return hr; 
 } 
  
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::Term
+// 
 // Clean up connection point 
+//////////////////////////////////////////////////////////////////////
 HRESULT CHTMLNode::Term() 
 { 
 	HRESULT hr = NOERROR; 
@@ -310,7 +357,11 @@ HRESULT CHTMLNode::Term()
 	return hr; 
 } 
  
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::Run
+// 
 // Load the specified document and start pumping messages 
+//////////////////////////////////////////////////////////////////////
 HRESULT CHTMLNode::Run() 
 {
 	HRESULT hr; 
@@ -343,7 +394,11 @@ HRESULT CHTMLNode::Run()
 	return hr;
 } 
  
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::LoadURLFromMoniker
+// 
 // Use an asynchronous Moniker to load the specified resource 
+//////////////////////////////////////////////////////////////////////
 HRESULT CHTMLNode::LoadURLFromMoniker() 
 { 
 	HRESULT hr; 
@@ -390,8 +445,12 @@ Error:
 	return hr; 
 } 
  
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::LoadURLFromFile
+// 
 // A more traditional form of persistence.  
 // MSHTML performs this asynchronously as well. 
+//////////////////////////////////////////////////////////////////////
 HRESULT CHTMLNode::LoadURLFromFile() 
 { 
 	HRESULT hr; 
@@ -416,7 +475,11 @@ HRESULT CHTMLNode::LoadURLFromFile()
 	return hr; 
 } 
  
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::Walk
+// 
 // Walk the object model. 
+//////////////////////////////////////////////////////////////////////
 HRESULT CHTMLNode::Walk() 
 { 
 	HRESULT hr; 
@@ -565,8 +628,13 @@ HRESULT CHTMLNode::Walk()
 	return hr; 
 } 
  
-// MSHTML Queries for the IDispatch interface of the host through the IOleClientSite 
-// interface that MSHTML is passed through its implementation of IOleObject::SetClientSite() 
+//////////////////////////////////////////////////////////////////////
+// CHTMLNode::Invoke
+// 
+// MSHTML Queries for the IDispatch interface of the host through the 
+//		IOleClientSite interface that MSHTML is passed through its 
+//		implementation of IOleObject::SetClientSite() 
+//////////////////////////////////////////////////////////////////////
 STDMETHODIMP CHTMLNode::Invoke(DISPID dispIdMember, 
 			REFIID riid, 
 			LCID lcid, 

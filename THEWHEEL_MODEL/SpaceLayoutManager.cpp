@@ -2,7 +2,7 @@
 // SpaceLayoutManager.cpp: implementation of the 
 //		CSpaceLayoutManager objective function.
 //
-// Copyright (C) 1996-2001
+// Copyright (C) 1996-2002 Derek Graham Lane
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
@@ -36,7 +36,7 @@ const REAL SIZE_SCALE = 100.0;
 
 // constants for the distance scale vs. activation curve
 const REAL DIST_SCALE_MIN = 1.0;
-const REAL DIST_SCALE_MAX = 1.5;
+const REAL DIST_SCALE_MAX = 1.35;
 const REAL ACTIVATION_MIDPOINT = 0.25;
 
 // constant for weighting the position energy
@@ -77,7 +77,8 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 
 	// set the optimizer to be used
 	m_pOptimizer = m_pConjGradOptimizer;
-}
+
+}	// CSpaceLayoutManager::CSpaceLayoutManager
 
 
 //////////////////////////////////////////////////////////////////////
@@ -90,7 +91,8 @@ CSpaceLayoutManager::~CSpaceLayoutManager()
 	// delete the optimizers
 	delete m_pPowellOptimizer;
 	delete m_pConjGradOptimizer;
-}
+
+}	// CSpaceLayoutManager::~CSpaceLayoutManager
 
 
 //////////////////////////////////////////////////////////////////////
@@ -108,7 +110,7 @@ void CSpaceLayoutManager::LoadSizesLinks()
 		CNode *pAtNode = m_pSpace->GetNodeAt(nAtNode);
 
 		// compute the x- and y-scales for the fields (from the linked rectangle)
-		CVector<3> vSize = pAtNode->GetSize(pAtNode->GetActivation());
+		CVectorD<3> vSize = pAtNode->GetSize(pAtNode->GetActivation());
 
 		// store the size -- add 10 to ensure non-zero sizes
 		m_vSize[nAtNode][0] = SIZE_SCALE * vSize[0] + 10.0;
@@ -141,70 +143,7 @@ void CSpaceLayoutManager::LoadSizesLinks()
 		}
 	}
 
-	// now load the clusters
-	int nAtCluster;
-	for (nAtCluster = 0; nAtCluster < m_pSpace->GetClusterCount(); nAtCluster++)
-	{
-		// get convenience pointers for the current node view and node
-		CNodeCluster *pCluster = m_pSpace->GetClusterAt(nAtCluster);
-
-		// compute the x- and y-scales for the fields (from the linked rectangle)
-		CVector<3> vSize = pCluster->GetSize(pCluster->GetActivation());
-
-		// store the size -- add 10 to ensure non-zero sizes
-		m_vSize[m_pSpace->GetSuperNodeCount() + nAtCluster][0] = 
-			SIZE_SCALE * vSize[0] + 10.0;
-		m_vSize[m_pSpace->GetSuperNodeCount() + nAtCluster][1] = 
-			SIZE_SCALE * vSize[1] + 10.0f;
-
-		// store the activation
-		m_act[m_pSpace->GetSuperNodeCount() + nAtCluster] = 
-			pCluster->GetActivation();
-
-		// iterate over the potential linked views
-		int nAtLinkedNode;
-		for (nAtLinkedNode = 0; nAtLinkedNode < m_pSpace->GetSuperNodeCount(); 
-				nAtLinkedNode++)
-		{
-			// get convenience pointers for the linked node view and node
-			CNode *pAtLinkedNode = m_pSpace->GetNodeAt(nAtLinkedNode);
-
-			// retrieve the link weight for layout
-			REAL weight = (REAL) pCluster->GetLinkWeight(pAtLinkedNode);
-
-			// add some weight to make it non-zero
-			weight += 0.0001f;
-
-			// store the link weight
-			m_mLinks[m_pSpace->GetSuperNodeCount() + nAtCluster]
-				[nAtLinkedNode] = weight;
-			m_mLinks[nAtLinkedNode]
-				[m_pSpace->GetSuperNodeCount() + nAtCluster] = weight;
-		}
-
-		// load cluster-cluster links
-		int nAtOtherCluster;
-		for (nAtOtherCluster = 0; nAtOtherCluster < m_pSpace->GetClusterCount(); nAtOtherCluster++)
-		{
-			// get convenience pointers for the current node view and node
-			CNodeCluster *pOtherCluster = m_pSpace->GetClusterAt(nAtOtherCluster);
-
-			// retrieve the link weight for layout
-			REAL weight = (REAL) 0.5 *
-				(pCluster->GetLinkWeight(pOtherCluster) +
-				pOtherCluster->GetLinkWeight(pCluster));
-
-			// add some weight to make it non-zero
-			weight += 0.0001f;
-
-			// store the link weight
-			m_mLinks[m_pSpace->GetSuperNodeCount() + nAtCluster]
-				[m_pSpace->GetSuperNodeCount() + nAtOtherCluster] = weight;
-			m_mLinks[m_pSpace->GetSuperNodeCount() + nAtOtherCluster]
-				[m_pSpace->GetSuperNodeCount() + nAtCluster] = weight;
-		}
-	}
-}
+}	// CSpaceLayoutManager::LoadSizesLinks()
 
 
 //////////////////////////////////////////////////////////////////////
@@ -217,11 +156,8 @@ void CSpaceLayoutManager::Pos2StateVector()
 	// for the state vector
 	m_vState.SetDim(m_nStateDim);
 
-	// store the number of clusters
-	int nClusters = m_pSpace->GetClusterCount();
-
 	// iterate for non-cluster nodes
-	for (int nAt = 0; nAt < m_nStateDim / 2 - nClusters; nAt++)
+	for (int nAt = 0; nAt < m_nStateDim / 2; nAt++)
 	{
 		if (nAt < m_pSpace->GetNodeCount())
 		{
@@ -236,19 +172,7 @@ void CSpaceLayoutManager::Pos2StateVector()
 		}
 	}
 
-	// iterate over the clusters
-	for (int nAtCluster = 0; nAtCluster < nClusters; nAtCluster++)
-	{
-		// get the cluster
-		CNodeCluster *pCluster = m_pSpace->GetClusterAt(nAtCluster);
-
-		// store the cluster's position
-		m_vState[(m_nStateDim / 2 - nClusters + nAtCluster)*2] = 
-			pCluster->GetPosition()[0];
-		m_vState[(m_nStateDim / 2 - nClusters + nAtCluster)*2+1] = 
-			pCluster->GetPosition()[1];
-	}
-}
+}	// CSpaceView::Pos2StateVector
 
 
 //////////////////////////////////////////////////////////////////////
@@ -268,30 +192,13 @@ void CSpaceLayoutManager::StateVector2Pos()
 		CNode *pNode = m_pSpace->GetNodeAt(nAt);
 
 		// form the node view's position
-		CVector<3> vPosition(m_vState[nAt*2], m_vState[nAt*2+1]);
+		CVectorD<3> vPosition(m_vState[nAt*2], m_vState[nAt*2+1]);
 
 		// set the node's position
 		pNode->SetPosition(vPosition);
 	}
 
-	// compute the number of clusters
-	int nClusters = m_pSpace->GetClusterCount();
-
-	// iterate over the clusterss
-	for (int nAtCluster = 0; nAtCluster < nClusters; nAtCluster++)
-	{
-		// get the cluster
-		CNodeCluster *pCluster = m_pSpace->GetClusterAt(nAtCluster);
-
-		// form the cluster's position
-		CVector<3> vPosition(
-			m_vState[(m_nStateDim / 2 - nClusters + nAtCluster)*2],
-			m_vState[(m_nStateDim / 2 - nClusters + nAtCluster)*2+1]);
-
-		// and set the cluster's position
-		pCluster->SetPosition(vPosition);
-	}
-}
+}	// CSpaceLayoutManager::StateVector2Pos
 
 
 //////////////////////////////////////////////////////////////////////
@@ -322,8 +229,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 	int nRealNodeCount = m_pSpace->GetSuperNodeCount(); 
 
 	// and the total number of nodes plus clusters
-	int nVizNodeCount = m_pSpace->GetSuperNodeCount() 
-		+ m_pSpace->GetClusterCount();
+	int nVizNodeCount = m_pSpace->GetSuperNodeCount();
 
 	// iterate over all current visualized node views
 	int nAtNodeView;
@@ -361,16 +267,18 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 					+ y * y / (ssy * ssy)) + 0.001;
 
 				// compute the optimal distance
+				const REAL MIDWEIGHT = 0.5;
 				REAL opt_dist = DIST_SCALE_MIN
 					+ (DIST_SCALE_MAX - DIST_SCALE_MIN) 
-						* (1.0 - weight / (weight + ACTIVATION_MIDPOINT));
+						* (1.0 - MIDWEIGHT / (MIDWEIGHT + ACTIVATION_MIDPOINT));
 
 				// compute the distance error
 				REAL dist_error = act_dist - opt_dist;
 
 				// compute the factor controlling the importance of the
 				//		attraction term
-				REAL factor = K_POS * weight * weight * m_act[nAtNodeView];
+				REAL factor = K_POS * weight // * weight 
+					* m_act[nAtNodeView];
 
 				// and add the attraction term to the energy
 				m_energy += factor * dist_error * dist_error;
@@ -405,7 +313,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 					REAL y_ratio = y * dy_ratio; // = (y * y) / (ssy * ssy);
 
 					// compute the energy term
-					REAL inv_sq = 1.0 / (x_ratio + y_ratio + 0.1f);
+					REAL inv_sq = 1.0 / (x_ratio + y_ratio + 0.1);
 					REAL factor = K_REP * m_act[nAtNodeView];
 
 					// add to total energy
@@ -444,11 +352,12 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 	// return the total energy
 	return m_energy;
-}
+
+}	// CSpaceLayoutManager::operator()
 
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceLayoutManager::LayoutNodes()
+// CSpaceLayoutManager::LayoutNodes
 // 
 // calls the optimizer to lay out the nodes
 //////////////////////////////////////////////////////////////////////
@@ -510,28 +419,14 @@ void CSpaceLayoutManager::LayoutNodes()
 			// if so, set position to it
 			pNode->SetPosition(pNode->GetMaxActivator()->GetPosition());
 		}
-		else
-		{
-			// otherwise, set the position to the nearest cluster
-			CNodeCluster *pCluster = m_pSpace->GetClusterAt(0);
-			if (NULL != pCluster)
-			{
-				CNodeCluster *pNearestCluster = 
-					pCluster->GetNearestCluster(pNode);
-
-				// set position to the closest cluster
-				if (pNearestCluster)
-				{
-					pNode->SetPosition(pNearestCluster->GetPosition());
-				}
-			}
-		}
 	}
 
 #ifdef _DEBUG_MEM
 	memState.DumpAllObjectsSince();
 #endif
-}
+
+}	// CSpaceLayoutManager::LayoutNodes
+
 
 //////////////////////////////////////////////////////////////////////
 // class CLeastSquaresFit2D
@@ -554,7 +449,7 @@ public:
 
 	// transforms the input state vector
 	void Transform(const CSpaceLayoutManager::CStateVector& vState, 
-			CVector<2> vOffset, double angle, 
+			CVectorD<2> vOffset, double angle, 
 			CSpaceLayoutManager::CStateVector *pXform);
 
 private:
@@ -563,7 +458,8 @@ private:
 
 	// stores the new state
 	CSpaceLayoutManager::CStateVector m_vNewState;
-};
+
+};	// class CLeastSquaresFit2D
 
 
 //////////////////////////////////////////////////////////////////////
@@ -578,7 +474,8 @@ CLeastSquaresFit2D::CLeastSquaresFit2D(
 		m_vOldState(vOldState),
 		m_vNewState(vNewState)
 {
-}
+}	// CLeastSquaresFit2D::CLeastSquaresFit2D
+
 
 //////////////////////////////////////////////////////////////////////
 // CLeastSquaresFit2D::operator()
@@ -594,7 +491,7 @@ REAL CLeastSquaresFit2D::operator()(const CVectorN<>& vInput,
 	ASSERT(!_isnan(vInput[2]));
 
 	// form the offset
-	CVector<2> vOffset = CVector<2>(vInput);
+	CVectorD<2> vOffset = CVectorD<2>(vInput);
 
 	// stores the transformed state
 	CSpaceLayoutManager::CStateVector vXformState;
@@ -616,7 +513,9 @@ REAL CLeastSquaresFit2D::operator()(const CVectorN<>& vInput,
 
 	// return as energy
 	return diff_sq;
-}
+
+}	// CLeastSquaresFit2D::operator()
+
 
 //////////////////////////////////////////////////////////////////////
 // CLeastSquaresFit2D::Transform
@@ -625,14 +524,14 @@ REAL CLeastSquaresFit2D::operator()(const CVectorN<>& vInput,
 //////////////////////////////////////////////////////////////////////
 void CLeastSquaresFit2D::Transform(
 		const CSpaceLayoutManager::CStateVector& vState, 
-		CVector<2> vOffset, double angle, 
+		CVectorD<2> vOffset, double angle, 
 		CSpaceLayoutManager::CStateVector *pXform)
 {
 	// set dimensions of receiving state vector
 	pXform->SetDim(vState.GetDim());
 
 	// create a rotation matrix
-	CMatrix<2> mRotate = CreateRotate(angle);
+	CMatrixD<2> mRotate = CreateRotate(angle);
 
 	// for each pair of coordinates
 	for (int nAt = 0; nAt < vState.GetDim(); nAt += 2)
@@ -642,12 +541,12 @@ void CLeastSquaresFit2D::Transform(
 		ASSERT(!_isnan(vState[nAt + 1]));
 
 		// form the position vector
-		CVector<2> vPos;
+		CVectorD<2> vPos;
 		vPos[0] = vState[nAt + 0];
 		vPos[1] = vState[nAt + 1];
 
 		// rotate translate the position vector
-		CVector<2> vXformPos = mRotate * vPos + vOffset;
+		CVectorD<2> vXformPos = mRotate * vPos + vOffset;
 
 		// check transformed coordinate
 		ASSERT(!_isnan(vXformPos[0]));
@@ -657,7 +556,9 @@ void CLeastSquaresFit2D::Transform(
 		(*pXform)[nAt + 0] = vXformPos[0];
 		(*pXform)[nAt + 1] = vXformPos[1];
 	}
-}
+
+}	// CLeastSquaresFit2D::Transform
+
 
 //////////////////////////////////////////////////////////////////////
 // CSpaceLayoutManager::RotateTranslateStateVector
@@ -676,24 +577,19 @@ void CSpaceLayoutManager::RotateTranslateStateVector(CStateVector *pState,
 	optimizer.SetTolerance(0.001);
 
 	// optimize and return the transform
-	CVector<3> xform = CVector<3>(optimizer.Optimize(
-		CVector<3>(0.0, 0.0, 0.0)));
-
-	// trace output
-	TRACE("Transforming by offset %lf, %lf, angle %lf\n", 
-		xform[0], xform[1], xform[2]);
+	CVectorD<3> xform = CVectorD<3>(optimizer.Optimize(
+		CVectorD<3>(0.0, 0.0, 0.0)));
 
 	// retrieve the resulting state vector
 	CStateVector vXformState;
-	fitFunction.Transform((*pState), CVector<2>(xform), xform[2], 
+	fitFunction.Transform((*pState), CVectorD<2>(xform), xform[2], 
 		&vXformState);
-
-	// trace output
-	TraceVector(vXformState);
 
 	// and return
 	(*pState) = vXformState;
-}
+
+}	// CSpaceLayoutManager::RotateTranslateStateVector
+
 
 int CSpaceLayoutManager::GetStateDim() const
 {
@@ -730,4 +626,9 @@ double CSpaceLayoutManager::GetTolerance()
 
 void CSpaceLayoutManager::SetTolerance(double tolerance)
 {
+}
+
+double CSpaceLayoutManager::GetEnergy()
+{
+	return m_energy;
 }

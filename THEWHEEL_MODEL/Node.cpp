@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // Node.cpp: implementation of the CNode class.
 //
-// Copyright (C) 1999-2001
+// Copyright (C) 1999-2002 Derek Graham Lane
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
@@ -23,6 +23,29 @@ static char THIS_FILE[]=__FILE__;
 
 
 //////////////////////////////////////////////////////////////////////
+// PROPAGATE_THRESHOLD_WEIGHT
+// 
+// constant defining threshold for propagation
+//////////////////////////////////////////////////////////////////////
+const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01;
+
+
+//////////////////////////////////////////////////////////////////////
+// CompareLinkWeights
+// 
+// comparison function for sorting links by weight, descending
+//////////////////////////////////////////////////////////////////////
+int __cdecl CompareLinkWeights(const void *elem1, const void *elem2)
+{
+	CNodeLink *pLink1 = *(CNodeLink**) elem1;
+	CNodeLink *pLink2 = *(CNodeLink**) elem2;
+
+	return 1000.0 * (pLink2->GetWeight() - pLink1->GetWeight());
+
+}	// CompareLinkWeights
+
+
+//////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
@@ -40,17 +63,17 @@ CNode::CNode(CSpace *pSpace,
 		m_strDescription(strDesc),
 		m_pDib(NULL),
 		m_pSoundBuffer(NULL),
-		m_vPosition(CVector<3>(0.0, 0.0, 0.0)),
+		m_vPosition(CVectorD<3>(0.0, 0.0, 0.0)),
 
 		m_primaryActivation((REAL) 0.005),		// initialize with a very 
 		m_secondaryActivation((REAL) 0.005),	// small activation
-		m_springActivation(m_primaryActivation + m_secondaryActivation),
 		m_maxDeltaActivation((REAL) 0.0),
 
 		m_pMaxActivator(NULL),
 		m_pView(NULL)
 {
-}
+}	// CNode::CNode
+
 
 //////////////////////////////////////////////////////////////////////
 // CNode::~CNode
@@ -64,8 +87,6 @@ CNode::~CNode()
 		delete m_arrChildren[nAt];
 	m_arrChildren.RemoveAll();
 
-	// children.RemoveAll();
-
 	// delete the links
 	for (nAt = 0; nAt < m_arrLinks.GetSize(); nAt++)
 		delete m_arrLinks[nAt];
@@ -73,7 +94,9 @@ CNode::~CNode()
 
 	// delete the DIB, if present
 	delete m_pDib;
-}
+
+}	// CNode::~CNode
+
 
 //////////////////////////////////////////////////////////////////////
 // implements CNode's dynamic serialization
@@ -90,7 +113,8 @@ IMPLEMENT_SERIAL(CNode, CObject, VERSIONABLE_SCHEMA|6);
 CNode *CNode::GetParent()
 {
 	return m_pParent;
-}
+
+}	// CNode::GetParent
 
 
 //////////////////////////////////////////////////////////////////////
@@ -101,7 +125,8 @@ CNode *CNode::GetParent()
 const CNode *CNode::GetParent() const
 {
 	return m_pParent;
-}
+
+}	// CNode::GetParent const
 
 
 //////////////////////////////////////////////////////////////////////
@@ -111,27 +136,35 @@ const CNode *CNode::GetParent() const
 //////////////////////////////////////////////////////////////////////
 void CNode::SetParent(CNode *pParent)
 {
-	// check to ensure parent is in same space
-	// ASSERT(pParent->m_pSpace == m_pSpace);
+	// if this currently has a parent
 	if (m_pParent)
 	{
-		if (m_pSpace == NULL)
-			m_pSpace = pParent->m_pSpace;
-
+		// find this in the children array
 		for (int nAt = 0; nAt < m_pParent->m_arrChildren.GetSize(); nAt++)
 		{
 			if (m_pParent->m_arrChildren[nAt] == this)
 			{
+				// remove from the current parent's children array
 				m_pParent->m_arrChildren.RemoveAt(nAt);
+
+				// don't skip the next one
 				nAt--;
 			}
 		}
 	}
 
+	// set the parent pointer
 	m_pParent = pParent;
 
+	// if a parent has been set,
 	if (m_pParent)
 	{
+		// set the space, if it hasn't been set yet
+		if (NULL == m_pSpace)
+		{
+			m_pSpace = pParent->m_pSpace;
+		}
+
 		// check to ensure the element is not already present
 		BOOL bFound = FALSE;
 		for (int nAt = 0; nAt < m_arrChildren.GetSize(); nAt++)
@@ -142,40 +175,57 @@ void CNode::SetParent(CNode *pParent)
 			}
 		}
 
+		// if not found,
 		if (!bFound)
 		{
+			// add to the children array
 			m_pParent->m_arrChildren.Add(this);
+
+			// set the parent as the initial max activator
+			m_pMaxActivator = m_pParent;
+
+			// set the position to the parent's
+			SetPosition(m_pParent->GetPosition());
 		}
 	}
 
-	// set the parent as the initial max activator
-	m_pMaxActivator = m_pParent;
-
-	// set the position to the parent's
-	SetPosition(m_pParent->GetPosition());
-
-	// notify views of the change
-	if (m_pSpace != NULL)
-	{
-		m_pSpace->UpdateAllViews(NULL, 0L, this);
-	}
-}
+}	// CNode::SetParent
 
 
+//////////////////////////////////////////////////////////////////////
+// CNode::GetChildCount
+// 
+// returns the number of child nodes for this node
+//////////////////////////////////////////////////////////////////////
 int CNode::GetChildCount() const
 {
 	return m_arrChildren.GetSize();
-}
 
+}	// CNode::GetChildCount
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetChildAt
+// 
+// returns the child node at the given index
+//////////////////////////////////////////////////////////////////////
 CNode *CNode::GetChildAt(int nAt)
 {
 	return (CNode *) m_arrChildren.GetAt(nAt);
-}
 
+}	// CNode::GetChildAt
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetChildAt const
+// 
+// returns the child node at the given index
+//////////////////////////////////////////////////////////////////////
 const CNode *CNode::GetChildAt(int nAt) const
 {
 	return (CNode *) m_arrChildren.GetAt(nAt);
-}
+
+}	// CNode::GetChildAt
 
 
 //////////////////////////////////////////////////////////////////////
@@ -186,7 +236,8 @@ const CNode *CNode::GetChildAt(int nAt) const
 const CString& CNode::GetName() const
 {
 	return m_strName;
-}
+
+}	// CNode::GetName
 
 
 //////////////////////////////////////////////////////////////////////
@@ -198,10 +249,7 @@ void CNode::SetName(const CString& strName)
 {
 	m_strName = strName;
 
-	// notify views of the change
-	if (m_pSpace != NULL)
-		m_pSpace->UpdateAllViews(NULL, 0L, this);
-}
+}	// CNode::SetName
 
 
 //////////////////////////////////////////////////////////////////////
@@ -212,7 +260,8 @@ void CNode::SetName(const CString& strName)
 const CString& CNode::GetDescription() const
 {
 	return m_strDescription;
-}
+
+}	// CNode::GetDescription
 
 
 //////////////////////////////////////////////////////////////////////
@@ -224,21 +273,32 @@ void CNode::SetDescription(const CString& strDesc)
 {
 	m_strDescription = strDesc;
 
-	// notify views of the change
-	if (m_pSpace != NULL)
-		m_pSpace->UpdateAllViews(NULL, 0L, this);
-}
+}	// CNode::SetDescription
 
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetClass
+// 
 // the node class
+//////////////////////////////////////////////////////////////////////
 const CString& CNode::GetClass() const
 {
 	return m_strClass;
-}
 
+}	// CNode::GetClass
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::SetClass
+// 
+// the node class
+//////////////////////////////////////////////////////////////////////
 void CNode::SetClass(const CString& strClass)
 {
 	m_strClass = strClass;
-}
+
+}	// CNode::SetClass
+
 
 //////////////////////////////////////////////////////////////////////
 // CNode::GetImageFilename
@@ -248,7 +308,8 @@ void CNode::SetClass(const CString& strClass)
 const CString& CNode::GetImageFilename() const
 {
 	return m_strImageFilename;
-}
+
+}	// CNode::GetImageFilename
 
 
 //////////////////////////////////////////////////////////////////////
@@ -260,10 +321,8 @@ void CNode::SetImageFilename(const CString& strImageFilename)
 {
 	m_strImageFilename = strImageFilename;
 
-	// notify views of the change
-	if (m_pSpace != NULL)
-		m_pSpace->UpdateAllViews(NULL, 0L, this);
-}
+}	// CNode::SetImageFilename
+
 
 
 //////////////////////////////////////////////////////////////////////
@@ -290,7 +349,8 @@ CDib *CNode::GetDib()
 	}
 
 	return m_pDib;
-}
+
+}	// CNode::GetDib
 
 
 //////////////////////////////////////////////////////////////////////
@@ -301,18 +361,20 @@ CDib *CNode::GetDib()
 const CString& CNode::GetSoundFilename() const
 {
 	return m_strSoundFilename;
-}
+
+}	// CNode::GetSoundFilename
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::SetImageFilename
+// CNode::SetSoundFilename
 // 
-// sets the name of the node's image file
+// sets the name of the node's sound file
 //////////////////////////////////////////////////////////////////////
 void CNode::SetSoundFilename(const CString& strSoundFilename)
 {
 	m_strSoundFilename = strSoundFilename;
-}
+
+}	// CNode::SetImageFilename
 
 
 //////////////////////////////////////////////////////////////////////
@@ -393,7 +455,8 @@ CLEANUP:
 
 	// return the buffer (or NULL if error)
 	return m_pSoundBuffer;
-}
+
+}	// CNode::GetSoundBuffer
 
 
 //////////////////////////////////////////////////////////////////////
@@ -404,7 +467,8 @@ CLEANUP:
 const CString& CNode::GetUrl() const
 {
 	return m_strUrl;
-}
+
+} // CNode::GetUrl
 
 
 //////////////////////////////////////////////////////////////////////
@@ -415,7 +479,54 @@ const CString& CNode::GetUrl() const
 void CNode::SetUrl(const CString& strUrl)
 {
 	m_strUrl = strUrl;
-}
+
+}	// CNode::SetUrl
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetPosition
+// 
+// returns the position of the node
+//////////////////////////////////////////////////////////////////////
+const CVectorD<3>& CNode::GetPosition() const
+{
+	return m_vPosition;
+
+}	// CNode::GetPosition
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::SetPosition
+// 
+// sets the position of the node
+//////////////////////////////////////////////////////////////////////
+void CNode::SetPosition(const CVectorD<3>& vPos)
+{
+	m_vPosition = vPos;
+
+}	// CNode::SetPosition
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetSize
+// 
+// returns the size of the node (width & height)
+//////////////////////////////////////////////////////////////////////
+CVectorD<3> CNode::GetSize(REAL activation) const
+{
+	// compute the desired aspect ratio (maintain the current aspect ratio)
+	REAL aspectRatio = 13.0 / 16.0 - 6.0 / 16.0 * (REAL) exp(-6.0f * activation);
+
+	// compute the new width and height from the desired area and the desired
+	//		aspect ratio
+	CVectorD<3> vSize;
+	vSize[0] = (REAL) sqrt(activation / aspectRatio);
+	vSize[1] = (REAL) sqrt(activation * aspectRatio);
+
+	// return the computed size
+	return vSize;
+
+}	// CNode::GetSize
 
 
 //////////////////////////////////////////////////////////////////////
@@ -426,7 +537,8 @@ void CNode::SetUrl(const CString& strUrl)
 int CNode::GetLinkCount() const
 {
 	return m_arrLinks.GetSize();
-}
+
+}	// CNode::GetLinkCount
 
 
 //////////////////////////////////////////////////////////////////////
@@ -437,7 +549,8 @@ int CNode::GetLinkCount() const
 CNodeLink *CNode::GetLinkAt(int nAt)
 {
 	return (CNodeLink *) m_arrLinks.GetAt(nAt);
-}
+
+}	// CNode::GetLinkAt
 
 
 //////////////////////////////////////////////////////////////////////
@@ -448,7 +561,8 @@ CNodeLink *CNode::GetLinkAt(int nAt)
 const CNodeLink *CNode::GetLinkAt(int nAt) const
 {
 	return (const CNodeLink *) m_arrLinks.GetAt(nAt);
-}
+
+}	// CNode::GetLinkAt const
 
 
 //////////////////////////////////////////////////////////////////////
@@ -473,7 +587,8 @@ CNodeLink * CNode::GetLinkTo(CNode * pToNode)
 
 	// not found?  return NULL
 	return NULL;
-}
+
+}	// CNode::GetLinkTo
 
 
 //////////////////////////////////////////////////////////////////////
@@ -498,7 +613,8 @@ const CNodeLink * CNode::GetLinkTo(CNode * pToNode) const
 
 	// not found?  return NULL
 	return NULL;
-}
+
+}	// CNode::GetLinkTo const
 
 
 //////////////////////////////////////////////////////////////////////
@@ -519,7 +635,8 @@ REAL CNode::GetLinkWeight(CNode * pToNode) const
 
 	// not found? return 0.0
 	return 0.0f;
-}
+
+}	// CNode::GetLinkWeight
 
 
 //////////////////////////////////////////////////////////////////////
@@ -553,12 +670,21 @@ void CNode::LinkTo(CNode *pToNode, REAL weight, BOOL bReciprocalLink)
 
 		// cross-link at the same weight
 		if (bReciprocalLink)
-			pToNode->LinkTo(this, weight);
+		{
+			pToNode->LinkTo(this, weight, FALSE);
+		}
 	}
 	else
 	{
 		// otherwise, just set the weight in one direction
 		pLink->SetWeight(weight);
+
+		// cross-link at the same weight
+		if (bReciprocalLink)
+		{
+			double otherWeight = pToNode->GetLinkWeight(this);
+			pToNode->LinkTo(this, (weight + otherWeight) * 0.5, FALSE);
+		}
 
 		// and update the map
 		m_mapLinks.SetAt(pToNode, weight);
@@ -566,7 +692,8 @@ void CNode::LinkTo(CNode *pToNode, REAL weight, BOOL bReciprocalLink)
 
 	// sort the links
 	SortLinks();
-}
+
+}	// CNode::LinkTo
 
 
 //////////////////////////////////////////////////////////////////////
@@ -582,7 +709,8 @@ void CNode::RemoveAllLinks()
 	}
 	m_arrLinks.RemoveAll();
 	m_mapLinks.RemoveAll();
-}
+
+}	// CNode::RemoveAllLinks
 
 
 //////////////////////////////////////////////////////////////////////
@@ -592,36 +720,10 @@ void CNode::RemoveAllLinks()
 //////////////////////////////////////////////////////////////////////
 void CNode::SortLinks()
 {
-	// flag to indicate a rearrangement has occurred
-	BOOL bRearrange;
-	do 
-	{
-		// initially, no rearrangement has occurred
-		bRearrange = FALSE;
+	qsort(m_arrLinks.GetData(), m_arrLinks.GetSize(), 
+		sizeof(CNodeLink*), CompareLinkWeights);
 
-		// for each link,
-		for (int nAt = 0; nAt < GetLinkCount()-1; nAt++)
-		{
-			// get the current and next links
-			CNodeLink *pThisLink = GetLinkAt(nAt);
-			CNodeLink *pNextLink = GetLinkAt(nAt+1);
-
-			// compare their weights
-			if (pThisLink->GetWeight() < pNextLink->GetWeight())
-			{
-				// if first is less than second, swap
-				m_arrLinks.SetAt(nAt, pNextLink);
-				m_arrLinks.SetAt(nAt+1, pThisLink);
-
-				// a rearrangement has occurred
-				bRearrange = TRUE;
-			}
-		}
-
-	// continue as long as rearrangements occur
-	} while (bRearrange);
-
-}
+}	// CNode::SortLinks
 
 
 //////////////////////////////////////////////////////////////////////
@@ -645,8 +747,7 @@ void CNode::LearnFromNode(CNode *pOtherNode, REAL k)
 			pOtherNode->LinkTo(this, newWeight);
 	}
 
-	// TODO: now soft-normalize the link weights
-}
+}	// CNode::LearnFromNode
 
 
 //////////////////////////////////////////////////////////////////////
@@ -657,7 +758,8 @@ void CNode::LearnFromNode(CNode *pOtherNode, REAL k)
 REAL CNode::GetActivation() const
 {
 	return m_primaryActivation + m_secondaryActivation;
-}
+
+}	// CNode::GetActivation
 
 
 //////////////////////////////////////////////////////////////////////
@@ -668,7 +770,8 @@ REAL CNode::GetActivation() const
 REAL CNode::GetPrimaryActivation() const
 {
 	return m_primaryActivation;
-}
+
+}	// CNode::GetPrimaryActivation
 
 
 //////////////////////////////////////////////////////////////////////
@@ -679,32 +782,8 @@ REAL CNode::GetPrimaryActivation() const
 REAL CNode::GetSecondaryActivation() const
 {
 	return m_secondaryActivation;
-}
 
-
-//////////////////////////////////////////////////////////////////////
-// CNode::GetSpringActivation
-// 
-// returns the node's spring activation value
-//////////////////////////////////////////////////////////////////////
-REAL CNode::GetSpringActivation() const
-{
-	return m_springActivation;
-}
-
-
-//////////////////////////////////////////////////////////////////////
-// CNode::UpdateSprings
-// 
-// updates the spring activation
-//////////////////////////////////////////////////////////////////////
-void CNode::UpdateSpring(REAL springConst)
-{
-	// update spring activation
-	m_springActivation = 
-		GetActivation(); //  * ((REAL) 1.0 - springConst)
-			// + m_springActivation * springConst;
-}
+}	// CNode::GetSecondaryActivation
 
 
 //////////////////////////////////////////////////////////////////////
@@ -722,7 +801,8 @@ int CNode::GetDescendantCount() const
 	}
 
 	return nCount;
-}
+
+}	// CNode::GetDescendantCount
 
 
 //////////////////////////////////////////////////////////////////////
@@ -747,7 +827,8 @@ REAL CNode::GetDescendantActivation() const
 
 	// return the sum
 	return sum;
-}
+
+}	// CNode::GetDescendantActivation
 
 
 //////////////////////////////////////////////////////////////////////
@@ -773,7 +854,8 @@ REAL CNode::GetDescendantPrimaryActivation() const
 
 	// return the sum
 	return sum;
-}
+
+}	// CNode::GetDescendantPrimaryActivation
 
 
 //////////////////////////////////////////////////////////////////////
@@ -799,7 +881,8 @@ REAL CNode::GetDescendantSecondaryActivation() const
 
 	// return the sum
 	return sum;
-}
+
+}	// CNode::GetDescendantSecondaryActivation
 
 
 //////////////////////////////////////////////////////////////////////
@@ -810,7 +893,8 @@ REAL CNode::GetDescendantSecondaryActivation() const
 CNode *CNode::GetMaxActivator()
 {
 	return m_pMaxActivator;
-}
+
+}	// CNode::GetMaxActivator
 
 
 //////////////////////////////////////////////////////////////////////
@@ -821,7 +905,8 @@ CNode *CNode::GetMaxActivator()
 CObject *CNode::GetView()
 {
 	return m_pView;
-}
+
+}	// CNode::GetView
 
 
 //////////////////////////////////////////////////////////////////////
@@ -832,7 +917,8 @@ CObject *CNode::GetView()
 void CNode::SetView(CObject *pView)
 {
 	m_pView = pView;
-}
+
+}	// CNode::SetView
 
 
 //////////////////////////////////////////////////////////////////////
@@ -896,7 +982,8 @@ void CNode::Serialize(CArchive &ar)
 				GetLinkAt(nAt)->GetWeight());
 		}
 	}
-}
+
+}	// CNode::Serialize
 
 
 //////////////////////////////////////////////////////////////////////
@@ -926,7 +1013,8 @@ void CNode::SetActivation(REAL newActivation, CNode *pActivator)
 	{
 		m_pMaxActivator = pActivator;
 	}
-}
+
+}	// CNode::SetActivation
 
 
 //////////////////////////////////////////////////////////////////////
@@ -942,6 +1030,12 @@ void CNode::PropagateActivation(REAL scale)
 	{
 		// get the link
 		CNodeLink *pLink = GetLinkAt(nAt);
+
+		// stop propagating if below the link weight threshold
+		if (pLink->GetWeight() < PROPAGATE_THRESHOLD_WEIGHT)
+		{
+			break;
+		}
 
 		// only propagate through the link if we have not already done so
 		if (!pLink->HasPropagated())
@@ -974,11 +1068,12 @@ void CNode::PropagateActivation(REAL scale)
 			// set the new actual activation
 			pTarget->SetActivation(newActivation, this);
 
-			// and propagate to linked nodes
+			// propagate to linked nodes
 			pTarget->PropagateActivation(scale * (REAL) 1.0);
-		}
+			}
 	}
-}
+
+}	// CNode::PropagateActivation
 
 
 //////////////////////////////////////////////////////////////////////
@@ -1008,7 +1103,8 @@ void CNode::ResetForPropagation()
 		// now recursively reset the children
 		pChildNode->ResetForPropagation();
 	}
-}
+
+}	// CNode::ResetForPropagation
 
 
 //////////////////////////////////////////////////////////////////////
@@ -1031,7 +1127,8 @@ void CNode::ScaleDescendantActivation(REAL primScale, REAL secScale)
 		// scale the child's activation
 		pNode->ScaleDescendantActivation(primScale, secScale);
 	}
-}
+
+}	// CNode::ScaleDescendantActivation
 
 
 //////////////////////////////////////////////////////////////////////
@@ -1052,29 +1149,5 @@ CNode * CNode::GetRandomDescendant()
 	}
 
 	return GetChildAt(nDescendant);
-}
 
-const CVector<3>& CNode::GetPosition() const
-{
-	return m_vPosition;
-}
-
-void CNode::SetPosition(const CVector<3>& vPos)
-{
-	m_vPosition = vPos;
-}
-
-CVector<3> CNode::GetSize(REAL activation) const
-{
-	// compute the desired aspect ratio (maintain the current aspect ratio)
-	REAL aspectRatio = 13.0 / 16.0 - 6.0 / 16.0 * (REAL) exp(-6.0f * activation);
-
-	// compute the new width and height from the desired area and the desired
-	//		aspect ratio
-	CVector<3> vSize;
-	vSize[0] = (REAL) sqrt(activation / aspectRatio);
-	vSize[1] = (REAL) sqrt(activation * aspectRatio);
-
-	// return the computed size
-	return vSize;
-}
+}	// CNode::GetRandomDescendant

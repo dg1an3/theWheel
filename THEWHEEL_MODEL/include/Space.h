@@ -1,23 +1,22 @@
 //////////////////////////////////////////////////////////////////////
 // Space.h: interface for the CSpace class.
 //
-// Copyright (C) 1999-2001
+// Copyright (C) 1999-2002 Derek Graham Lane
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_SPACE_H__0C8AA65A_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
-#define AFX_SPACE_H__0C8AA65A_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_
+#if !defined(SPACE_H)
+#define SPACE_H
 
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include <Matrix.h>
+#include <MatrixD.h>
 
 #include "Node.h"
-#include "NodeCluster.h"
-#include "SpaceLayoutManager.h"	// Added by ClassView
+#include "SpaceLayoutManager.h"
 
 //////////////////////////////////////////////////////////////////////
 // constant for total allowed activation of nodes
@@ -63,14 +62,6 @@ public:
 	// returns the total activation of the space
 	REAL GetTotalActivation() const;
 
-	///////////////////////////////////////////////////////////////////
-	// clusters
-
-	// accessors for the clusters
-	int GetClusterCount() const;
-	void SetClusterCount(int nCount);
-	CNodeCluster *GetClusterAt(int nAt);
-
 	// accessors for the super node count
 	int GetSuperNodeCount();
 	void SetMaxSuperNodeCount(int nSuperNodeCount);
@@ -91,10 +82,6 @@ public:
 	// layout the nodes
 	void LayoutNodes();
 
-	// get mass statistics for the nodes
-	CVector<3> GetCentralMoment();
-	CMatrix<2> GetInertiaTensor();
-
 	// get the master DirectSound object
 	LPDIRECTSOUND GetDirectSound();
 
@@ -113,9 +100,6 @@ protected:
 
 	// helper function to sort the nodes by activation
 	void SortNodes();
-
-	// cluster analysis
-	// void ComputeClusters();
 
 	// helper function to add random children to a node
 	void AddChildren(CNode *pParent, int nLevels, 
@@ -142,9 +126,6 @@ private:
 	// the direct sound interface
 	LPDIRECTSOUND m_pDS;
 
-	// the clusters for this space
-	CNodeCluster *m_pCluster;
-
 	// the manager for laying out the nodes
 	CSpaceLayoutManager *m_pLayoutManager;
 
@@ -157,4 +138,4 @@ private:
 //{{AFX_INSERT_LOCATION}}
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.
 
-#endif // !defined(AFX_SPACE_H__0C8AA65A_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
+#endif // !defined(SPACE_H)

@@ -1,11 +1,18 @@
+//////////////////////////////////////////////////////////////////////
 // NodeLink.cpp: implementation of the CNodeLink class.
 //
+// Copyright (C) 1999-2002 Derek Graham Lane
+// $Id$
+// U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
 
+// pre-compiled headers
 #include "stdafx.h"
-// #include "theWheel2001.h"
+
+// class declaration
 #include "NodeLink.h"
 
+// the CNode
 #include "Node.h"
 
 #ifdef _DEBUG
@@ -30,7 +37,7 @@ CNodeLink::CNodeLink(CNode *pToNode, REAL weight)
 		// initialize to HasPropagated to prevent immediate 
 		//		propagation
 {
-}
+}	// CNodeLink::CNodeLink
 
 
 //////////////////////////////////////////////////////////////////////
@@ -40,7 +47,7 @@ CNodeLink::CNodeLink(CNode *pToNode, REAL weight)
 //////////////////////////////////////////////////////////////////////
 CNodeLink::~CNodeLink()
 {
-}
+}	// CNodeLink::~CNodeLink
 
 
 //////////////////////////////////////////////////////////////////////
@@ -57,7 +64,8 @@ IMPLEMENT_SERIAL(CNodeLink, CObject, 1)
 REAL CNodeLink::GetWeight() const
 {
 	return m_weight;
-}
+
+}	// CNodeLink::GetWeight
 
 
 //////////////////////////////////////////////////////////////////////
@@ -68,7 +76,8 @@ REAL CNodeLink::GetWeight() const
 void CNodeLink::SetWeight(REAL newWeight)
 {
 	m_weight = newWeight;
-}
+
+}	// CNodeLink::SetWeight
 
 
 //////////////////////////////////////////////////////////////////////
@@ -79,7 +88,8 @@ void CNodeLink::SetWeight(REAL newWeight)
 CNode *CNodeLink::GetTarget()
 {
 	return m_pTarget;
-}
+
+}	// CNodeLink::GetTarget
 
 
 //////////////////////////////////////////////////////////////////////
@@ -90,7 +100,8 @@ CNode *CNodeLink::GetTarget()
 const CNode *CNodeLink::GetTarget() const
 {
 	return m_pTarget;
-}
+
+}	// CNodeLink::GetTarget const
 
 
 //////////////////////////////////////////////////////////////////////
@@ -101,7 +112,8 @@ const CNode *CNodeLink::GetTarget() const
 void CNodeLink::SetTarget(CNode *pTarget)
 {
 	m_pTarget = pTarget;
-}
+
+}	// CNodeLink::SetTarget
 
 
 //////////////////////////////////////////////////////////////////////
@@ -112,7 +124,8 @@ void CNodeLink::SetTarget(CNode *pTarget)
 BOOL CNodeLink::HasPropagated() const
 {
 	return m_bHasPropagated;
-}
+
+}	// CNodeLink::HasPropagated
 
 
 //////////////////////////////////////////////////////////////////////
@@ -123,7 +136,8 @@ BOOL CNodeLink::HasPropagated() const
 void CNodeLink::SetHasPropagated(BOOL bPropagated)
 {
 	m_bHasPropagated = bPropagated;
-}
+
+}	// CNodeLink::SetHasPropagated
 
 
 //////////////////////////////////////////////////////////////////////
@@ -147,4 +161,5 @@ void CNodeLink::Serialize(CArchive &ar)
 		ar << (float) m_weight;
 		ar << m_pTarget;
 	}
-}
+
+}	// CNodeLink::Serialize

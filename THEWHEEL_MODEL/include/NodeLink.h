@@ -1,13 +1,13 @@
 //////////////////////////////////////////////////////////////////////
-// Node.h: interface for the CNode class.
+// NodeLink.h: interface for the CNodeLink class.
 //
-// Copyright (C) 1999-2001
+// Copyright (C) 1999-2002 Derek Graham Lane
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_NODELINK_H__0C8AA66C_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
-#define AFX_NODELINK_H__0C8AA66C_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_
+#if !defined(NODELINK_H)
+#define NODELINK_H
 
 #if _MSC_VER > 1000
 #pragma once
@@ -76,4 +76,4 @@ private:
 	BOOL m_bHasPropagated;
 };
 
-#endif // !defined(AFX_NODELINK_H__0C8AA66C_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
+#endif // !defined(NODELINK_H)

@@ -1,19 +1,19 @@
 //////////////////////////////////////////////////////////////////////
 // Node.h: interface for the CNode class.
 //
-// Copyright (C) 1999-2001
+// Copyright (C) 1999-2002 Derek Graham Lane
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_NODE_H__0C8AA66B_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
-#define AFX_NODE_H__0C8AA66B_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_
+#if !defined(NODE_H)
+#define NODE_H
 
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include <Vector.h>
+#include <VectorD.h>
 
 // the wave file utilities
 #include "WAVE.h"
@@ -58,10 +58,6 @@ public:
 	CNode *GetChildAt(int nAt);
 	const CNode *GetChildAt(int nAt) const;
 
-	// virtual spawn function -- over-ride to implement spawn
-	//		behavior
-	//virtual void Spawn();
-
 	//////////////////////////////////////////////////////////////////
 	// attribute accessors
 
@@ -96,9 +92,9 @@ public:
 	void SetUrl(const CString& strUrl);
 
 	// the node's position
-	const CVector<3>& GetPosition() const;
-	void SetPosition(const CVector<3>& vPos);
-	CVector<3> GetSize(REAL activation) const;
+	const CVectorD<3>& GetPosition() const;
+	void SetPosition(const CVectorD<3>& vPos);
+	CVectorD<3> GetSize(REAL activation) const;
 
 	//////////////////////////////////////////////////////////////////
 	// link accessors
@@ -135,10 +131,6 @@ public:
 	REAL GetActivation() const;
 	REAL GetPrimaryActivation() const;
 	REAL GetSecondaryActivation() const;
-
-	// spring activation member functions
-	REAL GetSpringActivation() const;
-	void UpdateSpring(REAL springConst = 0.0);
 
 	// returns the number of descendants of this node
 	int GetDescendantCount() const;
@@ -194,7 +186,7 @@ protected:
 	// returns a random descendant
 	CNode * GetRandomDescendant();
 
-protected:
+public:
 	// pointer to the space that contains this node
 	CSpace *m_pSpace;
 
@@ -230,7 +222,7 @@ private:
 	CString m_strUrl;
 
 	// position and size
-	CVector<3> m_vPosition;
+	CVectorD<3> m_vPosition;
 
 	// the collection of links
 	CObArray m_arrLinks;
@@ -239,9 +231,6 @@ private:
 	// the current activation value of the node
 	REAL m_primaryActivation;
 	REAL m_secondaryActivation;
-
-	// the spring activation
-	REAL m_springActivation;
 
 	// maximum activation delta
 	REAL m_maxDeltaActivation;
@@ -254,4 +243,4 @@ private:
 	CObject *m_pView;
 };
 
-#endif // !defined(AFX_NODE_H__0C8AA66B_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
+#endif // !defined(NODE_H)

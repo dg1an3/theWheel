@@ -1,16 +1,26 @@
+//////////////////////////////////////////////////////////////////////
 // HTMLNode.h: interface for the CHTMLNode class.
 //
+// Copyright (C) 1999-2002 Derek Graham Lane
+// $Id$
+// U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_HTMLNODE_H__771C1324_865B_45B1_817B_47763C8B4BA5__INCLUDED_)
-#define AFX_HTMLNODE_H__771C1324_865B_45B1_817B_47763C8B4BA5__INCLUDED_
+#if !defined(HTMLNODE_H)
+#define HTMLNODE_H
 
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
 
+// base class
 #include "Node.h"
 
+//////////////////////////////////////////////////////////////////////
+// class CHTMLNode
+// 
+// a node object that represents an HTML file on the web
+//////////////////////////////////////////////////////////////////////
 class CHTMLNode : public CNode,
 	IPropertyNotifySink, 
 	IOleClientSite, 
@@ -19,10 +29,6 @@ class CHTMLNode : public CNode,
 public:
 	CHTMLNode();
 	virtual ~CHTMLNode();
-
-	// accessors for the node's URL
-	const CString& GetUrl() const;
-	void SetUrl(const CString& strUrl);
 
 // IUnknown methods 
     STDMETHOD(QueryInterface)(REFIID riid, LPVOID* ppv); 
@@ -117,4 +123,4 @@ private:
 	IBinding* m_pBinding; 
 };
 
-#endif // !defined(AFX_HTMLNODE_H__771C1324_865B_45B1_817B_47763C8B4BA5__INCLUDED_)
+#endif // !defined(HTMLNODE_H)

@@ -2,7 +2,7 @@
 // SpaceLayoutManager.h: declaration of the 
 //		CSpaceLayoutManager class
 //
-// Copyright (C) 1999-2001
+// Copyright (C) 1999-2002 Derek Graham Lane
 // U.S. Patent Pending
 // $Id$
 //////////////////////////////////////////////////////////////////////
@@ -21,7 +21,7 @@ class CSpace;
 // declaration for the dimensionality of the energy function state
 //		vector
 //////////////////////////////////////////////////////////////////////
-const int MAX_STATE_DIM = 64;
+const int MAX_STATE_DIM = 256;
 
 //////////////////////////////////////////////////////////////////////
 // class CSpaceLayoutManager
@@ -32,6 +32,7 @@ const int MAX_STATE_DIM = 64;
 class CSpaceLayoutManager : public CObjectiveFunction
 {
 public:
+	double GetEnergy();
 	// construct the energy function, given the CSpaceView to which it
 	//		is associated 
 	CSpaceLayoutManager(CSpace *pSpace);

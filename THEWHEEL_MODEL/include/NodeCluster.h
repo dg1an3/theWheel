@@ -1,20 +1,30 @@
+//////////////////////////////////////////////////////////////////////
 // NodeCluster.h: interface for the CNodeCluster class.
 //
+// Copyright (C) 1999-2002 Derek Graham Lane
+// $Id$
+// U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_NODECLUSTER_H__678A3037_1CBC_433C_972B_73FC63831C04__INCLUDED_)
-#define AFX_NODECLUSTER_H__678A3037_1CBC_433C_972B_73FC63831C04__INCLUDED_
+#if !defined(NODECLUSTER_H)
+#define NODECLUSTER_H
 
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
 
+// base class
 #include "Node.h"
-#include <Vector.h>
 
+//////////////////////////////////////////////////////////////////////
+// class CNodeCluster
+// 
+// a statistical composite of many nodes
+//////////////////////////////////////////////////////////////////////
 class CNodeCluster : public CNode  
 {
 public:
+	// construct
 	CNodeCluster(CSpace *pSpace = NULL, int nSiblings = 1);
 	virtual ~CNodeCluster();
 
@@ -92,4 +102,4 @@ private:
 	CMap<CNode *, CNode *, CNode *, CNode *> m_mapNodes;
 };
 
-#endif // !defined(AFX_NODECLUSTER_H__678A3037_1CBC_433C_972B_73FC63831C04__INCLUDED_)
+#endif // !defined(NODECLUSTER_H)
