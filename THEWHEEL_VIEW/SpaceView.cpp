@@ -18,10 +18,6 @@
 // include for some constants
 #include <float.h>
 
-// TODO: get rid of these
-// the new node dialog
-#include "EditNodeDlg.h"
-#include "OptionsDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -137,13 +133,12 @@ const int TIMER_ID = 7;			// luck 7
 // constructs a new CSpaceView object 
 //////////////////////////////////////////////////////////////////////
 CSpaceView::CSpaceView()
-:	m_springConst(0.95),
-	m_lpDD(NULL),			// DirectDraw object
-	m_lpDDSPrimary(NULL),	// DirectDraw primary surface
-	m_lpDDSOne(NULL),		// Offscreen surface 1
-	m_lpClipper(NULL),		// clipper for primary
-	m_pTracker(NULL),
-	m_bDragging(FALSE)
+	: m_lpDD(NULL),			// DirectDraw object
+		m_lpDDSPrimary(NULL),	// DirectDraw primary surface
+		m_lpDDSOne(NULL),		// Offscreen surface 1
+		m_lpClipper(NULL),		// clipper for primary
+		m_pTracker(NULL),
+		m_bDragging(FALSE)
 {
 	DWORD dwBkColor = ::AfxGetApp()->GetProfileInt("Settings", "BkColor", 
 		(DWORD) RGB(115, 158, 206));
@@ -234,7 +229,6 @@ int CSpaceView::GetVisibleNodeCount()
 {
 	int nNumVizNodeViews = __min(m_arrNodeViews.GetSize(), 
 		GetDocument()->GetLayoutManager()->GetStateDim() / 2); 
-	//		- GetDocument()->GetClusterCount());
 
 	return nNumVizNodeViews;
 
@@ -357,6 +351,29 @@ void CSpaceView::SetTracker(CTracker *pTracker)
 	m_pTracker = pTracker;
 
 }	// CSpaceView::SetTracker
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::SetBkColor
+// 
+// Sets the background color for the SpaceView
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::SetBkColor(COLORREF color)
+{
+	// store background color
+	m_colorBk = color;
+
+	// get the client rectangle, if available
+	CRect rect(0, 0, 0, 0);
+	if (m_hWnd)
+	{
+		GetClientRect(&rect);
+	}
+
+	// tell skin about background color
+	m_skin.SetClientArea(rect.Width(), rect.Height(), m_colorBk);
+
+}	// CSpaceView::SetBkColor
 
 
 //////////////////////////////////////////////////////////////////////
@@ -615,28 +632,6 @@ void CSpaceView::OnInitialUpdate()
 {
 	CView::OnInitialUpdate();
 
-	// get the layout manager
-	CSpaceLayoutManager *pLayoutManager = 
-		GetDocument()->GetLayoutManager();
-
-	// load the options
-	pLayoutManager->SetKPos(::AfxGetApp()->GetProfileInt("LAYOUT", "K_POS", 
-		pLayoutManager->GetKPos()));
-	pLayoutManager->SetKRep(::AfxGetApp()->GetProfileInt("LAYOUT", "R_POS", 
-		pLayoutManager->GetKRep()));
-	pLayoutManager->SetStateDim(::AfxGetApp()->GetProfileInt("LAYOUT", "STATE_DIM", 
-		pLayoutManager->GetStateDim()));
-	pLayoutManager->SetTolerance( 1.0 / 10.0 * 
-		(double) ::AfxGetApp()->GetProfileInt("LAYOUT", "TOLERANCE", 
-			10.0 * pLayoutManager->GetTolerance()));
-	SetSpringConst( 1.0 / 100.0 * 
-		(double) ::AfxGetApp()->GetProfileInt("LAYOUT", "SPRING_CONST", 
-			100.0 * GetSpringConst()));
-
-	// make sure super node count + clusters = STATE_DIM
-	GetDocument()->SetMaxSuperNodeCount(
-		GetDocument()->GetLayoutManager()->GetStateDim() / 2);
-
 	// get rid of the node views
 	for (int nAt = 0; nAt < m_arrNodeViews.GetSize(); nAt++)
 	{
@@ -683,13 +678,13 @@ void CSpaceView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 	if (pHint != NULL)
 	{
 		// cast the hint object to a CNode
-		CNode *pNewNode = (CNode *)pHint;
-		ASSERT(pNewNode->IsKindOf(RUNTIME_CLASS(CNode)));
+		CNode *pNode = (CNode *)pHint;
+		ASSERT(pNode->IsKindOf(RUNTIME_CLASS(CNode)));
 
-		if (pNewNode->GetView() == NULL)
+		if (pNode->GetView() == NULL)
 		{
 			// construct a new node view for this node, and add to the array
-			CNodeView *pNewNodeView = new CNodeView(pNewNode, this);
+			CNodeView *pNewNodeView = new CNodeView(pNode, this);
 			m_arrNodeViews.Add(pNewNodeView);
 
 			// activate the node to propagate the activation
@@ -698,6 +693,20 @@ void CSpaceView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 			// and lay them out and center them
 			GetDocument()->LayoutNodes();
 			CenterNodeViews();
+		}
+		else if (pNode->GetSpace() == NULL)
+		{
+			// deleting a node
+			CNodeView *pNodeView = (CNodeView *) pNode->GetView();
+
+			// find the node view
+			for (int nAt = 0; nAt < m_arrNodeViews.GetSize(); nAt++)
+			{
+				if (m_arrNodeViews[nAt] == pNodeView)
+				{
+					m_arrNodeViews.RemoveAt(nAt);
+				}
+			}
 		}
 	}
 
@@ -780,7 +789,7 @@ BEGIN_MESSAGE_MAP(CSpaceView, CView)
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
 	ON_WM_TIMER()
-	ON_COMMAND(ID_EDIT_OPTIONS, OnEditOptions)
+// 	ON_COMMAND(ID_EDIT_OPTIONS, OnEditOptions)
 	//}}AFX_MSG_MAP
 	// Standard printing commands
 	ON_COMMAND(ID_FILE_PRINT, CView::OnFilePrint)
@@ -1073,7 +1082,7 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 	// update the privates
 	for (int nAt = 0; nAt < GetNodeViewCount(); nAt++)
 	{
-		GetNodeView(nAt)->UpdateSprings(m_springConst);
+		GetNodeView(nAt)->UpdateSprings(GetDocument()->GetSpringConst());
 	}
 
 	// redraw the window
@@ -1084,78 +1093,3 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 
 }	// CSpaceView::OnTimer
 
-
-///////////////////////////////////////////////////////////////////////////////
-// TODO: Remove these
-///////////////////////////////////////////////////////////////////////////////
-
-void CSpaceView::OnEditOptions() 
-{
-	// stop the timer for the options dialog
-	KillTimer(m_nTimerID);
-
-	// get a pointer to the layout manager
-	CSpaceLayoutManager *pLayoutManager = GetDocument()->GetLayoutManager();
-
-	// create an options dialog box
-	COptionsDlg dlgOptions;
-
-	// get the space layout manager, which contains all of the options
-	dlgOptions.m_k_pos = pLayoutManager->GetKPos();
-	dlgOptions.m_k_rep = pLayoutManager->GetKRep();
-	dlgOptions.m_nSuperNodeCount = pLayoutManager->GetStateDim() / 2;
-	dlgOptions.m_tolerance = pLayoutManager->GetTolerance();
-	dlgOptions.m_springConst = m_springConst;
-
-	if (dlgOptions.DoModal() == IDOK)	
-	{
-		pLayoutManager->SetKPos(dlgOptions.m_k_pos);
-		pLayoutManager->SetKRep(dlgOptions.m_k_rep);
-		pLayoutManager->SetStateDim(dlgOptions.m_nSuperNodeCount * 2);
-		pLayoutManager->SetTolerance(dlgOptions.m_tolerance);
-		m_springConst = dlgOptions.m_springConst;
-
-		// save the options to the registry
-		::AfxGetApp()->WriteProfileInt("LAYOUT", "K_POS", 
-			pLayoutManager->GetKPos());
-		::AfxGetApp()->WriteProfileInt("LAYOUT", "R_POS", 
-			pLayoutManager->GetKRep());
-		::AfxGetApp()->WriteProfileInt("LAYOUT", "STATE_DIM", 
-			pLayoutManager->GetStateDim());
-		::AfxGetApp()->WriteProfileInt("LAYOUT", "TOLERANCE", 
-			10.0 * pLayoutManager->GetTolerance());
-		::AfxGetApp()->WriteProfileInt("LAYOUT", "SPRING_CONST", 
-			100.0 * GetSpringConst());
-	}
-
-	// restart the timer
- 	m_nTimerID = SetTimer(TIMER_ID, TIMER_ELAPSED, NULL);
-	ASSERT(m_nTimerID != 0);
-}
-
-void CSpaceView::SetSpringConst(double springConst)
-{
-	m_springConst = springConst;
-}
-
-double CSpaceView::GetSpringConst()
-{
-	return m_springConst;
-}
-
-
-void CSpaceView::SetBkColor(COLORREF color)
-{
-	// store background color
-	m_colorBk = color;
-
-	// get the client rectangle, if available
-	CRect rect(0, 0, 0, 0);
-	if (m_hWnd)
-	{
-		GetClientRect(&rect);
-	}
-
-	// tell skin about background color
-	m_skin.SetClientArea(rect.Width(), rect.Height(), m_colorBk);
-}

@@ -66,6 +66,9 @@ public:
 	// set the tracker
 	void SetTracker(CTracker *pTracker);
 
+	// sets the background color for the space view
+	void SetBkColor(COLORREF color);
+
 // Operations
 public:
 	// activates a particular node by a particular scale factor
@@ -88,7 +91,6 @@ public:
 public:
 	// initializes the direct draw surfaces
 	BOOL InitDDraw();
-	LPGUID m_lpGuid;
 
 	// creates the node views for the children of the passed node
 	void CreateNodeViews(CNode *pParentNode, CPoint pt);
@@ -101,11 +103,6 @@ public:
 
 	// activates pending
 	void ActivatePending();
-
-	// TODO: move this to the space
-	// accessors for spring constant
-	double GetSpringConst();
-	void SetSpringConst(double springConst);
 
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -122,7 +119,6 @@ protected:
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnTimer(UINT nIDEvent);
-	afx_msg void OnEditOptions();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
@@ -130,21 +126,20 @@ private:
 	// the child node views
 	CObArray m_arrNodeViews;
 
-	// TODO: move this to the space
-	// spring constant for node views
-	double m_springConst;
-
-public:
-	void SetBkColor(COLORREF color);
-	COLORREF m_colorBk;
 	// the skin for the node views
 	CNodeViewSkin m_skin;
+
+	// the global UID for direct draw
+	LPGUID m_lpGuid;
 
 	// back buffer for drawing
 	LPDIRECTDRAW		m_lpDD;			// DirectDraw object
 	LPDIRECTDRAWSURFACE	m_lpDDSPrimary;	// DirectDraw primary surface
 	LPDIRECTDRAWSURFACE	m_lpDDSOne;		// Offscreen surface 1
 	LPDIRECTDRAWCLIPPER m_lpClipper;	// clipper for primary
+
+	// the background color
+	COLORREF m_colorBk;
 
 	// holds the timer ID
 	UINT m_nTimerID;
