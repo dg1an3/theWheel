@@ -65,6 +65,7 @@ public:
 
 	//virtual REAL testLong(const CVectorN<>& vInput, 
 	//	CVectorN<> *pGrad = NULL);
+	REAL GetDistError(CNode *pFrom, CNode *pTo);
 
 	// performs the layout
 	void LayoutNodes(CSpaceStateVector *pSSV, int nConstNodes);
