@@ -14,7 +14,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // CNodeView window
 
-class CNodeView : public CWnd, public CObserver
+class CNodeView : public CWnd // , public CObserver
 {
 // Construction
 public:

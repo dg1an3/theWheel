@@ -26,9 +26,9 @@ CNodeView::CNodeView(CNode *pNode)
 	m_bDragged(FALSE),
 	isWaveMode(FALSE)
 {
-	rectWindow.AddObserver(this);
-	privCenter.AddObserver(this);
-	privActivation.AddObserver(this);
+	rectWindow.AddObserver(this, (ChangeFunction) OnChange);
+	privCenter.AddObserver(this, (ChangeFunction) OnChange);
+	privActivation.AddObserver(this, (ChangeFunction) OnChange);
 }
 
 CNodeView::~CNodeView()
