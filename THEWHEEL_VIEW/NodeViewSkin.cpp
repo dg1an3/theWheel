@@ -41,6 +41,9 @@ const COLORREF COLORKEY = RGB(0, 255, 0);
 
 const REAL BORDER_RADIUS = 10.0;
 
+const int MIN_HEIGHT_ELLIPTANGLE = 15;
+const int MAX_HEIGHT_GDI = MIN_HEIGHT_ELLIPTANGLE + 40;
+
 /////////////////////////////////////////////////////////////////////////////
 // ComputeEllipticalness
 //
@@ -65,6 +68,16 @@ CVectorD<3> EvalElliptangle(double theta, double *p)
 
 }
 
+COLORREF BlendColors(COLORREF color1, COLORREF color2, REAL frac1)
+{
+	REAL red = (REAL) GetRValue(color1) * frac1 
+		+ (REAL) GetRValue(color2) * (1.0 - frac1);
+	REAL grn = (REAL) GetGValue(color1) * frac1 
+		+ (REAL) GetGValue(color2) * (1.0 - frac1);
+	REAL blu = (REAL) GetBValue(color1) * frac1 
+		+ (REAL) GetBValue(color2) * (1.0 - frac1);
+	return RGB(red, grn, blu);
+}
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -167,8 +180,8 @@ CRect& CNodeViewSkin::CalcOuterRect(CNodeView *pNodeView)
 		pNodeView->GetNode()->GetSize(pNodeView->GetSpringActivation());
 
 	// get the width and height for the node view
-	int nWidth = (int) (1.05 * vSize[0] * scale);
-	int nHeight = (int) (1.05 * vSize[1] * scale);
+	int nWidth = (int) (1.1 * vSize[0] * scale);
+	int nHeight = (int) (1.1 * vSize[1] * scale);
 
 	// set the width and height of the window, keeping the center constant
 	CRect& rectOuter = pNodeView->GetOuterRect();
@@ -459,7 +472,7 @@ void CNodeViewSkin::BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView)
 	// calculate the node-views shape rgn, for hit-testing
 	CalcShape(pNodeView, pNodeView->GetShape(), THICK_PEN_WIDTH);
 
-	if (rectOuter.Height() < 10)
+	if (rectOuter.Height() < 6)
 	{
 		return;
 	}
@@ -539,62 +552,64 @@ LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView,
 		// set the color key
 		ASSERT_HRESULT(DDSetColorKey(lpDDS, COLORKEY));
 
-#ifdef USE_GDI
-		// form a CDC for the surface
-		CDC dc;
-		GET_ATTACH_DC(lpDDS, dc);
+		// use GDI calls for small
+		if (rectSrc.Height() < MAX_HEIGHT_GDI)
+		{
+			// form a CDC for the surface
+			CDC dc;
+			GET_ATTACH_DC(lpDDS, dc);
 
-		// offset to the top of the rectangle
-		dc.OffsetWindowOrg(rectSrc.left, rectSrc.top);
+			// offset to the top of the rectangle
+			dc.OffsetWindowOrg(rectSrc.left, rectSrc.top);
 
-		// draw the skin
-		DrawSkinGDI(&dc, pNodeView);
+			// draw the skin
+			DrawSkinGDI(&dc, pNodeView);
 
-		// release and detach
-		RELEASE_DETACH_DC(lpDDS, dc);
+			// release and detach
+			RELEASE_DETACH_DC(lpDDS, dc);
+		}
+		else
+		{
+			// Direct3D rendering -- initialize the objects first
+			LPDIRECT3DDEVICE2 lpD3DDev = NULL;
+			ASSERT_BOOL(InitD3DDevice(lpDDS, &lpD3DDev));
 
-#else
-		// Direct3D rendering -- initialize the objects first
-		LPDIRECT3DDEVICE2 lpD3DDev = NULL;
-		ASSERT_BOOL(InitD3DDevice(lpDDS, &lpD3DDev));
+			LPDIRECT3DVIEWPORT2	lpViewport = NULL;
+			ASSERT_BOOL(InitViewport(lpD3DDev, rectSrc, &lpViewport));
 
-		LPDIRECT3DVIEWPORT2	lpViewport = NULL;
-		ASSERT_BOOL(InitViewport(lpD3DDev, rectSrc, &lpViewport));
+			// set up the zoom transform, accounting for rectangle
+			//		inflation
+			D3DMATRIX mat;
+			ZeroMemory(&mat, sizeof(D3DMATRIX));
+			mat(0, 0) = (D3DVALUE) 1.0 / (rectSrc.Width() + 10.0);
+			mat(1, 1) = (D3DVALUE) 1.0 / (rectSrc.Width() + 10.0);
+			mat(2, 2) = (D3DVALUE) 1.0; // 0.0025;
+			mat(3, 3) = (D3DVALUE) 1.0;
+			CHECK_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_VIEW, &mat));
 
-		// set up the zoom transform, accounting for rectangle
-		//		inflation
-		D3DMATRIX mat;
-		ZeroMemory(&mat, sizeof(D3DMATRIX));
-		mat(0, 0) = (D3DVALUE) 1.0 / (rectSrc.Width() + 10.0);
-		mat(1, 1) = (D3DVALUE) 1.0 / (rectSrc.Width() + 10.0);
-		mat(2, 2) = (D3DVALUE) 1.0; // 0.0025;
-		mat(3, 3) = (D3DVALUE) 1.0;
-		CHECK_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_VIEW, &mat));
+			LPDIRECT3DLIGHT lpLights[2];
+			ASSERT_BOOL(InitLights(lpViewport, lpLights));
 
-		LPDIRECT3DLIGHT lpLights[2];
-		ASSERT_BOOL(InitLights(lpViewport, lpLights));
+			// create the material and attach to the device's state
+			LPDIRECT3DMATERIAL2	lpMaterial = NULL;
+			ASSERT_BOOL(InitMaterial(&lpMaterial));
 
-		// create the material and attach to the device's state
-		LPDIRECT3DMATERIAL2	lpMaterial = NULL;
-		ASSERT_BOOL(InitMaterial(&lpMaterial));
+			D3DTEXTUREHANDLE hMat;
+			ASSERT_HRESULT(lpMaterial->GetHandle(lpD3DDev, &hMat));
+			ASSERT_HRESULT(lpD3DDev->SetLightState(D3DLIGHTSTATE_MATERIAL, hMat));
 
-		D3DTEXTUREHANDLE hMat;
-		ASSERT_HRESULT(lpMaterial->GetHandle(lpD3DDev, &hMat));
-		ASSERT_HRESULT(lpD3DDev->SetLightState(D3DLIGHTSTATE_MATERIAL, hMat));
+			// render the skin
+			ASSERT_HRESULT(lpD3DDev->BeginScene());
+			DrawSkinD3D(lpD3DDev, pNodeView);
+			ASSERT_HRESULT(lpD3DDev->EndScene());
 
-		// render the skin
-		ASSERT_HRESULT(lpD3DDev->BeginScene());
-		DrawSkinD3D(lpD3DDev, pNodeView);
-		ASSERT_HRESULT(lpD3DDev->EndScene());
-
-		// release the interface
-		ASSERT_HRESULT(lpMaterial->Release());
-		ASSERT_HRESULT(lpLights[0]->Release());
-		ASSERT_HRESULT(lpLights[1]->Release());
-		ASSERT_HRESULT(lpViewport->Release());
-		ASSERT_HRESULT(lpD3DDev->Release());
-
-#endif
+			// release the interface
+			ASSERT_HRESULT(lpMaterial->Release());
+			ASSERT_HRESULT(lpLights[0]->Release());
+			ASSERT_HRESULT(lpLights[1]->Release());
+			ASSERT_HRESULT(lpViewport->Release());
+			ASSERT_HRESULT(lpD3DDev->Release());
+		}
 
 		// store the newly-formed DDS
 		m_arrlpSkinDDS.SetAt(nWidth, lpDDS);
@@ -631,7 +646,8 @@ LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView,
 //		computed
 //////////////////////////////////////////////////////////////////////
 void CNodeViewSkin::DrawSkinGDI(CDC *pDC, CNodeView *pNodeView)
-{	// calculate the rectangles
+{	
+	// calculate the rectangles
 	const CRect& rectOuter = pNodeView->GetOuterRect();
 	const CRect& rectInner = pNodeView->GetInnerRect();
 
@@ -644,54 +660,71 @@ void CNodeViewSkin::DrawSkinGDI(CDC *pDC, CNodeView *pNodeView)
 	CBrush *pOldBrush = NULL;
 
 	// select attributes for background
-	CBrush backBrush(BACKGROUND_COLOR);
-	pOldBrush = pDC->SelectObject(&backBrush);
-	pOldPen = (CPen *)pDC->SelectStockObject(NULL_PEN);
+	// if height > MIN_HEIGHT_ELLIPTANGLE, draw true elliptangle
+	if (rectOuter.Height() > MIN_HEIGHT_ELLIPTANGLE)
+	{
+		CBrush backBrush(BACKGROUND_COLOR);
+		pOldBrush = pDC->SelectObject(&backBrush);
+		pOldPen = (CPen *)pDC->SelectStockObject(NULL_PEN);
 
-	// now draw the background
-	pDC->FillSolidRect(rectInner, BACKGROUND_COLOR);
-	pDC->Chord(&rectLeftRightEllipse, rectInner.TopLeft(), 
-		CPoint(rectInner.left, rectInner.bottom));
-	pDC->Chord(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
-		rectInner.TopLeft());
-	pDC->Chord(&rectLeftRightEllipse, rectInner.BottomRight(), 
-		CPoint(rectInner.right, rectInner.top));
-	pDC->Chord(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
-		rectInner.BottomRight());
+		// now draw the background
+		pDC->FillSolidRect(rectInner, BACKGROUND_COLOR);
+		pDC->Chord(&rectLeftRightEllipse, rectInner.TopLeft(), 
+			CPoint(rectInner.left, rectInner.bottom));
+		pDC->Chord(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
+			rectInner.TopLeft());
+		pDC->Chord(&rectLeftRightEllipse, rectInner.BottomRight(), 
+			CPoint(rectInner.right, rectInner.top));
+		pDC->Chord(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
+			rectInner.BottomRight());
 
-	// draw the upper-left half of the outline
-	CPen penUpperLeftThick(PS_SOLID, THICK_PEN_WIDTH, UPPER_DARK_COLOR);
-	pDC->SelectObject(&penUpperLeftThick);
-	pDC->Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
-		CPoint(rectInner.left, rectInner.bottom));
-	pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
-		rectInner.TopLeft());
+		// draw the upper-left half of the outline
+		CPen penUpperLeftThick(PS_SOLID, THICK_PEN_WIDTH, UPPER_DARK_COLOR);
+		pDC->SelectObject(&penUpperLeftThick);
+		pDC->Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
+			CPoint(rectInner.left, rectInner.bottom));
+		pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
+			rectInner.TopLeft());
 
-	CPen penUpperLeftThin(PS_SOLID, THIN_PEN_WIDTH, UPPER_LIGHT_COLOR);
-	pDC->SelectObject(&penUpperLeftThin);
-	pDC->Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
-		CPoint(rectInner.left, rectInner.bottom));
-	pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
-		rectInner.TopLeft());
+		CPen penUpperLeftThin(PS_SOLID, THIN_PEN_WIDTH, UPPER_LIGHT_COLOR);
+		pDC->SelectObject(&penUpperLeftThin);
+		pDC->Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
+			CPoint(rectInner.left, rectInner.bottom));
+		pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
+			rectInner.TopLeft());
 
-	// draw the lower-right half of the outline
-	CPen penLowerRightThick(PS_SOLID, THICK_PEN_WIDTH, LOWER_LIGHT_COLOR);
-	pDC->SelectObject(&penLowerRightThick);
-	pDC->Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
-		CPoint(rectInner.right, rectInner.top));
-	pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
-		rectInner.BottomRight());
+		// draw the lower-right half of the outline
+		CPen penLowerRightThick(PS_SOLID, THICK_PEN_WIDTH, LOWER_LIGHT_COLOR);
+		pDC->SelectObject(&penLowerRightThick);
+		pDC->Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
+			CPoint(rectInner.right, rectInner.top));
+		pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
+			rectInner.BottomRight());
 
-	CPen penLowerRightThin(PS_SOLID, THIN_PEN_WIDTH, LOWER_DARK_COLOR);
-	pDC->SelectObject(&penLowerRightThin);
-	pDC->Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
-		CPoint(rectInner.right, rectInner.top));
-	pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
-		rectInner.BottomRight());
+		CPen penLowerRightThin(PS_SOLID, THIN_PEN_WIDTH, LOWER_DARK_COLOR);
+		pDC->SelectObject(&penLowerRightThin);
+		pDC->Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
+			CPoint(rectInner.right, rectInner.top));
+		pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
+			rectInner.BottomRight());
+	}
+	else
+	{
+		// fraction of ellipse color
+		REAL fracEllipseColor = (REAL) rectOuter.Height() 
+			/ (REAL) MIN_HEIGHT_ELLIPTANGLE;
 
-	// restore the old pen 
-	pDC->SelectObject(pOldPen);
-	pDC->SelectObject(pOldBrush);
+		// form the brush and pen
+		CBrush backBrush(BlendColors(BACKGROUND_COLOR, m_colorBk, fracEllipseColor));
+		pOldBrush = pDC->SelectObject(&backBrush);
+		pOldPen = (CPen *)pDC->SelectStockObject(NULL_PEN);
+
+		pDC->Ellipse(rectOuter);
+
+		// restore the old pen 
+		pDC->SelectObject(pOldPen);
+		pDC->SelectObject(pOldBrush);
+	}
 
 }	// CNodeViewSkin::DrawSkinGDI
 

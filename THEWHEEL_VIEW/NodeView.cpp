@@ -29,7 +29,18 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
+
+//////////////////////////////////////////////////////////////////////
+// constants
+//////////////////////////////////////////////////////////////////////
+
 const COLORREF DEFAULT_TITLE = RGB(149, 205, 208);
+
+const REAL MAX_SPRING_CONST = 0.99;
+const REAL MIN_POST_SUPER = 0.0014;
+const REAL VIEW_SCALE = 500.0;
+
+const REAL MIN_WEIGHT_TO_DRAW_LINK = 0.1;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -42,7 +53,6 @@ const COLORREF DEFAULT_TITLE = RGB(149, 205, 208);
 //////////////////////////////////////////////////////////////////////
 CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 : m_pNode(pNode),
-	// m_pSkin(NULL),
 	m_springActivation(pNode->GetActivation()),
 	m_ptMouseDown(-1, -1),
 	m_bDragging(FALSE),
@@ -58,9 +68,9 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 	pParent->GetClientRect(&rectParent);
 
 	m_vSpringCenter = GetNode()->GetPosition();
-		// CVector<3>(rectParent.Width() / 2, 
-		// rectParent.Height() / 2);
-}
+
+}	// CNodeView::CNodeView
+
 
 //////////////////////////////////////////////////////////////////////
 // CNodeView::~CNodeView
@@ -69,7 +79,7 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 //////////////////////////////////////////////////////////////////////
 CNodeView::~CNodeView()
 {
-}
+}	// CNodeView::~CNodeView
 
 
 //////////////////////////////////////////////////////////////////////
@@ -80,7 +90,9 @@ CNodeView::~CNodeView()
 CNode *CNodeView::GetNode()
 {
 	return m_pNode;
-}
+
+}	// CNodeView::GetNode
+
 
 //////////////////////////////////////////////////////////////////////
 // CNodeView::GetSpringCenter
@@ -90,7 +102,34 @@ CNode *CNodeView::GetNode()
 CVectorD<3> CNodeView::GetSpringCenter()
 {
 	return m_vSpringCenter;
-}
+
+}	// CNodeView::GetSpringCenter
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::GetScaledNodeCenter
+// 
+// computes the center in the CSpaceView's coordinates, given
+//		the CNode's position
+//////////////////////////////////////////////////////////////////////
+CVectorD<3> CNodeView::GetScaledNodeCenter()
+{
+	// compute the scale
+	CRect rectParent;
+	m_pParent->GetClientRect(&rectParent);
+	REAL scale = (REAL) sqrt(rectParent.Width() * rectParent.Height()) 
+			/ VIEW_SCALE;
+
+	// compute the center
+	CVectorD<3> vCenter(
+		(REAL) rectParent.Width() / 2, 
+		(REAL) rectParent.Height() / 2, 0.0);
+
+	// compute the scaled position
+	return scale * (GetNode()->GetPosition() - vCenter) + vCenter;
+
+}	// CNodeView::GetScaledNodeCenter
+
 
 //////////////////////////////////////////////////////////////////////
 // CNodeView::GetThresholdedActivation
@@ -126,8 +165,10 @@ REAL CNodeView::GetThresholdedActivation()
 	}
 
 	// otherwise, the thresholded activation is 0.0
-	return 0.0f;
-}
+	return 0.0;
+
+}	// CNodeView::GetThresholdedActivation
+
 
 //////////////////////////////////////////////////////////////////////
 // CNodeView::GetSpringActivation
@@ -140,7 +181,8 @@ REAL CNodeView::GetSpringActivation()
 	REAL factor = 0.8 + 0.5 * (1.0 / (0.5 * dist * dist + 1.0));
 
 	return factor * m_springActivation; 
-}
+
+}	// CNodeView::GetSpringActivation
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -151,7 +193,9 @@ REAL CNodeView::GetSpringActivation()
 CRect& CNodeView::GetOuterRect()
 {
 	return m_rectOuter;
-}
+
+}	// CNodeView::GetOuterRect
+
 
 /////////////////////////////////////////////////////////////////////////////
 // CNodeView::GetInnerRect
@@ -161,7 +205,9 @@ CRect& CNodeView::GetOuterRect()
 CRect& CNodeView::GetInnerRect()
 {
 	return m_rectInner;
-}
+
+}	// CNodeView::GetInnerRect
+
 
 //////////////////////////////////////////////////////////////////////
 // CNodeView::GetShape
@@ -171,7 +217,9 @@ CRect& CNodeView::GetInnerRect()
 CRgn& CNodeView::GetShape()
 {
 	return m_shape;
-}
+
+}	// CNodeView::GetShape
+
 
 //////////////////////////////////////////////////////////////////////
 // CNodeView::UpdateSprings
@@ -179,42 +227,98 @@ CRgn& CNodeView::GetShape()
 // updates the spring-dynamic variables -- should be called on a 
 //		regular basis
 //////////////////////////////////////////////////////////////////////
-void CNodeView::UpdateSprings(REAL springConst)
+void CNodeView::UpdateSpringPosition(REAL springConst)
 {
-	// update spring activation
- 	m_springActivation 
-		= GetThresholdedActivation() * (1.0f - springConst * 0.90)
-			+ m_springActivation * springConst * 0.90;
-
-	// compute the scale
-	CRect rectParent;
-	m_pParent->GetClientRect(&rectParent);
-	REAL scale 
-		= (REAL) sqrt(rectParent.Width() * rectParent.Height()) 
-			/ 250.0f;
-
-	// compute the center
-	CVectorD<3> vCenter(
-		(REAL) rectParent.Width() / 2, 
-		(REAL) rectParent.Height() / 2,
-		0.0f);
-
 	// compute the scaled position
-	CVectorD<3> vScaledPos 
-		= scale * (GetNode()->GetPosition() - vCenter) + vCenter;
-
-	// compute a new spring constant
-	REAL factor = exp(GetThresholdedActivation() - GetSpringActivation())
-		/ (exp(GetThresholdedActivation() - GetSpringActivation()) + 0.01);
-	springConst = springConst * (0.2 + 0.8 * factor);
+	CVectorD<3> vScaledPos = GetScaledNodeCenter();
 
 	// update the center spring
 	m_vSpringCenter = vScaledPos 
-		* (1.0f - springConst) + m_vSpringCenter * (springConst);
+		* (1.0 - springConst) + m_vSpringCenter * (springConst);
 
 	// and invalidate the parent window
 	m_pParent->Invalidate(FALSE);
-}
+
+}	// CNodeView::UpdateSprings
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::UpdateSpringActivation
+// 
+// updates the spring-dynamic variables -- should be called on a 
+//		regular basis
+//////////////////////////////////////////////////////////////////////
+void CNodeView::UpdateSpringActivation(REAL springConst)
+{
+	// see if the activation is below threshold
+	// compute the threshold
+	int nSuperNodeCount = 
+		m_pParent->GetDocument()->GetSuperNodeCount();
+	
+	if (nSuperNodeCount > 0)
+	{
+		CNode *pLastSuperNode = 
+			m_pParent->GetDocument()->GetNodeAt(nSuperNodeCount-1);
+		REAL activationThreshold = pLastSuperNode->GetActivation();
+
+		// linearly scale the spring constant if we are below
+		//		the activation threshold
+		if (m_springActivation < activationThreshold
+			&& GetNode()->IsSubThreshold())
+		{
+			springConst += (MAX_SPRING_CONST - springConst) 
+				* (1.0 - m_springActivation / activationThreshold);
+
+			// set the post-super flag
+			GetNode()->SetPostSuper(m_springActivation > MIN_POST_SUPER);
+		}
+	}
+
+	// update spring activation
+ 	m_springActivation = GetThresholdedActivation() * (1.0 - springConst)
+			+ m_springActivation * springConst;
+
+	// and invalidate the parent window
+	m_pParent->Invalidate(FALSE);
+
+}	// CNodeView::UpdateSpringActivation
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::AddPendingActivation
+// 
+// draws the band upon which the title is displayed
+//////////////////////////////////////////////////////////////////////
+void CNodeView::AddPendingActivation(double pending)
+{
+	m_pendingActivation += pending;
+
+}	// CNodeView::AddPendingActivation
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::GetPendingActivation
+// 
+// draws the band upon which the title is displayed
+//////////////////////////////////////////////////////////////////////
+REAL CNodeView::GetPendingActivation()
+{
+	return m_pendingActivation;
+
+}	// CNodeView::GetPendingActivation
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::ResetPendingActivation
+// 
+// draws the band upon which the title is displayed
+//////////////////////////////////////////////////////////////////////
+void CNodeView::ResetPendingActivation()
+{
+	m_pendingActivation = (REAL) 0.0;
+
+}	// CNodeView::ResetPendingActivation
+
 
 //////////////////////////////////////////////////////////////////////
 // CNodeView::Draw
@@ -255,7 +359,9 @@ void CNodeView::Draw(CDC *pDC)
 			DrawText(pDC, rectInner);
 		}
 	}
-}
+
+}	// CNodeView::Draw
+
 
 //////////////////////////////////////////////////////////////////////
 // CNodeView::DrawLinks
@@ -267,7 +373,8 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 	pDC->SetBkMode(TRANSPARENT);
 
 	// draw the links only if the activation is above 0.0
-	if (GetThresholdedActivation() > 0.0)
+	if (!GetNode()->IsSubThreshold()
+		&& GetNode()->GetActivation() > MIN_POST_SUPER)
 	{
 		// for each link
 		for (int nAtLink = 0; nAtLink < GetNode()->GetLinkCount(); nAtLink++)
@@ -277,9 +384,11 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 
 			// only draw the link to node view's with activations greater than the current
 			if (!pLink->IsStabilizer()
-				&& pLink->GetWeight() > 0.1
+				&& pLink->GetWeight() > MIN_WEIGHT_TO_DRAW_LINK
 				&& pLinkedView != NULL
-				&& pLinkedView->GetSpringActivation() > GetSpringActivation())
+				&& pLinkedView->GetSpringActivation() > GetSpringActivation()
+				&& !pLinkedView->GetNode()->IsSubThreshold()
+				&& pLinkedView->GetNode()->GetActivation() > MIN_POST_SUPER)
 			{
 				// draw the link
 				CVectorD<3> vFrom = GetSpringCenter();
@@ -287,15 +396,25 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 				
 				pSkin->DrawLink(pDC, vFrom, GetSpringActivation(), 
 					vTo, pLinkedView->GetSpringActivation());
+
+				if (FALSE)
+				{
+					CVectorD<3> vMid = 0.5 * (vFrom + vTo);
+					CString strGain;
+					strGain.Format("%0.2lf", pLink->m_gain);
+					pDC->TextOut(vMid[0], vMid[1], strGain);
+				}
 			}
 		}
 	}
-}
+
+}	// CNodeView::DrawLinks
+
 
 //////////////////////////////////////////////////////////////////////
-// CNodeView::DrawText
+// CNodeView::DrawTitle
 // 
-// draws the node's text in the given rectangle
+// draws the node's title in the given rectangle
 //////////////////////////////////////////////////////////////////////
 void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 {
@@ -323,7 +442,12 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 	CRect rectText(rectInner);
 	rectText = rectInner;
 	rectText.right += 500;
-	int nHeight = pDC->DrawText(GetNode()->GetName(), rectText, 
+
+	CString strName = GetNode()->GetName();
+	if (GetNode()->GetOptimalStateVector() != NULL)
+		strName += "*";
+
+	int nHeight = pDC->DrawText(strName, rectText, 
 		DT_CALCRECT | DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	for (int nAt = 0; nAt < 4 && rectText.bottom > GetInnerRect().bottom; nAt++)
@@ -331,15 +455,13 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 		rectText.bottom = rectText.top +
 			(rectText.Height() / nDesiredHeight - 1) * nDesiredHeight;
 	}
-	// CRect rectText(rectInner);
-	pDC->DrawText(GetNode()->GetName(), rectText, 
+	pDC->DrawText(strName, rectText, 
 		DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	// now draw the description body
 	if (GetSpringActivation() >= 0.01)
 	{
 		rectText = rectInner;
-		// rectText.DeflateRect(5, 5, 5, 5);
 		rectText.top += nHeight + 5;
 	}
 	else
@@ -351,7 +473,9 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 
 	pDC->SelectObject(pOldFont);
 	font.DeleteObject();
-}
+
+}	// CNodeView::DrawText
+
 
 //////////////////////////////////////////////////////////////////////
 // CNodeView::DrawText
@@ -397,7 +521,9 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 		pDC->SelectObject(pOldFont);
 		smallFont.DeleteObject();
 	}
-}
+
+}	// CNodeView::DrawText
+
 
 //////////////////////////////////////////////////////////////////////
 // CNodeView::DrawImage
@@ -407,21 +533,39 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 //////////////////////////////////////////////////////////////////////
 void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
 {
-	if (GetNode()->GetDib() != NULL)
+	if (GetNode()->GetDib() != NULL 
+		|| GetNode()->GetIcon() != NULL)
 	{
+		CSize sizeImage;
+		if (GetNode()->GetDib())
+			sizeImage = GetNode()->GetDib()->GetSize();
+		else 
+		{
+			sizeImage = CSize(48, 48);
+		}
+
 		if (!m_bBackgroundImage)
 		{
 			CRect rectImage = rectInner;
 			int nActualWidth;
 	
-			CSize sizeImage = GetNode()->GetDib()->GetSize();
 			nActualWidth = sizeImage.cx * rectImage.Height() / sizeImage.cy;
 			rectImage.right = rectImage.left + nActualWidth;
 
 			if (rectImage.Height() > 10 || rectImage.Width() > 10)
 			{
 				rectImage.InflateRect(2, 2, 2, 2);
-				GetNode()->GetDib()->Draw(*pDC, &rectImage);
+				if (GetNode()->GetDib())
+				{
+					GetNode()->GetDib()->Draw(*pDC, &rectImage);
+				}
+				else
+				{
+					::DrawIconEx(*pDC, rectImage.left, rectImage.top,
+							GetNode()->GetIcon(), 
+							rectImage.Width(), rectImage.Height(), 
+							0, NULL, DI_NORMAL);
+				}
 
 				// adjust the rectangle to account for the bitmap
 				rectInner.left += nActualWidth + 10;
@@ -430,7 +574,6 @@ void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
 		else
 		{
 			CRect rectImage(GetOuterRect());
-			CSize sizeImage = GetNode()->GetDib()->GetSize();
 
 			BOOL m_bPreserveWidth = FALSE;
 			if (m_bPreserveWidth)
@@ -451,14 +594,31 @@ void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
 			// clip to the node view
 			pDC->SelectClipRgn(&GetShape());
 
-			GetNode()->GetDib()->Draw(*pDC, &rectImage);
+			if (GetNode()->GetDib())
+			{
+				GetNode()->GetDib()->Draw(*pDC, &rectImage);
+			}
+			else
+			{
+				::DrawIconEx(*pDC, rectImage.left, rectImage.top,
+						GetNode()->GetIcon(), 
+						rectImage.Width(), rectImage.Height(), 
+						0, NULL, DI_NORMAL);
+			}
 
 			// unselect clipping to node view
 			pDC->SelectClipRgn(NULL);
 		}
 	}
-}
 
+}	// CNodeView::DrawImage
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::DrawTitleBand
+// 
+// draws the band upon which the title is displayed
+//////////////////////////////////////////////////////////////////////
 void CNodeView::DrawTitleBand(CDC *pDC, CRect& rectInner)
 {
 	int nDesiredHeight = __min(rectInner.Height() / 4, 30);
@@ -519,19 +679,7 @@ void CNodeView::DrawTitleBand(CDC *pDC, CRect& rectInner)
 
 	pDC->SelectObject(pOldFont);
 	font.DeleteObject();
-}
 
-void CNodeView::AddPendingActivation(double pending)
-{
-	m_pendingActivation += pending;
-}
+}	// CNodeView::DrawTitleBand
 
-REAL CNodeView::GetPendingActivation()
-{
-	return m_pendingActivation;
-}
 
-void CNodeView::ResetPendingActivation()
-{
-	m_pendingActivation = (REAL) 0.0;
-}
