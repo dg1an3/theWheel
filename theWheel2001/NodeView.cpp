@@ -301,7 +301,7 @@ void CNodeView::OnPaint()
 	CFont *pOldFont = dcMem.SelectObject(&font);
 
 	CRect rectText(rectInner);
-	rectText.DeflateRect(5, 5, 5, 5);
+	rectText.DeflateRect(5, 5, 5, -5);
 	dcMem.DrawText(forNode->name.Get(), rectText, 
 		DT_CENTER | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
