@@ -256,7 +256,7 @@ void CSpaceView::PropagateActivation(CNodeView *pSource, float percent, float fa
 			{
 				// determine the weight linking this
 				CNodeLink *pLink = pSource->forNode->GetLink(pDest->forNode.Get());
-				if ((pLink != NULL) && (!pLink->m_bPropagated) 
+				if ((pLink != NULL) && (!pLink->hasPropagated.Get()) 
 						&& (pLink->weight.Get() > maxWeight))
 				{
 					// maxWeight = pSource->forNode->GetLinkWeightBoltz(pDest->forNode.Get(), 
@@ -271,7 +271,7 @@ void CSpaceView::PropagateActivation(CNodeView *pSource, float percent, float fa
 
 		if (pMaxDest != NULL)
 		{
-			pMaxLink->m_bPropagated = TRUE;
+			pMaxLink->hasPropagated.Set(TRUE);
 
 			// compute the new activation
 			float oldActivation = pMaxDest->activation.Get();
@@ -295,7 +295,7 @@ void CSpaceView::ResetForPropagation()
 		for (int nAt = 0; nAt < pView->forNode->links.GetSize(); nAt++)
 		{
 			CNodeLink *pLink = pView->forNode->links.Get(nAt);
-			pLink->m_bPropagated = FALSE;
+			pLink->hasPropagated.Set(FALSE);
 		}
 	}
 }
@@ -695,7 +695,7 @@ void CSpaceView::LearnForNode(CNodeView *pNodeView)
 				pLink->weight.Set(pLink->weight.Get() + dWeight);
 
 				// normalize the links
-				pOtherNodeView->forNode->NormalizeLinks();
+				// pOtherNodeView->forNode->NormalizeLinks();
 			}
 		}
 	}
