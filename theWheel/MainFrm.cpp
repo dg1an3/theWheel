@@ -202,8 +202,5 @@ void CMainFrame::SetRuntime(BOOL bRuntime)
 
 		// install the tracker on the space view
 		pSpaceView->SetTracker(pTracker);
-
-		// set up the pointer to the tree view, for selection behavior
-		pTracker->SetSpaceTreeView(pSpaceTreeView);
 	}
 }
