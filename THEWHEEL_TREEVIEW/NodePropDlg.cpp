@@ -21,7 +21,8 @@ static char THIS_FILE[] = __FILE__;
 
 
 CNodePropDlg::CNodePropDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CNodePropDlg::IDD, pParent)
+	: CDialog(CNodePropDlg::IDD, pParent),
+		m_pCurNode(NULL)
 {
 	//{{AFX_DATA_INIT(CNodePropDlg)
 	m_strName = _T("");
@@ -33,13 +34,6 @@ void CNodePropDlg::SetCurNode(CNode *pNode)
 {
 	m_pCurNode = pNode;
 
-	if (pNode != NULL)
-	{
-		// set the member variables
-		m_strName = pNode->GetName();
-		m_strDesc = pNode->GetDescription();
-	}
-
 	// load the fields
 	UpdateData(FALSE);
 }
@@ -47,10 +41,25 @@ void CNodePropDlg::SetCurNode(CNode *pNode)
 void CNodePropDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
+
+	if (!pDX->m_bSaveAndValidate && m_pCurNode != NULL)
+	{
+		// set the member variables
+		m_strName = m_pCurNode->GetName();
+		m_strDesc = m_pCurNode->GetDescription();
+	}
+
 	//{{AFX_DATA_MAP(CNodePropDlg)
 	DDX_Text(pDX, IDC_EDITNAME, m_strName);
 	DDX_Text(pDX, IDC_EDITDESC, m_strDesc);
 	//}}AFX_DATA_MAP
+
+	if (pDX->m_bSaveAndValidate && m_pCurNode != NULL)
+	{
+		// set the member variables
+		m_pCurNode->SetName(m_strName);
+		m_pCurNode->SetDescription(m_strDesc);
+	}
 }
 
 
@@ -101,10 +110,10 @@ void CNodePropDlg::OnChangeEditname()
 	
 	UpdateData(TRUE);
 	
-	m_pCurNode->SetName(m_strName);
-	if (m_pCurNode->GetSpace() != NULL)
+	// m_pCurNode->SetName(m_strName);
+	// if (m_pCurNode->GetSpace() != NULL)
 	{
-		m_pCurNode->GetSpace()->UpdateAllViews(NULL, 0L, m_pCurNode);
+	//	m_pCurNode->GetSpace()->UpdateAllViews(NULL, 0L, m_pCurNode);
 	}
 }
 
@@ -117,5 +126,5 @@ void CNodePropDlg::OnChangeEditdesc()
 	
 	UpdateData(TRUE);
 	
-	m_pCurNode->SetDescription(m_strDesc);
+	// m_pCurNode->SetDescription(m_strDesc);
 }
