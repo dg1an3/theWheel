@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "Release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /Ob2 /I "..\OptimizeN" /I "..\VecMat" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /Yu"stdafx.h" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /Ob2 /I "include" /I "..\OptimizeN\include" /I "..\VecMat" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /Yu"stdafx.h" /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
 # ADD RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
@@ -64,7 +64,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "Debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\OptimizeN" /I "..\VecMat" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /FR /Yu"stdafx.h" /FD /GZ /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "include" /I "..\OptimizeN\include" /I "..\VecMat" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /FR /Yu"stdafx.h" /FD /GZ /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
 # ADD RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
@@ -127,31 +127,31 @@ SOURCE=.\WAVE.C
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=.\Dib.h
+SOURCE=.\include\Dib.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\HTMLNode.h
+SOURCE=.\include\HTMLNode.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\Node.h
+SOURCE=.\include\Node.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\NodeCluster.h
+SOURCE=.\include\NodeCluster.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\NodeLink.h
+SOURCE=.\include\NodeLink.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\Space.h
+SOURCE=.\include\Space.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\SpaceLayoutManager.h
+SOURCE=.\include\SpaceLayoutManager.h
 # End Source File
 # Begin Source File
 
@@ -159,7 +159,7 @@ SOURCE=.\StdAfx.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\WAVE.H
+SOURCE=.\include\WAVE.H
 # End Source File
 # End Group
 # Begin Source File
