@@ -20,9 +20,6 @@
 // the node view for tracking links
 #include "NodeView.h"
 
-// the tree view for selection behavior
-#include "SpaceTreeView.h"
-
 //////////////////////////////////////////////////////////////////////
 // class CDesigntimeTracker
 //
@@ -34,9 +31,6 @@ public:
 	// constructor/destructor
 	CDesigntimeTracker(CSpaceView *pView);
 	virtual ~CDesigntimeTracker();
-
-	// sets the associated tree view
-	void SetSpaceTreeView(CSpaceTreeView *pTreeView);
 
 	// handlers for button click events
 	virtual void OnButtonDown(UINT nFlags, CPoint point);	
@@ -58,9 +52,6 @@ protected:
 
 	// cut start point
 	CPoint m_ptStart;
-
-	// the associated tree view
-	CSpaceTreeView * m_pTreeView;
 };
 
 #endif // !defined(DesigntimeTracker_H)
