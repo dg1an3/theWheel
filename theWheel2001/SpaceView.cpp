@@ -388,8 +388,8 @@ void CSpaceView::OnDraw(CDC* pDC)
 	bitmapBuffer.CreateBitmap(rectClient.Width(), rectClient.Height(), 1, 32, NULL); 
 	dcMem.SelectObject(&bitmapBuffer);
 
-	CBrush brush;
-	brush.CreateSolidBrush(RGB(192, 192, 192));
+	CBrush brush(RGB(192, 192, 192));
+	// brush.CreateSolidBrush();
 	dcMem.FillRect(&rectClient, &brush);
 
 	// create new node views
@@ -397,6 +397,10 @@ void CSpaceView::OnDraw(CDC* pDC)
 	for (nAtNodeView = nodeViews.GetSize()-1; nAtNodeView >= 0; nAtNodeView--)
 	{
 		CNodeView *pNodeView = (CNodeView *)nodeViews.Get(nAtNodeView);
+
+		CBrush greyBrush(RGB(160, 160, 160));
+		CBrush *pOldBrush = dcMem.SelectObject(&greyBrush);
+		CPen *pOldPen = (CPen *)dcMem.SelectStockObject(NULL_PEN);
 
 		if (pNodeView->GetThresholdedActivation() > 0.0)
 		{
@@ -407,11 +411,32 @@ void CSpaceView::OnDraw(CDC* pDC)
 				if (pLinkedView->GetThresholdedActivation() > 0.0)
 				{
 					// draw the link
-					dcMem.MoveTo(pNodeView->GetSpringCenter());
-					dcMem.LineTo(pLinkedView->GetSpringCenter());
+					CVector<2> vFrom = pNodeView->GetSpringCenter();
+					CVector<2> vTo = pLinkedView->GetSpringCenter();
+
+					CVector<2> vOffset = vTo - vFrom;
+					CVector<2> vNormal(vOffset[1], -vOffset[0]);
+					vNormal.Normalize();
+					vNormal *= 5.0;
+
+					vOffset *= 0.5;
+
+					CPoint ptPoly[6];
+					ptPoly[0] = vFrom + 4.0 * vNormal;
+					ptPoly[1] = vFrom + vOffset + vNormal;
+					ptPoly[2] = vTo + 4.0 * vNormal;
+					ptPoly[3] = vTo - 4.0 * vNormal;
+					ptPoly[4] = vFrom + vOffset - vNormal;
+					ptPoly[5] = vFrom - 4.0 * vNormal;
+
+					dcMem.Polygon(ptPoly, 6);
 				}
 			}
 		}
+
+		dcMem.SelectObject(pOldPen);
+		dcMem.SelectObject(pOldBrush);
+		greyBrush.DeleteObject();
 	} 
 
 	// create new node views
