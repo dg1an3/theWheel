@@ -37,10 +37,13 @@ const REAL SIZE_SCALE = 100.0;
 // constants for the distance scale vs. activation curve
 const REAL DIST_SCALE_MIN = 1.0;
 const REAL DIST_SCALE_MAX = 1.5;
-const REAL ACTIVATION_MIDPOINT = 0.15;
+const REAL ACTIVATION_MIDPOINT = 0.25;
 
 // constant for weighting the position energy
 const REAL K_POS = 600.0;
+
+// constant for weighting the repulsion energy
+const REAL K_REP = 2000.0;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -395,16 +398,16 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 					// compute the energy term
 					REAL inv_sq = 1.0 / (x_ratio + y_ratio + 0.1f);
+					REAL factor = K_REP 
+						* m_act[nAtNodeView] * m_act[nAtNodeView];
 
 					// add to total energy
-					m_energy += 200.0f * m_act[nAtNodeView] * inv_sq;
+					m_energy += factor * inv_sq;
 
 					// compute gradient terms
 					REAL inv_sq_sq = inv_sq * inv_sq;
-					REAL dRepulsion_dx = -2.0 
-						* 200.0f * m_act[nAtNodeView] * dx_ratio * inv_sq_sq;
-					REAL dRepulsion_dy = -2.0 
-						* 200.0f * m_act[nAtNodeView] * dy_ratio * inv_sq_sq;
+					REAL dRepulsion_dx = -2.0 * factor * dx_ratio * inv_sq_sq;
+					REAL dRepulsion_dy = -2.0 * factor * dy_ratio * inv_sq_sq;
 
 					// add to the gradient vectors
 					m_vGrad[nAtNodeView*2   + 0] += dRepulsion_dx;
@@ -572,8 +575,8 @@ CLeastSquaresFit2D::CLeastSquaresFit2D(
 // 
 // evaluates the objective function
 //////////////////////////////////////////////////////////////////////
-virtual REAL CLeastSquaresFit2D::operator()(const CVectorN<>& vInput, 
-	CVectorN<> *pGrad = NULL)
+REAL CLeastSquaresFit2D::operator()(const CVectorN<>& vInput, 
+									CVectorN<> *pGrad)
 {
 	// check for valid input
 	ASSERT(!_isnan(vInput[0]));
