@@ -37,6 +37,26 @@ CSpace::~CSpace()
 {
 }
 
+void AddChildren(CNode *pParent, int nLevels, 
+				 int nCount = 3, float weight = 0.50f)
+{
+	for (int nAt = 0; nAt < nCount; nAt++)
+	{
+		CString strChildName;
+		strChildName.Format("%s%s%d", 
+			pParent->name.Get(), "son", nAt+1);
+		CNode *pChild = new CNode(strChildName);
+
+		pParent->children.Add(pChild);
+		pChild->parent.Set(pParent);
+
+		pChild->LinkTo(pParent, weight);
+
+		if (nLevels > 0)
+			AddChildren(pChild, nLevels-1, nCount, weight);
+	}
+}
+
 BOOL CSpace::OnNewDocument()
 {
 	if (!CDocument::OnNewDocument())
@@ -44,6 +64,13 @@ BOOL CSpace::OnNewDocument()
 
 	// remove all nodes
 	rootNode.children.RemoveAll();
+
+	CNode *pNewRoot = new CNode();
+	rootNode.children.Add(pNewRoot);
+	pNewRoot->name.Set("root");
+
+	// add random children to the root node
+	AddChildren(pNewRoot, 3);
 
 // #define VSIM
 #ifdef VSIM
@@ -68,7 +95,6 @@ BOOL CSpace::OnNewDocument()
 	pBeamNode->LinkTo(pVSIMNode, 0.3f);
 #endif
 
-#define RECREATION
 #ifdef RECREATION
 	// now populate with some dummy data
 
