@@ -20,7 +20,8 @@ static char THIS_FILE[]=__FILE__;
 
 CNode::CNode(const CString& strName, const CString& strDesc)
 	: parent(NULL),
-		description(strDesc)
+		description(strDesc),
+		m_currTemperature(0.0f)
 {
 	name.Set(strName);
 }
@@ -53,6 +54,19 @@ float CNode::GetLinkWeight(CNode * pToNode)
 		return pLink->weight.Get();
 
 	return 0.0f;
+}
+
+float CNode::GetLinkWeightBoltz(CNode * pToNode, float temperature)
+{
+	if (m_currTemperature != temperature)
+	{
+		m_currSum = 0.0f;
+		for (int nAt = 0; nAt < links.GetSize(); nAt++)		
+			m_currSum += (float) exp(links.Get(nAt)->weight.Get() / temperature);
+		m_currTemperature = temperature;
+	}
+
+	return (float) exp(GetLinkWeight(pToNode) / m_currTemperature) / m_currSum;
 }
 
 void CNode::Serialize(CArchive &ar)

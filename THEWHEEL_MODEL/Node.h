@@ -41,10 +41,16 @@ public:
 	void LinkTo(CNode *toNode, float weight);
 	CNodeLink *GetLink(CNode * toNode);
 	float GetLinkWeight(CNode * toNode);
+	float GetLinkWeightBoltz(CNode * toNode, float temperature = 0.1f);
 	void NormalizeLinks(float temperature = -1.0f);
 	
 	// serialization of this node
 	virtual void Serialize(CArchive &ar);
+
+protected:
+	// temporary storage for cached Boltzmann weights
+	float m_currTemperature;
+	float m_currSum;
 };
 
 #endif // !defined(AFX_NODE_H__0C8AA66B_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
