@@ -51,6 +51,7 @@ protected:
 	//{{AFX_MSG(CLinkPropDlg)
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	virtual BOOL OnInitDialog();
+	afx_msg void OnClickLinklist(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnEndlabeleditLinklist(NMHDR* pNMHDR, LRESULT* pResult);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
