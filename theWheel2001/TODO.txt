@@ -1,0 +1,55 @@
+1) Files to be cleaned:
+
+	GEOM_BASE\Volumep.h
+
+	GUI_BASE\Graph.h
+	GUI_BASE\Graph.cpp
+	GUI_BASE\ObjectExplorer.h
+	GUI_BASE\ObjectExplorer.cpp
+	GUI_BASE\ObjectExplorerControlBar.h
+	GUI_BASE\ObjectExplorerControlBar.cpp
+	GUI_BASE\ObjectTreeItem.h
+	GUI_BASE\ObjectTreeItem.cpp
+	GUI_BASE\TabControlBar.h
+	GUI_BASE\TabControlBar.cpp
+	* Clean project resources
+
+	OPTIMIZER_BASE\BrentOptimizer.h
+	OPTIMIZER_BASE\ConjGradOptimizer.h
+	OPTIMIZER_BASE\ObjectiveFunction.h
+	OPTIMIZER_BASE\Optimizer.h
+	OPTIMIZER_BASE\PowellOptimizer.h
+	OPTIMIZER_BASE\Optimizer.cpp (is this necessary?)
+
+	THEWHEEL_MODEL\Node.h
+	THEWHEEL_MODEL\Node.cpp
+	THEWHEEL_MODEL\NodeLink.h
+	THEWHEEL_MODEL\NodeLink.cpp
+	THEWHEEL_MODEL\Space.h
+	THEWHEEL_MODEL\Space.cpp
+
+	theWheel2001\MainFrm.h
+	theWheel2001\MainFrm.cpp
+	theWheel2001\NewNodeDlg.h
+	theWheel2001\NewNodeDlg.cpp
+	theWheel2001\NodeRenderer.h
+	theWheel2001\NodeRenderer.cpp
+	theWheel2001\NodeView.h
+	theWheel2001\NodeView.cpp
+	theWheel2001\SpaceTreeView.h
+	theWheel2001\SpaceTreeView.cpp
+	theWheel2001\SpaceView.h
+	theWheel2001\SpaceView.cpp
+	theWheel2001\SpaceViewEnergyFunction.h
+	theWheel2001\SpaceViewEnergyFunction.cpp
+	theWheel2001\theWheel2001.h
+	theWheel2001\theWheel2001.cpp
+	* Clean project resources
+
+2) Move activation to the CNode objects
+	Propagation
+	Learning
+
+4) Make CSpaceView : public COpenGLView
+
+5) Instantiate CNodeRenderers instead of CNodeViews
