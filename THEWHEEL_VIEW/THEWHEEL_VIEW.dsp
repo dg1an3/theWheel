@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "Release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "include" /I "..\THEWHEEL_MODEL\include" /I "..\OptimizeN\include" /I "..\VecMat" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /D "D3D_OVERLOADS" /Yu"stdafx.h" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "include" /I "..\THEWHEEL_MODEL\include" /I "..\OptimizeN\include" /I "..\MTL" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /D "D3D_OVERLOADS" /Yu"stdafx.h" /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
 # ADD RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
@@ -64,7 +64,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "Debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "include" /I "..\THEWHEEL_MODEL\include" /I "..\OptimizeN\include" /I "..\VecMat" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /D "D3D_OVERLOADS" /Yu"stdafx.h" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "include" /I "..\THEWHEEL_MODEL\include" /I "..\OptimizeN\include" /I "..\MTL" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /D "D3D_OVERLOADS" /Yu"stdafx.h" /FD /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
 # ADD RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
 BSC32=bscmake.exe
@@ -94,23 +94,7 @@ SOURCE=.\DesigntimeTracker.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\EditNodeDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\ImagePropDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\LinkPropDlg.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\Molding.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\NodePropDlg.cpp
 # End Source File
 # Begin Source File
 
@@ -122,27 +106,7 @@ SOURCE=.\NodeViewSkin.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\OptionsDlg.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\RuntimeTracker.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\SpaceClassDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\SpaceOptDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\SpacePropDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\SpaceTreeView.cpp
 # End Source File
 # Begin Source File
 
@@ -163,10 +127,6 @@ SOURCE=.\THEWHEEL_VIEW.rc
 
 SOURCE=.\Tracker.cpp
 # End Source File
-# Begin Source File
-
-SOURCE=.\TreeMenuCtrl.cpp
-# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -181,23 +141,7 @@ SOURCE=.\include\DesigntimeTracker.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\include\EditNodeDlg.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\ImagePropDlg.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\LinkPropDlg.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\include\Molding.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\NodePropDlg.h
 # End Source File
 # Begin Source File
 
@@ -209,27 +153,7 @@ SOURCE=.\include\NodeViewSkin.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\include\OptionsDlg.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\include\RuntimeTracker.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\SpaceClassDlg.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\SpaceOptDlg.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\SpacePropDlg.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\SpaceTreeView.h
 # End Source File
 # Begin Source File
 
@@ -247,15 +171,7 @@ SOURCE=.\include\THEWHEEL_VIEW_resource.h
 
 SOURCE=.\include\Tracker.h
 # End Source File
-# Begin Source File
-
-SOURCE=.\include\TreeMenuCtrl.h
-# End Source File
 # End Group
-# Begin Source File
-
-SOURCE=.\res\bitmap1.bmp
-# End Source File
 # Begin Source File
 
 SOURCE=.\res\H_point.cur
@@ -266,23 +182,11 @@ SOURCE=.\res\link.cur
 # End Source File
 # Begin Source File
 
-SOURCE=.\res\link1.cur
-# End Source File
-# Begin Source File
-
-SOURCE=.\res\node.bmp
-# End Source File
-# Begin Source File
-
 SOURCE=.\Readme.txt
 # End Source File
 # Begin Source File
 
 SOURCE=.\res\saw.cur
-# End Source File
-# Begin Source File
-
-SOURCE=.\res\space.bmp
 # End Source File
 # End Target
 # End Project
