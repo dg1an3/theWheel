@@ -335,7 +335,7 @@ void CNodeView::Draw(CDC *pDC)
 		DrawElliptangle(pDC);
 
 		// draw the image (if any)
-		DrawImage(pDC, rectInner);
+		// DrawImage(pDC, rectInner);
 
 		// draw the text
 		DrawText(pDC, rectInner);
@@ -511,17 +511,23 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 		if (forNode->GetDib() != NULL)
 		{
 			CRect rectImage = rectText;
-			rectImage.right = rectImage.left + rectImage.Height();
-			// rectImage.left += rectImage.Height();
 
-			rectImage.DeflateRect(5, 5, 5, 5);
-			forNode->GetDib()->Draw(*pDC, &rectImage);
+			CSize sizeImage = forNode->GetDib()->GetSize();
+			int nActualWidth = sizeImage.cx * rectImage.Height() / sizeImage.cy;
 
-			// draw the bitmap next to the title
-			// pDC->Ellipse(rectImage);
+			rectImage.right = rectImage.left + nActualWidth;
 
-			// adjust the rectangle to account for the bitmap
-			rectText.left += rectText.Height();
+			if (rectImage.Height() > 20 && rectImage.Width() > 20)
+			{
+				rectImage.DeflateRect(5, 5, 5, 5);
+				forNode->GetDib()->Draw(*pDC, &rectImage);
+
+				// draw the bitmap next to the title
+				// pDC->Ellipse(rectImage);
+
+				// adjust the rectangle to account for the bitmap
+				rectText.left += nActualWidth;
+			}
 		}
 
 		nDesiredHeight = max(nDesiredHeight / 2, 14);
