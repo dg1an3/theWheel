@@ -17,7 +17,7 @@ static char THIS_FILE[]=__FILE__;
 //////////////////////////////////////////////////////////////////////
 
 CNode::CNode(const CString& strName, const CString& strDesc)
-	: // name(strName),
+	: parent(NULL),
 		description(strDesc)
 {
 	name.Set(strName);
@@ -60,6 +60,10 @@ void CNode::Serialize(CArchive &ar)
 
 	children.Serialize(ar);
 	links.Serialize(ar);
+
+	if (!ar.IsStoring())
+		for (int nAt = 0; nAt < children.GetSize(); nAt++)
+			((CNode *)children.Get(nAt))->parent.Set(this);
 
 //	CObArray arrChildren;
 //	CObArray arrLinks;

@@ -25,8 +25,8 @@ public:
 	// serialization support
 	DECLARE_SERIAL(CNode)
 
-	// the node name
-//	CValue< CString > name;
+	// the node's parent
+	CAssociation< CNode > parent;
 
 	// the node description
 	CValue< CString > description;
