@@ -75,7 +75,7 @@ float CNode::GetLinkWeight(CNode * pToNode)
 
 float CNode::GetLinkWeightBoltz(CNode * pToNode, float temperature)
 {
-	if (m_currTemperature != temperature)
+/*	if (m_currTemperature != temperature)
 	{
 		m_currSum = 0.0f;
 		for (int nAt = 0; nAt < links.GetSize(); nAt++)		
@@ -86,7 +86,10 @@ float CNode::GetLinkWeightBoltz(CNode * pToNode, float temperature)
 	float boltzWeight = 
 		(float) exp(GetLinkWeight(pToNode) / m_currTemperature) / m_currSum;
 
-	return boltzWeight * 1.025 - 0.025;
+	return boltzWeight * 1.02 - 0.02;
+	*/
+
+	return GetLinkWeight(pToNode);
 }
 
 void CNode::Serialize(CArchive &ar)
@@ -94,12 +97,47 @@ void CNode::Serialize(CArchive &ar)
 	name.Serialize(ar);
 	description.Serialize(ar);
 
+//	if (ar.IsStoring())
+		imageFilename.Serialize(ar);
+
 	children.Serialize(ar);
 	links.Serialize(ar);
 
 	if (!ar.IsStoring())
+	{
 		for (int nAt = 0; nAt < children.GetSize(); nAt++)
 			((CNode *)children.Get(nAt))->parent.Set(this);
+
+#define FIX_WEIGHTS
+#ifdef FIX_WEIGHTS
+		float prevMax = 10.0f;
+		for (int nIter = 0; nIter < min(5, links.GetSize()); nIter++)
+		{
+			float maxWeight = 0.0f;
+
+			for (int nAt = 0; nAt < links.GetSize(); nAt++)
+			{
+				// 
+				float weight = links.Get(nAt)->weight.Get();
+				if (weight > maxWeight && weight < prevMax)
+					maxWeight = weight;
+			}
+
+			prevMax = maxWeight;
+		}
+
+		for (nAt = 0; nAt < links.GetSize(); nAt++)
+		{
+			// 
+			float weight = links.Get(nAt)->weight.Get();
+			if (weight < prevMax)
+				links.Get(nAt)->weight.Set(0.0f);
+		}
+
+		NormalizeLinks();
+
+#endif
+	}
 
 //	CObArray arrChildren;
 //	CObArray arrLinks;
