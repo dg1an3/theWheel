@@ -106,7 +106,7 @@ void CNodeLink::SetGain(REAL gain)
 	ASSERT(_finite(m_gain));
 
 	// set by filtering with the currrent gain
-	m_gain = 0.5 * m_gain + 0.5 * gain;
+	m_gain = 0.75 * m_gain + 0.25 * gain;
 
 	// ensure still finite
 	ASSERT(_finite(m_gain));

@@ -77,6 +77,7 @@ private:
 	// weight of this link
 	REAL m_weight;
 
+public:
 	// link's gain
 	REAL m_gain;
 
