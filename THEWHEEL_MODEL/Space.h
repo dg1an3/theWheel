@@ -14,6 +14,13 @@
 #endif // _MSC_VER > 1000
 
 #include "Node.h"
+#include "NodeCluster.h"
+
+//////////////////////////////////////////////////////////////////////
+// constant for total allowed activation of nodes
+//////////////////////////////////////////////////////////////////////
+const float TOTAL_ACTIVATION = 0.50f;
+
 
 //////////////////////////////////////////////////////////////////////
 // class CSpace
@@ -27,16 +34,41 @@ protected: // create from serialization only
 	CSpace();
 	DECLARE_DYNCREATE(CSpace)
 
-// Attributes
 public:
-	// the parent node contains all of this space's nodes as children
-	CNode *m_pRootNode;
 
-// Operations
-public:
+	///////////////////////////////////////////////////////////////////
+	// hierarchy
+
+	// the root node contains all of this space's nodes as children
+	CNode *GetRootNode();
+
+	// accessors for nodes (sorted by activation)
+	int GetNodeCount();
+	CNode *GetNodeAt(int nAt);
+
+	// adds a new node to the space as a child of the parent
+	void AddNode(CNode *pNewNode, CNode *pParentNode);
+
+	///////////////////////////////////////////////////////////////////
+	// operations
+
+	// activates a particular node
+	void ActivateNode(CNode *pNode, float scale);
 
 	// adjusts nodes so that sum of all activations = sum
 	void NormalizeNodes(double sum = 1.0);
+
+	///////////////////////////////////////////////////////////////////
+	// clusters
+
+	// accessors for the clusters
+	int GetClusterCount();
+	void SetClusterCount(int nCount);
+	CNodeCluster *GetClusterAt(int nAt);
+
+	// accessors for the super node count
+	int GetSuperNodeCount();
+	void SetSuperNodeCount(int nSuperNodeCount);
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -55,19 +87,23 @@ public:
 #endif
 
 protected:
+
+	// recursively adds nodes to the array
+	void AddNodeToArray(CNode *pNode);
+
+	// helper function to sort the nodes by activation
+	void SortNodes();
+
+	// cluster analysis
+public:
+	void ComputeClusters();
+
 	// helper function to add random children to a node
 	void AddChildren(CNode *pParent, int nLevels, 
 				 int nCount = 3, float weight = 0.50f);
 
 	// helper function to randomly cross-link nodes
 	void CrossLinkNodes(int nCount, float weight = 0.50f);
-
-	// accessors for the total activation value for all nodes in the space
-	double GetTotalActivation();
-	void SetTotalActivation();
-
-	// adds to the total activation value for all nodes in the space
-	void AddTotalActivation(double activation);
 
 // Generated message map functions
 protected:
@@ -78,8 +114,18 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 private:
-	// holds the the total activation value for all nodes in the space
-	double m_totalActivation;
+
+	// the parent node contains all of this space's nodes as children
+	CNode *m_pRootNode;
+
+	// the array of nodes
+	CObArray m_arrNodes;
+
+	// the clusters for this space
+	CNodeCluster *m_pCluster;
+
+	// stores the number of super nodes
+	int m_nSuperNodeCount;
 };
 
 /////////////////////////////////////////////////////////////////////////////

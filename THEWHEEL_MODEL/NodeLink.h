@@ -35,29 +35,46 @@ public:
 	// serialization support
 	DECLARE_SERIAL(CNodeLink)
 
-	// node weight
-	float GetWeight();
-	void SetWeight(float weight);
+	//////////////////////////////////////////////////////////////////
+	// attributes
 
-	// DEPRECATED
-	CValue< float > weight;
+	// node weight
+	float GetWeight() const;
 
 	// node target
 	CNode *GetTarget();
+	const CNode *GetTarget() const;
 	void SetTarget(CNode *pTarget);
 
-	// DEPRECATED
-	CAssociation< CNode > forTarget;
-
-	// flag to indicate that propagation has occurred through the link
-	BOOL HasPropagated();
-	void SetHasPropagated(BOOL bPropagated);
-
-	// DEPRECATED
-	CValue<BOOL> hasPropagated;
+	//////////////////////////////////////////////////////////////////
+	// serialization
 
 	// serialization of this node link
 	virtual void Serialize(CArchive &ar);
+
+protected:
+
+	// declares CSpace as a friend class, to access the helper functions
+	friend CNode;
+
+	void SetWeight(float weight);
+
+	//////////////////////////////////////////////////////////////////
+	// propagation helpers
+
+	// flag to indicate that propagation has occurred through the link
+	BOOL HasPropagated() const;
+	void SetHasPropagated(BOOL bPropagated = TRUE);
+
+private:
+	// weight of this link
+	float m_weight;
+
+	// target of this link
+	CNode *m_pTarget;
+
+	// flag to indicate that propagation has already occurred
+	BOOL m_bHasPropagated;
 };
 
 #endif // !defined(AFX_NODELINK_H__0C8AA66C_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)

@@ -12,6 +12,9 @@
 // the class definition
 #include "Node.h"
 
+// include the document class
+#include "Space.h"
+
 #ifdef _DEBUG
 #undef THIS_FILE
 static char THIS_FILE[]=__FILE__;
@@ -27,17 +30,19 @@ static char THIS_FILE[]=__FILE__;
 // 
 // constructs a CNode object with the given name and description
 //////////////////////////////////////////////////////////////////////
-CNode::CNode(CSpace *pSpace, 
+CNode::CNode(CSpace *pSpace,
 			 const CString& strName, 
 			 const CString& strDesc)
 	: m_pSpace(pSpace),
-		parent(NULL),
-		description(strDesc),
+		m_pParent(NULL),
+		m_strDescription(strDesc),
 		m_pDib(NULL),
-		// initialize with a very small activation
-		m_primaryActivation(0.005),
-		m_secondaryActivation(0.005),
+		m_vPosition(CVector<3>(0.0, 0.0, 0.0)),
+
+		m_primaryActivation(0.005),		// initialize with a very 
+		m_secondaryActivation(0.005),	// small activation
 		m_maxDeltaActivation(0.0),
+
 		m_pMaxActivator(NULL),
 		m_pView(NULL)
 {
@@ -53,7 +58,11 @@ CNode::CNode(CSpace *pSpace,
 CNode::~CNode()
 {
 	children.RemoveAll();
-	links.RemoveAll();
+
+	// delete the links
+	for (int nAt = 0; nAt < m_arrLinks.GetSize(); nAt++)
+		delete m_arrLinks[nAt];
+	m_arrLinks.RemoveAll();
 
 	// delete the DIB, if present
 	delete m_pDib;
@@ -62,7 +71,132 @@ CNode::~CNode()
 //////////////////////////////////////////////////////////////////////
 // implements CNode's dynamic serialization
 //////////////////////////////////////////////////////////////////////
-IMPLEMENT_SERIAL(CNode, CModelObject, 4);
+IMPLEMENT_SERIAL(CNode, CModelObject, VERSIONABLE_SCHEMA|5);
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetParent
+// 
+// returns a pointer to the node's parent
+//////////////////////////////////////////////////////////////////////
+CNode *CNode::GetParent()
+{
+	return m_pParent;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetParent const
+// 
+// returns a pointer to the node's parent
+//////////////////////////////////////////////////////////////////////
+const CNode *CNode::GetParent() const
+{
+	return m_pParent;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::SetParent
+// 
+// sets a pointer to the node's parent
+//////////////////////////////////////////////////////////////////////
+void CNode::SetParent(CNode *pParent)
+{
+	// check to ensure parent is in same space
+	ASSERT(pParent->m_pSpace == m_pSpace);
+
+	if (m_pParent)
+		m_pParent->children.Release(this);
+
+	m_pParent = pParent;
+
+	if (m_pParent)
+		m_pParent->children.Add(this);
+
+	// notify views of the change
+	if (m_pSpace != NULL)
+		m_pSpace->UpdateAllViews(NULL, 0L, this);
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetName
+// 
+// returns the node's name
+//////////////////////////////////////////////////////////////////////
+const CString& CNode::GetName() const
+{
+	return name.Get();
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::SetName
+// 
+// sets the name of the node
+//////////////////////////////////////////////////////////////////////
+void CNode::SetName(const CString& strName)
+{
+	name.Set(strName);
+
+	// notify views of the change
+	if (m_pSpace != NULL)
+		m_pSpace->UpdateAllViews(NULL, 0L, this);
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetDescription
+// 
+// returns the node's description text
+//////////////////////////////////////////////////////////////////////
+const CString& CNode::GetDescription() const
+{
+	return m_strDescription;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::SetDescription
+// 
+// sets the node's description text
+//////////////////////////////////////////////////////////////////////
+void CNode::SetDescription(const CString& strDesc)
+{
+	m_strDescription = strDesc;
+
+	// notify views of the change
+	if (m_pSpace != NULL)
+		m_pSpace->UpdateAllViews(NULL, 0L, this);
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetImageFilename
+// 
+// returns the name of the node's image file
+//////////////////////////////////////////////////////////////////////
+const CString& CNode::GetImageFilename() const
+{
+	return m_strImageFilename;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::SetImageFilename
+// 
+// sets the name of the node's image file
+//////////////////////////////////////////////////////////////////////
+void CNode::SetImageFilename(const CString& strImageFilename)
+{
+	m_strImageFilename = strImageFilename;
+
+	// notify views of the change
+	if (m_pSpace != NULL)
+		m_pSpace->UpdateAllViews(NULL, 0L, this);
+}
+
 
 //////////////////////////////////////////////////////////////////////
 // CNode::GetDib
@@ -73,13 +207,13 @@ IMPLEMENT_SERIAL(CNode, CModelObject, 4);
 CDib *CNode::GetDib()
 {
 	// if we have not loaded the image,
-	if (m_pDib == NULL && imageFilename.Get() != "")
+	if (m_pDib == NULL && GetImageFilename() != "")
 	{
 		// create a new DIB
 		m_pDib = new CDib();
 
 		// and try to load the image
-		if (!m_pDib->Load("./images/" + imageFilename.Get()))
+		if (!m_pDib->Load("./images/" + GetImageFilename()))
 		{
 			// no luck -- delete the DIB and return NULL
 			delete m_pDib;
@@ -90,56 +224,111 @@ CDib *CNode::GetDib()
 	return m_pDib;
 }
 
+
 //////////////////////////////////////////////////////////////////////
-// CNode::LinkTo
+// CNode::GetUrl
 // 
-// links the node to the target node (creating a CNodeLink in the
-// proces, if necessary).
+// returns the url for this node
 //////////////////////////////////////////////////////////////////////
-void CNode::LinkTo(CNode *pToNode, float weight)
+const CString& CNode::GetUrl() const
 {
-	ASSERT(pToNode != NULL);
-
-	// find any existing links
-	CNodeLink *pLink = GetLink(pToNode);
-
-	// was a link found
-	if (pLink == NULL)
-	{
-		// create a new node link with the target and weight
-		links.Add(new CNodeLink(pToNode, weight));
-
-		// cross-link at the same weight
-		pToNode->links.Add(new CNodeLink(this, weight));
-	}
-	else
-	{
-		// otherwise, just set the weight in one direction
-		pLink->weight.Set(weight);
-	}
+	return m_strUrl;
 }
 
+
 //////////////////////////////////////////////////////////////////////
-// CNode::GetLink
+// CNode::SetUrl
+// 
+// sets the url for this node
+//////////////////////////////////////////////////////////////////////
+void CNode::SetUrl(const CString& strUrl)
+{
+	m_strUrl = strUrl;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetLinkCount
+// 
+// returns the number of links for this node
+//////////////////////////////////////////////////////////////////////
+int CNode::GetLinkCount() const
+{
+	return m_arrLinks.GetSize();
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetLinkAt
+// 
+// finds a link at the given index position.
+//////////////////////////////////////////////////////////////////////
+CNodeLink *CNode::GetLinkAt(int nAt)
+{
+	return (CNodeLink *) m_arrLinks.GetAt(nAt);
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetLinkAt const
+// 
+// finds a link at the given index position.
+//////////////////////////////////////////////////////////////////////
+const CNodeLink *CNode::GetLinkAt(int nAt) const
+{
+	return (const CNodeLink *) m_arrLinks.GetAt(nAt);
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetLinkTo
 // 
 // finds a link to the given target, if it exists.
 // otherwise returns NULL.
 //////////////////////////////////////////////////////////////////////
-CNodeLink * CNode::GetLink(CNode * pToNode)
+CNodeLink * CNode::GetLinkTo(CNode * pToNode)
 {
 	// search through the links,
-	for (int nAt = 0; nAt < links.GetSize(); nAt++)
-
+	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
+	{
 		// looking for the one with the desired target
-		if (links.Get(nAt)->forTarget.Get() == pToNode)
+		CNodeLink *pLink = GetLinkAt(nAt);
+		if (pLink->GetTarget() == pToNode)
 		{
 			// and return it
-			return links.Get(nAt); 
+			return pLink; 
 		}
+	}
 
 	// not found?  return NULL
 	return NULL;
 }
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetLinkTo const
+// 
+// finds a link to the given target, if it exists.
+// otherwise returns NULL.
+//////////////////////////////////////////////////////////////////////
+const CNodeLink * CNode::GetLinkTo(CNode * pToNode) const
+{
+	// search through the links,
+	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
+	{
+		// looking for the one with the desired target
+		const CNodeLink *pLink = GetLinkAt(nAt);
+		if (pLink->GetTarget() == pToNode)
+		{
+			// and return it
+			return pLink; 
+		}
+	}
+
+	// not found?  return NULL
+	return NULL;
+}
+
 
 //////////////////////////////////////////////////////////////////////
 // CNode::GetLinkWeight
@@ -147,20 +336,83 @@ CNodeLink * CNode::GetLink(CNode * pToNode)
 // finds a link to the given target, if it exists.
 // otherwise returns NULL.
 //////////////////////////////////////////////////////////////////////
-float CNode::GetLinkWeight(CNode * pToNode)
+float CNode::GetLinkWeight(CNode * pToNode) const
 {
-	// try to find the link
-	CNodeLink *pLink = GetLink(pToNode);
-
-	// found it?
-	if (pLink)
-	
+	// find the weight in the map
+	float weight;
+	if (m_mapLinks.Lookup(pToNode, weight))
+	{	
 		// return the weight
-		return pLink->weight.Get();
+		return weight;
+	}
 
 	// not found? return 0.0
 	return 0.0f;
 }
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::LinkTo
+// 
+// links the node to the target node (creating a CNodeLink in the
+// proces, if necessary).
+//////////////////////////////////////////////////////////////////////
+void CNode::LinkTo(CNode *pToNode, float weight, BOOL bReciprocalLink)
+{
+	// don't link to NULL
+	ASSERT(pToNode != NULL);
+
+	// don't self-link
+	if (pToNode == this)
+	{
+		return;
+	}
+
+	// find any existing links
+	CNodeLink *pLink = GetLinkTo(pToNode);
+
+	// was a link found
+	if (pLink == NULL)
+	{
+		// create a new node link with the target and weight
+		m_arrLinks.Add(new CNodeLink(pToNode, weight));
+
+		// add to the map
+		m_mapLinks.SetAt(pToNode, weight);
+
+		// cross-link at the same weight
+		if (bReciprocalLink)
+			pToNode->LinkTo(this, weight);
+	}
+	else
+	{
+		// otherwise, just set the weight in one direction
+		pLink->SetWeight(weight);
+
+		// and update the map
+		m_mapLinks.SetAt(pToNode, weight);
+	}
+
+	// sort the links
+	SortLinks();
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::RemoveAllLinks
+// 
+// removes all the links for the node
+//////////////////////////////////////////////////////////////////////
+void CNode::RemoveAllLinks()
+{
+	for (int nAt = 0; nAt < m_arrLinks.GetSize(); nAt++)
+	{
+		delete m_arrLinks[nAt];
+	}
+	m_arrLinks.RemoveAll();
+	m_mapLinks.RemoveAll();
+}
+
 
 //////////////////////////////////////////////////////////////////////
 // CNode::SortLinks
@@ -177,18 +429,18 @@ void CNode::SortLinks()
 		bRearrange = FALSE;
 
 		// for each link,
-		for (int nAt = 0; nAt < links.GetSize()-1; nAt++)
+		for (int nAt = 0; nAt < GetLinkCount()-1; nAt++)
 		{
 			// get the current and next links
-			CNodeLink *pThisLink = links.Get(nAt);
-			CNodeLink *pNextLink = links.Get(nAt+1);
+			CNodeLink *pThisLink = GetLinkAt(nAt);
+			CNodeLink *pNextLink = GetLinkAt(nAt+1);
 
 			// compare their weights
-			if (pThisLink->weight.Get() < pNextLink->weight.Get())
+			if (pThisLink->GetWeight() < pNextLink->GetWeight())
 			{
 				// if first is less than second, swap
-				links.Set(nAt, pNextLink);
-				links.Set(nAt+1, pThisLink);
+				m_arrLinks.SetAt(nAt, pNextLink);
+				m_arrLinks.SetAt(nAt+1, pThisLink);
 
 				// a rearrangement has occurred
 				bRearrange = TRUE;
@@ -200,35 +452,247 @@ void CNode::SortLinks()
 
 }
 
+
+//////////////////////////////////////////////////////////////////////
+// CNode::LearnFromNode
+// 
+// applies a simple learning rule to the link weights
+//////////////////////////////////////////////////////////////////////
+void CNode::LearnFromNode(CNode *pOtherNode, float k)
+{
+	float otherAct = (float) pOtherNode->GetPrimaryActivation();
+	float weightTo = (float) pOtherNode->GetLinkWeight(this);
+
+	if (otherAct > GetPrimaryActivation() 
+		&& otherAct * weightTo < GetPrimaryActivation())
+	{
+		float targetWeight = (float) GetPrimaryActivation() / otherAct;
+		ASSERT(targetWeight > weightTo);
+
+		float newWeight = weightTo + (targetWeight - weightTo) * k;
+		if (newWeight < 2.0)
+			pOtherNode->LinkTo(this, newWeight);
+	}
+
+	// TODO: now soft-normalize the link weights
+}
+
+
 //////////////////////////////////////////////////////////////////////
 // CNode::GetActivation
 // 
 // returns the node's activation
 //////////////////////////////////////////////////////////////////////
-double CNode::GetActivation()
+double CNode::GetActivation() const
 {
 	return m_primaryActivation + m_secondaryActivation;
 }
+
 
 //////////////////////////////////////////////////////////////////////
 // CNode::GetPrimaryActivation
 // 
 // returns the node's primary activation
 //////////////////////////////////////////////////////////////////////
-double CNode::GetPrimaryActivation()
+double CNode::GetPrimaryActivation() const
 {
 	return m_primaryActivation;
 }
+
 
 //////////////////////////////////////////////////////////////////////
 // CNode::GetSecondaryActivation
 // 
 // returns the node's secondary activation
 //////////////////////////////////////////////////////////////////////
-double CNode::GetSecondaryActivation()
+double CNode::GetSecondaryActivation() const
 {
 	return m_secondaryActivation;
 }
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetDescendantCount
+// 
+// returns the number of descendants
+//////////////////////////////////////////////////////////////////////
+int CNode::GetDescendantCount() const
+{
+	int nCount = 0;
+	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	{
+		CNode *pChild = ((CNode *)children.Get(nAt));
+		nCount += pChild->GetDescendantCount() + 1;		// 1 for the child itself
+	}
+
+	return nCount;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetDescendantActivation
+// 
+// sums the activation value of this node with all children nodes
+//////////////////////////////////////////////////////////////////////
+double CNode::GetDescendantActivation() const
+{
+	// initialize with the activation of this node
+	double sum = GetActivation();
+
+	// iterate over child nodes
+	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	{
+		// for each child node
+		CNode *pNode = (CNode *)children.Get(nAt);
+
+		// sum its descendent activation
+		sum += pNode->GetDescendantActivation();
+	}
+
+	// return the sum
+	return sum;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetDescendantPrimaryActivation
+// 
+// sums the primary activation value of this node with all children 
+// nodes
+//////////////////////////////////////////////////////////////////////
+double CNode::GetDescendantPrimaryActivation() const
+{
+	// initialize with the activation of this node
+	double sum = GetPrimaryActivation();
+
+	// iterate over child nodes
+	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	{
+		// for each child node
+		CNode *pNode = (CNode *)children.Get(nAt);
+
+		// sum its descendent activation
+		sum += pNode->GetDescendantPrimaryActivation();
+	}
+
+	// return the sum
+	return sum;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetDescendantSecondaryActivation
+// 
+// sums the primary activation value of this node with all children 
+// nodes
+//////////////////////////////////////////////////////////////////////
+double CNode::GetDescendantSecondaryActivation() const
+{
+	// initialize with the activation of this node
+	double sum = GetSecondaryActivation();
+
+	// iterate over child nodes
+	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	{
+		// for each child node
+		CNode *pNode = (CNode *)children.Get(nAt);
+
+		// sum its descendent activation
+		sum += pNode->GetDescendantSecondaryActivation();
+	}
+
+	// return the sum
+	return sum;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetMaxActivator
+// 
+// returns the current maximum activator
+//////////////////////////////////////////////////////////////////////
+CNode *CNode::GetMaxActivator()
+{
+	return m_pMaxActivator;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetView
+// 
+// returns the view object for this node
+//////////////////////////////////////////////////////////////////////
+CObject *CNode::GetView()
+{
+	return m_pView;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::SetView
+// 
+// sets the view object for this node
+//////////////////////////////////////////////////////////////////////
+void CNode::SetView(CObject *pView)
+{
+	m_pView = pView;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::Serialize
+// 
+// serialize the node
+//////////////////////////////////////////////////////////////////////
+void CNode::Serialize(CArchive &ar)
+{
+	UINT nSchema = ar.GetObjectSchema();
+
+	// serialize the node name
+	name.Serialize(ar);
+
+	// serialize the node body
+	if (ar.IsLoading())
+	{
+		ar >> m_strDescription;
+		ar >> m_strImageFilename;
+
+		if (nSchema >= 5)
+		{
+			ar >> m_strUrl;
+		}
+	}
+	else
+	{
+		ar << m_strDescription;
+		ar << m_strImageFilename;
+		ar << m_strUrl;
+	}
+
+	// serialize children
+	children.Serialize(ar);
+
+	// serialize links
+	m_arrLinks.Serialize(ar);
+
+	// if we are loading,
+	if (ar.IsLoading())
+	{
+		// set the children's parent
+		for (int nAt = 0; nAt < children.GetSize(); nAt++)
+			((CNode *)children.Get(nAt))->SetParent(this);
+
+		// sort the links
+		SortLinks();
+
+		// and set up the map
+		m_mapLinks.RemoveAll();
+		for (nAt = 0; nAt < GetLinkCount(); nAt++)
+			m_mapLinks.SetAt(GetLinkAt(nAt)->GetTarget(), 
+				GetLinkAt(nAt)->GetWeight());
+	}
+}
+
 
 //////////////////////////////////////////////////////////////////////
 // CNode::SetActivation
@@ -259,89 +723,87 @@ void CNode::SetActivation(double newActivation, CNode *pActivator)
 	}
 }
 
+
 //////////////////////////////////////////////////////////////////////
-// CNode::GetMaxActivator
+// CNode::PropagateActivation
 // 
-// returns the current maximum activator
+// propagates the activation of this node through the other nodes
+//		in the space
 //////////////////////////////////////////////////////////////////////
-CNode *CNode::GetMaxActivator()
+void CNode::PropagateActivation(double scale)
 {
-	return m_pMaxActivator;
+	// iterate through the links from highest to lowest activation
+	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
+	{
+		// get the link
+		CNodeLink *pLink = GetLinkAt(nAt);
+
+		// only propagate through the link if we have not already done so
+		if (!pLink->HasPropagated())
+		{
+			// mark this link as having propagated
+			pLink->SetHasPropagated(TRUE);
+
+			// get the link target
+			CNode *pTarget = pLink->GetTarget();
+
+			// compute the desired new activation = this activation * weight
+			double targetActivation = GetActivation() 
+				* pLink->GetWeight();
+
+			// perturb the new activation
+			targetActivation *= 
+				(1.0005f - 0.001f * (float) rand() / (float) RAND_MAX);
+
+			// the new activation defaults to the original activation
+			double newActivation = pTarget->GetActivation();
+
+			// now change it if the current target activation is less than the target
+			if (pTarget->GetActivation() < targetActivation)
+			{
+				// compute the new actual activation
+				newActivation = pTarget->GetActivation() + 
+					(targetActivation - pTarget->GetActivation()) * scale;
+			}
+
+			// set the new actual activation
+			pTarget->SetActivation(newActivation, this);
+
+			// and propagate to linked nodes
+			pTarget->PropagateActivation(scale * 1.0);
+		}
+	}
 }
 
+
 //////////////////////////////////////////////////////////////////////
-// CNode::GetDescendantActivation
+// CNode::ResetForPropagation
 // 
-// sums the activation value of this node with all children nodes
+// resets the "hasPropagated" flags on the link weights
 //////////////////////////////////////////////////////////////////////
-double CNode::GetDescendantActivation()
+void CNode::ResetForPropagation()
 {
-	// initialize with the activation of this node
-	double sum = GetActivation();
+	// reset the max delta activation
+	m_maxDeltaActivation = 0.0;
+	m_pMaxActivator = NULL;
 
-	// iterate over child nodes
-	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	// reset each of the node's links
+	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
 	{
-		// for each child node
-		CNode *pNode = (CNode *)children.Get(nAt);
-
-		// sum its descendent activation
-		sum += pNode->GetDescendantActivation();
+		CNodeLink *pLink = GetLinkAt(nAt);
+		pLink->SetHasPropagated(FALSE);
 	}
 
-	// return the sum
-	return sum;
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNode::GetDescendantPrimaryActivation
-// 
-// sums the primary activation value of this node with all children 
-// nodes
-//////////////////////////////////////////////////////////////////////
-double CNode::GetDescendantPrimaryActivation()
-{
-	// initialize with the activation of this node
-	double sum = GetPrimaryActivation();
-
-	// iterate over child nodes
-	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	// now do the same for all children
+	for (nAt = 0; nAt < children.GetSize(); nAt++)
 	{
-		// for each child node
-		CNode *pNode = (CNode *)children.Get(nAt);
-
-		// sum its descendent activation
-		sum += pNode->GetDescendantPrimaryActivation();
+		// for each child,
+		CNode *pChildNode = (CNode *) children.Get(nAt);
+		// now recursively reset the children
+		pChildNode->ResetForPropagation();
 	}
-
-	// return the sum
-	return sum;
 }
 
-//////////////////////////////////////////////////////////////////////
-// CNode::GetDescendantSecondaryActivation
-// 
-// sums the primary activation value of this node with all children 
-// nodes
-//////////////////////////////////////////////////////////////////////
-double CNode::GetDescendantSecondaryActivation()
-{
-	// initialize with the activation of this node
-	double sum = GetSecondaryActivation();
-
-	// iterate over child nodes
-	for (int nAt = 0; nAt < children.GetSize(); nAt++)
-	{
-		// for each child node
-		CNode *pNode = (CNode *)children.Get(nAt);
-
-		// sum its descendent activation
-		sum += pNode->GetDescendantSecondaryActivation();
-	}
-
-	// return the sum
-	return sum;
-}
 
 //////////////////////////////////////////////////////////////////////
 // CNode::ScaleDescendantActivation
@@ -366,144 +828,12 @@ void CNode::ScaleDescendantActivation(double primScale, double secScale)
 	}
 }
 
+
 //////////////////////////////////////////////////////////////////////
-// CNode::PropagateActivation
+// CNode::GetRandomDescendant
 // 
-// propagates the activation of this node through the other nodes
-//		in the space
+// returns a random descendant, for testing purposes
 //////////////////////////////////////////////////////////////////////
-void CNode::PropagateActivation(double scale)
-{
-	// sort the links
-	SortLinks();
-
-	// iterate through the links from highest to lowest activation
-	for (int nAt = 0; nAt < links.GetSize(); nAt++)
-	{
-		// get the link
-		CNodeLink *pLink = links.Get(nAt);
-
-		// only propagate through the link if we have not already done so
-		if (!pLink->hasPropagated.Get())
-		{
-			// mark this link as having propagated
-			pLink->hasPropagated.Set(TRUE);
-
-			// get the link target
-			CNode *pTarget = pLink->forTarget.Get();
-
-			// compute the desired new activation = this activation * weight
-			double targetActivation = GetActivation() 
-				* pLink->weight.Get();
-
-			// perturb the new activation
-			targetActivation *= 
-				(1.0005f - 0.001f * (float) rand() / (float) RAND_MAX);
-
-			// the new activation defaults to the original activation
-			double newActivation = pTarget->GetActivation();
-
-			// now change it if the current target activation is less than the target
-			if (pTarget->GetActivation() < targetActivation)
-			{
-				// compute the new actual activation
-				newActivation = pTarget->GetActivation() + 
-					(targetActivation - pTarget->GetActivation()) * scale;
-			}
-
-			// set the new actual activation
-			pTarget->SetActivation(newActivation, this);
-
-			// and propagate to linked nodes
-			pTarget->PropagateActivation(scale);
-		}
-	}
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNode::ResetForPropagation
-// 
-// resets the "hasPropagated" flags on the link weights
-//////////////////////////////////////////////////////////////////////
-void CNode::ResetForPropagation()
-{
-	// reset the max delta activation
-	m_maxDeltaActivation = 0.0;
-	m_pMaxActivator = NULL;
-
-	// reset each of the node's links
-	for (int nAt = 0; nAt < links.GetSize(); nAt++)
-	{
-		CNodeLink *pLink = links.Get(nAt);
-		pLink->hasPropagated.Set(FALSE);
-	}
-
-	// now do the same for all children
-	for (nAt = 0; nAt < children.GetSize(); nAt++)
-	{
-		// for each child,
-		CNode *pChildNode = (CNode *) children.Get(nAt);
-		// now recursively reset the children
-		pChildNode->ResetForPropagation();
-	}
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNode::GetView
-// 
-// returns the view object for this node
-//////////////////////////////////////////////////////////////////////
-CObject *CNode::GetView()
-{
-	return m_pView;
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNode::SetView
-// 
-// sets the view object for this node
-//////////////////////////////////////////////////////////////////////
-void CNode::SetView(CObject *pView)
-{
-	m_pView = pView;
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNode::Serialize
-// 
-// serialize the node
-//////////////////////////////////////////////////////////////////////
-void CNode::Serialize(CArchive &ar)
-{
-	// serialize the node name
-	name.Serialize(ar);
-
-	// serialize the node body
-	description.Serialize(ar);
-
-	// serialize the image filename
-	imageFilename.Serialize(ar);
-
-	// serialize children
-	children.Serialize(ar);
-
-	// serialize links
-	links.Serialize(ar);
-
-	// if we are loading,
-	if (ar.IsLoading())
-	{
-		// set the children's parent
-		for (int nAt = 0; nAt < children.GetSize(); nAt++)
-			((CNode *)children.Get(nAt))->parent.Set(this);
-
-		// and sort the links
-		SortLinks();
-	}
-}
-
-
-
 CNode * CNode::GetRandomDescendant()
 {
 	int nDescendant = rand() * GetDescendantCount() / RAND_MAX;
@@ -519,14 +849,27 @@ CNode * CNode::GetRandomDescendant()
 	return (CNode *) children.Get(nDescendant);
 }
 
-int CNode::GetDescendantCount()
+const CVector<3>& CNode::GetPosition() const
 {
-	int nCount = 0;
-	for (int nAt = 0; nAt < children.GetSize(); nAt++)
-	{
-		CNode *pChild = ((CNode *)children.Get(nAt));
-		nCount += pChild->GetDescendantCount() + 1;		// 1 for the child itself
-	}
+	return m_vPosition;
+}
 
-	return nCount;
+void CNode::SetPosition(const CVector<3>& vPos)
+{
+	m_vPosition = vPos;
+}
+
+CVector<3> CNode::GetSize(float activation) const
+{
+	// compute the desired aspect ratio (maintain the current aspect ratio)
+	float aspectRatio = 0.75f - 0.375f * (float) exp(-8.0f * activation);
+
+	// compute the new width and height from the desired area and the desired
+	//		aspect ratio
+	CVector<3> vSize;
+	vSize[0] = sqrt(activation / aspectRatio);
+	vSize[1] = sqrt(activation * aspectRatio);
+
+	// return the computed size
+	return vSize;
 }

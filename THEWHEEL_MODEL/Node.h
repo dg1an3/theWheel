@@ -16,6 +16,7 @@
 #include <Value.h>
 #include <Collection.h>
 #include <ModelObject.h>
+#include <Vector.h>
 
 #include <Dib.h>
 
@@ -35,97 +36,160 @@ class CNode : public CModelObject
 public:
 	// constructors/destructors
 	CNode(CSpace *pSpace = NULL,
-		const CString& strName = "", 
+		const CString& strName = "",
 		const CString& strDesc = "");
 	virtual ~CNode();
 
 	// serialization support
 	DECLARE_SERIAL(CNode)
 
+	//////////////////////////////////////////////////////////////////
+	// hierarchy
+
 	// the node's parent
 	CNode *GetParent();
+	const CNode *GetParent() const;
 	void SetParent(CNode *pParent);
 
-	// DEPRECATED
-	CAssociation< CNode > parent;
+	//////////////////////////////////////////////////////////////////
+	// attribute accessors
+
+	// the node's name
+	const CString& GetName() const;
+	void SetName(const CString& strName);
 
 	// the node description
-	const CString& GetDescription();
+	const CString& GetDescription() const;
 	void SetDescription(const CString& strDesc);
 
-	// DEPRECATED
-	CValue< CString > description;
-
 	// an image filename, if present
-	const CString& GetImageFilename();
+	const CString& GetImageFilename() const;
 	void SetImageFilename(const CString& strImageFilename);
-
-	// DEPRECATED
-	CValue< CString > imageFilename;
 
 	// loads the image file, if necessary
 	CDib *GetDib();
 
+	// the node description
+	const CString& GetUrl() const;
+	void SetUrl(const CString& strUrl);
+
+	// the node's position
+	const CVector<3>& GetPosition() const;
+	void SetPosition(const CVector<3>& vPos);
+	CVector<3> GetSize(float activation) const;
+
+	//////////////////////////////////////////////////////////////////
+	// link accessors
+
 	// accessors for the node links
-	int GetLinkCount();
-	CNodeLink *GetLink(int nAt);
+	int GetLinkCount() const;
+	CNodeLink *GetLinkAt(int nAt);
+	const CNodeLink *GetLinkAt(int nAt) const;
 
-	// DEPRECATED
-	CCollection< CNodeLink > links;
+	// accessors for links by the target
+	CNodeLink *GetLinkTo(CNode * toNode);
+	const CNodeLink *GetLinkTo(CNode * toNode) const;
 
-	// accessor helpers for the links
-	void LinkTo(CNode *toNode, float weight);
-	CNodeLink *GetLink(CNode * toNode);
-	float GetLinkWeight(CNode * toNode);
+	// accessor to just get the link weight
+	float GetLinkWeight(CNode * toNode) const;
 
-	// sorts the links descending by weight
+	// creates or modifies an existing link
+	void LinkTo(CNode *toNode, float weight, BOOL bReciprocalLink = TRUE);
+
+	// clears all links
+	void RemoveAllLinks();
+
+	// sorts the links descending by weight, should be called after
+	//		changing link weights
 	void SortLinks();
 
-	// accessors for the node's activation
-	double GetActivation();
-	double GetPrimaryActivation();
-	double GetSecondaryActivation();
+	// hebbian learning
+	void LearnFromNode(CNode *pOtherNode, float k = 0.0001f);
 
-	// set accessor sets either the primary or the secondary activation, based
-	//		on whether the activator is NULL
-	void SetActivation(double newActivation, CNode *pActivator = NULL);
+	//////////////////////////////////////////////////////////////////
+	// activation accessors
+
+	// accessors for the node's activation
+	double GetActivation() const;
+	double GetPrimaryActivation() const;
+	double GetSecondaryActivation() const;
+
+	// returns the number of descendants of this node
+	int GetDescendantCount() const;
+
+	// returns the sum of the activation of all descendants, 
+	//		plus this node's activation
+	double GetDescendantActivation() const;
+	double GetDescendantPrimaryActivation() const;
+	double GetDescendantSecondaryActivation() const;
 
 	// returns the current maximum activator
 	CNode *GetMaxActivator();
 
-	// returns the sum of the activation of all descendants, 
-	//		plus this node's activation
-	double GetDescendantActivation();
-	double GetDescendantPrimaryActivation();
-	double GetDescendantSecondaryActivation();
-
-	// scales the activation of this node and all descendants by
-	//		the scale amount
-	void ScaleDescendantActivation(double primScale, double secScale);
-
-	// returns the number of descendants of this node
-	int GetDescendantCount();
-
-	// returns a random descendant
-	CNode * GetRandomDescendant();
-
-	// propagation management
-	void ResetForPropagation();
-	void PropagateActivation(double scale);
+	//////////////////////////////////////////////////////////////////
+	// view object
 
 	// convenience pointer to a view object
 	CObject *GetView();
 	void SetView(CObject *pView);
 
+	//////////////////////////////////////////////////////////////////
+	// serialization
+
 	// serialization of this node
 	virtual void Serialize(CArchive &ar);
 
 protected:
-	// pointer to the space that holds this node
+
+	// declares CSpace as a friend class, to access the helper functions
+	friend CSpace;
+
+	//////////////////////////////////////////////////////////////////
+	// activation helper functions
+
+	// set accessor sets either the primary or the secondary activation, based
+	//		on whether the activator is NULL
+	void SetActivation(double newActivation, CNode *pActivator = NULL);
+
+	// propagation management
+	void ResetForPropagation();
+	void PropagateActivation(double scale);
+
+	//////////////////////////////////////////////////////////////////
+	// descendant helper functions
+
+	// scales the activation of this node and all descendants by
+	//		the scale amount
+	void ScaleDescendantActivation(double primScale, double secScale);
+
+	// returns a random descendant
+	CNode * GetRandomDescendant();
+
+private:
+	// pointer to the space that contains this node
 	CSpace *m_pSpace;
+
+	// pointer to the node's parent
+	CNode *m_pParent;
+
+	// the node's description
+	CString m_strDescription;
+
+	// the node's image filename
+	CString m_strImageFilename;
 
 	// pointer to the DIB, if it is loaded
 	CDib *m_pDib;
+
+	// url
+	CString m_strUrl;
+
+	// position and size
+	CVector<3> m_vPosition;
+
+	// the collection of links
+	CObArray m_arrLinks;
+	CMap<CNode *, CNode *, float, float> m_mapLinks;
 
 	// the current activation value of the node
 	double m_primaryActivation;
