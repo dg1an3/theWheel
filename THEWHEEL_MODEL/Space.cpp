@@ -123,10 +123,15 @@ void CSpace::AddChildren(CNode *pParent, int nLevels,
 		CNode *pChild = new CNode(strChildName);
 
 		pChild->description.Set("I am a child node.  "
-			"I exist for the good of my parent node.  "
-			"I only have meaning in the context of my siblings.");
+			"I am the cat of the dog.  I am the mouse of the cheese.  "
+			"I am the leaf of the tea.  I am the down of the charm.");
 		pParent->children.Add(pChild);
 		pChild->parent.Set(pParent);
+
+		// set the image filename
+		char pszImageFilename[_MAX_FNAME];
+		sprintf(pszImageFilename, "image%i.bmp", rand() % 8);
+		pChild->imageFilename.Set(pszImageFilename);
 
 		// generate a randomly varying weight
 		float actWeight = weight * (1.4f - 0.8f * (float) rand() / (float) RAND_MAX);
