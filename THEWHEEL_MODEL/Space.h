@@ -1,6 +1,10 @@
-// Space.h : interface of the CSpace class
+//////////////////////////////////////////////////////////////////////
+// Space.h: interface for the CSpace class.
 //
-/////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 1999-2001
+// $Id$
+// U.S. Patent Pending
+//////////////////////////////////////////////////////////////////////
 
 #if !defined(AFX_SPACE_H__0C8AA65A_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
 #define AFX_SPACE_H__0C8AA65A_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_
@@ -11,6 +15,12 @@
 
 #include "Node.h"
 
+//////////////////////////////////////////////////////////////////////
+// class CSpace
+// 
+// a space object has a collection of CNodes arranged as a containment
+// hierarchy.  the CNodes are linked together.
+//////////////////////////////////////////////////////////////////////
 class CSpace : public CDocument
 {
 protected: // create from serialization only
@@ -24,6 +34,9 @@ public:
 
 // Operations
 public:
+
+	// adjusts nodes so that sum of all activations = sum
+	void NormalizeNodes(double sum = 1.0);
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -42,6 +55,9 @@ public:
 #endif
 
 protected:
+	// helper function to add random children to a node
+	void AddChildren(CNode *pParent, int nLevels, 
+				 int nCount = 3, float weight = 0.50f);
 
 // Generated message map functions
 protected:

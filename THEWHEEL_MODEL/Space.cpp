@@ -1,9 +1,15 @@
-// Space.cpp : implementation of the CSpace class
+//////////////////////////////////////////////////////////////////////
+// Space.cpp: implementation of the CSpace class.
 //
+// Copyright (C) 1999-2001
+// $Id$
+// U.S. Patent Pending
+//////////////////////////////////////////////////////////////////////
 
+// pre-compiled headers
 #include "stdafx.h"
-// #include "theWheel2001.h"
 
+// the class definition
 #include "Space.h"
 
 #ifdef _DEBUG
@@ -13,10 +19,50 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 /////////////////////////////////////////////////////////////////////////////
-// CSpace
+// CSpace construction/destruction
+/////////////////////////////////////////////////////////////////////////////
 
+//////////////////////////////////////////////////////////////////////
+// CSpace::CSpace
+// 
+// constructs an empty CSpace object.  use OnNewDocument to initialize
+//////////////////////////////////////////////////////////////////////
+CSpace::CSpace()
+{
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::~CSpace
+// 
+// deletes the CSpace object
+//////////////////////////////////////////////////////////////////////
+CSpace::~CSpace()
+{
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// implements CSpace's dynamic creation
+/////////////////////////////////////////////////////////////////////////////
 IMPLEMENT_DYNCREATE(CSpace, CDocument)
 
+//////////////////////////////////////////////////////////////////////
+// CSpace::NormalizeNodes
+// 
+// normalizes the nodes to a known sum
+//////////////////////////////////////////////////////////////////////
+void CSpace::NormalizeNodes(double sum)
+{
+	// compute the scale factor for normalization
+	double scale = sum 
+		/ rootNode.GetDescendantActivation();
+
+	// normalize to equal sum
+	rootNode.ScaleDescendantActivation(scale);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// CSpace message map
+/////////////////////////////////////////////////////////////////////////////
 BEGIN_MESSAGE_MAP(CSpace, CDocument)
 	//{{AFX_MSG_MAP(CSpace)
 		// NOTE - the ClassWizard will add and remove mapping macros here.
@@ -24,27 +70,49 @@ BEGIN_MESSAGE_MAP(CSpace, CDocument)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
-/////////////////////////////////////////////////////////////////////////////
-// CSpace construction/destruction
-
-CSpace::CSpace()
+//////////////////////////////////////////////////////////////////////
+// CSpace::OnNewDocument
+// 
+// initializes a new document
+//////////////////////////////////////////////////////////////////////
+BOOL CSpace::OnNewDocument()
 {
-	// TODO: add one-time construction code here
+	if (!CDocument::OnNewDocument())
+		return FALSE;
 
+	// remove all nodes
+	// TODO: ensure that this really deletes all children
+	rootNode.children.RemoveAll();
+
+	// set the name of the root node
+	rootNode.name.Set("root");
+
+	// add random children to the root node
+	AddChildren(&rootNode, 3, 3);
+
+	// initialize the node activations from the root node
+	rootNode.activation.Set(0.5);
+	rootNode.PropagateActivation(0.8);
+	rootNode.ResetForPropagation();
+	NormalizeNodes();
+
+	// everything OK, return TRUE
+	return TRUE;
 }
 
-CSpace::~CSpace()
-{
-}
-
-void AddChildren(CNode *pParent, int nLevels, 
-				 int nCount = 3, float weight = 0.50f)
+//////////////////////////////////////////////////////////////////////
+// CSpace::AddChildren
+// 
+// helper function to add random children to the CSpace object
+//////////////////////////////////////////////////////////////////////
+void CSpace::AddChildren(CNode *pParent, int nLevels, 
+				 int nCount, float weight)
 {
 	for (int nAt = 0; nAt < nCount; nAt++)
 	{
 		CString strChildName;
 		strChildName.Format("%s%s%d", 
-			pParent->name.Get(), "son", nAt+1);
+			pParent->name.Get(), "->", nAt+1);
 		CNode *pChild = new CNode(strChildName);
 
 		pParent->children.Add(pChild);
@@ -62,80 +130,11 @@ void AddChildren(CNode *pParent, int nLevels,
 	pParent->SortLinks();	
 }
 
-BOOL CSpace::OnNewDocument()
-{
-	if (!CDocument::OnNewDocument())
-		return FALSE;
-
-	// remove all nodes
-	rootNode.children.RemoveAll();
-
-	CNode *pNewRoot = new CNode();
-	rootNode.children.Add(pNewRoot);
-	pNewRoot->name.Set("root");
-
-	// add random children to the root node
-	AddChildren(pNewRoot, 3, 3);
-
-// #define VSIM
-#ifdef VSIM
-	// now populate with some dummy data
-	CNode *pVSIMNode = new CNode("VSIM");
-	rootNode.children.Add(pVSIMNode);
-	pVSIMNode->parent.Set(NULL);
-
-	CNode *pContouringNode = new CNode("Contouring");
-	pVSIMNode->children.Add(pContouringNode); 
-	pContouringNode->parent.Set(pVSIMNode);
-	pContouringNode->LinkTo(pVSIMNode, 0.3f);
-
-	CNode *pIsocenterNode = new CNode("Isocenter Mgmt");
-	pVSIMNode->children.Add(pIsocenterNode); 
-	pIsocenterNode->parent.Set(pVSIMNode);
-	pIsocenterNode->LinkTo(pVSIMNode, 0.3f);
-
-	CNode *pBeamNode = new CNode("Beam Design");
-	pVSIMNode->children.Add(pBeamNode); 
-	pBeamNode->parent.Set(pVSIMNode);
-	pBeamNode->LinkTo(pVSIMNode, 0.3f);
-#endif
-
-#ifdef RECREATION
-	// now populate with some dummy data
-
-	CNode *pR_B_Soul = new CNode("R&B/Soul");
-	rootNode.children.Add(pR_B_Soul); 
-
-//	CNode *pJazz = new CNode("Jazz");
-//	rootNode.children.Add(pJazz);
-
-	CNode *pGroove = new CNode("Groove");
-	rootNode.children.Add(pGroove); 
-
-	CNode *pAlternative = new CNode("Alternative");
-	rootNode.children.Add(pAlternative); 
-
-	CNode *pTechnoDance = new CNode("Techno/Dance");
-	rootNode.children.Add(pTechnoDance);
-
-	// pR_B_Soul->LinkTo(pJazz, 0.3f);
-	pR_B_Soul->LinkTo(pGroove, 0.3f);
-	pR_B_Soul->LinkTo(pAlternative, 0.1f);
-	pR_B_Soul->LinkTo(pTechnoDance, 0.3f);
-
-	pGroove->LinkTo(pAlternative, 0.2f);
-	pGroove->LinkTo(pTechnoDance, 0.1f);
-
-	pAlternative->LinkTo(pTechnoDance, 0.3f);
-
-#endif
-
-	return TRUE;
-}
-
-/////////////////////////////////////////////////////////////////////////////
-// CSpace serialization
-
+//////////////////////////////////////////////////////////////////////
+// CSpace::Serialize
+// 
+// reads/writes the CSpace to an archive
+//////////////////////////////////////////////////////////////////////
 void CSpace::Serialize(CArchive& ar)
 {
 	// just serialize the root node
@@ -146,11 +145,21 @@ void CSpace::Serialize(CArchive& ar)
 // CSpace diagnostics
 
 #ifdef _DEBUG
+//////////////////////////////////////////////////////////////////////
+// CSpace::AssertValid
+// 
+// ensures the validity of the CSpace object
+//////////////////////////////////////////////////////////////////////
 void CSpace::AssertValid() const
 {
 	CDocument::AssertValid();
 }
 
+//////////////////////////////////////////////////////////////////////
+// CSpace::Dump
+// 
+// outputs the CSpace to the dump context
+//////////////////////////////////////////////////////////////////////
 void CSpace::Dump(CDumpContext& dc) const
 {
 	CDocument::Dump(dc);
