@@ -78,8 +78,9 @@ CNode::~CNode()
 //////////////////////////////////////////////////////////////////////
 // implements CNode's dynamic serialization
 //////////////////////////////////////////////////////////////////////
-IMPLEMENT_SERIAL(CNode, CObject, VERSIONABLE_SCHEMA|5);
-
+IMPLEMENT_SERIAL(CNode, CObject, VERSIONABLE_SCHEMA|6);
+//		6 -- added class description
+//		5 -- added URL
 
 //////////////////////////////////////////////////////////////////////
 // CNode::GetParent
@@ -111,10 +112,12 @@ const CNode *CNode::GetParent() const
 void CNode::SetParent(CNode *pParent)
 {
 	// check to ensure parent is in same space
-	ASSERT(pParent->m_pSpace == m_pSpace);
-
+	// ASSERT(pParent->m_pSpace == m_pSpace);
 	if (m_pParent)
 	{
+		if (m_pSpace == NULL)
+			m_pSpace = pParent->m_pSpace;
+
 		for (int nAt = 0; nAt < m_pParent->m_arrChildren.GetSize(); nAt++)
 		{
 			if (m_pParent->m_arrChildren[nAt] == this)
@@ -144,6 +147,12 @@ void CNode::SetParent(CNode *pParent)
 			m_pParent->m_arrChildren.Add(this);
 		}
 	}
+
+	// set the parent as the initial max activator
+	m_pMaxActivator = m_pParent;
+
+	// set the position to the parent's
+	SetPosition(m_pParent->GetPosition());
 
 	// notify views of the change
 	if (m_pSpace != NULL)
@@ -220,6 +229,16 @@ void CNode::SetDescription(const CString& strDesc)
 		m_pSpace->UpdateAllViews(NULL, 0L, this);
 }
 
+// the node class
+const CString& CNode::GetClass() const
+{
+	return m_strClass;
+}
+
+void CNode::SetClass(const CString& strClass)
+{
+	m_strClass = strClass;
+}
 
 //////////////////////////////////////////////////////////////////////
 // CNode::GetImageFilename
@@ -836,6 +855,11 @@ void CNode::Serialize(CArchive &ar)
 		{
 			ar >> m_strUrl;
 		}
+
+		if (nSchema >= 6)
+		{
+			ar >> m_strClass;
+		}
 	}
 	else
 	{
@@ -843,6 +867,7 @@ void CNode::Serialize(CArchive &ar)
 		ar << m_strDescription;
 		ar << m_strImageFilename;
 		ar << m_strUrl;
+		ar << m_strClass;
 	}
 
 	// serialize children
@@ -979,6 +1004,7 @@ void CNode::ResetForPropagation()
 	{
 		// for each child,
 		CNode *pChildNode = GetChildAt(nAt);
+
 		// now recursively reset the children
 		pChildNode->ResetForPropagation();
 	}
@@ -1041,7 +1067,7 @@ void CNode::SetPosition(const CVector<3>& vPos)
 CVector<3> CNode::GetSize(REAL activation) const
 {
 	// compute the desired aspect ratio (maintain the current aspect ratio)
-	REAL aspectRatio = 0.75f - 0.375f * (REAL) exp(-8.0f * activation);
+	REAL aspectRatio = 13.0 / 16.0 - 6.0 / 16.0 * (REAL) exp(-6.0f * activation);
 
 	// compute the new width and height from the desired area and the desired
 	//		aspect ratio
