@@ -18,6 +18,10 @@ class CSpaceOptDlg : public CDialog
 public:
 	CSpaceOptDlg(CWnd* pParent = NULL);   // standard constructor
 
+	// over-ride to handle enter key
+	void OnOK( ) { ::SetFocus(NULL); }
+
+
 // Dialog Data
 	//{{AFX_DATA(CSpaceOptDlg)
 	enum { IDD = IDD_SPACEOPTPROP };

@@ -23,6 +23,9 @@ public:
 	// accessor for current node
 	void SetCurNode(CNode *pNode);
 
+	// over-ride to handle enter key
+	void OnOK( ) { ::SetFocus(NULL); }
+
 // Dialog Data
 	//{{AFX_DATA(CNodePropDlg)
 	enum { IDD = IDD_NODEPROP };

@@ -4,6 +4,7 @@
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
+
 // ImagePropDlg.h : header file
 //
 
@@ -20,6 +21,9 @@ public:
 
 	// accessor for current node
 	void SetCurNode(CNode *pNode);
+
+	// over-ride to handle enter key
+	void OnOK( ) { ::SetFocus(NULL); }
 
 // Dialog Data
 	//{{AFX_DATA(CImagePropDlg)

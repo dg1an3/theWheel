@@ -19,6 +19,9 @@ class CSpaceClassDlg : public CDialog
 public:
 	CSpaceClassDlg(CWnd* pParent = NULL);   // standard constructor
 
+	// over-ride to handle enter key
+	void OnOK( ) { ::SetFocus(NULL); }
+
 // Dialog Data
 	//{{AFX_DATA(CSpaceClassDlg)
 	enum { IDD = IDD_SPACECLASSPROP };
