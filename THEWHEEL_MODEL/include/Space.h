@@ -33,11 +33,10 @@ const REAL TOTAL_ACTIVATION = (REAL) 0.50;
 //////////////////////////////////////////////////////////////////////
 class CSpace : public CDocument
 {
-protected: // create from serialization only
-	CSpace();
-	DECLARE_DYNCREATE(CSpace)
-
 public:
+	CSpace();
+
+	DECLARE_DYNCREATE(CSpace)
 
 	///////////////////////////////////////////////////////////////////
 	// hierarchy
@@ -73,7 +72,7 @@ public:
 	CNodeCluster *GetClusterAt(int nAt);
 
 	// accessors for the super node count
-	int GetSuperNodeCount() const;
+	int GetSuperNodeCount();
 	void SetMaxSuperNodeCount(int nSuperNodeCount);
 
 // Overrides
@@ -86,14 +85,22 @@ public:
 
 // Implementation
 public:
+	// returns a pointer to the layout manager
+	CSpaceLayoutManager *GetLayoutManager();
+
+	// layout the nodes
 	void LayoutNodes();
 
-	CVector<3> GetCentralMoment() const;
-	CMatrix<2> GetInertiaTensor() const;
+	// get mass statistics for the nodes
+	CVector<3> GetCentralMoment();
+	CMatrix<2> GetInertiaTensor();
 
+	// get the master DirectSound object
 	LPDIRECTSOUND GetDirectSound();
 
+	// destroy the space
 	virtual ~CSpace();
+
 #ifdef _DEBUG
 	virtual void AssertValid() const;
 	virtual void Dump(CDumpContext& dc) const;
@@ -137,9 +144,6 @@ private:
 
 	// the clusters for this space
 	CNodeCluster *m_pCluster;
-
-	// stores the number of super nodes
-	int m_nSuperNodeCount;
 
 	// the manager for laying out the nodes
 	CSpaceLayoutManager *m_pLayoutManager;
