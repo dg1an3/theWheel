@@ -37,7 +37,6 @@ static char THIS_FILE[]=__FILE__;
 //////////////////////////////////////////////////////////////////////
 CDesigntimeTracker::CDesigntimeTracker(CSpaceView *pView)
 : CTracker(pView),
-	m_pTreeView(NULL),
 	m_pLinkingView(NULL),
 	m_bCutting(FALSE)
 {
@@ -52,18 +51,6 @@ CDesigntimeTracker::CDesigntimeTracker(CSpaceView *pView)
 CDesigntimeTracker::~CDesigntimeTracker()
 {
 }	// CDesigntimeTracker::~CDesigntimeTracker
-
-
-//////////////////////////////////////////////////////////////////////
-// CDesigntimeTracker::SetSpaceTreeView
-// 
-// sets the associated tree view
-//////////////////////////////////////////////////////////////////////
-void CDesigntimeTracker::SetSpaceTreeView(CSpaceTreeView *pTreeView)
-{
-	m_pTreeView = pTreeView;
-
-}	// CDesigntimeTracker::SetSpaceTreeView
 
 
 //////////////////////////////////////////////////////////////////////
@@ -117,11 +104,9 @@ void CDesigntimeTracker::OnButtonUp(UINT nFlags, CPoint point)
 				// if so, activate it
 				m_pLinkingView->AddPendingActivation((REAL) 0.45);
 
-				// and select it in the associated tree view
-				if (m_pTreeView != NULL)
-				{
-					m_pTreeView->SelectNode(m_pLinkingView->GetNode());
-				}
+				// set the new pending node
+				CNode *pNode = m_pLinkingView->GetNode();
+				pNode->GetSpace()->SetCurrentNode(pNode);
 			}
 			else
 			{
