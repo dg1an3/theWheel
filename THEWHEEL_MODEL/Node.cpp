@@ -15,6 +15,9 @@
 // include the document class
 #include "Space.h"
 
+// intel math lib
+#include <mathf.h>
+
 #ifdef _DEBUG
 #undef THIS_FILE
 static char THIS_FILE[]=__FILE__;
@@ -28,13 +31,6 @@ static char THIS_FILE[]=__FILE__;
 // constant defining threshold for propagation
 //////////////////////////////////////////////////////////////////////
 const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01;
-
-// TODO: get these from the layout function
-// constants for the distance scale vs. activation curve
-// const REAL SIZE_SCALE = 100.0;
-// const REAL DIST_SCALE_MIN = 1.0;
-// const REAL DIST_SCALE_MAX = 1.35;
-// const REAL ACTIVATION_MIDPOINT = 0.25;
 
 //////////////////////////////////////////////////////////////////////
 // CompareLinkWeights
@@ -85,6 +81,7 @@ CNode::CNode(CSpace *pSpace,
 		m_maxDeltaActivation((REAL) 0.0),
 		m_bFoundMaxActivator(FALSE),
 		m_bSubThreshold(TRUE),
+		m_rmse(0.0),
 
 		m_pOptSSV(NULL),
 
@@ -125,6 +122,7 @@ CNode::~CNode()
 	{
 		delete m_pOptSSV;
 	}
+
 }	// CNode::~CNode
 
 
@@ -418,6 +416,32 @@ CDib *CNode::GetDib()
 
 
 //////////////////////////////////////////////////////////////////////
+// CNode::GetIcon
+// 
+// gets a handle to the node's icon, instead of a DIB
+//////////////////////////////////////////////////////////////////////
+HICON CNode::GetIcon()
+{
+	// retrieve if no icon exists and there is a URL
+	if (m_hIcon == NULL 
+		&& m_strUrl != "")
+	{
+		// get info on the URL file from the shell
+		SHFILEINFO info;
+		ZeroMemory(&info, sizeof(info));
+		::SHGetFileInfo(m_strUrl, 0, &info, sizeof(info), 
+			SHGFI_ICON | SHGFI_LARGEICON);
+
+		// get the icon
+		m_hIcon = info.hIcon;
+	}
+
+	return m_hIcon;
+
+}	// CNode::GetIcon
+
+
+//////////////////////////////////////////////////////////////////////
 // CNode::GetSoundFilename
 // 
 // returns the name of the node's sound file
@@ -566,6 +590,10 @@ const CVectorD<3>& CNode::GetPosition() const
 //////////////////////////////////////////////////////////////////////
 void CNode::SetPosition(const CVectorD<3>& vPos, BOOL bFireChange)
 {
+	// update RMSE
+	m_rmse = (REAL) 0.01 * m_rmse
+		+ (REAL) 0.99 * (m_vPosition - vPos).GetLength();
+
 	m_vPosition = vPos;
 
 	if (bFireChange)
@@ -577,14 +605,30 @@ void CNode::SetPosition(const CVectorD<3>& vPos, BOOL bFireChange)
 
 
 //////////////////////////////////////////////////////////////////////
+// CNode::GetRMSE
+// 
+// returns positional RMSE
+//////////////////////////////////////////////////////////////////////
+REAL CNode::GetRMSE()
+{
+	return m_rmse;
+
+}	// CNode::GetRMSE
+
+
+//////////////////////////////////////////////////////////////////////
 // CNode::GetSize
 // 
 // returns the size of the node (width & height)
 //////////////////////////////////////////////////////////////////////
 CVectorD<3> CNode::GetSize(REAL activation) const
 {
+	const REAL max = 13.0 / 16.0;
+	const REAL scale = 6.0 / 16.0;
+
 	// compute the desired aspect ratio (maintain the current aspect ratio)
-	REAL aspectRatio = 13.0 / 16.0 - 6.0 / 16.0 * (REAL) exp(-6.0f * activation);
+	REAL aspectRatio = max - scale 
+		* (REAL) expf((REAL) -6.0 * activation);
 
 	// compute the new width and height from the desired area and the desired
 	//		aspect ratio
@@ -703,7 +747,7 @@ REAL CNode::GetLinkWeight(CNode * pToNode) const
 	}
 
 	// not found? return 0.0
-	return 0.0f;
+	return (REAL) 0.0;
 
 }	// CNode::GetLinkWeight
 
@@ -770,8 +814,8 @@ void CNode::LinkTo(CNode *pToNode, REAL weight, BOOL bReciprocalLink)
 		// cross-link at the same weight
 		if (bReciprocalLink)
 		{
-			double otherWeight = pToNode->GetLinkWeight(this);
-			pToNode->LinkTo(this, (weight + otherWeight) * 0.5, FALSE);
+			REAL otherWeight = pToNode->GetLinkWeight(this);
+			pToNode->LinkTo(this, (weight + otherWeight) * (REAL) 0.5, FALSE);
 		}
 
 		// and update the map
@@ -1038,11 +1082,24 @@ void CNode::Serialize(CArchive &ar)
 
 		if (nSchema >= 7)
 		{
-			ar >> m_primaryActivation;
-			ar >> m_secondaryActivation;
-			ar >> m_vPosition;
+			double primaryActivation;
+			ar >> primaryActivation;
+			m_primaryActivation = primaryActivation;
+
+			double secondaryActivation;
+			ar >> secondaryActivation;
+			m_secondaryActivation = secondaryActivation;
+
+			CVectorD<3, double> vPosition;
+			ar >> vPosition;
+			m_vPosition[0] = vPosition[0];
+			m_vPosition[1] = vPosition[1];
+			m_vPosition[2] = vPosition[2];
+
 			ar >> m_pMaxActivator;
-			ar >> m_maxDeltaActivation;
+			double maxDeltaActivation;
+			ar >> maxDeltaActivation;
+			m_maxDeltaActivation = maxDeltaActivation;
 		}
 
 		if (nSchema >= 8)
@@ -1068,11 +1125,17 @@ void CNode::Serialize(CArchive &ar)
 		ar << m_strClass;
 
 		// schema 7
-		ar << m_primaryActivation;
-		ar << m_secondaryActivation;
-		ar << m_vPosition;
+		ar << (double) m_primaryActivation;
+		ar << (double) m_secondaryActivation;
+
+		CVectorD<3, double> vPosition;
+		vPosition[0] = m_vPosition[0];
+		vPosition[1] = m_vPosition[1];
+		vPosition[2] = m_vPosition[2];
+		ar << vPosition;
+
 		ar << m_pMaxActivator;
-		ar << m_maxDeltaActivation;
+		ar << (double) m_maxDeltaActivation;
 
 		if (nSchema >= 8)
 		{
@@ -1178,12 +1241,6 @@ void CNode::PropagateActivation(REAL scale)
 		// get the link
 		CNodeLink *pLink = GetLinkAt(nAt);
 
-		// skip if the link is a stabilizer
-		if (pLink->IsStabilizer())
-		{
-			continue;
-		}
-
 		// stop propagating if its below the link weight threshold
 		if (pLink->GetWeight() < PROPAGATE_THRESHOLD_WEIGHT)
 		{
@@ -1199,40 +1256,15 @@ void CNode::PropagateActivation(REAL scale)
 			// get the link target
 			CNode *pTarget = pLink->GetTarget();
 
-/*			// compute the distance function
-			const REAL size = GetSize(GetActivation()).GetLength();
-			const REAL size_pair_scale = 0.5 * (size + 
-				pTarget->GetSize(pTarget->GetActivation()).GetLength());
-			const REAL distance = (pTarget->GetPosition() - GetPosition()).GetLength();
-			const REAL norm_distance = distance / (SIZE_SCALE * size_pair_scale);
-
-			// compute the optimal distance
-			const REAL MIDWEIGHT = 0.5;
-			const REAL opt_dist = DIST_SCALE_MIN
-				+ (DIST_SCALE_MAX - DIST_SCALE_MIN) 
-					* (1.0 - MIDWEIGHT / (MIDWEIGHT + ACTIVATION_MIDPOINT));
-
-			// compute the exponential of the distance
-			const REAL exp_dist = exp(64.0 * (norm_distance - opt_dist) - 1.0);
-			if (_finite(exp_dist))
-			{
-				// compute the gain and set it
-				REAL new_gain = 1.0 - exp_dist / (exp_dist + 1.0);
-				pLink->SetGain(new_gain);
-			}
-			else
-			{
-				// getting too far away, need more power
-				pLink->SetGain(1.0);
-			} */
-
 			// compute the desired new activation = this activation * weight
 			REAL targetActivation = GetActivation() 
 				* pLink->GetWeight();
 
-			// perturb the new activation
-			targetActivation *= 
-				(1.0005f - 0.001f * (REAL) rand() / (REAL) RAND_MAX);
+			// attenuate if the link is a stabilizer
+			if (pLink->IsStabilizer())
+			{
+				targetActivation *= (REAL) 0.25;
+			}
 
 			// the new activation defaults to the original activation
 			REAL newActivation = pTarget->GetActivation();
@@ -1249,7 +1281,7 @@ void CNode::PropagateActivation(REAL scale)
 			pTarget->SetActivation(newActivation, this, pLink->GetGainWeight());
 
 			// propagate to linked nodes
-			pTarget->PropagateActivation(scale * (REAL) 1.0);
+			pTarget->PropagateActivation(scale * (REAL) 0.999);
 		}
 	}
 
@@ -1267,10 +1299,10 @@ void CNode::ResetForPropagation()
 	if (!m_bFoundMaxActivator)
 	{
 		// cut the activation in half
-		m_primaryActivation /= 2.0;
+		m_primaryActivation /= (REAL) 2.0;
 
 		// cut the secondary activation in half as well
-		m_secondaryActivation /= 2.0;
+		m_secondaryActivation /= (REAL) 2.0;
 
 		// adjust the space's total count
 		if (m_pSpace)
@@ -1279,7 +1311,7 @@ void CNode::ResetForPropagation()
 				m_primaryActivation;
 			m_pSpace->m_totalSecondaryActivation -= 
 				m_secondaryActivation;
-		}
+		} 
 	}
 
 	// reset the max delta activation
@@ -1304,19 +1336,3 @@ void CNode::ResetForPropagation()
 
 }	// CNode::ResetForPropagation
 
-
-HICON CNode::GetIcon()
-{
-	if (m_hIcon == NULL && m_strUrl != "")
-	{
-		SHFILEINFO info;
-		ZeroMemory(&info, sizeof(info));
-
-		::SHGetFileInfo(m_strUrl, 0, &info, sizeof(info), 
-			SHGFI_ICON | SHGFI_LARGEICON);
-
-		m_hIcon = info.hIcon;
-	}
-
-	return m_hIcon;
-}
