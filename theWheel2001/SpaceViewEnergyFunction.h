@@ -8,7 +8,7 @@ const int SPV_STATE_DIM = 20;
 
 class CSpaceView;
 
-class CSpaceViewEnergyFunction : public CObjectiveFunction<SPV_STATE_DIM, SPV_STATE_TYPE>
+class CSpaceViewEnergyFunction : public CGradObjectiveFunction<SPV_STATE_DIM, SPV_STATE_TYPE>
 {
 public:
 	CSpaceView *m_pView;
@@ -27,10 +27,19 @@ public:
 	// evaluates the energy function
 	virtual SPV_STATE_TYPE operator()(const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput);
 
+	// evaluates the gradient of the energy function
+	virtual CVector<SPV_STATE_DIM, SPV_STATE_TYPE> 
+		Grad(const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput);
+
 private:
 	// array holding the mapping from CNodeViews (indexes into m_pView->nodeViews) to
 	//		state vector elements
 	CArray<int, int> m_arrElementMap;
+
+	// caches previous computation
+	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> m_vInput;
+	SPV_STATE_TYPE m_energy;
+	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> m_vGrad;
 };
 
 

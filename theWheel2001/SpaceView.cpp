@@ -54,7 +54,12 @@ CSpaceView::CSpaceView()
 {
 	m_pEnergyFunc = new CSpaceViewEnergyFunction();
 	m_pEnergyFunc->m_pView = this;
+
+#ifdef USE_GRAD
+	m_pOptimizer = new CConjGradOptimizer<SPV_STATE_DIM, double>(m_pEnergyFunc);
+#else
 	m_pOptimizer = new CPowellOptimizer<SPV_STATE_DIM, double>(m_pEnergyFunc);
+#endif
 
 	// set the tolerance
 	m_pOptimizer->tolerance.Set(TOLERANCE);

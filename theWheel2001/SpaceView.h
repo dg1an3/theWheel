@@ -13,7 +13,12 @@
 #include "NodeView.h"
 
 #include "SpaceViewEnergyFunction.h"
+
+#ifdef USE_GRAD
+#include "ConjGradOptimizer.h"
+#else
 #include "PowellOptimizer.h"
+#endif
 
 class CSpaceView : public CView
 {
@@ -99,7 +104,7 @@ protected:
 
 private:
 	// the optimizer used to lay out the child views
-	CPowellOptimizer<SPV_STATE_DIM, double> *m_pOptimizer;
+	COptimizer<SPV_STATE_DIM, double> *m_pOptimizer;
 
 	// the energy function that the optimizer uses as an objective function
 	CSpaceViewEnergyFunction *m_pEnergyFunc;
