@@ -636,7 +636,7 @@ void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
 							0, NULL, DI_NORMAL);
 				}
 
-				if (m_bMaximized)
+/*				if (m_bMaximized)
 				{
 					CRect rectBtn(rectImage);
 					rectBtn.top = rectBtn.bottom + 5;
@@ -646,7 +646,7 @@ void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
 					m_pParent->m_btnGo.PrintClient(pDC, PRF_CLIENT);
 					pDC->SetViewportOrg(ptOrig);
 				}
-
+*/
 				// adjust the rectangle to account for the bitmap
 				rectInner.left += nActualWidth + 10;
 			}

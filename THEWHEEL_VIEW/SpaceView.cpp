@@ -905,12 +905,12 @@ int CSpaceView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (!m_dropTarget.Register(this))
 		return -1;
 
-	if (!m_btnGo.Create("Go", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, 
+/*	if (!m_btnGo.Create("Go", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, 
 		CRect(-30, -30, 0, 0), this, IDB_GO))
 		return -1;
 
 	if (!m_btnGo.LoadBitmaps(IDB_GO_BUTTON, IDB_GO_BUTTON_DOWN))
-		return -1;
+		return -1; */
 
 	return 0;
 
