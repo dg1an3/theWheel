@@ -172,7 +172,7 @@ CVector<SPV_STATE_DIM, SPV_STATE_TYPE> CSpaceViewEnergyFunction::GetStateVector(
 	for (int nAt = 0; nAt < m_pView->nodeViews.GetSize() && nAtVectorElement < SPV_STATE_DIM; nAt++)
 	{
 		CNodeView *pView = m_pView->nodeViews.Get(nAt);
-		if (pView->activation.Get() > CNodeView::activationThreshold)
+		if (pView->activation.Get() >= CNodeView::activationThreshold)
 		{
 			vState[nAtVectorElement] = (SPV_STATE_TYPE) pView->center.Get()[0];
 			vState[nAtVectorElement+1] = (SPV_STATE_TYPE) pView->center.Get()[1];
@@ -218,7 +218,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::GetThreshold()
 	int nSuperThresholdViewCount = 0;
 	int nPrevSuperThresholdViewCount;
 
-	while (nSuperThresholdViewCount < SPV_STATE_DIM / 2)
+	while (nSuperThresholdViewCount <= SPV_STATE_DIM / 2)
 	{
 		nPrevSuperThresholdViewCount = nSuperThresholdViewCount;
 		prevThreshold = threshold;
@@ -349,7 +349,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 					for (int nX = -1; nX <= 1; nX++)
 						for (int nY = -1; nY <= 1; nY++)
 						{
-							m_energy += 1.0 / 10.0
+							m_energy += 1.0 / 9.0
 								* spacerFunc((x + dx * (SPV_STATE_TYPE) nX) / ssx, 
 									(y + dy * (SPV_STATE_TYPE) nY) / ssy);
 

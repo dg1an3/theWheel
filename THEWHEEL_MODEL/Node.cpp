@@ -69,7 +69,7 @@ float CNode::GetLinkWeightBoltz(CNode * pToNode, float temperature)
 	float boltzWeight = 
 		(float) exp(GetLinkWeight(pToNode) / m_currTemperature) / m_currSum;
 
-	return boltzWeight * 1.02 - 0.02;
+	return boltzWeight * 1.225 - 0.025;
 }
 
 void CNode::Serialize(CArchive &ar)

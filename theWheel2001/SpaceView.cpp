@@ -23,7 +23,7 @@ int nNodeID = 1100;
 const SPV_STATE_TYPE TOLERANCE = 0.7;
 const SPV_STATE_TYPE TOTAL_ACTIVATION = 0.35f;
 
-#define LEARNING_EPSILON 100.0
+#define LEARNING_EPSILON 10.0
 
 extern SPV_STATE_TYPE Gauss2D(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE sx, SPV_STATE_TYPE sy);
 //{
@@ -297,7 +297,7 @@ void CSpaceView::PropagateActivation(CNodeView *pSource, float percent, float fa
 			if (oldActivation < percent * maxWeight)
 			{
 				float newActivation = CNodeView::ActivationCurve(oldActivation * factor,
-					percent * maxWeight);
+					percent * maxWeight * 1.5);
 				pMaxDest->activation.Set(newActivation);
 				PropagateActivation(pMaxDest, newActivation);
 			}
@@ -657,8 +657,6 @@ void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI)
 
 void CSpaceView::LearnForNode(CNodeView *pNodeView)
 {
-	return;
-
 	// get the rectangle for the target node view
 	CRect rectNodeView;
 	pNodeView->GetWindowRect(&rectNodeView);
@@ -731,4 +729,25 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 
 	
 	CView::OnTimer(nIDEvent);
+}
+
+CNodeView * CSpaceView::GetMaxLinked(CNodeView *pView)
+{
+	CNodeView *pMaxLink = NULL;
+	float maxActWeight = 0.0f;
+
+	// update the privates
+	int nAt;
+	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
+	{
+		float act = nodeViews.Get(nAt)->activation.Get();
+		float weight = nodeViews.Get(nAt)->forNode->GetLinkWeight(pView->forNode.Get());
+		if (act * weight * weight> maxActWeight)
+		{
+			maxActWeight = act * weight * weight;
+			pMaxLink = nodeViews.Get(nAt);
+		}		
+	}
+
+	return pMaxLink;
 }

@@ -561,27 +561,32 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 void CNodeView::UpdatePrivates()
 {
 	CSpaceView *pSpaceView = (CSpaceView *)GetParent();
-	CNodeView *pParentView = pSpaceView->GetViewForNode(forNode->parent.Get());
+	// CNodeView *pParentView = pSpaceView->GetViewForNode(forNode->parent.Get());
 
 	CRect rect;
 	pSpaceView->GetClientRect(&rect);
 	CVector<2> vNewCenter(rect.CenterPoint());
-	if (activation.Get() > activationThreshold)
-	{
-		vNewCenter = center.Get() * 0.125 + privCenter.Get() * 0.875;
-	}
-	else if (pParentView != NULL)
-	{
-		vNewCenter = center.Get() * 0.875 + pParentView->center.Get() * 0.125;
-		center.Set(vNewCenter);
-	}
-	privCenter.Set(vNewCenter);
 
 	float newActivation;
 	if (activation.Get() > activationThreshold)
 		newActivation = activation.Get() * 0.25f + privActivation.Get() * 0.75f;
 	else
 		newActivation = privActivation.Get() * 0.75f;
+
+	if (activation.Get() > activationThreshold)
+	{
+		vNewCenter = center.Get() * 0.125 + privCenter.Get() * 0.875;
+	}
+	else // if (pParentView != NULL)
+	{
+		CNodeView *pMaxLinked = pSpaceView->GetMaxLinked(this);
+		if (pMaxLinked != NULL)
+		{
+			vNewCenter = center.Get() * 0.875 + pMaxLinked->center.Get() * 0.125;
+			center.Set(vNewCenter);
+		}
+	}
+	privCenter.Set(vNewCenter);
 
 	privActivation.Set(newActivation);
 }
