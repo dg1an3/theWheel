@@ -50,11 +50,16 @@ void AddChildren(CNode *pParent, int nLevels,
 		pParent->children.Add(pChild);
 		pChild->parent.Set(pParent);
 
-		pChild->LinkTo(pParent, weight);
+		// generate a randomly varying weight
+		float actWeight = weight * (1.4f - 0.8f * (float) rand() / (float) RAND_MAX);
+		pChild->LinkTo(pParent, actWeight);
 
 		if (nLevels > 0)
 			AddChildren(pChild, nLevels-1, nCount, weight);
 	}
+
+	// now sort the links
+	pParent->SortLinks();	
 }
 
 BOOL CSpace::OnNewDocument()
@@ -70,7 +75,7 @@ BOOL CSpace::OnNewDocument()
 	pNewRoot->name.Set("root");
 
 	// add random children to the root node
-	AddChildren(pNewRoot, 3);
+	AddChildren(pNewRoot, 3, 4);
 
 // #define VSIM
 #ifdef VSIM
