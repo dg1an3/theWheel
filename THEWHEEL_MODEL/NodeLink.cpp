@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // NodeLink.cpp: implementation of the CNodeLink class.
 //
-// Copyright (C) 1999-2002 Derek Graham Lane
+// Copyright (C) 1999-2003 Derek Graham Lane
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
@@ -33,6 +33,8 @@ static char THIS_FILE[]=__FILE__;
 CNodeLink::CNodeLink(CNode *pToNode, REAL weight)
 	: m_pTarget(pToNode),
 		m_weight(weight),
+		m_gain((REAL) 1.0),
+		m_bIsStabilizer(FALSE),
 		m_bHasPropagated(TRUE)
 		// initialize to HasPropagated to prevent immediate 
 		//		propagation
@@ -53,8 +55,9 @@ CNodeLink::~CNodeLink()
 //////////////////////////////////////////////////////////////////////
 // implements CNodeLink's dynamic serialization
 //////////////////////////////////////////////////////////////////////
-IMPLEMENT_SERIAL(CNodeLink, CObject, 1)
-
+IMPLEMENT_SERIAL(CNodeLink, CObject, VERSIONABLE_SCHEMA|2);
+//		2 -- added stabilizer flag
+//		1 -- initial version
 
 //////////////////////////////////////////////////////////////////////
 // CNodeLink::GetWeight
@@ -147,6 +150,8 @@ void CNodeLink::SetHasPropagated(BOOL bPropagated)
 //////////////////////////////////////////////////////////////////////
 void CNodeLink::Serialize(CArchive &ar)
 {
+	UINT nSchema = ar.GetObjectSchema();
+
 	if (ar.IsLoading())
 	{
 		// load the values
@@ -154,12 +159,59 @@ void CNodeLink::Serialize(CArchive &ar)
 		ar >> weight;
 		m_weight = (REAL) weight;
 		ar >> m_pTarget;
+
+		if (nSchema >= 2)
+		{
+			ar >> m_bIsStabilizer;
+		}
 	}
 	else
 	{
 		// store the values
 		ar << (float) m_weight;
 		ar << m_pTarget;
+
+		if (nSchema >= 2)
+		{
+			ar << m_bIsStabilizer;
+		}
 	}
 
 }	// CNodeLink::Serialize
+
+void CNodeLink::SetGain(REAL gain)
+{
+	ASSERT(_finite(m_gain));
+	m_gain = 0.5 * m_gain + 0.5 * gain;
+	ASSERT(_finite(m_gain));
+}
+
+REAL CNodeLink::GetGainWeight() const
+{
+	return 0.99 * m_gain * GetWeight() + 0.01 * GetWeight();
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeLink::IsStabilizer
+// 
+// returns TRUE if this link is a stabilizer link
+//////////////////////////////////////////////////////////////////////
+BOOL CNodeLink::IsStabilizer() const
+{
+	return m_bIsStabilizer;
+
+}	// CNode::IsStabilizer
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeLink::SetStabilizer
+// 
+// links the node to the target node (creating a CNodeLink in the
+// proces, if necessary).
+//////////////////////////////////////////////////////////////////////
+void CNodeLink::SetStabilizer(BOOL bIsStabilizer)
+{
+	m_bIsStabilizer = bIsStabilizer;
+}
+

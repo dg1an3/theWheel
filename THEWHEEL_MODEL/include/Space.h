@@ -35,6 +35,10 @@ class CSpace : public CDocument
 public:
 	CSpace();
 
+	// destroy the space
+	virtual ~CSpace();
+
+	// declare dynamic creation
 	DECLARE_DYNCREATE(CSpace)
 
 	///////////////////////////////////////////////////////////////////
@@ -50,6 +54,9 @@ public:
 	// adds a new node to the space as a child of the parent
 	void AddNode(CNode *pNewNode, CNode *pParentNode);
 
+	// removes a node from the space
+	void RemoveNode(CNode *pMarkedNode);
+
 	///////////////////////////////////////////////////////////////////
 	// operations
 
@@ -60,7 +67,9 @@ public:
 	void NormalizeNodes(REAL sum = 1.0);
 
 	// returns the total activation of the space
-	REAL GetTotalActivation() const;
+	REAL GetTotalActivation(BOOL bCompute = FALSE) const;
+	REAL GetTotalPrimaryActivation(BOOL bCompute = FALSE) const;
+	REAL GetTotalSecondaryActivation(BOOL bCompute = FALSE) const;
 
 	// accessors for the super node count
 	int GetSuperNodeCount();
@@ -82,11 +91,11 @@ public:
 	// layout the nodes
 	void LayoutNodes();
 
+	// sets the center of the node views
+	void SetCenter(double x, double y);
+
 	// get the master DirectSound object
 	LPDIRECTSOUND GetDirectSound();
-
-	// destroy the space
-	virtual ~CSpace();
 
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -101,13 +110,6 @@ protected:
 	// helper function to sort the nodes by activation
 	void SortNodes();
 
-	// helper function to add random children to a node
-	void AddChildren(CNode *pParent, int nLevels, 
-				 int nCount = 3, REAL weight = 0.50f);
-
-	// helper function to randomly cross-link nodes
-	void CrossLinkNodes(int nCount, REAL weight = 0.50f);
-
 // Generated message map functions
 protected:
 	//{{AFX_MSG(CSpace)
@@ -115,6 +117,13 @@ protected:
 		//    DO NOT EDIT what you see in these blocks of generated code !
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
+
+	// allow CNode access to the total activation
+	friend CNode;
+
+	// holds the computed total activation
+	mutable REAL m_totalPrimaryActivation;
+	mutable REAL m_totalSecondaryActivation;
 
 private:
 	// the parent node contains all of this space's nodes as children
@@ -129,8 +138,8 @@ private:
 	// the manager for laying out the nodes
 	CSpaceLayoutManager *m_pLayoutManager;
 
-	// returns the computed total activation
-	REAL m_totalActivation;
+	// the center of the node views
+	CVectorD<3> m_vCenter;
 };
 
 /////////////////////////////////////////////////////////////////////////////

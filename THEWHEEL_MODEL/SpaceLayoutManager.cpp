@@ -2,7 +2,7 @@
 // SpaceLayoutManager.cpp: implementation of the 
 //		CSpaceLayoutManager objective function.
 //
-// Copyright (C) 1996-2002 Derek Graham Lane
+// Copyright (C) 1996-2003 Derek Graham Lane
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
@@ -13,6 +13,10 @@
 // defines the gaussian function
 #include <MathUtil.h>
 
+// for least-squares
+#include <MatrixNxM.h>
+#include <MatrixBase.inl>
+
 // optimizer for the layout
 #include <PowellOptimizer.h>
 #include <ConjGradOptimizer.h>
@@ -20,6 +24,9 @@
 
 // header file for the CSpace object
 #include "Space.h"
+
+// least-squares fitting
+#include "LeastSquaresFit2D.h"
 
 // header files for the class
 #include "SpaceLayoutManager.h"
@@ -29,7 +36,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 // constant for the tolerance of the optimization
-const REAL TOLERANCE = (REAL) 0.1;
+const REAL TOLERANCE = (REAL) 0.01;
 
 // scale for the sizes of the nodes
 const REAL SIZE_SCALE = 100.0;
@@ -43,7 +50,7 @@ const REAL ACTIVATION_MIDPOINT = 0.25;
 const REAL K_POS = 600.0;
 
 // constant for weighting the repulsion energy
-const REAL K_REP = 200.0;
+const REAL K_REP = 600.0;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -56,7 +63,7 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 	: CObjectiveFunction(TRUE),
 		m_pSpace(pSpace),
 
-		m_nStateDim(MAX_STATE_DIM / 2),
+		m_nStateDim(80),
 
 		m_vInput(CVectorN<>()),
 		m_energy(0.0),
@@ -93,6 +100,108 @@ CSpaceLayoutManager::~CSpaceLayoutManager()
 	delete m_pConjGradOptimizer;
 
 }	// CSpaceLayoutManager::~CSpaceLayoutManager
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceLayoutManager::GetStateDim
+// 
+// returns the state dimension
+//////////////////////////////////////////////////////////////////////
+int CSpaceLayoutManager::GetStateDim() const
+{
+	return m_nStateDim;
+
+}	// CSpaceLayoutManager::GetStateDim
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceLayoutManager::SetStateDim
+// 
+// sets the state dimension
+//////////////////////////////////////////////////////////////////////
+void CSpaceLayoutManager::SetStateDim(int nStateDim)
+{
+	m_nStateDim = nStateDim;
+
+}	// CSpaceLayoutManager::SetStateDim
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceLayoutManager::GetEnergy
+// 
+// returns the energy from the most recent optimization
+//////////////////////////////////////////////////////////////////////
+double CSpaceLayoutManager::GetEnergy()
+{
+	return m_energy;
+
+}	// CSpaceLayoutManager::GetEnergy
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceLayoutManager::GetKPos
+// 
+// returns the k_pos (positional) parameter
+//////////////////////////////////////////////////////////////////////
+double CSpaceLayoutManager::GetKPos()
+{
+	return K_POS;
+
+}	// CSpaceLayoutManager::GetKPos
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceLayoutManager::SetKPos
+// 
+// sets the positional paramater
+//////////////////////////////////////////////////////////////////////
+void CSpaceLayoutManager::SetKPos(double k_pos)
+{
+}	// CSpaceLayoutManager::SetKPos
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceLayoutManager::GetKRep
+// 
+// returns the repulsion parameter
+//////////////////////////////////////////////////////////////////////
+double CSpaceLayoutManager::GetKRep()
+{
+	return K_REP;
+
+}	// CSpaceLayoutManager::GetKRep
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceLayoutManager::SetKRep
+// 
+// sets the repulsion parameter
+//////////////////////////////////////////////////////////////////////
+void CSpaceLayoutManager::SetKRep(double k_rep)
+{
+}	// CSpaceLayoutManager::SetKRep
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceLayoutManager::GetTolerance
+// 
+// returns the tolerance parameter
+//////////////////////////////////////////////////////////////////////
+double CSpaceLayoutManager::GetTolerance()
+{
+	return TOLERANCE;
+
+}	// CSpaceLayoutManager::GetTolerance
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceLayoutManager::SetTolerance()
+// 
+// sets the tolerance parameter
+//////////////////////////////////////////////////////////////////////
+void CSpaceLayoutManager::SetTolerance(double tolerance)
+{
+}	// CSpaceLayoutManager::SetTolerance()
 
 
 //////////////////////////////////////////////////////////////////////
@@ -277,8 +386,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 				// compute the factor controlling the importance of the
 				//		attraction term
-				REAL factor = K_POS * weight // * weight 
-					* m_act[nAtNodeView];
+				REAL factor = K_POS * weight * m_act[nAtNodeView];
 
 				// and add the attraction term to the energy
 				m_energy += factor * dist_error * dist_error;
@@ -363,12 +471,6 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 //////////////////////////////////////////////////////////////////////
 void CSpaceLayoutManager::LayoutNodes()
 {
-#ifdef _DEBUG_MEM
-	// used to check for memory leaks
-	CMemoryState memState;
-	memState.Checkpoint();
-#endif
-
 	// set up the state vector
 	Pos2StateVector();
 
@@ -378,28 +480,16 @@ void CSpaceLayoutManager::LayoutNodes()
 	// reset evaluation count
 	m_nEvaluations = 0;
 
-#ifdef _DEBUG_MEM
-	memState.DumpAllObjectsSince();
-#endif
-
 	// form the state vector
-	CStateVector vNewState;
+	CVectorN<> vNewState;
 	vNewState.SetDim(m_nStateDim);
 
 	// perform the optimization
 	vNewState = m_pOptimizer->Optimize(m_vState);
 
-#ifdef TRACE_ITERATIONS_PER_LAYOUT
-	LOG_TRACE("Iterations for layout = %i\n", m_nEvaluations);
-#endif
-
-#ifdef _DEBUG_MEM
-	memState.DumpAllObjectsSince();
-#endif
-
 	// now determine a rotation/translation that minimizes the squared
 	//		difference between previous and current state
-	RotateTranslateStateVector(&vNewState, m_vState);
+	RotateTranslateStateVector(m_vState, vNewState);
 
 	// assign the new state vector
 	m_vState = vNewState;
@@ -421,143 +511,7 @@ void CSpaceLayoutManager::LayoutNodes()
 		}
 	}
 
-#ifdef _DEBUG_MEM
-	memState.DumpAllObjectsSince();
-#endif
-
 }	// CSpaceLayoutManager::LayoutNodes
-
-
-//////////////////////////////////////////////////////////////////////
-// class CLeastSquaresFit2D
-// 
-// objective function to compute a 2D rigid transform relating two
-//		sets of points.
-// input vector is a 3D vector with first two elements = x, y offset
-//		and last element = angle
-//////////////////////////////////////////////////////////////////////
-class CLeastSquaresFit2D : public CObjectiveFunction
-{
-public:
-	// construct the objective function
-	CLeastSquaresFit2D(const CSpaceLayoutManager::CStateVector& vOldState, 
-			const CSpaceLayoutManager::CStateVector& vNewState);
-
-	// evaluates the objective function
-	virtual REAL operator()(const CVectorN<>& vInput, 
-		CVectorN<> *pGrad = NULL);
-
-	// transforms the input state vector
-	void Transform(const CSpaceLayoutManager::CStateVector& vState, 
-			CVectorD<2> vOffset, double angle, 
-			CSpaceLayoutManager::CStateVector *pXform);
-
-private:
-	// stores the old state
-	CSpaceLayoutManager::CStateVector m_vOldState;
-
-	// stores the new state
-	CSpaceLayoutManager::CStateVector m_vNewState;
-
-};	// class CLeastSquaresFit2D
-
-
-//////////////////////////////////////////////////////////////////////
-// CLeastSquaresFit2D::CLeastSquaresFit2D
-// 
-// construct the objective function
-//////////////////////////////////////////////////////////////////////
-CLeastSquaresFit2D::CLeastSquaresFit2D(
-		const CSpaceLayoutManager::CStateVector& vOldState, 
-		const CSpaceLayoutManager::CStateVector& vNewState)
-	: CObjectiveFunction(FALSE),
-		m_vOldState(vOldState),
-		m_vNewState(vNewState)
-{
-}	// CLeastSquaresFit2D::CLeastSquaresFit2D
-
-
-//////////////////////////////////////////////////////////////////////
-// CLeastSquaresFit2D::operator()
-// 
-// evaluates the objective function
-//////////////////////////////////////////////////////////////////////
-REAL CLeastSquaresFit2D::operator()(const CVectorN<>& vInput, 
-									CVectorN<> *pGrad)
-{
-	// check for valid input
-	ASSERT(!_isnan(vInput[0]));
-	ASSERT(!_isnan(vInput[1]));
-	ASSERT(!_isnan(vInput[2]));
-
-	// form the offset
-	CVectorD<2> vOffset = CVectorD<2>(vInput);
-
-	// stores the transformed state
-	CSpaceLayoutManager::CStateVector vXformState;
-
-	// transform the state
-	Transform(m_vNewState, vOffset, vInput[2], &vXformState);
-
-	// form the difference square
-	double diff_sq = 0.0;
-	for (int nAt = 0; nAt < vXformState.GetDim(); nAt += 2)
-	{
-		// compute difference squared
-		diff_sq += (vXformState[nAt] - m_vOldState[nAt])
-			 * (vXformState[nAt] - m_vOldState[nAt]);
-	}
-
-	// check for valid diff_sq
-	ASSERT(!_isnan(diff_sq));
-
-	// return as energy
-	return diff_sq;
-
-}	// CLeastSquaresFit2D::operator()
-
-
-//////////////////////////////////////////////////////////////////////
-// CLeastSquaresFit2D::Transform
-// 
-// transforms the input state vector
-//////////////////////////////////////////////////////////////////////
-void CLeastSquaresFit2D::Transform(
-		const CSpaceLayoutManager::CStateVector& vState, 
-		CVectorD<2> vOffset, double angle, 
-		CSpaceLayoutManager::CStateVector *pXform)
-{
-	// set dimensions of receiving state vector
-	pXform->SetDim(vState.GetDim());
-
-	// create a rotation matrix
-	CMatrixD<2> mRotate = CreateRotate(angle);
-
-	// for each pair of coordinates
-	for (int nAt = 0; nAt < vState.GetDim(); nAt += 2)
-	{
-		// check state
-		ASSERT(!_isnan(vState[nAt + 0]));
-		ASSERT(!_isnan(vState[nAt + 1]));
-
-		// form the position vector
-		CVectorD<2> vPos;
-		vPos[0] = vState[nAt + 0];
-		vPos[1] = vState[nAt + 1];
-
-		// rotate translate the position vector
-		CVectorD<2> vXformPos = mRotate * vPos + vOffset;
-
-		// check transformed coordinate
-		ASSERT(!_isnan(vXformPos[0]));
-		ASSERT(!_isnan(vXformPos[1]));
-
-		// store in new state vector
-		(*pXform)[nAt + 0] = vXformPos[0];
-		(*pXform)[nAt + 1] = vXformPos[1];
-	}
-
-}	// CLeastSquaresFit2D::Transform
 
 
 //////////////////////////////////////////////////////////////////////
@@ -566,69 +520,81 @@ void CLeastSquaresFit2D::Transform(
 // called to minimize rotate/translate error between old state
 //		and new
 //////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::RotateTranslateStateVector(CStateVector *pState, 
-											const CStateVector &vOldState)
+void CSpaceLayoutManager::RotateTranslateStateVector(const CVectorN<>& vOldState,
+													 CVectorN<>& vNewState)
 {
-	// objective function
-	CLeastSquaresFit2D fitFunction(*pState, vOldState);
-	
-	// optimizer for the fitness function
-	CPowellOptimizer optimizer(&fitFunction);
-	optimizer.SetTolerance(0.001);
+	// form the Nx3 matrix of pre-coordinates (homogeneous)
+	CMatrixNxM<> mOld(m_pSpace->GetSuperNodeCount(), 3);
+	for (int nAt = 0; nAt < mOld.GetCols(); nAt++)
+	{
+		mOld[nAt][0] = vOldState[nAt * 2];
+		mOld[nAt][1] = vOldState[nAt * 2 + 1];
+		mOld[nAt][2] = 1.0;
+	}
 
-	// optimize and return the transform
-	CVectorD<3> xform = CVectorD<3>(optimizer.Optimize(
-		CVectorD<3>(0.0, 0.0, 0.0)));
+	// form the Nx3 matrix of post-coordinates (homogeneous)
+	CMatrixNxM<> mNew(m_pSpace->GetSuperNodeCount(), 3);
+	for (nAt = 0; nAt < mNew.GetCols(); nAt++)
+	{
+		mNew[nAt][0] = vNewState[nAt * 2];
+		mNew[nAt][1] = vNewState[nAt * 2 + 1];
+		mNew[nAt][2] = 1.0;
+	}
 
-	// retrieve the resulting state vector
-	CStateVector vXformState;
-	fitFunction.Transform((*pState), CVectorD<2>(xform), xform[2], 
-		&vXformState);
+	// work with the transpose of the problem, so that columns < rows
+	mOld.Transpose();
+	mNew.Transpose();
 
-	// and return
-	(*pState) = vXformState;
+	// form the pseudo-inverse of the a coordinates
+	CMatrixNxM<> mNew_ps = mNew;
+	if (mNew_ps.Pseudoinvert())
+	{
+		// form the transform matrix
+		CMatrixNxM<> mTransform = mNew_ps * mOld;
+
+		// un-transpose the matrices
+		mNew.Transpose();
+		mOld.Transpose();
+		mTransform.Transpose();
+
+		// store the offset part
+		CVectorN<> offset = mTransform[2];
+
+		// reshape to isolate upper 2x2
+		mTransform.Reshape(2, 2);
+
+		// now turn the transform matrix upper 2x2
+		//		into an orthogonal matrix
+		CVectorN<> w(2);
+		CMatrixNxM<> v(2, 2);
+		if (mTransform.SVD(w, v))
+		{
+			// form the orthogonal matrix
+			v.Transpose();
+			mTransform *= v;
+
+			// restore the translation part
+			mTransform.Reshape(3, 3);
+			mTransform[2][0] = offset[0];
+			mTransform[2][1] = offset[1];
+			mTransform[2][2] = 1.0;
+
+			// transform the points
+			mNew = mTransform * mNew;
+
+			// now repopulate
+			for (nAt = 0; nAt < mNew.GetCols(); nAt++)
+			{
+				vNewState[nAt * 2] = mNew[nAt][0];
+				vNewState[nAt * 2 + 1] = mNew[nAt][1];
+			}
+		}
+	}
+	else
+	{
+		TRACE("CSpaceLayoutManager::RotateTranslateStateVector: No pseudoinverse\n");
+	}
 
 }	// CSpaceLayoutManager::RotateTranslateStateVector
 
 
-int CSpaceLayoutManager::GetStateDim() const
-{
-	return m_nStateDim;
-}
-
-void CSpaceLayoutManager::SetStateDim(int nStateDim)
-{
-	m_nStateDim = nStateDim;
-}
-
-double CSpaceLayoutManager::GetKPos()
-{
-	return K_POS;
-}
-
-void CSpaceLayoutManager::SetKPos(double k_pos)
-{
-}
-
-double CSpaceLayoutManager::GetKRep()
-{
-	return K_REP;
-}
-
-void CSpaceLayoutManager::SetKRep(double k_rep)
-{
-}
-
-double CSpaceLayoutManager::GetTolerance()
-{
-	return TOLERANCE;
-}
-
-void CSpaceLayoutManager::SetTolerance(double tolerance)
-{
-}
-
-double CSpaceLayoutManager::GetEnergy()
-{
-	return m_energy;
-}

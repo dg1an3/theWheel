@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // Space.cpp: implementation of the CSpace class.
 //
-// Copyright (C) 1999-2001	
+// Copyright (C) 1999-2002 Derek G Lane	
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
@@ -57,7 +57,9 @@ int __cdecl CompareNodeActivations(const void *elem1, const void *elem2)
 CSpace::CSpace()
 	: m_pRootNode(NULL),
 		m_pDS(NULL),
-		m_pLayoutManager(NULL)
+		m_pLayoutManager(NULL),
+		m_totalPrimaryActivation(0.0),
+		m_totalSecondaryActivation(0.0)
 {
 	// create the layout manager
 	m_pLayoutManager = new CSpaceLayoutManager(this);
@@ -135,22 +137,70 @@ void CSpace::AddNode(CNode *pNewNode, CNode *pParentNode)
 	REAL actWeight = 
 		0.5f * (1.4f - 0.8f * (REAL) rand() / (REAL) RAND_MAX);
 
-	// set up the link
-	pNewNode->LinkTo(pParentNode, (REAL) actWeight);
+	if (pParentNode)
+	{
+		// set up the link
+		pNewNode->LinkTo(pParentNode, (REAL) actWeight);
 
-	// add the new node to the parent
-	pNewNode->SetParent(pParentNode);
-
-	// set the activation for the new node
-	pNewNode->SetActivation(actWeight * 0.1f);
+		// add the new node to the parent
+		pNewNode->SetParent(pParentNode);
+	}
 
 	// add the node to the array
 	AddNodeToArray(pNewNode);
+
+	// set the activation for the new node, only after adding to
+	//		the array (because it will update the total activation)
+	pNewNode->SetActivation(actWeight * 0.1f);
 
 	// update all the views, passing the new node as a hint
 	UpdateAllViews(NULL, NULL, pNewNode);	
 
 }	// CSpace::AddNode
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::RemoveNode
+// 
+// removes a particular node from the space
+//////////////////////////////////////////////////////////////////////
+void CSpace::RemoveNode(CNode *pMarkedNode)
+{
+	// delete any links to the node
+	for (int nAt = 0; nAt < GetNodeCount(); nAt++)
+	{
+		// get the other node
+		CNode *pOtherNode = GetNodeAt(nAt);
+
+		// if its not the node to be removed,
+		if (pOtherNode != pMarkedNode)
+		{
+			// then unlink the marked node
+			pOtherNode->Unlink(pMarkedNode);
+		}
+	}
+
+	// remove the node from the parent
+	pMarkedNode->SetParent(NULL);
+
+	// find and remove the node from the array
+	for (nAt = 0; nAt < GetNodeCount(); nAt++)
+	{
+		// get the other node
+		CNode *pNode = (CNode *) m_arrNodes.GetAt(nAt);
+
+		// if its not the node to be removed,
+		if (pNode == pMarkedNode)
+		{
+			// remove the marked node
+			m_arrNodes.RemoveAt(nAt);
+
+			// and break from the for loop
+			break;
+		}
+	}
+
+}	// CSpace::RemoveNode
 
 
 //////////////////////////////////////////////////////////////////////
@@ -176,9 +226,6 @@ void CSpace::ActivateNode(CNode *pNode, REAL scale)
 	// normalize the nodes
 	NormalizeNodes();
 
-	// update total activation
-	m_totalActivation = GetRootNode()->GetDescendantActivation();
-
 	// sort the nodes
 	SortNodes();
 
@@ -194,17 +241,26 @@ void CSpace::NormalizeNodes(REAL sum)
 {
 	// scale for secondary
 	REAL scale_2 = sum 
-		/ (PRIM_SEC_RATIO * m_pRootNode->GetDescendantPrimaryActivation()
-			+ m_pRootNode->GetDescendantSecondaryActivation());
+		/ (PRIM_SEC_RATIO * GetTotalPrimaryActivation() 
+			+ GetTotalSecondaryActivation()); 
 
 	// scale for primary
 	REAL scale_1 = scale_2 * PRIM_SEC_RATIO;
 
-	// scale for equal primary/secondary weighting
-	REAL scale = sum / m_pRootNode->GetDescendantActivation();
+	// scale the nodes
+	for (int nAt = 0; nAt < GetNodeCount(); nAt++)
+	{
+		CNode *pNode = GetNodeAt(nAt);
 
-	// normalize to equal sum
-	m_pRootNode->ScaleDescendantActivation(scale_1, scale_2);
+		// scale this node's activation
+		m_totalPrimaryActivation -= pNode->m_primaryActivation;
+		pNode->m_primaryActivation *= scale_1;
+		m_totalPrimaryActivation += pNode->m_primaryActivation;
+
+		m_totalSecondaryActivation -= pNode->m_secondaryActivation;
+		pNode->m_secondaryActivation *= scale_2;
+		m_totalSecondaryActivation += pNode->m_secondaryActivation;
+	}
 
 }	// CSpace::NormalizeNodes
 
@@ -259,32 +315,24 @@ BOOL CSpace::OnNewDocument()
 	// remove all nodes
 	delete m_pRootNode;
 
+	// clear the array
+	m_arrNodes.RemoveAll();
+	m_totalPrimaryActivation = 0.0;
+	m_totalSecondaryActivation = 0.0;
+
 	// create a new root node
 	m_pRootNode = new CNode();
 	m_pRootNode->SetName("root");
+	AddNode(m_pRootNode, NULL);
 	AddNode(new CNode(this, "Child1"), m_pRootNode);
 	AddNode(new CNode(this, "Child2"), m_pRootNode);
 	AddNode(new CNode(this, "Child3"), m_pRootNode);
-
-#ifdef USE_FAKE_NODES
-	m_pRootNode->SetDescription("Eadf eeqrjij afga gdfijagg ahvuert8qu4 vadfgahg."
-		"Jkdjfwheu sdfg hahrewgakdjf asg hag7un34gafasdgha vhg haeirnga."
-		"Sdff jdf jdskljfa; lkdjfsjd fkjweu iagh eurafgnls uashfre.");
-
-	for (int nAt = 0; nAt < 2173; nAt++)
-		rand();
-
-	// add random children to the root node
-	AddChildren(&rootNode, 4, 3);
-	CrossLinkNodes(m_pRootNode->GetDescendantCount() / 50);
-#endif
-
-	AddNodeToArray(m_pRootNode);
 
 	// initialize the node activations from the root node
 	m_pRootNode->SetActivation((REAL) 0.5);
 	m_pRootNode->ResetForPropagation();
 	m_pRootNode->PropagateActivation((REAL) 0.8);
+
 	NormalizeNodes();
 
 	// everything OK, return TRUE
@@ -307,78 +355,6 @@ void CSpace::SortNodes()
 
 
 //////////////////////////////////////////////////////////////////////
-// CSpace::AddChildren
-// 
-// helper function to add random children to the CSpace object
-//////////////////////////////////////////////////////////////////////
-void CSpace::AddChildren(CNode *pParent, int nLevels, 
-				 int nCount, REAL weight)
-{
-	for (int nAt = 0; nAt < nCount; nAt++)
-	{
-		CString strChildName;
-		strChildName.Format("%s%s%d", 
-			pParent->GetName(), "->", nAt+1);
-		CNode *pChild = new CNode(this, strChildName);
-
-		pChild->SetDescription("Ud dfjaskf rtertj 23 adsjf.  "
-			"Lkdjfsdfj sdaf ajskjgew ajg ajsdklgj; slrj jagifj ajdfgjkld.  "
-			"I d fdmgj sdl jdsgiow mrektmrejgj migmoergmmsos m ksdfogkf.");
-		// pParent->m_arrChildren.Add(pChild);
-		pChild->SetParent(pParent);
-
-		// set the image filename
-		char pszImageFilename[_MAX_FNAME];
-		sprintf(pszImageFilename, "image%i.bmp", rand() % 8);
-		pChild->SetImageFilename(pszImageFilename);
-
-		// generate a randomly varying weight
-		REAL actWeight = weight * (1.4f - 0.8f * (REAL) rand() / (REAL) RAND_MAX);
-		pChild->LinkTo(pParent, actWeight);
-
-		if (nLevels > 0)
-			AddChildren(pChild, nLevels-1, nCount, weight);
-	}
-
-	// now sort the links
-	pParent->SortLinks();	
-
-}	// CSpace::AddChildren
-
-
-//////////////////////////////////////////////////////////////////////
-// CSpace::CrossLinkNodes
-// 
-// randomly cross-links some nodes
-//////////////////////////////////////////////////////////////////////
-void CSpace::CrossLinkNodes(int nCount, REAL weight)
-{
-	// cross-link
-	for (int nAt = 0; nAt < nCount; nAt++)
-	{
-		// select the first random child
-		CNode *pChild1 = m_pRootNode->GetRandomDescendant();
-
-		// select the second random child
-		CNode *pChild2 = m_pRootNode->GetRandomDescendant();
-
-		if (pChild1 != pChild2)
-		{
-			REAL actWeight = weight * (1.4f - 0.8f * (REAL) rand() / (REAL) RAND_MAX);
-
-			TRACE("Linking child %s to child %s with weight %lf\n",
-				pChild1->GetName(),
-				pChild2->GetName(), 
-				actWeight);
-
-			pChild1->LinkTo(pChild2, weight);
-		}
-	}
-
-}	// CSpace::CrossLinkNodes
-
-
-//////////////////////////////////////////////////////////////////////
 // CSpace::AddNodeToArray
 // 
 // adds a node (and its children) to the node array
@@ -387,6 +363,10 @@ void CSpace::AddNodeToArray(CNode *pNode)
 {
 	// set the pointer to the space
 	pNode->m_pSpace = this;
+	pNode->m_pSpace->m_totalPrimaryActivation += 
+		pNode->GetPrimaryActivation();
+	pNode->m_pSpace->m_totalSecondaryActivation += 
+		pNode->GetSecondaryActivation();
 
 	// add to the array
 	m_arrNodes.Add(pNode);
@@ -418,12 +398,21 @@ void CSpace::Serialize(CArchive& ar)
 
 		// remove existing nodes from the array
 		m_arrNodes.RemoveAll();
+		m_totalPrimaryActivation = 0.0;
+		m_totalSecondaryActivation = 0.0;
 
 		// add the root node to the array of nodes
 		AddNodeToArray(m_pRootNode);
 
-		// and do some activation
-		ActivateNode(m_pRootNode, 0.5);
+		// sort the nodes
+		SortNodes();
+
+		// normalize the nodes
+		NormalizeNodes();
+
+		// set the total activation
+		GetTotalPrimaryActivation(TRUE);
+		GetTotalSecondaryActivation(TRUE);
 	}
 	else
 	{
@@ -493,11 +482,64 @@ void CSpace::Dump(CDumpContext& dc) const
 // 
 // returns the total activation of all nodes
 //////////////////////////////////////////////////////////////////////
-REAL CSpace::GetTotalActivation() const
+REAL CSpace::GetTotalActivation(BOOL bCompute) const
 {
-	return m_totalActivation;
+	return GetTotalPrimaryActivation(bCompute)
+		+ GetTotalSecondaryActivation(bCompute);
 
 }	// CSpace::GetTotalActivation
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetTotalPrimaryActivation
+// 
+// returns the total primary activation of all nodes
+//////////////////////////////////////////////////////////////////////
+REAL CSpace::GetTotalPrimaryActivation(BOOL bCompute) const
+{
+	// are we recomputing?
+	if (bCompute)
+	{
+		// reset total
+		m_totalPrimaryActivation = 0.0;
+
+		// sum all primary activations
+		for (int nAt = 0; nAt < GetNodeCount(); nAt++)
+		{
+			m_totalPrimaryActivation += 
+				GetNodeAt(nAt)->GetPrimaryActivation();
+		}
+	}
+
+	return m_totalPrimaryActivation;
+
+}	// CSpace::GetTotalPrimaryActivation
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetTotalSecondaryActivation
+// 
+// returns the total secondary activation of all nodes
+//////////////////////////////////////////////////////////////////////
+REAL CSpace::GetTotalSecondaryActivation(BOOL bCompute) const
+{
+	// are we recomputing?
+	if (bCompute)
+	{
+		// reset total
+		m_totalSecondaryActivation = 0.0;
+
+		// sum all secondary activations
+		for (int nAt = 0; nAt < GetNodeCount(); nAt++)
+		{
+			m_totalSecondaryActivation += 
+				GetNodeAt(nAt)->GetSecondaryActivation();
+		}
+	}
+
+	return m_totalSecondaryActivation;
+
+}	// CSpace::GetTotalSecondaryActivation
 
 
 //////////////////////////////////////////////////////////////////////
@@ -522,7 +564,71 @@ void CSpace::LayoutNodes()
 	// layout the nodes
 	m_pLayoutManager->LayoutNodes();
 
+	// check super-nodes for distance from center
+	for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
+	{
+		// get the node
+		CNode *pNode = GetNodeAt(nAt);
+		CVectorD<3> vOffset = pNode->GetPosition() - m_vCenter;
+		
+		if (vOffset.GetLength() > 500.0)
+		{
+			REAL overflow = vOffset.GetLength() - 500.0;
+			vOffset.Normalize();
+			vOffset *= (500.0 + overflow / 2.0);
+		}
+
+		pNode->SetPosition(m_vCenter + vOffset);
+	}
+
+	// position sub-threshold nodes
+	for (nAt = GetSuperNodeCount(); nAt < GetNodeCount(); nAt++)
+	{
+		// get the node
+		CNode *pNode = GetNodeAt(nAt);
+		CVectorD<3> vNewPosition = m_vCenter;
+
+		// see if there is a max activator
+		if (pNode->GetMaxActivator() != NULL)
+		{
+			// the the new position
+			vNewPosition = pNode->GetMaxActivator()->GetPosition();
+			CVectorD<3> vCenter = m_vCenter;
+
+			if (pNode->GetMaxActivator()->GetMaxActivator() != NULL)
+			{
+				vCenter = pNode->GetMaxActivator()->GetMaxActivator()->GetPosition();
+			}
+			CVectorD<3> vDirection = vNewPosition - vCenter;
+			vDirection.Normalize();
+
+			CVectorD<3> vSize = pNode->GetMaxActivator()->GetSize(
+				pNode->GetMaxActivator()->GetActivation());
+
+			vDirection *= vSize.GetLength() * 30.0;
+
+			// set position to it's position
+			vNewPosition += vDirection;
+		}
+
+		// set the new position
+		pNode->SetPosition(vNewPosition);
+	}
+
 }	// CSpace::LayoutNodes
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::SetCenter
+// 
+// lays out the nodes in the array
+//////////////////////////////////////////////////////////////////////
+void CSpace::SetCenter(double x, double y)
+{
+	m_vCenter[0] = x;
+	m_vCenter[1] = y;
+
+}	// CSpace::SetCenter
 
 
 //////////////////////////////////////////////////////////////////////

@@ -40,6 +40,14 @@ public:
 	// node weight
 	REAL GetWeight() const;
 
+	// accessors for gain setting
+	void SetGain(REAL gain);
+	REAL GetGainWeight() const;
+
+	// accessors for stabilizer flag
+	BOOL IsStabilizer() const;
+	void SetStabilizer(BOOL bIsStabilizer = TRUE);
+
 	// node target
 	CNode *GetTarget();
 	const CNode *GetTarget() const;
@@ -69,8 +77,14 @@ private:
 	// weight of this link
 	REAL m_weight;
 
+	// link's gain
+	REAL m_gain;
+
 	// target of this link
 	CNode *m_pTarget;
+
+	// flag to indicate this is a stabilizer link
+	BOOL m_bIsStabilizer;
 
 	// flag to indicate that propagation has already occurred
 	BOOL m_bHasPropagated;

@@ -110,9 +110,13 @@ public:
 
 	// accessor to just get the link weight
 	REAL GetLinkWeight(CNode * toNode) const;
+	REAL GetLinkGainWeight(CNode *pToNode);
 
 	// creates or modifies an existing link
 	void LinkTo(CNode *toNode, REAL weight, BOOL bReciprocalLink = TRUE);
+
+	// unlinks a particular node (in both directions)
+	void Unlink(CNode *pNode, BOOL bReciprocalLink = TRUE);
 
 	// clears all links
 	void RemoveAllLinks();
@@ -120,9 +124,6 @@ public:
 	// sorts the links descending by weight, should be called after
 	//		changing link weights
 	void SortLinks();
-
-	// hebbian learning
-	void LearnFromNode(CNode *pOtherNode, REAL k = 0.000001f);
 
 	//////////////////////////////////////////////////////////////////
 	// activation accessors
@@ -134,12 +135,6 @@ public:
 
 	// returns the number of descendants of this node
 	int GetDescendantCount() const;
-
-	// returns the sum of the activation of all descendants, 
-	//		plus this node's activation
-	REAL GetDescendantActivation() const;
-	REAL GetDescendantPrimaryActivation() const;
-	REAL GetDescendantSecondaryActivation() const;
 
 	// returns the current maximum activator
 	CNode *GetMaxActivator();
@@ -157,6 +152,9 @@ public:
 	// serialization of this node
 	virtual void Serialize(CArchive &ar);
 
+	// pointer to the space that contains this node
+	CSpace *m_pSpace;
+
 protected:
 
 	// declares CSpace as a friend class, to access the helper functions
@@ -170,25 +168,11 @@ protected:
 	// over-rides can perform special functions, for instance when the
 	//		activation reaches a threshold
 	virtual void SetActivation(REAL newActivation, 
-		CNode *pActivator = NULL);
+		CNode *pActivator = NULL, REAL weight = 0.0);
 
 	// propagation management
 	void ResetForPropagation();
 	void PropagateActivation(REAL scale);
-
-	//////////////////////////////////////////////////////////////////
-	// descendant helper functions
-
-	// scales the activation of this node and all descendants by
-	//		the scale amount
-	void ScaleDescendantActivation(REAL primScale, REAL secScale);
-
-	// returns a random descendant
-	CNode * GetRandomDescendant();
-
-public:
-	// pointer to the space that contains this node
-	CSpace *m_pSpace;
 
 private:
 	// pointer to the node's parent
@@ -238,6 +222,10 @@ private:
 	// stores a pointer to the maximum activator for this
 	//		propagation cycle
 	CNode *m_pMaxActivator;
+
+	// flag to indicate that a max activator was found during
+	//		the previous propagation
+	BOOL m_bFoundMaxActivator;
 
 	// convenience pointer to a view object
 	CObject *m_pView;

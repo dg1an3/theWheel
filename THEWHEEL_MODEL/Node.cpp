@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // Node.cpp: implementation of the CNode class.
 //
-// Copyright (C) 1999-2002 Derek Graham Lane
+// Copyright (C) 1999-2003 Derek Graham Lane
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
@@ -29,6 +29,12 @@ static char THIS_FILE[]=__FILE__;
 //////////////////////////////////////////////////////////////////////
 const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01;
 
+// TODO: get these from the layout function
+// constants for the distance scale vs. activation curve
+const REAL SIZE_SCALE = 100.0;
+const REAL DIST_SCALE_MIN = 1.0;
+const REAL DIST_SCALE_MAX = 1.35;
+const REAL ACTIVATION_MIDPOINT = 0.25;
 
 //////////////////////////////////////////////////////////////////////
 // CompareLinkWeights
@@ -67,9 +73,11 @@ CNode::CNode(CSpace *pSpace,
 
 		m_primaryActivation((REAL) 0.005),		// initialize with a very 
 		m_secondaryActivation((REAL) 0.005),	// small activation
-		m_maxDeltaActivation((REAL) 0.0),
 
 		m_pMaxActivator(NULL),
+		m_maxDeltaActivation((REAL) 0.0),
+		m_bFoundMaxActivator(FALSE),
+
 		m_pView(NULL)
 {
 }	// CNode::CNode
@@ -101,7 +109,8 @@ CNode::~CNode()
 //////////////////////////////////////////////////////////////////////
 // implements CNode's dynamic serialization
 //////////////////////////////////////////////////////////////////////
-IMPLEMENT_SERIAL(CNode, CObject, VERSIONABLE_SCHEMA|6);
+IMPLEMENT_SERIAL(CNode, CObject, VERSIONABLE_SCHEMA|7);
+//		7 -- added activation and position
 //		6 -- added class description
 //		5 -- added URL
 
@@ -640,6 +649,25 @@ REAL CNode::GetLinkWeight(CNode * pToNode) const
 
 
 //////////////////////////////////////////////////////////////////////
+// CNode::GetLinkGainWeight
+// 
+// returns the gained weight for the given link
+//////////////////////////////////////////////////////////////////////
+REAL CNode::GetLinkGainWeight(CNode *pToNode)
+{
+	CNodeLink *pLink = GetLinkTo(pToNode);
+	if (pLink)
+	{
+		return pLink->GetGainWeight();
+	}
+
+	// not found? return 0.0
+	return (REAL) 0.0;
+
+}	// CNode::GetLinkGainWeight
+
+
+//////////////////////////////////////////////////////////////////////
 // CNode::LinkTo
 // 
 // links the node to the target node (creating a CNodeLink in the
@@ -697,6 +725,42 @@ void CNode::LinkTo(CNode *pToNode, REAL weight, BOOL bReciprocalLink)
 
 
 //////////////////////////////////////////////////////////////////////
+// CNode::Unlink
+// 
+// removes a link
+//////////////////////////////////////////////////////////////////////
+void CNode::Unlink(CNode *pNode, BOOL bReciprocalLink)
+{
+	// search through the links,
+	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
+	{
+		// looking for the one with the desired target
+		CNodeLink *pLink = (CNodeLink *) m_arrLinks.GetAt(nAt);
+		if (pLink->GetTarget() == pNode)
+		{
+			// and remove from the array
+			m_arrLinks.RemoveAt(nAt);
+
+			// delete the link
+			delete pLink;
+
+			// break from the loop
+			break;
+		}
+	}
+
+	// remove from the weight map
+	m_mapLinks.RemoveKey(pNode);
+
+	// if the reciprocal link should be removed,
+	if (bReciprocalLink)
+	{
+		// then unlink in the other direction
+		pNode->Unlink(this, FALSE);
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
 // CNode::RemoveAllLinks
 // 
 // removes all the links for the node
@@ -724,30 +788,6 @@ void CNode::SortLinks()
 		sizeof(CNodeLink*), CompareLinkWeights);
 
 }	// CNode::SortLinks
-
-
-//////////////////////////////////////////////////////////////////////
-// CNode::LearnFromNode
-// 
-// applies a simple learning rule to the link weights
-//////////////////////////////////////////////////////////////////////
-void CNode::LearnFromNode(CNode *pOtherNode, REAL k)
-{
-	REAL otherAct = (REAL) pOtherNode->GetPrimaryActivation();
-	REAL weightTo = (REAL) pOtherNode->GetLinkWeight(this);
-
-	if (otherAct > GetPrimaryActivation() 
-		&& otherAct * weightTo < GetPrimaryActivation())
-	{
-		REAL targetWeight = (REAL) GetPrimaryActivation() / otherAct;
-		ASSERT(targetWeight > weightTo);
-
-		REAL newWeight = weightTo + (targetWeight - weightTo) * k;
-		if (newWeight < 2.0)
-			pOtherNode->LinkTo(this, newWeight);
-	}
-
-}	// CNode::LearnFromNode
 
 
 //////////////////////////////////////////////////////////////////////
@@ -803,86 +843,6 @@ int CNode::GetDescendantCount() const
 	return nCount;
 
 }	// CNode::GetDescendantCount
-
-
-//////////////////////////////////////////////////////////////////////
-// CNode::GetDescendantActivation
-// 
-// sums the activation value of this node with all children nodes
-//////////////////////////////////////////////////////////////////////
-REAL CNode::GetDescendantActivation() const
-{
-	// initialize with the activation of this node
-	REAL sum = GetActivation();
-
-	// iterate over child nodes
-	for (int nAt = 0; nAt < GetChildCount(); nAt++)
-	{
-		// for each child node
-		const CNode *pNode = GetChildAt(nAt);
-
-		// sum its descendent activation
-		sum += pNode->GetDescendantActivation();
-	}
-
-	// return the sum
-	return sum;
-
-}	// CNode::GetDescendantActivation
-
-
-//////////////////////////////////////////////////////////////////////
-// CNode::GetDescendantPrimaryActivation
-// 
-// sums the primary activation value of this node with all children 
-// nodes
-//////////////////////////////////////////////////////////////////////
-REAL CNode::GetDescendantPrimaryActivation() const
-{
-	// initialize with the activation of this node
-	REAL sum = GetPrimaryActivation();
-
-	// iterate over child nodes
-	for (int nAt = 0; nAt < GetChildCount(); nAt++)
-	{
-		// for each child node
-		const CNode *pNode = GetChildAt(nAt);
-
-		// sum its descendent activation
-		sum += pNode->GetDescendantPrimaryActivation();
-	}
-
-	// return the sum
-	return sum;
-
-}	// CNode::GetDescendantPrimaryActivation
-
-
-//////////////////////////////////////////////////////////////////////
-// CNode::GetDescendantSecondaryActivation
-// 
-// sums the primary activation value of this node with all children 
-// nodes
-//////////////////////////////////////////////////////////////////////
-REAL CNode::GetDescendantSecondaryActivation() const
-{
-	// initialize with the activation of this node
-	REAL sum = GetSecondaryActivation();
-
-	// iterate over child nodes
-	for (int nAt = 0; nAt < GetChildCount(); nAt++)
-	{
-		// for each child node
-		const CNode *pNode = GetChildAt(nAt);
-
-		// sum its descendent activation
-		sum += pNode->GetDescendantSecondaryActivation();
-	}
-
-	// return the sum
-	return sum;
-
-}	// CNode::GetDescendantSecondaryActivation
 
 
 //////////////////////////////////////////////////////////////////////
@@ -946,14 +906,34 @@ void CNode::Serialize(CArchive &ar)
 		{
 			ar >> m_strClass;
 		}
+
+		if (nSchema >= 7)
+		{
+			ar >> m_primaryActivation;
+			ar >> m_secondaryActivation;
+			ar >> m_vPosition;
+			ar >> m_pMaxActivator;
+			ar >> m_maxDeltaActivation;
+		}
 	}
 	else
 	{
 		ar << m_strName;
 		ar << m_strDescription;
 		ar << m_strImageFilename;
+
+		// schema 5
 		ar << m_strUrl;
+
+		// schema 6
 		ar << m_strClass;
+
+		// schema 7
+		ar << m_primaryActivation;
+		ar << m_secondaryActivation;
+		ar << m_vPosition;
+		ar << m_pMaxActivator;
+		ar << m_maxDeltaActivation;
 	}
 
 	// serialize children
@@ -992,7 +972,7 @@ void CNode::Serialize(CArchive &ar)
 // sets the node's activation.  if an activator is passed, it is
 //		compared to the current Max Activator
 //////////////////////////////////////////////////////////////////////
-void CNode::SetActivation(REAL newActivation, CNode *pActivator)
+void CNode::SetActivation(REAL newActivation, CNode *pActivator, REAL weight)
 {
 	// compute the delta
 	REAL deltaActivation = newActivation - GetActivation();
@@ -1001,17 +981,40 @@ void CNode::SetActivation(REAL newActivation, CNode *pActivator)
 	if (pActivator == NULL)
 	{
 		m_primaryActivation += deltaActivation;
+
+		// update the total activation value
+		if (m_pSpace)
+		{
+			m_pSpace->m_totalPrimaryActivation += deltaActivation;
+		}
 	}
 	else
 	{
 		m_secondaryActivation += deltaActivation;
+
+		// update the total activation value
+		if (m_pSpace)
+		{
+			m_pSpace->m_totalSecondaryActivation += deltaActivation;
+		}
 	}
 
 	// compare the delta for a new max activator
-	if (deltaActivation > m_maxDeltaActivation 
-		&& pActivator != NULL)
+	if (pActivator != NULL)
 	{
-		m_pMaxActivator = pActivator;
+		// set the new max if this is the first found
+		if (!m_bFoundMaxActivator 
+
+			// or update the max if greater than current max
+			|| pActivator->GetActivation() * weight > m_maxDeltaActivation)
+		{
+			m_pMaxActivator = pActivator;
+			m_maxDeltaActivation = pActivator->GetActivation() * weight;
+
+			// set the flag to indicate we have found a max activator 
+			//		for this round
+			m_bFoundMaxActivator = TRUE;
+		}
 	}
 
 }	// CNode::SetActivation
@@ -1031,7 +1034,13 @@ void CNode::PropagateActivation(REAL scale)
 		// get the link
 		CNodeLink *pLink = GetLinkAt(nAt);
 
-		// stop propagating if below the link weight threshold
+		// skip if the link is a stabilizer
+		if (pLink->IsStabilizer())
+		{
+			continue;
+		}
+
+		// stop propagating if its below the link weight threshold
 		if (pLink->GetWeight() < PROPAGATE_THRESHOLD_WEIGHT)
 		{
 			break;
@@ -1045,6 +1054,31 @@ void CNode::PropagateActivation(REAL scale)
 
 			// get the link target
 			CNode *pTarget = pLink->GetTarget();
+
+			// compute the distance function
+			REAL distance = (pTarget->GetPosition() - GetPosition()).GetLength();
+			REAL norm_distance = distance 
+				/ (SIZE_SCALE * GetSize(GetActivation()).GetLength());
+
+			// compute the optimal distance
+			const REAL MIDWEIGHT = 0.5;
+			REAL opt_dist = DIST_SCALE_MIN
+				+ (DIST_SCALE_MAX - DIST_SCALE_MIN) 
+					* (1.0 - MIDWEIGHT / (MIDWEIGHT + ACTIVATION_MIDPOINT));
+
+			// compute the exponential of the distance
+			REAL exp_dist = exp(1.0 * (norm_distance - opt_dist) - 2.0);
+			if (_finite(exp_dist))
+			{
+				// compute the gain and set it
+				REAL new_gain = 1.0 - exp_dist / (exp_dist + 1.0);
+				pLink->SetGain(new_gain);
+			}
+			else
+			{
+				// getting too far away, need more power
+				pLink->SetGain(1.0);
+			}
 
 			// compute the desired new activation = this activation * weight
 			REAL targetActivation = GetActivation() 
@@ -1066,11 +1100,11 @@ void CNode::PropagateActivation(REAL scale)
 			}
 
 			// set the new actual activation
-			pTarget->SetActivation(newActivation, this);
+			pTarget->SetActivation(newActivation, this, pLink->GetGainWeight());
 
 			// propagate to linked nodes
 			pTarget->PropagateActivation(scale * (REAL) 1.0);
-			}
+		}
 	}
 
 }	// CNode::PropagateActivation
@@ -1083,9 +1117,27 @@ void CNode::PropagateActivation(REAL scale)
 //////////////////////////////////////////////////////////////////////
 void CNode::ResetForPropagation()
 {
+	// if a max activator was not found during previous propagation,
+	if (!m_bFoundMaxActivator)
+	{
+		// cut the activation in half
+		m_primaryActivation /= 2.0;
+
+		// cut the secondary activation in half as well
+		m_secondaryActivation /= 2.0;
+
+		// adjust the space's total count
+		if (m_pSpace)
+		{
+			m_pSpace->m_totalPrimaryActivation -= 
+				m_primaryActivation;
+			m_pSpace->m_totalSecondaryActivation -= 
+				m_secondaryActivation;
+		}
+	}
+
 	// reset the max delta activation
-	m_maxDeltaActivation = 0.0;
-	m_pMaxActivator = NULL;
+	m_bFoundMaxActivator = FALSE;
 
 	// reset each of the node's links
 	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
@@ -1107,47 +1159,3 @@ void CNode::ResetForPropagation()
 }	// CNode::ResetForPropagation
 
 
-//////////////////////////////////////////////////////////////////////
-// CNode::ScaleDescendantActivation
-// 
-// sums the activation value of this node with all children nodes
-//////////////////////////////////////////////////////////////////////
-void CNode::ScaleDescendantActivation(REAL primScale, REAL secScale)
-{
-	// scale this node's activation
-	m_primaryActivation *= primScale;
-	m_secondaryActivation *= secScale;
-
-	// iterate over child nodes
-	for (int nAt = 0; nAt < GetChildCount(); nAt++)
-	{
-		// for each child node
-		CNode *pNode = GetChildAt(nAt);
-
-		// scale the child's activation
-		pNode->ScaleDescendantActivation(primScale, secScale);
-	}
-
-}	// CNode::ScaleDescendantActivation
-
-
-//////////////////////////////////////////////////////////////////////
-// CNode::GetRandomDescendant
-// 
-// returns a random descendant, for testing purposes
-//////////////////////////////////////////////////////////////////////
-CNode * CNode::GetRandomDescendant()
-{
-	int nDescendant = rand() * GetDescendantCount() / RAND_MAX;
-
-	for (int nAt = 0; nAt < GetChildCount(); nAt++)
-	{
-		CNode *pChild = GetChildAt(nAt);
-		if (pChild->GetDescendantCount() > nDescendant)
-			return pChild->GetRandomDescendant();
-		nDescendant -= pChild->GetDescendantCount();
-	}
-
-	return GetChildAt(nDescendant);
-
-}	// CNode::GetRandomDescendant

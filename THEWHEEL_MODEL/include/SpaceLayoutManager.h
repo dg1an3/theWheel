@@ -32,7 +32,6 @@ const int MAX_STATE_DIM = 256;
 class CSpaceLayoutManager : public CObjectiveFunction
 {
 public:
-	double GetEnergy();
 	// construct the energy function, given the CSpaceView to which it
 	//		is associated 
 	CSpaceLayoutManager(CSpace *pSpace);
@@ -40,8 +39,16 @@ public:
 	// destroys the energy function
 	virtual ~CSpaceLayoutManager();
 
-	// typedef for the actual state vector
-	typedef CVectorN<REAL> CStateVector;
+	double GetKPos();
+	void SetKPos(double k_pos);
+
+	double GetKRep();
+	void SetKRep(double k_rep);
+
+	double GetTolerance();
+	void SetTolerance(double tolerance);
+
+	double GetEnergy();
 
 	// dimension of the state vector
 	int GetStateDim() const;
@@ -55,7 +62,7 @@ public:
 	void StateVector2Pos();
 
 	// evaluates the energy function
-	virtual REAL operator()(const CStateVector& vInput, 
+	virtual REAL operator()(const CVectorN<>& vInput, 
 		CVectorN<> *pGrad = NULL);
 
 	// performs the layout
@@ -63,16 +70,8 @@ public:
 
 	// member function to rotate and translate the state vector
 	//		to minimize the diff. w/ the previous state vector
-	void RotateTranslateStateVector(CStateVector *pState, const CStateVector& vOldState);
-
-	double GetKPos();
-	void SetKPos(double k_pos);
-
-	double GetKRep();
-	void SetKRep(double k_rep);
-
-	double GetTolerance();
-	void SetTolerance(double tolerance);
+	void RotateTranslateStateVector(const CVectorN<>& vOldState, 
+		CVectorN<>& vNewState);
 
 private:
 	// pointer to the energy function's spaceview
@@ -90,16 +89,16 @@ private:
 	int m_nStateDim;
 
 	// caches previous input vector
-	CStateVector m_vInput;
+	CVectorN<> m_vInput;
 
 	// caches energy value for the previous input vector
 	REAL m_energy;
 
 	// holds the current state
-	CStateVector m_vState;
+	CVectorN<> m_vState;
 
 	// caches the gradient for the previous input vector
-	CStateVector m_vGrad;
+	CVectorN<> m_vGrad;
 
 	// stores the view sizes for quick access
 	REAL m_vSize[MAX_STATE_DIM][2];
