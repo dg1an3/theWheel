@@ -22,6 +22,9 @@
 #include <afxcmn.h>			// MFC support for Windows Common Controls
 #endif // _AFX_NO_AFXCMN_SUPPORT
 
+// #include <gdiplus.h>
+// using namespace Gdiplus;
+
 void log_trace(const char *, ...);
 
 #ifdef _DEBUG
@@ -29,6 +32,23 @@ void log_trace(const char *, ...);
 #else
 #define LOG_TRACE log_trace
 #endif
+
+#define START_TIMER(EVENT_FLAG)			\
+{										\
+	LARGE_INTEGER freq;					\
+	QueryPerformanceFrequency(&freq);	\
+										\
+	LARGE_INTEGER start;				\
+	QueryPerformanceCounter(&start);	\
+
+#define STOP_TIMER(EVENT_FLAG, LABEL)	\
+	LARGE_INTEGER end;					\
+	QueryPerformanceCounter(&end);		\
+										\
+	LOG_TRACE("Time: " LABEL " = %lf\n",	\
+		(double) (end.QuadPart - start.QuadPart)	\
+			/ (double) freq.QuadPart);	\
+}										\
 
 //{{AFX_INSERT_LOCATION}}
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.
