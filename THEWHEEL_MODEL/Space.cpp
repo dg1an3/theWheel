@@ -91,9 +91,9 @@ BOOL CSpace::OnNewDocument()
 	AddChildren(&rootNode, 3, 3);
 
 	// initialize the node activations from the root node
-	rootNode.activation.Set(0.5);
-	rootNode.PropagateActivation(0.8);
+	rootNode.SetActivation(0.5);
 	rootNode.ResetForPropagation();
+	rootNode.PropagateActivation(0.8);
 	NormalizeNodes();
 
 	// everything OK, return TRUE
