@@ -378,7 +378,7 @@ void CSpaceView::OnDraw(CDC* pDC)
 	for (nAtCluster = 0; nAtCluster < GetDocument()->GetClusterCount(); nAtCluster++)
 	{
 		// get the current node view
-		CVector<2> vCenter = GetDocument()->GetClusterAt(nAtCluster)->m_vCenter;
+		CVector<3> vCenter = GetDocument()->GetClusterAt(nAtCluster)->GetPosition();
 
 		// draw the node view
 		pDC->Ellipse(vCenter[0] - 10.0, vCenter[1] - 10.0, vCenter[0] + 10.0, vCenter[1] + 10.0);
@@ -400,7 +400,7 @@ void CSpaceView::OnInitialUpdate()
 #endif
 
 	// make sure super node count + clusters = STATE_DIM
-	GetDocument()->SetSuperNodeCount(
+	GetDocument()->SetMaxSuperNodeCount(
 		STATE_DIM / 2 - GetDocument()->GetClusterCount());
 
 	// get rid of the node views
@@ -692,7 +692,7 @@ void CSpaceView::LayoutNodeViews()
 
 				// set position to the closest cluster
 				if (pNearestCluster)
-					pNodeView->GetNode()->SetPosition(CVector<3>(pNearestCluster->m_vCenter));
+					pNodeView->GetNode()->SetPosition(pNearestCluster->GetPosition());
 			}
 		}
 	}

@@ -178,8 +178,8 @@ STATE_TYPE CNodeViewEnergyFunction::operator()(
 		else
 		{
 			CNodeCluster *pCluster = m_pView->GetDocument()->GetClusterAt(nAtNodeView - nRealNodeCount);
-			x = vInput[0] - pCluster->m_vCenter[0];
-			y = vInput[0] - pCluster->m_vCenter[1];
+			x = vInput[0] - pCluster->GetPosition()[0];
+			y = vInput[0] - pCluster->GetPosition()[1];
 		}
 
 		// compute the x- and y-scales for the fields (from the linked rectangle)
