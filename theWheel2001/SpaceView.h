@@ -1,11 +1,10 @@
-////////////////////////////////////
-// Copyright (C) 1996-2000 DG Lane
-// U.S. Patent Pending
-////////////////////////////////////
-
-// SpaceView.h : interface of the CSpaceView class
+//////////////////////////////////////////////////////////////////////
+// SpaceView.h: interface for the CSpaceView class.
 //
-/////////////////////////////////////////////////////////////////////////////
+// Copyright (C) 1996-2001
+// $Id$
+// U.S. Patent Pending
+//////////////////////////////////////////////////////////////////////
 
 #if !defined(AFX_SPACEVIEW_H__0C8AA65C_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
 #define AFX_SPACEVIEW_H__0C8AA65C_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_
@@ -28,7 +27,8 @@
 //////////////////////////////////////////////////////////////////////
 // class CSpaceView
 //
-// manages the dynamic layout view of the space
+// manages the dynamic layout of the space; contains a node view
+//		for each node in the spcce
 //////////////////////////////////////////////////////////////////////
 class CSpaceView : public CView
 {
@@ -55,12 +55,12 @@ public:
 
 // Operations
 public:
-	// creates the node views for the children of the passed node
-	void CreateNodeViews(CNode *pParentNode, CPoint pt);
-
 	// adds a new node to the space, creating and initializing the node view
 	//		along the way
 	void AddNodeToSpace(CNode *pNewNode);
+
+	// creates the node views for the children of the passed node
+	void CreateNodeViews(CNode *pParentNode, CPoint pt);
 
 	// sort the node views
 	void SortNodeViews();
@@ -79,7 +79,6 @@ public:
 	//{{AFX_VIRTUAL(CSpaceView)
 	public:
 	virtual void OnDraw(CDC* pDC);  // overridden to draw this view
-	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
 	protected:
 	virtual void OnInitialUpdate(); // called first time after construct
 	virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
@@ -112,8 +111,6 @@ public:
 // Generated message map functions
 protected:
 	//{{AFX_MSG(CSpaceView)
-	afx_msg void OnDestroy();
-	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnNewNode();
 	afx_msg void OnViewLayout();
@@ -121,6 +118,8 @@ protected:
 	afx_msg void OnUpdateViewPropagate(CCmdUI* pCmdUI);
 	afx_msg void OnViewWave();
 	afx_msg void OnUpdateViewWave(CCmdUI* pCmdUI);
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	//}}AFX_MSG
 	afx_msg void OnStyleChanged(int nStyleType, LPSTYLESTRUCT lpStyleStruct);
 	DECLARE_MESSAGE_MAP()
