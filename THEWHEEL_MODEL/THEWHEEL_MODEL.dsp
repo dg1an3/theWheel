@@ -89,19 +89,7 @@ SOURCE=.\Dib.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\EEVORG.CPP
-# End Source File
-# Begin Source File
-
-SOURCE=.\HTMLNode.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\Node.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\NodeCluster.cpp
 # End Source File
 # Begin Source File
 
@@ -135,19 +123,7 @@ SOURCE=.\include\Dib.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\include\EEVORG.H
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\HTMLNode.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\include\Node.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\include\NodeCluster.h
 # End Source File
 # Begin Source File
 
