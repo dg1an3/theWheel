@@ -151,16 +151,10 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 				CRect rectLinked;
 				pAtLinkedView->GetWindowRect(&rectLinked);
 
-				// retrieve the link weight
-				SPV_STATE_TYPE weight1 = 
-					pAtLinkedNode->GetLinkWeightBoltz(pAtNode, 
-						(pAtLinkedView->activation.Get() + 0.1f)); 
-
-				SPV_STATE_TYPE weight2 = 
-					pAtNode->GetLinkWeightBoltz(pAtLinkedNode, 
-						(pAtNodeView->activation.Get() + 0.1f));
-
-				SPV_STATE_TYPE weight = (weight1 + weight2) / 2.0f;
+				// retrieve the link weight for layout
+				SPV_STATE_TYPE weight = 0.5 *
+					(pAtNode->GetLinkWeight(pAtLinkedNode)
+					+ pAtLinkedNode->GetLinkWeight(pAtNode));
 
 				SPV_STATE_TYPE ssx = (SPV_STATE_TYPE) rectLinked.Width();
 				SPV_STATE_TYPE ssy = (SPV_STATE_TYPE) rectLinked.Height();
@@ -195,7 +189,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 		SPV_STATE_TYPE nodeViewHeight = (SPV_STATE_TYPE) rectNodeView.Height();
 
 		// set the x and y coordinates for the centering calculation
-		x = vInput[nAtNodeView*2 + 0]; // GetMap()[nAtNodeView] + 0];
+		x = vInput[nAtNodeView*2 + 0];
 		y = vInput[nAtNodeView*2 + 1];
 
 		m_energy += CenterField(x - nodeViewWidth / 2.0,  y, width, height, sigma);
