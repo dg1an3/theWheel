@@ -265,7 +265,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 
 	// retrieve the parent's rectangle
 	CRect rectSpaceView;
-	m_pView->GetWindowRect(&rectSpaceView;);
+	m_pView->GetWindowRect(&rectSpaceView);
 
 	// iterate over all child node views
 	int nAtNodeView;
@@ -285,6 +285,12 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 			// temporary variables to hold the derivative of the energy
 			SPV_STATE_TYPE dEnergyDx = 0.0;
 			SPV_STATE_TYPE dEnergyDy = 0.0;
+
+			// stores the x and y coordinates for various computations;
+			SPV_STATE_TYPE x;
+			SPV_STATE_TYPE y;
+			SPV_STATE_TYPE dx = (SPV_STATE_TYPE) rectNodeView.Width() / 2.0;
+			SPV_STATE_TYPE dy = (SPV_STATE_TYPE) rectNodeView.Height() / 2.0;
 
 			// iterate over the potential linked views
 			int nAtLinkedView;
@@ -319,16 +325,14 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 					SPV_STATE_TYPE weight = (weight1 + weight2) / 2.0f;
 
 					SPV_STATE_TYPE ssx = MinSize((SPV_STATE_TYPE) rectLinked.Width(), 
-						(SPV_STATE_TYPE) rectWnd.Width() / 8.0f);
+						(SPV_STATE_TYPE) rectNodeView.Width() / 8.0f);
 					SPV_STATE_TYPE ssy = MinSize((SPV_STATE_TYPE) rectLinked.Height(), 
-						(SPV_STATE_TYPE) rectWnd.Height() / 8.0f);
+						(SPV_STATE_TYPE) rectNodeView.Height() / 8.0f);
 
-					SPV_STATE_TYPE x = vInput[GetMap()[nAtNodeView] + 0] 
+					x = vInput[GetMap()[nAtNodeView] + 0] 
 						- vInput[GetMap()[nAtLinkedView] + 0];
-					SPV_STATE_TYPE y = vInput[GetMap()[nAtNodeView] + 1] 
+					y = vInput[GetMap()[nAtNodeView] + 1] 
 						- vInput[GetMap()[nAtLinkedView] + 1];
-					SPV_STATE_TYPE dx = (SPV_STATE_TYPE) rectNodeView.Width() / 2.0;
-					SPV_STATE_TYPE dy = (SPV_STATE_TYPE) rectNodeView.Height() / 2.0;
 
 					// compute the energy due to this interation
 					for (int nX = -1; nX <= 1; nX++)
@@ -366,65 +370,42 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 				}
 			}
 
-			SPV_STATE_TYPE width = (SPV_STATE_TYPE) rectWnd.Width();
-			SPV_STATE_TYPE height = (SPV_STATE_TYPE) rectWnd.Height();
+			SPV_STATE_TYPE width = (SPV_STATE_TYPE) rectSpaceView.Width();
+			SPV_STATE_TYPE height = (SPV_STATE_TYPE) rectSpaceView.Height();
 			SPV_STATE_TYPE sigma = width + height / 32.0;
 
-			m_energy += CenterField(vInput[GetMap()[nAtNodeView]] - rectNodeView.Width() / 2.0, 
-				vInput[GetMap()[nAtNodeView]+1],
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
+			SPV_STATE_TYPE nodeViewWidth = (SPV_STATE_TYPE) rectNodeView.Width();
+			SPV_STATE_TYPE nodeViewHeight = (SPV_STATE_TYPE) rectNodeView.Height();
 
-			m_energy += CenterField(vInput[GetMap()[nAtNodeView]], vInput[GetMap()[nAtNodeView]+1],
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
+			// set the x and y coordinates for the centering calculation
+			x = vInput[GetMap()[nAtNodeView] + 0];
+			y = vInput[GetMap()[nAtNodeView] + 1];
 
-			m_energy += CenterField(vInput[GetMap()[nAtNodeView]] + rectNodeView.Width() / 2.0, 
-				vInput[GetMap()[nAtNodeView]+1],
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
+			m_energy += CenterField(x - nodeViewWidth / 2.0,  y, width, height, sigma);
+			m_energy += CenterField(x,                        y, width, height, sigma);
+			m_energy += CenterField(x + nodeViewWidth / 2.0,  y, width, height, sigma);
 
-			m_energy += CenterField(vInput[GetMap()[nAtNodeView]], 
-				vInput[GetMap()[nAtNodeView]+1] - rectNodeView.Height() / 2.0,
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
-
-			m_energy += CenterField(vInput[GetMap()[nAtNodeView]], vInput[GetMap()[nAtNodeView]+1],
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
-
-			m_energy += CenterField(vInput[GetMap()[nAtNodeView]], 
-				vInput[GetMap()[nAtNodeView]+1] + rectNodeView.Height() / 2.0,
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
+			m_energy += CenterField(x, y - nodeViewHeight / 2.0, width, height, sigma);
+//			m_energy += CenterField(x, y,                        width, height, sigma);
+			m_energy += CenterField(x, y + nodeViewHeight / 2.0, width, height, sigma);
 
 #ifdef USE_GRAD
 
-			dEnergyDx += dCenterFieldDx(vInput[GetMap()[nAtNodeView]], 
-				vInput[GetMap()[nAtNodeView]+1],
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
-			dEnergyDx += dCenterFieldDx(vInput[GetMap()[nAtNodeView]] - rectNodeView.Width() / 2.0, 
-				vInput[GetMap()[nAtNodeView]+1],
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
-			dEnergyDx += dCenterFieldDx(vInput[GetMap()[nAtNodeView]] + rectNodeView.Width() / 2.0, 
-				vInput[GetMap()[nAtNodeView]+1],
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
-			dEnergyDx += dCenterFieldDx(vInput[GetMap()[nAtNodeView]], 
-				vInput[GetMap()[nAtNodeView]+1] - rectNodeView.Height() / 2.0,
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
-			dEnergyDx += dCenterFieldDx(vInput[GetMap()[nAtNodeView]], 
-				vInput[GetMap()[nAtNodeView]+1] + rectNodeView.Height() / 2.0,
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
+			dEnergyDx += dCenterFieldDx(x - width / 2.0,  y, width, height, sigma);
+			dEnergyDx += dCenterFieldDx(x,                y, width, height, sigma);
+			dEnergyDx += dCenterFieldDx(x + width / 2.0,  y, width, height, sigma);
 
-			dEnergyDy += dCenterFieldDy(vInput[GetMap()[nAtNodeView]], 
-				vInput[GetMap()[nAtNodeView]+1],
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
-			dEnergyDy += dCenterFieldDy(vInput[GetMap()[nAtNodeView]] - rectNodeView.Width() / 2.0, 
-				vInput[GetMap()[nAtNodeView]+1],
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
-			dEnergyDy += dCenterFieldDy(vInput[GetMap()[nAtNodeView]] + rectNodeView.Width() / 2.0, 
-				vInput[GetMap()[nAtNodeView]+1],
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
-			dEnergyDy += dCenterFieldDy(vInput[GetMap()[nAtNodeView]], 
-				vInput[GetMap()[nAtNodeView]+1] - rectNodeView.Height() / 2.0,
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
-			dEnergyDy += dCenterFieldDy(vInput[GetMap()[nAtNodeView]], 
-				vInput[GetMap()[nAtNodeView]+1] + rectNodeView.Height() / 2.0,
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
+			dEnergyDx += dCenterFieldDx(x, y - height / 2.0, width, height, sigma);
+			dEnergyDx += dCenterFieldDx(x, y,                width, height, sigma);
+			dEnergyDx += dCenterFieldDx(x, y + height / 2.0, width, height, sigma);
+
+			dEnergyDy += dCenterFieldDy(x - width / 2.0,  y, width, height, sigma);
+			dEnergyDy += dCenterFieldDy(x,                y, width, height, sigma);
+			dEnergyDy += dCenterFieldDy(x + width / 2.0,  y, width, height, sigma);
+
+			dEnergyDy += dCenterFieldDy(x, y - height / 2.0, width, height, sigma);
+			dEnergyDy += dCenterFieldDy(x, y,                width, height, sigma);
+			dEnergyDy += dCenterFieldDy(x, y + height / 2.0, width, height, sigma);
 
 			// now store the two-dimensional gradient components;
 			m_vGrad[GetMap()[nAtNodeView]] = dEnergyDx;

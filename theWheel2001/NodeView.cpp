@@ -263,13 +263,47 @@ void CNodeView::OnPaint()
 
 	CFont *pOldFont = dc.SelectObject(&font);
 
-	dc.DrawText(forNode->name.Get(), rectInner, 
-		DT_CENTER | DT_SINGLELINE | DT_VCENTER);
+	CRect rectText(rectInner);
+	rectText.DeflateRect(5, 5, 5, 5);
+	dc.DrawText(forNode->name.Get(), rectText, 
+		DT_CENTER | DT_PATH_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
+
+	// now calculate the height of the drawn text
+	rectText = rectInner;
+	rectText.DeflateRect(5, 5, 5, 5);
+	int nHeight = dc.DrawText(forNode->name.Get(), rectText, 
+		DT_CALCRECT | DT_CENTER | DT_PATH_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	dc.SelectObject(pOldFont);
 
 	// stores the old pen that was selected into the context
 	CPen *pOldPen;
+
+	// now draw the description body
+//	CPen penTemp(PS_SOLID, 1, RGB(0, 0, 0));
+//	pOldPen = dc.SelectObject(&penTemp);
+	rectText = rectInner;
+	rectText.DeflateRect(5, 5, 5, 5);
+	rectText.top += nHeight + 5;
+//	dc.Rectangle( rectText );
+
+//	dc.SelectObject(pOldPen);
+
+	CFont smallFont;
+	bResult = smallFont.CreateFont(nDesiredHeight * 2 / 3, 0, //nDesiredWidth,
+		0, 0, FW_NORMAL, 
+		FALSE, FALSE, 0,
+		DEFAULT_CHARSET,
+		OUT_DEFAULT_PRECIS,
+		CLIP_DEFAULT_PRECIS,
+		DEFAULT_QUALITY,
+		VARIABLE_PITCH,
+		"Arial");
+	ASSERT(bResult);
+
+	dc.SelectObject(&smallFont);
+	dc.DrawText(forNode->name.Get(), rectText, 
+		DT_LEFT | DT_END_ELLIPSIS | DT_WORDBREAK);
 
 	// get the guide rectangles
 	CRect rectLeftRightEllipse = GetLeftRightEllipseRect();

@@ -18,7 +18,7 @@
 #include <math.h>
 
 int nNodeID = 1100;
-const SPV_STATE_TYPE TOLERANCE = 1.0;
+const SPV_STATE_TYPE TOLERANCE = 0.7;
 const SPV_STATE_TYPE TOTAL_ACTIVATION = 0.35f;
 
 #ifdef _DEBUG
@@ -338,7 +338,7 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt,
 		CPoint ptCenter = arrNodeViews[nAtNode]->center.Get();
 
 		CreateNodeViews(pNode, ptCenter, 
-			arrNodeViews[nAtNode]->activation.Get() / 3.0f);
+			arrNodeViews[nAtNode]->activation.Get() / 1.0f);
 	}
 }
 
