@@ -292,21 +292,25 @@ void CNodeView::OnPaint()
 
 //	dc.SelectObject(pOldPen);
 
-	CFont smallFont;
-	bResult = smallFont.CreateFont(nDesiredHeight * 2 / 3, 0, //nDesiredWidth,
-		0, 0, FW_NORMAL, 
-		FALSE, FALSE, 0,
-		DEFAULT_CHARSET,
-		OUT_DEFAULT_PRECIS,
-		CLIP_DEFAULT_PRECIS,
-		DEFAULT_QUALITY,
-		VARIABLE_PITCH,
-		"Arial");
-	ASSERT(bResult);
+	if (nDesiredHeight > 12)
+	{
+		nDesiredHeight = max(nDesiredHeight / 2, 12);
+		CFont smallFont;
+		bResult = smallFont.CreateFont(nDesiredHeight, 0, //nDesiredWidth,
+			0, 0, FW_NORMAL, 
+			FALSE, FALSE, 0,
+			DEFAULT_CHARSET,
+			OUT_DEFAULT_PRECIS,
+			CLIP_DEFAULT_PRECIS,
+			DEFAULT_QUALITY,
+			VARIABLE_PITCH,
+			"Arial");
+		ASSERT(bResult);
 
-	dc.SelectObject(&smallFont);
-	dc.DrawText(forNode->description.Get(), rectText, 
-		DT_LEFT | DT_END_ELLIPSIS | DT_WORDBREAK);
+		dc.SelectObject(&smallFont);
+		dc.DrawText(forNode->description.Get(), rectText, 
+			DT_LEFT | DT_END_ELLIPSIS | DT_WORDBREAK);
+	}
 
 	// get the guide rectangles
 	CRect rectLeftRightEllipse = GetLeftRightEllipseRect();
