@@ -5,88 +5,34 @@
 
 #include "stdafx.h"
 
+#include <ScalarFunction.h>
+#include <LookupFunction.h>
+
 #include "SpaceViewEnergyFunction.h"
 #include "SpaceView.h"
-
-#include "LookupFunction.h"
 
 SPV_STATE_TYPE SPACER_AMPL = 35.0f;
 SPV_STATE_TYPE ATTRACT_AMPL = 140.0f; 
 
 SPV_STATE_TYPE CENTER_AMPL = 0.03f;
 
-SPV_STATE_TYPE Gauss2D(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE sx, SPV_STATE_TYPE sy)
-{
-	SPV_STATE_TYPE d = (x * x) / (2.0f * sx * sx) 
-		+ (y * y) / (2.0f * sy * sy);
-
-	return (SPV_STATE_TYPE) exp(-d)
-		/ (SPV_STATE_TYPE) (sqrt(2.0f * PI * sx * sy));
-}
-
-SPV_STATE_TYPE Gauss(SPV_STATE_TYPE x, SPV_STATE_TYPE s)
-{
-	SPV_STATE_TYPE d = (x * x) / (2.0f * s * s); 
-
-	return (SPV_STATE_TYPE) exp(-d)
-		/ (SPV_STATE_TYPE) (sqrt(2.0f * PI * s));
-}
-
 SPV_STATE_TYPE attract_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
-	return Gauss2D(x, y, 1.0f, 1.0f);
+	return Gauss2D<SPV_STATE_TYPE>(x, y , 1.0f, 1.0f);
 }
 
 CLookupFunction<SPV_STATE_TYPE> attractFunc(&attract_func, 
 		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "ATTRFUNC.TMP");
 
-SPV_STATE_TYPE dattract_func_dx(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
-{
-	return -x * Gauss2D(x, y, 1.0f, 1.0f);
-}
-
-CLookupFunction<SPV_STATE_TYPE> dAttractFuncDx(&attract_func, 
-		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "ATTRFUNCDX.TMP");
-
-SPV_STATE_TYPE dattract_func_dy(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
-{
-	return -y * Gauss2D(x, y, 1.0f, 1.0f);
-}
-
-CLookupFunction<SPV_STATE_TYPE> dAttractFuncDy(&attract_func, 
-		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "ATTRFUNCDY.TMP");
-
 SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
-	return 0.0 // 0.5 * Gauss2D(x, y, 2.0f, 2.0f)
-		// +        Gauss2D(x, y, 1.0f, 1.0f)
-		+ 2.0f * Gauss2D(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
-		+ 4.0f * Gauss2D(x, y, 1.0f / 4.0f, 1.0f / 4.0f)
-		+ 8.0f * Gauss2D(x, y, 1.0f / 8.0f, 1.0f / 8.0f);
+	return 2.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
+		+ 4.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 4.0f, 1.0f / 4.0f)
+		+ 8.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 8.0f, 1.0f / 8.0f);
 }
 
 CLookupFunction<SPV_STATE_TYPE> spacerFunc(&spacer_func, 
 		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "SPACERFUNC.TMP");
-
-SPV_STATE_TYPE dspacer_func_dx(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
-{
-	return -x * Gauss2D(x, y, 1.0f, 1.0f)
-		+ 2.0f * -x * 4.0f * Gauss2D(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
-		+ 4.0f * -x * 16.0f * Gauss2D(x, y, 1.0f / 4.0f, 1.0f / 4.0f);
-}
-
-CLookupFunction<SPV_STATE_TYPE> dSpacerFuncDx(&spacer_func, 
-		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "SPACERFUNCDX.TMP");
-
-SPV_STATE_TYPE dspacer_func_dy(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
-{
-	return -y * Gauss2D(x, y, 1.0f, 1.0f)
-		+ 2.0f * -y * 4.0f * Gauss2D(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
-		+ 4.0f * -y * 16.0f * Gauss2D(x, y, 1.0f / 4.0f, 1.0f / 4.0f);
-}
-
-CLookupFunction<SPV_STATE_TYPE> dSpacerFuncDy(&spacer_func, 
-		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "SPACERFUNCDY.TMP");
 
 SPV_STATE_TYPE MinSize(SPV_STATE_TYPE x, SPV_STATE_TYPE xmin)
 {
@@ -122,41 +68,6 @@ SPV_STATE_TYPE CenterField(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE wi
 	SPV_STATE_TYPE distMin = min(distHorz, distVert);
 
 	return energy + 24.0f * Gauss(distMin + cs, cs);
-}
-
-SPV_STATE_TYPE dCenterFieldDx(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE width, SPV_STATE_TYPE height, SPV_STATE_TYPE cs)
-{
-	SPV_STATE_TYPE denergy = 0.0f;
-
-	// compute distance to nearest side
-	SPV_STATE_TYPE distToLeft = x;
-	if (distToLeft < 0.0)
-		denergy = -1.0;
-
-	SPV_STATE_TYPE distToRight = width - x;
-	if (distToRight < 0.0)
-		denergy = 1.0;
-
-	SPV_STATE_TYPE distMin = min(distToLeft, distToRight);
-
-	return denergy + 24.0f * -(distMin + cs) / (cs * cs) * Gauss(distMin + cs, cs);
-}
-
-SPV_STATE_TYPE dCenterFieldDy(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE width, SPV_STATE_TYPE height, SPV_STATE_TYPE cs)
-{
-	SPV_STATE_TYPE denergy = 0.0f;
-
-	SPV_STATE_TYPE distToTop = y;
-	if (distToTop < 0.0)
-		denergy = -1.0;
-
-	SPV_STATE_TYPE distToBottom = height - y;
-	if (distToBottom < 0.0)
-		denergy = 1.0;
-
-	SPV_STATE_TYPE distMin = min(distToTop, distToBottom);
-
-	return denergy + 24.0f * -(distMin + cs) / (cs * cs) * Gauss(distMin + cs, cs);
 }
 
 CVector<SPV_STATE_DIM, SPV_STATE_TYPE> CSpaceViewEnergyFunction::GetStateVector()
@@ -352,34 +263,11 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 							m_energy += 1.0 / 10.0
 								* spacerFunc((x + dx * (SPV_STATE_TYPE) nX) / ssx, 
 									(y + dy * (SPV_STATE_TYPE) nY) / ssy);
-
-#ifdef USE_GRAD
-							dEnergyDx +=  1.0 / 20.0
-								* dSpacerFuncDx((x + dx * (SPV_STATE_TYPE) nX) / ssx, 
-									(y + dy * (SPV_STATE_TYPE) nY) / ssy)
-									/ ssx;
-
-							dEnergyDy += 1.0 / 20.0
-								* dSpacerFuncDy((x + dx * (SPV_STATE_TYPE) nX) / ssx, 
-									(y + dy * (SPV_STATE_TYPE) nY) / ssy)
-									/ ssy;
-#endif
 						}
 
-//					m_energy += 0.25 * (1.0 - weight)
-//						* attractFunc(x / (ssx * 2.0), y / (ssy * 2.0));
 					m_energy -= weight * 60.0
 						* attractFunc(x / (ssx * 6.0), y / (ssy * 6.0));
 
-#ifdef USE_GRAD
-					dEnergyDx -= weight * 20.0
-						* dAttractFuncDx(x / (ssx * 4.0), y / (ssy * 4.0))
-							/ (ssx * 4.0);
-
-					dEnergyDy -= weight * 20.0
-						* dAttractFuncDy(x / (ssx * 4.0), y / (ssy * 4.0))
-							/ (ssy * 4.0);
-#endif
 				}
 			}
 
@@ -401,39 +289,6 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 			m_energy += CenterField(x, y - nodeViewHeight / 2.0, width, height, sigma);
 //			m_energy += CenterField(x, y,                        width, height, sigma);
 			m_energy += CenterField(x, y + nodeViewHeight / 2.0, width, height, sigma);
-
-//			float x_ = 2.0f * ((float) rectSpaceView.Width() / 2.0f - x) 
-//				/ (float) rectSpaceView.Width();
-//
-//			float y_ = 2.0f * ((float) rectSpaceView.Height() / 2.0f - y) 
-//				/ (float) rectSpaceView.Height();
-
-//			m_energy += 
-//				10.0f * pAtNodeView->activation.Get()
-//					* (x_ * x_ + y_ * y_);
-
-#ifdef USE_GRAD
-
-			dEnergyDx += dCenterFieldDx(x - width / 2.0,  y, width, height, sigma);
-			dEnergyDx += dCenterFieldDx(x,                y, width, height, sigma);
-			dEnergyDx += dCenterFieldDx(x + width / 2.0,  y, width, height, sigma);
-
-			dEnergyDx += dCenterFieldDx(x, y - height / 2.0, width, height, sigma);
-			dEnergyDx += dCenterFieldDx(x, y,                width, height, sigma);
-			dEnergyDx += dCenterFieldDx(x, y + height / 2.0, width, height, sigma);
-
-			dEnergyDy += dCenterFieldDy(x - width / 2.0,  y, width, height, sigma);
-			dEnergyDy += dCenterFieldDy(x,                y, width, height, sigma);
-			dEnergyDy += dCenterFieldDy(x + width / 2.0,  y, width, height, sigma);
-
-			dEnergyDy += dCenterFieldDy(x, y - height / 2.0, width, height, sigma);
-			dEnergyDy += dCenterFieldDy(x, y,                width, height, sigma);
-			dEnergyDy += dCenterFieldDy(x, y + height / 2.0, width, height, sigma);
-
-			// now store the two-dimensional gradient components;
-			m_vGrad[GetMap()[nAtNodeView]] = dEnergyDx;
-			m_vGrad[GetMap()[nAtNodeView]+1] = dEnergyDy;
-#endif
 
 		}
 	}
