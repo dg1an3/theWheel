@@ -1062,6 +1062,9 @@ void CSpace::LayoutNodes()
 	// adjust any runaway nodes
 	AdjustRunawayNodes();
 
+	// relax
+	Relax();
+
 	// finally, position the sub-threshold nodes
 	PositionSubNodes();
 
@@ -1100,3 +1103,45 @@ LPDIRECTSOUND CSpace::GetDirectSound()
 
 }	// CSpace::GetDirectSound
 
+
+void CSpace::Relax()
+{
+	for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
+	{
+		CNode *pNode = GetNodeAt(nAt);
+
+		for (int nAtLinked = 0; nAtLinked < GetSuperNodeCount(); nAtLinked++)
+		{
+			if (nAt != nAtLinked)
+			{
+				CNode *pTarget = GetNodeAt(nAtLinked);
+
+				CNodeLink *pLink = pNode->GetLinkTo(pTarget);
+
+				if (pLink != NULL)
+				{
+					const REAL distErr = m_pLayoutManager->GetDistError(pNode, pTarget);
+					TRACE("DistErr = %lf\n", distErr);
+
+					// compute the exponential of the distance
+					const REAL exp_dist = exp(1.0 *	distErr + 0.5);
+						// (norm_distance - opt_dist + 5.0);
+
+					TRACE("Exp distance = %lf\n", exp_dist);
+					if (_finite(exp_dist))
+					{
+						// compute the gain and set it
+						REAL new_gain = 1.0 - exp_dist / (exp_dist + 80.0);
+						TRACE("New gain = %lf\n", new_gain);
+						pLink->SetGain(new_gain);
+					}
+					else
+					{
+						// getting too far away, need more power
+						pLink->SetGain(1.0);
+					}
+				}
+			}
+		}
+	}
+}
