@@ -26,7 +26,7 @@ CLookupFunction<SPV_STATE_TYPE> attractFunc(&attract_func,
 
 SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
-	return 2.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
+	return // 2.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
 		+ 4.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 4.0f, 1.0f / 4.0f)
 		+ 8.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 8.0f, 1.0f / 8.0f);
 }
@@ -76,10 +76,25 @@ CVector<SPV_STATE_DIM, SPV_STATE_TYPE> CSpaceViewEnergyFunction::GetStateVector(
 	GetThreshold();
 
 	// set up the mapping array
-	m_arrElementMap.SetSize(m_pView->nodeViews.GetSize());
+//	m_arrElementMap.SetSize(m_pView->nodeViews.GetSize());
 
 	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> vState;
-	int nAtVectorElement = 0;
+	for (int nAt = 0; nAt < SPV_STATE_DIM / 2; nAt++)
+	{
+		if (nAt < m_pView->nodeViews.GetSize())
+		{
+			CNodeView *pView = m_pView->nodeViews.Get(nAt);
+			vState[nAt*2] = (SPV_STATE_TYPE) pView->center.Get()[0];
+			vState[nAt*2+1] = (SPV_STATE_TYPE) pView->center.Get()[1];
+		}
+		else
+		{
+			vState[nAt*2] = (SPV_STATE_TYPE) 0.0;
+			vState[nAt*2+1] = (SPV_STATE_TYPE) 0.0;
+		}
+	}
+
+/*	int nAtVectorElement = 0;
 	for (int nAt = 0; nAt < m_pView->nodeViews.GetSize() && nAtVectorElement < SPV_STATE_DIM; nAt++)
 	{
 		CNodeView *pView = m_pView->nodeViews.Get(nAt);
@@ -96,12 +111,20 @@ CVector<SPV_STATE_DIM, SPV_STATE_TYPE> CSpaceViewEnergyFunction::GetStateVector(
 			// flag to indicate the node view is not represented in the state vector
 			m_arrElementMap[nAt] = -1;
 	}
+*/
 	return vState;
 }
 
 void CSpaceViewEnergyFunction::SetStateVector(const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vState)
 {
-	for (int nAt = 0; nAt < m_pView->nodeViews.GetSize(); nAt++)
+	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), SPV_STATE_DIM / 2);
+	for (int nAt = 0; nAt < nNumVizNodeViews; nAt++)
+	{
+		CNodeView *pView = m_pView->nodeViews.Get(nAt);
+		pView->center.Set(CVector<2>(vState[nAt*2], vState[nAt*2+1]));
+	}
+
+/*	for (int nAt = 0; nAt < m_pView->nodeViews.GetSize(); nAt++)
 	{
 		if (m_arrElementMap[nAt] != -1)
 		{
@@ -109,17 +132,22 @@ void CSpaceViewEnergyFunction::SetStateVector(const CVector<SPV_STATE_DIM, SPV_S
 			pView->center.Set(CVector<2>(vState[m_arrElementMap[nAt]], 
 				vState[m_arrElementMap[nAt]+1]));
 		}
-	}
+	} */
 }
 
 
 SPV_STATE_TYPE CSpaceViewEnergyFunction::GetThreshold()
 {
-	if (m_pView->nodeViews.GetSize() <= SPV_STATE_DIM / 2)
+/*	if (m_pView->nodeViews.GetSize() <= SPV_STATE_DIM / 2)
 	{
 		CNodeView::activationThreshold = 0.0000001f;
 		return 0.0000001f;
 	}
+*/
+	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), SPV_STATE_DIM / 2);
+	CNodeView::activationThreshold = 
+		m_pView->nodeViews.Get(nNumVizNodeViews - 1)->activation.Get();
+	return CNodeView::activationThreshold;
 
 	// set initial threshold greater than the max activation
 	SPV_STATE_TYPE threshold = 200.0;
@@ -163,10 +191,12 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::GetThreshold()
 	return threshold; // prevThreshold;
 }
 
+/*
 const CArray<int, int>& CSpaceViewEnergyFunction::GetMap()
 {
 	return m_arrElementMap;
 }
+*/
 
 SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput)
 {
@@ -175,7 +205,8 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 	int nAtSuperthreshCount = 0;
 	for (int nAt = 0; nAt < m_pView->nodeViews.GetSize(); nAt++)
 	{
-		if (m_pView->nodeViews.Get(nAt)->activation.Get() > CNodeView::activationThreshold)
+		float activation = m_pView->nodeViews.Get(nAt)->activation.Get();
+		if (activation >= CNodeView::activationThreshold)
 		{
 			TRACE1(">>>> Node %s\n", m_pView->nodeViews.Get(nAt)->forNode->name.Get());
 		}
@@ -192,11 +223,13 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 	m_pView->GetWindowRect(&rectSpaceView);
 
 	// iterate over all child node views
+	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), SPV_STATE_DIM / 2);
 	int nAtNodeView;
-	for (nAtNodeView = 0; nAtNodeView < m_pView->nodeViews.GetSize(); nAtNodeView++)
+	for (nAtNodeView = 0; nAtNodeView < nNumVizNodeViews; // m_pView->nodeViews.GetSize(); 
+		nAtNodeView++)
 	{
 		// if the node is not in the state vector, skip it
-		if (GetMap()[nAtNodeView] != -1)
+		// if (GetMap()[nAtNodeView] != -1)
 		{
 			// get convenience pointers for the current node view and node
 			CNodeView *pAtNodeView = m_pView->nodeViews.Get(nAtNodeView);
@@ -218,12 +251,12 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 
 			// iterate over the potential linked views
 			int nAtLinkedView;
-			for (nAtLinkedView = 0; nAtLinkedView < m_pView->nodeViews.GetSize(); 
+			for (nAtLinkedView = 0; nAtLinkedView < nNumVizNodeViews; // m_pView->nodeViews.GetSize(); 
 					nAtLinkedView++)
 			{
 				// only processs the linked view if it is in the vector
-				if (nAtLinkedView != nAtNodeView 
-						&& GetMap()[nAtLinkedView] != -1)
+				if (nAtLinkedView != nAtNodeView) 
+						// && GetMap()[nAtLinkedView] != -1)
 				{
 					// get convenience pointers for the linked node view and node
 					CNodeView *pAtLinkedView = m_pView->nodeViews.Get(nAtLinkedView);
@@ -262,10 +295,10 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 					SPV_STATE_TYPE ssy = MinSize((SPV_STATE_TYPE) rectLinked.Height(), 
 						(SPV_STATE_TYPE) rectNodeView.Height() / 8.0f);
 
-					x = vInput[GetMap()[nAtNodeView] + 0] 
-						- vInput[GetMap()[nAtLinkedView] + 0];
-					y = vInput[GetMap()[nAtNodeView] + 1] 
-						- vInput[GetMap()[nAtLinkedView] + 1];
+					x = vInput[nAtNodeView*2 + 0] // GetMap()[nAtNodeView] + 0] 
+						- vInput[nAtLinkedView*2 + 0];
+					y = vInput[nAtNodeView*2 + 1] 
+						- vInput[nAtLinkedView*2 + 1];
 
 					// compute the energy due to this interation
 					for (int nX = -1; nX <= 1; nX++)
@@ -276,7 +309,11 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 									(y + dy * (SPV_STATE_TYPE) nY) / ssy);
 						}
 
-					m_energy -= weight * 60.0
+					// add general repulsion
+					m_energy += 2.0
+						* attractFunc(x / (ssx * 1.0), y / (ssy * 1.0));
+
+					m_energy -= weight * 75.0
 						* attractFunc(x / (ssx * 6.0), y / (ssy * 6.0));
 
 				}
@@ -290,8 +327,8 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 			SPV_STATE_TYPE nodeViewHeight = (SPV_STATE_TYPE) rectNodeView.Height();
 
 			// set the x and y coordinates for the centering calculation
-			x = vInput[GetMap()[nAtNodeView] + 0];
-			y = vInput[GetMap()[nAtNodeView] + 1];
+			x = vInput[nAtNodeView*2 + 0]; // GetMap()[nAtNodeView] + 0];
+			y = vInput[nAtNodeView*2 + 1];
 
 			m_energy += CenterField(x - nodeViewWidth / 2.0,  y, width, height, sigma);
 			m_energy += CenterField(x,                        y, width, height, sigma);

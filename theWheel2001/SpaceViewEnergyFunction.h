@@ -23,7 +23,7 @@ public:
 
 	// retrieves the current mapping from CNodeView index to 
 	//		state vector element index
-	const CArray<int, int>& GetMap();
+	// const CArray<int, int>& GetMap();
 
 	// gets and sets the state vector for the associated CSpaceView
 	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> GetStateVector();
@@ -39,7 +39,7 @@ public:
 private:
 	// array holding the mapping from CNodeViews (indexes into m_pView->nodeViews) to
 	//		state vector elements
-	CArray<int, int> m_arrElementMap;
+	// CArray<int, int> m_arrElementMap;
 
 	// caches previous computation
 	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> m_vInput;
