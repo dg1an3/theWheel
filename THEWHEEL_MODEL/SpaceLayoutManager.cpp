@@ -54,7 +54,7 @@ const REAL OPT_DIST = DIST_SCALE_MIN
 const REAL K_POS = 600.0;
 
 // constant for weighting the repulsion energy
-const REAL K_REP = 600.0;
+const REAL K_REP = 3200.0;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -242,7 +242,6 @@ void CSpaceLayoutManager::LoadSizesLinks()
 		// compute the x- and y-scales for the fields (from the linked rectangle)
 		const CVectorD<3> vSize = pAtNode->GetSize(m_act[nAtNode]);
 		const REAL size_scale = SIZE_SCALE;
-			// * (0.35 * log(0.5 * pAtNode->GetChildCount() + 1.5) + 0.5);
 
 		// store the size -- add 10 to ensure non-zero sizes
 		m_vSize[nAtNode][0] = size_scale * vSize[0] + 10.0;
@@ -531,3 +530,30 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 }	// CSpaceLayoutManager::LayoutNodes
 
 
+
+REAL CSpaceLayoutManager::GetDistError(CNode *pFrom, CNode *pTo)
+{
+	// store the size -- add 10 to ensure non-zero sizes
+	CVectorD<3> vSizeFrom = pFrom->GetSize(pFrom->GetActivation());
+	vSizeFrom *= SIZE_SCALE;
+	vSizeFrom += CVectorD<3>(10.0, 10.0, 0.0);
+
+	CVectorD<3> vSizeTo = pTo->GetSize(pTo->GetActivation());
+	vSizeTo *= SIZE_SCALE;
+	vSizeTo += CVectorD<3>(10.0, 10.0, 0.0);
+
+	CVectorD<3> vSizeAvg = 0.5 * (vSizeFrom + vSizeTo);
+
+	CVectorD<3> vOffset = pFrom->GetPosition() - pTo->GetPosition();
+
+	// compute the relative actual distance
+	const REAL act_dist = (REAL) sqrt(vOffset[0] * vOffset[0] 
+											/ (vSizeAvg[0] * vSizeAvg[0])
+		+ vOffset[1] * vOffset[1] 
+				/ (vSizeAvg[1] * vSizeAvg[1])) + 0.001;
+
+	// compute the distance error
+	const REAL dist_error = act_dist - OPT_DIST;
+
+	return dist_error;
+}
