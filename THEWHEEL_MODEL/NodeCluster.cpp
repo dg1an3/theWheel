@@ -8,6 +8,8 @@
 #include <math.h>
 #include <float.h>
 
+#include <MathUtil.h>
+
 #include "Space.h"
 
 //////////////////////////////////////////////////////////////////////
@@ -82,14 +84,14 @@ CNodeCluster *CNodeCluster::GetSibling(int nAt)
 }
 
 
-float CNodeCluster::GetNodeDistanceSq(CNode *pNode)
+REAL CNodeCluster::GetNodeDistanceSq(CNode *pNode)
 {
 	int nSuperNodes = m_pSpace->GetSuperNodeCount();
-	float dist_sq = 0.0f;
+	REAL dist_sq = 0.0f;
 	for (int nAt = 0; nAt < nSuperNodes; nAt++)
 	{
 		CNode *pSuperNode = m_pSpace->GetNodeAt(nAt);
-		float weight = pNode->GetLinkWeight(pSuperNode);
+		REAL weight = pNode->GetLinkWeight(pSuperNode);
 		dist_sq += (weight - GetLinkVector()[nAt]) 
 			* (weight - GetLinkVector()[nAt]);
 	}
@@ -98,7 +100,7 @@ float CNodeCluster::GetNodeDistanceSq(CNode *pNode)
 	for (nAt = 0; nAt < GetSiblingCount(); nAt++)
 	{
 		CNodeCluster *pCluster = GetSibling(nAt);
-		float weight = pCluster->GetLinkWeightForNode(pNode);
+		REAL weight = pCluster->GetLinkWeightForNode(pNode);
 		dist_sq += (weight - GetLinkVector()[nAt+nSuperNodes]) 
 			* (weight - GetLinkVector()[nAt+nSuperNodes]);
 	}
@@ -107,10 +109,10 @@ float CNodeCluster::GetNodeDistanceSq(CNode *pNode)
 }
 
 
-float CNodeCluster::GetLinkWeightForNode(CNode *pNode)
+REAL CNodeCluster::GetLinkWeightForNode(CNode *pNode)
 {
-	float total_activation = 0.0f;
-	float total_weight = 0.0f;
+	REAL total_activation = 0.0f;
+	REAL total_weight = 0.0f;
 
 	// form the weight from weighted average of links from nodes in this
 	for (POSITION pos = m_mapNodes.GetStartPosition(); pos != NULL; )
@@ -118,8 +120,8 @@ float CNodeCluster::GetLinkWeightForNode(CNode *pNode)
 		CNode *pOtherNode;
 		m_mapNodes.GetNextAssoc(pos, pOtherNode, pOtherNode);
 			
-		float weight = pNode->GetLinkWeight(pOtherNode);
-		float act = (float) (pNode->GetActivation() + pOtherNode->GetActivation());
+		REAL weight = pNode->GetLinkWeight(pOtherNode);
+		REAL act = (REAL) (pNode->GetActivation() + pOtherNode->GetActivation());
 
 		total_weight += weight * act;
 		total_activation += act;
@@ -132,15 +134,15 @@ float CNodeCluster::GetLinkWeightForNode(CNode *pNode)
 }
 
 
-float CNodeCluster::GetTotalActivation() 
+REAL CNodeCluster::GetTotalActivation() 
 { 
 	return m_totalActivation; 
 }
 
 
-float CNodeCluster::GetActualTotalActivation()
+REAL CNodeCluster::GetActualTotalActivation()
 {
-	float total_activation = 0.0f;
+	REAL total_activation = 0.0f;
 
 	// form the weight from weighted average of links from nodes in this
 	for (POSITION pos = m_mapNodes.GetStartPosition(); pos != NULL; )
@@ -148,14 +150,14 @@ float CNodeCluster::GetActualTotalActivation()
 		CNode *pOtherNode;
 		m_mapNodes.GetNextAssoc(pos, pOtherNode, pOtherNode);
 			
-		total_activation += (float) pOtherNode->GetActivation();
+		total_activation += (REAL) pOtherNode->GetActivation();
 	}
 
 	return total_activation;
 }
 
 
-float CNodeCluster::GetClusterError() 
+REAL CNodeCluster::GetClusterError() 
 { 
 	if (m_totalActivation > 0.0f)
 		return m_error / m_totalActivation; 
@@ -164,14 +166,14 @@ float CNodeCluster::GetClusterError()
 }
 
 
-CNodeCluster * CNodeCluster::GetNearestCluster(CNode *pNode, float *dist_sq)
+CNodeCluster * CNodeCluster::GetNearestCluster(CNode *pNode, REAL *dist_sq)
 {
-	float minDist = FLT_MAX;
+	REAL minDist = FLT_MAX;
 	CNodeCluster *pNearestCluster = this;
 	for (int nAtCluster = 0; nAtCluster < GetSiblingCount(); nAtCluster++)
 	{
 		CNodeCluster *pCluster = GetSibling(nAtCluster);
-		float dist = pCluster->GetNodeDistanceSq(pNode);
+		REAL dist = pCluster->GetNodeDistanceSq(pNode);
 		if (dist < minDist)
 		{
 			minDist = dist;
@@ -186,10 +188,10 @@ CNodeCluster * CNodeCluster::GetNearestCluster(CNode *pNode, float *dist_sq)
 }
 
 
-void CNodeCluster::AddNodeToCluster(CNode *pNode, float dist_sq)
+void CNodeCluster::AddNodeToCluster(CNode *pNode, REAL dist_sq)
 {
 	int nSuperNodes = m_pSpace->GetSuperNodeCount();
-	float act = (float) pNode->GetActivation();
+	REAL act = (REAL) pNode->GetActivation();
 	for (int nAtSuper = 0; nAtSuper < nSuperNodes; nAtSuper++)
 	{
 		CNode *pSuperNode = m_pSpace->GetNodeAt(nAtSuper);
@@ -200,7 +202,7 @@ void CNodeCluster::AddNodeToCluster(CNode *pNode, float dist_sq)
 	for (int nAt = 0; nAt < GetSiblingCount(); nAt++)
 	{
 		CNodeCluster *pCluster = GetSibling(nAt);
-		float weight = pCluster->GetLinkWeightForNode(pNode);
+		REAL weight = pCluster->GetLinkWeightForNode(pNode);
 		m_arrLinkVectorCurrent[nAt+nSuperNodes] += 
 			act * pCluster->GetLinkWeightForNode(pNode);
 	}
@@ -215,11 +217,16 @@ void CNodeCluster::AddNodeToCluster(CNode *pNode, float dist_sq)
 
 void CNodeCluster::UpdateClusters()
 {
+	if (m_pSpace->GetNodeCount() == m_pSpace->GetSuperNodeCount())
+	{
+		return;
+	}
+
 	// store total activation
-	double total_activation = m_pSpace->GetRootNode()->GetDescendantActivation();
+	REAL total_activation = m_pSpace->GetTotalActivation();
 
 	// stores the probability of including any particular node in the update
-	const float p_update = 1.0;
+	const REAL p_update = 1.0;
 
 	// 
 	// initialize node clusters with first N subnodes
@@ -241,8 +248,8 @@ void CNodeCluster::UpdateClusters()
 
 		// compute how many nodes will be analyzed
 
-		int nN = min(m_pSpace->GetNodeCount(), 
-			m_pSpace->GetSuperNodeCount() * GetSiblingCount());
+		int nN = __min(m_pSpace->GetNodeCount() - m_pSpace->GetSuperNodeCount(), 
+			m_pSpace->GetSuperNodeCount());
 
 		// assign nodes to the clusters based on distance
 		for (int nAtNode = m_pSpace->GetSuperNodeCount(); 
@@ -251,9 +258,9 @@ void CNodeCluster::UpdateClusters()
 		{
 			CNode *pNode = m_pSpace->GetNodeAt(nAtNode);
 
-			if ((float) rand() < p_update * (float) RAND_MAX)
+			// if ((REAL) rand() < p_update * (REAL) RAND_MAX)
 			{
-				float dist_sq;
+				REAL dist_sq;
 
 				// determine the nearest cluster
 				CNodeCluster *pNearestCluster = GetNearestCluster(pNode, &dist_sq);
@@ -274,6 +281,9 @@ void CNodeCluster::UpdateClusters()
 			pCluster->LoadLinkWeights();
 		}
 	}
+
+	// load the node's activation
+	SetActivation(GetActualTotalActivation());
 }
 
 
@@ -289,7 +299,7 @@ void CNodeCluster::LoadLinkWeights()
 		ASSERT(pSuperNode);
 
 		// compute the weight
-		float weight = 0.0f;
+		REAL weight = 0.0f;
 		if (m_totalActivation > 0.0f)
 			weight = m_arrLinkVectorCurrent[nAt] / m_totalActivation;
 
@@ -303,7 +313,7 @@ void CNodeCluster::LoadLinkWeights()
 	for (nAt = 0; nAt < GetSiblingCount(); nAt++)
 	{
 		CNodeCluster *pCluster = GetSibling(nAt);
-		float weight = GetLinkWeightToCluster(pCluster);
+		REAL weight = GetLinkWeightToCluster(pCluster);
 
 		// set the link weight vector element
 		m_arrLinkVectorFinal[nAt + nSuperNodes] = weight;
@@ -340,28 +350,28 @@ void CNodeCluster::UpdateLinkVector()
 }
 
 
-float * CNodeCluster::GetLinkVector()
+REAL * CNodeCluster::GetLinkVector()
 {
 	return m_arrLinkVectorFinal.GetData();
 }
 
 
 
-void CNodeCluster::ResetTotalActivation(double scale) 
+void CNodeCluster::ResetTotalActivation(REAL scale) 
 { 
 	for (int nAt = 0; nAt < m_pSpace->GetSuperNodeCount() + GetSiblingCount(); nAt++)
 	{
-		m_arrLinkVectorCurrent[nAt] *= (float) scale;
+		m_arrLinkVectorCurrent[nAt] *= (REAL) scale;
 	}
-	m_error *= (float) scale;
-	m_totalActivation *= (float) scale;
+	m_error *= (REAL) scale;
+	m_totalActivation *= (REAL) scale;
 }
 
 
-float CNodeCluster::GetLinkWeightToCluster(CNodeCluster *pToCluster)
+REAL CNodeCluster::GetLinkWeightToCluster(CNodeCluster *pToCluster)
 {
-	float total_activation = 0.0f;
-	float total_weight = 0.0f;
+	REAL total_activation = 0.0f;
+	REAL total_weight = 0.0f;
 
 	// form the weight from weighted average of links from nodes in this
 	for (POSITION pos = m_mapNodes.GetStartPosition(); pos != NULL; )
@@ -373,8 +383,8 @@ float CNodeCluster::GetLinkWeightToCluster(CNodeCluster *pToCluster)
 			CNode *pOtherNode;
 			pToCluster->m_mapNodes.GetNextAssoc(posOther, pOtherNode, pOtherNode);
 			
-			float weight = pNode->GetLinkWeight(pOtherNode);
-			float act = (float)(pNode->GetActivation() + pOtherNode->GetActivation());
+			REAL weight = pNode->GetLinkWeight(pOtherNode);
+			REAL act = (REAL)(pNode->GetActivation() + pOtherNode->GetActivation());
 
 			total_weight += weight * act;
 			total_activation += act;

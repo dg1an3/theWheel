@@ -23,26 +23,26 @@ public:
 	CNodeCluster *GetSibling(int nAt);
 
 	// returns the distance to a particular node
-	float GetNodeDistanceSq(CNode *pNode);
+	REAL GetNodeDistanceSq(CNode *pNode);
 
 	// returns the weight from the cluster to a particular node
-	float GetLinkWeightForNode(CNode *pNode);
+	REAL GetLinkWeightForNode(CNode *pNode);
 
 	// retrieves two versions of the cluster's total activation
-	float GetTotalActivation();
-	float GetActualTotalActivation();
+	REAL GetTotalActivation();
+	REAL GetActualTotalActivation();
 
 	// returns the total cluster error
-	float GetClusterError();
+	REAL GetClusterError();
 
 	// returns the nearest cluster, also returns the distance squared
-	CNodeCluster * GetNearestCluster(CNode *pNode, float *dist_sq = NULL);
+	CNodeCluster * GetNearestCluster(CNode *pNode, REAL *dist_sq = NULL);
 
 protected:
 	friend CSpace;
 
 	// add a node to the cluster
-	void AddNodeToCluster(CNode *pNode, float dist_sq);
+	void AddNodeToCluster(CNode *pNode, REAL dist_sq);
 
 	// updates the clusters after a change to the node activations
 	void UpdateClusters();
@@ -56,15 +56,15 @@ protected:
 
 	// retrieves the cluster's link vector (only valid after a
 	//	LoadLinkWeights call)
-	float * GetLinkVector();
+	REAL * GetLinkVector();
 
 	// reset the total activation 
 	//		(prepares for another iteration of the k-means clustering,
 	//			but leaves GetLinkVector and the node map intact)
-	void ResetTotalActivation(double scale = 0.5);
+	void ResetTotalActivation(REAL scale = 0.5);
 
 	// retrieves the link weight to another cluster
-	float GetLinkWeightToCluster(CNodeCluster *toCluster);
+	REAL GetLinkWeightToCluster(CNodeCluster *toCluster);
 
 	// helper to dump the link vector
 	void DumpLinkVector();
@@ -77,16 +77,16 @@ private:
 	CObArray m_arrSiblings;
 
 	// the link vector for this currently forming population
-	CArray<float, float> m_arrLinkVectorCurrent;
+	CArray<REAL, REAL> m_arrLinkVectorCurrent;
 
 	// the 'final' link vector after the last update
-	CArray<float, float> m_arrLinkVectorFinal;
+	CArray<REAL, REAL> m_arrLinkVectorFinal;
 
 	// total activation for all nodes added to the cluster
-	float m_totalActivation;
+	REAL m_totalActivation;
 
 	// error (mean squared error) for the cluster
-	float m_error;
+	REAL m_error;
 
 	// contains the nodes (in an easy-to-access format)
 	CMap<CNode *, CNode *, CNode *, CNode *> m_mapNodes;

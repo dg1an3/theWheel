@@ -13,8 +13,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include <Value.h>
-#include <Association.h>
+#include <MathUtil.h>
 
 // forward declaration of CNode
 class CNode;
@@ -29,7 +28,7 @@ class CNodeLink : public CObject
 {
 public:
 	// constructors/destructors
-	CNodeLink(CNode *pToNode = NULL, float weight = 0.0);
+	CNodeLink(CNode *pToNode = NULL, REAL weight = 0.0);
 	virtual ~CNodeLink();
 
 	// serialization support
@@ -39,7 +38,7 @@ public:
 	// attributes
 
 	// node weight
-	float GetWeight() const;
+	REAL GetWeight() const;
 
 	// node target
 	CNode *GetTarget();
@@ -57,7 +56,7 @@ protected:
 	// declares CSpace as a friend class, to access the helper functions
 	friend CNode;
 
-	void SetWeight(float weight);
+	void SetWeight(REAL weight);
 
 	//////////////////////////////////////////////////////////////////
 	// propagation helpers
@@ -68,7 +67,7 @@ protected:
 
 private:
 	// weight of this link
-	float m_weight;
+	REAL m_weight;
 
 	// target of this link
 	CNode *m_pTarget;

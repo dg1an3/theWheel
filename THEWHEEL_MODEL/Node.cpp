@@ -21,6 +21,7 @@ static char THIS_FILE[]=__FILE__;
 #define new DEBUG_NEW
 #endif
 
+
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -35,19 +36,20 @@ CNode::CNode(CSpace *pSpace,
 			 const CString& strDesc)
 	: m_pSpace(pSpace),
 		m_pParent(NULL),
+		m_strName(strName),
 		m_strDescription(strDesc),
 		m_pDib(NULL),
+		m_pSoundBuffer(NULL),
 		m_vPosition(CVector<3>(0.0, 0.0, 0.0)),
 
-		m_primaryActivation(0.005),		// initialize with a very 
-		m_secondaryActivation(0.005),	// small activation
-		m_maxDeltaActivation(0.0),
+		m_primaryActivation((REAL) 0.005),		// initialize with a very 
+		m_secondaryActivation((REAL) 0.005),	// small activation
+		m_springActivation(m_primaryActivation + m_secondaryActivation),
+		m_maxDeltaActivation((REAL) 0.0),
 
 		m_pMaxActivator(NULL),
 		m_pView(NULL)
 {
-	// set the node's name
-	name.Set(strName);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -57,10 +59,15 @@ CNode::CNode(CSpace *pSpace,
 //////////////////////////////////////////////////////////////////////
 CNode::~CNode()
 {
-	children.RemoveAll();
+	// delete the links
+	for (int nAt = 0; nAt < m_arrChildren.GetSize(); nAt++)
+		delete m_arrChildren[nAt];
+	m_arrChildren.RemoveAll();
+
+	// children.RemoveAll();
 
 	// delete the links
-	for (int nAt = 0; nAt < m_arrLinks.GetSize(); nAt++)
+	for (nAt = 0; nAt < m_arrLinks.GetSize(); nAt++)
 		delete m_arrLinks[nAt];
 	m_arrLinks.RemoveAll();
 
@@ -71,7 +78,7 @@ CNode::~CNode()
 //////////////////////////////////////////////////////////////////////
 // implements CNode's dynamic serialization
 //////////////////////////////////////////////////////////////////////
-IMPLEMENT_SERIAL(CNode, CModelObject, VERSIONABLE_SCHEMA|5);
+IMPLEMENT_SERIAL(CNode, CObject, VERSIONABLE_SCHEMA|5);
 
 
 //////////////////////////////////////////////////////////////////////
@@ -107,16 +114,58 @@ void CNode::SetParent(CNode *pParent)
 	ASSERT(pParent->m_pSpace == m_pSpace);
 
 	if (m_pParent)
-		m_pParent->children.Release(this);
+	{
+		for (int nAt = 0; nAt < m_pParent->m_arrChildren.GetSize(); nAt++)
+		{
+			if (m_pParent->m_arrChildren[nAt] == this)
+			{
+				m_pParent->m_arrChildren.RemoveAt(nAt);
+				nAt--;
+			}
+		}
+	}
 
 	m_pParent = pParent;
 
 	if (m_pParent)
-		m_pParent->children.Add(this);
+	{
+		// check to ensure the element is not already present
+		BOOL bFound = FALSE;
+		for (int nAt = 0; nAt < m_arrChildren.GetSize(); nAt++)
+		{
+			if (m_arrChildren[nAt] == this)
+			{
+				bFound = TRUE;
+			}
+		}
+
+		if (!bFound)
+		{
+			m_pParent->m_arrChildren.Add(this);
+		}
+	}
 
 	// notify views of the change
 	if (m_pSpace != NULL)
+	{
 		m_pSpace->UpdateAllViews(NULL, 0L, this);
+	}
+}
+
+
+int CNode::GetChildCount() const
+{
+	return m_arrChildren.GetSize();
+}
+
+CNode *CNode::GetChildAt(int nAt)
+{
+	return (CNode *) m_arrChildren.GetAt(nAt);
+}
+
+const CNode *CNode::GetChildAt(int nAt) const
+{
+	return (CNode *) m_arrChildren.GetAt(nAt);
 }
 
 
@@ -127,7 +176,7 @@ void CNode::SetParent(CNode *pParent)
 //////////////////////////////////////////////////////////////////////
 const CString& CNode::GetName() const
 {
-	return name.Get();
+	return m_strName;
 }
 
 
@@ -138,7 +187,7 @@ const CString& CNode::GetName() const
 //////////////////////////////////////////////////////////////////////
 void CNode::SetName(const CString& strName)
 {
-	name.Set(strName);
+	m_strName = strName;
 
 	// notify views of the change
 	if (m_pSpace != NULL)
@@ -222,6 +271,109 @@ CDib *CNode::GetDib()
 	}
 
 	return m_pDib;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetSoundFilename
+// 
+// returns the name of the node's sound file
+//////////////////////////////////////////////////////////////////////
+const CString& CNode::GetSoundFilename() const
+{
+	return m_strSoundFilename;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::SetImageFilename
+// 
+// sets the name of the node's image file
+//////////////////////////////////////////////////////////////////////
+void CNode::SetSoundFilename(const CString& strSoundFilename)
+{
+	m_strSoundFilename = strSoundFilename;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetSoundBuffer
+// 
+// returns interface to sound buffer, loading if necessary
+//////////////////////////////////////////////////////////////////////
+LPDIRECTSOUNDBUFFER CNode::GetSoundBuffer()
+{
+	if (NULL != m_pSoundBuffer)
+	{
+		return m_pSoundBuffer;
+	}
+
+	// structures that hold the file data
+	LPWAVEFORMATEX lpWaveFormat = NULL;
+	UINT nSize;
+	DWORD dwSamples;
+	LPBYTE lpWaveData = NULL;
+
+	// the direct sound buffer
+	LPVOID lpBuffer = NULL;
+	DWORD dwBufSize;
+
+	// load the file
+	if (0 != WaveLoadFile(GetSoundFilename(), 
+		&nSize, &dwSamples, &lpWaveFormat, &lpWaveData))
+	{
+		goto CLEANUP;
+	}
+
+	// create the sound buffer
+	DSBUFFERDESC bufdesc;
+	memset(&bufdesc, 0, sizeof(bufdesc));
+	bufdesc.dwSize = sizeof(bufdesc);
+	bufdesc.dwFlags = DSBCAPS_STATIC;
+	bufdesc.dwBufferBytes = __min(nSize, DSBSIZE_MAX);
+	bufdesc.lpwfxFormat = lpWaveFormat;
+	if (DS_OK != m_pSpace->GetDirectSound()
+			->CreateSoundBuffer(&bufdesc, &m_pSoundBuffer, NULL))
+	{
+		goto CLEANUP;
+	}
+
+	// lock the buffer
+	if (DS_OK != m_pSoundBuffer->Lock(0, 0, &lpBuffer, &dwBufSize, 
+			NULL, NULL, DSBLOCK_ENTIREBUFFER))
+	{
+		// error, so free the buffer first
+		m_pSoundBuffer->Release();
+		m_pSoundBuffer = NULL;
+
+		goto CLEANUP;
+	}
+	ASSERT(dwBufSize == nSize);
+
+	// copy the wave data
+	memcpy(lpBuffer, lpWaveData, nSize);
+
+CLEANUP:
+	// unlock the sound buffer
+	if (NULL != m_pSoundBuffer)
+	{
+		m_pSoundBuffer->Unlock(lpBuffer, dwBufSize, NULL, 0);
+	}
+
+	// free the wave format structure
+	if (NULL != lpWaveFormat)
+	{
+		GlobalFree(lpWaveFormat);
+	}
+
+	// free the wave data
+	if (NULL != lpWaveData)
+	{
+		GlobalFree(lpWaveData);
+	}
+
+	// return the buffer (or NULL if error)
+	return m_pSoundBuffer;
 }
 
 
@@ -336,10 +488,10 @@ const CNodeLink * CNode::GetLinkTo(CNode * pToNode) const
 // finds a link to the given target, if it exists.
 // otherwise returns NULL.
 //////////////////////////////////////////////////////////////////////
-float CNode::GetLinkWeight(CNode * pToNode) const
+REAL CNode::GetLinkWeight(CNode * pToNode) const
 {
 	// find the weight in the map
-	float weight;
+	REAL weight;
 	if (m_mapLinks.Lookup(pToNode, weight))
 	{	
 		// return the weight
@@ -357,7 +509,7 @@ float CNode::GetLinkWeight(CNode * pToNode) const
 // links the node to the target node (creating a CNodeLink in the
 // proces, if necessary).
 //////////////////////////////////////////////////////////////////////
-void CNode::LinkTo(CNode *pToNode, float weight, BOOL bReciprocalLink)
+void CNode::LinkTo(CNode *pToNode, REAL weight, BOOL bReciprocalLink)
 {
 	// don't link to NULL
 	ASSERT(pToNode != NULL);
@@ -458,18 +610,18 @@ void CNode::SortLinks()
 // 
 // applies a simple learning rule to the link weights
 //////////////////////////////////////////////////////////////////////
-void CNode::LearnFromNode(CNode *pOtherNode, float k)
+void CNode::LearnFromNode(CNode *pOtherNode, REAL k)
 {
-	float otherAct = (float) pOtherNode->GetPrimaryActivation();
-	float weightTo = (float) pOtherNode->GetLinkWeight(this);
+	REAL otherAct = (REAL) pOtherNode->GetPrimaryActivation();
+	REAL weightTo = (REAL) pOtherNode->GetLinkWeight(this);
 
 	if (otherAct > GetPrimaryActivation() 
 		&& otherAct * weightTo < GetPrimaryActivation())
 	{
-		float targetWeight = (float) GetPrimaryActivation() / otherAct;
+		REAL targetWeight = (REAL) GetPrimaryActivation() / otherAct;
 		ASSERT(targetWeight > weightTo);
 
-		float newWeight = weightTo + (targetWeight - weightTo) * k;
+		REAL newWeight = weightTo + (targetWeight - weightTo) * k;
 		if (newWeight < 2.0)
 			pOtherNode->LinkTo(this, newWeight);
 	}
@@ -483,7 +635,7 @@ void CNode::LearnFromNode(CNode *pOtherNode, float k)
 // 
 // returns the node's activation
 //////////////////////////////////////////////////////////////////////
-double CNode::GetActivation() const
+REAL CNode::GetActivation() const
 {
 	return m_primaryActivation + m_secondaryActivation;
 }
@@ -494,7 +646,7 @@ double CNode::GetActivation() const
 // 
 // returns the node's primary activation
 //////////////////////////////////////////////////////////////////////
-double CNode::GetPrimaryActivation() const
+REAL CNode::GetPrimaryActivation() const
 {
 	return m_primaryActivation;
 }
@@ -505,9 +657,34 @@ double CNode::GetPrimaryActivation() const
 // 
 // returns the node's secondary activation
 //////////////////////////////////////////////////////////////////////
-double CNode::GetSecondaryActivation() const
+REAL CNode::GetSecondaryActivation() const
 {
 	return m_secondaryActivation;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetSpringActivation
+// 
+// returns the node's spring activation value
+//////////////////////////////////////////////////////////////////////
+REAL CNode::GetSpringActivation() const
+{
+	return m_springActivation;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::UpdateSprings
+// 
+// updates the spring activation
+//////////////////////////////////////////////////////////////////////
+void CNode::UpdateSpring(REAL springConst)
+{
+	// update spring activation
+	m_springActivation = 
+		GetActivation(); //  * ((REAL) 1.0 - springConst)
+			// + m_springActivation * springConst;
 }
 
 
@@ -519,9 +696,9 @@ double CNode::GetSecondaryActivation() const
 int CNode::GetDescendantCount() const
 {
 	int nCount = 0;
-	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	for (int nAt = 0; nAt < GetChildCount(); nAt++)
 	{
-		CNode *pChild = ((CNode *)children.Get(nAt));
+		const CNode *pChild = GetChildAt(nAt);
 		nCount += pChild->GetDescendantCount() + 1;		// 1 for the child itself
 	}
 
@@ -534,16 +711,16 @@ int CNode::GetDescendantCount() const
 // 
 // sums the activation value of this node with all children nodes
 //////////////////////////////////////////////////////////////////////
-double CNode::GetDescendantActivation() const
+REAL CNode::GetDescendantActivation() const
 {
 	// initialize with the activation of this node
-	double sum = GetActivation();
+	REAL sum = GetActivation();
 
 	// iterate over child nodes
-	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	for (int nAt = 0; nAt < GetChildCount(); nAt++)
 	{
 		// for each child node
-		CNode *pNode = (CNode *)children.Get(nAt);
+		const CNode *pNode = GetChildAt(nAt);
 
 		// sum its descendent activation
 		sum += pNode->GetDescendantActivation();
@@ -560,16 +737,16 @@ double CNode::GetDescendantActivation() const
 // sums the primary activation value of this node with all children 
 // nodes
 //////////////////////////////////////////////////////////////////////
-double CNode::GetDescendantPrimaryActivation() const
+REAL CNode::GetDescendantPrimaryActivation() const
 {
 	// initialize with the activation of this node
-	double sum = GetPrimaryActivation();
+	REAL sum = GetPrimaryActivation();
 
 	// iterate over child nodes
-	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	for (int nAt = 0; nAt < GetChildCount(); nAt++)
 	{
 		// for each child node
-		CNode *pNode = (CNode *)children.Get(nAt);
+		const CNode *pNode = GetChildAt(nAt);
 
 		// sum its descendent activation
 		sum += pNode->GetDescendantPrimaryActivation();
@@ -586,16 +763,16 @@ double CNode::GetDescendantPrimaryActivation() const
 // sums the primary activation value of this node with all children 
 // nodes
 //////////////////////////////////////////////////////////////////////
-double CNode::GetDescendantSecondaryActivation() const
+REAL CNode::GetDescendantSecondaryActivation() const
 {
 	// initialize with the activation of this node
-	double sum = GetSecondaryActivation();
+	REAL sum = GetSecondaryActivation();
 
 	// iterate over child nodes
-	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	for (int nAt = 0; nAt < GetChildCount(); nAt++)
 	{
 		// for each child node
-		CNode *pNode = (CNode *)children.Get(nAt);
+		const CNode *pNode = GetChildAt(nAt);
 
 		// sum its descendent activation
 		sum += pNode->GetDescendantSecondaryActivation();
@@ -648,12 +825,10 @@ void CNode::Serialize(CArchive &ar)
 {
 	UINT nSchema = ar.GetObjectSchema();
 
-	// serialize the node name
-	name.Serialize(ar);
-
 	// serialize the node body
 	if (ar.IsLoading())
 	{
+		ar >> m_strName;
 		ar >> m_strDescription;
 		ar >> m_strImageFilename;
 
@@ -664,13 +839,14 @@ void CNode::Serialize(CArchive &ar)
 	}
 	else
 	{
+		ar << m_strName;
 		ar << m_strDescription;
 		ar << m_strImageFilename;
 		ar << m_strUrl;
 	}
 
 	// serialize children
-	children.Serialize(ar);
+	m_arrChildren.Serialize(ar);
 
 	// serialize links
 	m_arrLinks.Serialize(ar);
@@ -679,8 +855,10 @@ void CNode::Serialize(CArchive &ar)
 	if (ar.IsLoading())
 	{
 		// set the children's parent
-		for (int nAt = 0; nAt < children.GetSize(); nAt++)
-			((CNode *)children.Get(nAt))->SetParent(this);
+		for (int nAt = 0; nAt < GetChildCount(); nAt++)
+		{
+			GetChildAt(nAt)->m_pParent = this;
+		}
 
 		// sort the links
 		SortLinks();
@@ -688,8 +866,10 @@ void CNode::Serialize(CArchive &ar)
 		// and set up the map
 		m_mapLinks.RemoveAll();
 		for (nAt = 0; nAt < GetLinkCount(); nAt++)
+		{
 			m_mapLinks.SetAt(GetLinkAt(nAt)->GetTarget(), 
 				GetLinkAt(nAt)->GetWeight());
+		}
 	}
 }
 
@@ -700,10 +880,10 @@ void CNode::Serialize(CArchive &ar)
 // sets the node's activation.  if an activator is passed, it is
 //		compared to the current Max Activator
 //////////////////////////////////////////////////////////////////////
-void CNode::SetActivation(double newActivation, CNode *pActivator)
+void CNode::SetActivation(REAL newActivation, CNode *pActivator)
 {
 	// compute the delta
-	double deltaActivation = newActivation - GetActivation();
+	REAL deltaActivation = newActivation - GetActivation();
 
 	// set the activation, based on whether primary or secondary
 	if (pActivator == NULL)
@@ -730,7 +910,7 @@ void CNode::SetActivation(double newActivation, CNode *pActivator)
 // propagates the activation of this node through the other nodes
 //		in the space
 //////////////////////////////////////////////////////////////////////
-void CNode::PropagateActivation(double scale)
+void CNode::PropagateActivation(REAL scale)
 {
 	// iterate through the links from highest to lowest activation
 	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
@@ -748,15 +928,15 @@ void CNode::PropagateActivation(double scale)
 			CNode *pTarget = pLink->GetTarget();
 
 			// compute the desired new activation = this activation * weight
-			double targetActivation = GetActivation() 
+			REAL targetActivation = GetActivation() 
 				* pLink->GetWeight();
 
 			// perturb the new activation
 			targetActivation *= 
-				(1.0005f - 0.001f * (float) rand() / (float) RAND_MAX);
+				(1.0005f - 0.001f * (REAL) rand() / (REAL) RAND_MAX);
 
 			// the new activation defaults to the original activation
-			double newActivation = pTarget->GetActivation();
+			REAL newActivation = pTarget->GetActivation();
 
 			// now change it if the current target activation is less than the target
 			if (pTarget->GetActivation() < targetActivation)
@@ -770,7 +950,7 @@ void CNode::PropagateActivation(double scale)
 			pTarget->SetActivation(newActivation, this);
 
 			// and propagate to linked nodes
-			pTarget->PropagateActivation(scale * 1.0);
+			pTarget->PropagateActivation(scale * (REAL) 1.0);
 		}
 	}
 }
@@ -795,10 +975,10 @@ void CNode::ResetForPropagation()
 	}
 
 	// now do the same for all children
-	for (nAt = 0; nAt < children.GetSize(); nAt++)
+	for (nAt = 0; nAt < GetChildCount(); nAt++)
 	{
 		// for each child,
-		CNode *pChildNode = (CNode *) children.Get(nAt);
+		CNode *pChildNode = GetChildAt(nAt);
 		// now recursively reset the children
 		pChildNode->ResetForPropagation();
 	}
@@ -810,18 +990,17 @@ void CNode::ResetForPropagation()
 // 
 // sums the activation value of this node with all children nodes
 //////////////////////////////////////////////////////////////////////
-void CNode::ScaleDescendantActivation(double primScale, double secScale)
+void CNode::ScaleDescendantActivation(REAL primScale, REAL secScale)
 {
 	// scale this node's activation
 	m_primaryActivation *= primScale;
 	m_secondaryActivation *= secScale;
-	// SetActivation(GetActivation() * scale);
 
 	// iterate over child nodes
-	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	for (int nAt = 0; nAt < GetChildCount(); nAt++)
 	{
 		// for each child node
-		CNode *pNode = (CNode *)children.Get(nAt);
+		CNode *pNode = GetChildAt(nAt);
 
 		// scale the child's activation
 		pNode->ScaleDescendantActivation(primScale, secScale);
@@ -838,15 +1017,15 @@ CNode * CNode::GetRandomDescendant()
 {
 	int nDescendant = rand() * GetDescendantCount() / RAND_MAX;
 
-	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	for (int nAt = 0; nAt < GetChildCount(); nAt++)
 	{
-		CNode *pChild = ((CNode *)children.Get(nAt));
+		CNode *pChild = GetChildAt(nAt);
 		if (pChild->GetDescendantCount() > nDescendant)
 			return pChild->GetRandomDescendant();
 		nDescendant -= pChild->GetDescendantCount();
 	}
 
-	return (CNode *) children.Get(nDescendant);
+	return GetChildAt(nDescendant);
 }
 
 const CVector<3>& CNode::GetPosition() const
@@ -859,16 +1038,16 @@ void CNode::SetPosition(const CVector<3>& vPos)
 	m_vPosition = vPos;
 }
 
-CVector<3> CNode::GetSize(float activation) const
+CVector<3> CNode::GetSize(REAL activation) const
 {
 	// compute the desired aspect ratio (maintain the current aspect ratio)
-	float aspectRatio = 0.75f - 0.375f * (float) exp(-8.0f * activation);
+	REAL aspectRatio = 0.75f - 0.375f * (REAL) exp(-8.0f * activation);
 
 	// compute the new width and height from the desired area and the desired
 	//		aspect ratio
 	CVector<3> vSize;
-	vSize[0] = sqrt(activation / aspectRatio);
-	vSize[1] = sqrt(activation * aspectRatio);
+	vSize[0] = (REAL) sqrt(activation / aspectRatio);
+	vSize[1] = (REAL) sqrt(activation * aspectRatio);
 
 	// return the computed size
 	return vSize;

@@ -13,13 +13,16 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
+#include <Matrix.h>
+
 #include "Node.h"
 #include "NodeCluster.h"
+#include "SpaceLayoutManager.h"	// Added by ClassView
 
 //////////////////////////////////////////////////////////////////////
 // constant for total allowed activation of nodes
 //////////////////////////////////////////////////////////////////////
-const float TOTAL_ACTIVATION = 0.50f;
+const REAL TOTAL_ACTIVATION = (REAL) 0.50;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -43,8 +46,8 @@ public:
 	CNode *GetRootNode();
 
 	// accessors for nodes (sorted by activation)
-	int GetNodeCount();
-	CNode *GetNodeAt(int nAt);
+	int GetNodeCount() const;
+	CNode *GetNodeAt(int nAt) const;
 
 	// adds a new node to the space as a child of the parent
 	void AddNode(CNode *pNewNode, CNode *pParentNode);
@@ -53,21 +56,24 @@ public:
 	// operations
 
 	// activates a particular node
-	void ActivateNode(CNode *pNode, float scale);
+	void ActivateNode(CNode *pNode, REAL scale);
 
 	// adjusts nodes so that sum of all activations = sum
-	void NormalizeNodes(double sum = 1.0);
+	void NormalizeNodes(REAL sum = 1.0);
+
+	// returns the total activation of the space
+	REAL GetTotalActivation() const;
 
 	///////////////////////////////////////////////////////////////////
 	// clusters
 
 	// accessors for the clusters
-	int GetClusterCount();
+	int GetClusterCount() const;
 	void SetClusterCount(int nCount);
 	CNodeCluster *GetClusterAt(int nAt);
 
 	// accessors for the super node count
-	int GetSuperNodeCount();
+	int GetSuperNodeCount() const;
 	void SetMaxSuperNodeCount(int nSuperNodeCount);
 
 // Overrides
@@ -80,6 +86,13 @@ public:
 
 // Implementation
 public:
+	void LayoutNodes();
+
+	CVector<3> GetCentralMoment() const;
+	CMatrix<2> GetInertiaTensor() const;
+
+	LPDIRECTSOUND GetDirectSound();
+
 	virtual ~CSpace();
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -95,15 +108,14 @@ protected:
 	void SortNodes();
 
 	// cluster analysis
-public:
-	void ComputeClusters();
+	// void ComputeClusters();
 
 	// helper function to add random children to a node
 	void AddChildren(CNode *pParent, int nLevels, 
-				 int nCount = 3, float weight = 0.50f);
+				 int nCount = 3, REAL weight = 0.50f);
 
 	// helper function to randomly cross-link nodes
-	void CrossLinkNodes(int nCount, float weight = 0.50f);
+	void CrossLinkNodes(int nCount, REAL weight = 0.50f);
 
 // Generated message map functions
 protected:
@@ -114,18 +126,26 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 private:
-
 	// the parent node contains all of this space's nodes as children
 	CNode *m_pRootNode;
 
 	// the array of nodes
 	CObArray m_arrNodes;
 
+	// the direct sound interface
+	LPDIRECTSOUND m_pDS;
+
 	// the clusters for this space
 	CNodeCluster *m_pCluster;
 
 	// stores the number of super nodes
 	int m_nSuperNodeCount;
+
+	// the manager for laying out the nodes
+	CSpaceLayoutManager *m_pLayoutManager;
+
+	// returns the computed total activation
+	REAL m_totalActivation;
 };
 
 /////////////////////////////////////////////////////////////////////////////

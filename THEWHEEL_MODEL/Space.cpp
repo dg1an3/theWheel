@@ -32,10 +32,16 @@ static char THIS_FILE[] = __FILE__;
 //////////////////////////////////////////////////////////////////////
 CSpace::CSpace()
 	: m_pRootNode(NULL),
+		m_pDS(NULL),
 		m_nSuperNodeCount(20),
-		m_pCluster(NULL)
+		m_pCluster(NULL),
+		m_pLayoutManager(NULL)
 {
-	SetClusterCount(1);
+	// set up the clusters
+	SetClusterCount(0);
+
+	// create the layout manager
+	m_pLayoutManager = new CSpaceLayoutManager(this);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -45,9 +51,14 @@ CSpace::CSpace()
 //////////////////////////////////////////////////////////////////////
 CSpace::~CSpace()
 {
-	delete m_pRootNode;
+	// delete the layout manager
+	delete m_pLayoutManager;
 
+	// delete the clusters
 	delete m_pCluster;
+
+	// delete the root node (deletes other nodes)
+	delete m_pRootNode;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -66,15 +77,28 @@ CNode *CSpace::GetRootNode()
 	return m_pRootNode;
 }
 
-int CSpace::GetNodeCount()
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetNodeCount
+// 
+// returns the number of nodes in the space
+//////////////////////////////////////////////////////////////////////
+int CSpace::GetNodeCount() const
 {
 	return m_arrNodes.GetSize();
 }
 
-CNode *CSpace::GetNodeAt(int nAt)
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetNodeAt
+// 
+// returns a node by index
+//////////////////////////////////////////////////////////////////////
+CNode *CSpace::GetNodeAt(int nAt) const
 {
 	return (CNode *) m_arrNodes.GetAt(nAt);
 }
+
 
 //////////////////////////////////////////////////////////////////////
 // CSpace::AddNode
@@ -85,11 +109,11 @@ CNode *CSpace::GetNodeAt(int nAt)
 void CSpace::AddNode(CNode *pNewNode, CNode *pParentNode)
 {
 	// determine the initial activation
-	float actWeight = 
-		0.5f * (1.4f - 0.8f * (float) rand() / (float) RAND_MAX);
+	REAL actWeight = 
+		0.5f * (1.4f - 0.8f * (REAL) rand() / (REAL) RAND_MAX);
 
 	// set up the link
-	pNewNode->LinkTo(pParentNode, (float) actWeight);
+	pNewNode->LinkTo(pParentNode, (REAL) actWeight);
 
 	// add the new node to the parent
 	pNewNode->SetParent(pParentNode);
@@ -113,28 +137,37 @@ void CSpace::AddNode(CNode *pNewNode, CNode *pParentNode)
 // 
 // activates a particular node
 //////////////////////////////////////////////////////////////////////
-void CSpace::ActivateNode(CNode *pNode, float scale)
+void CSpace::ActivateNode(CNode *pNode, REAL scale)
 {
 	// first, compute the new activation of the node up to the max
-	double oldActivation = pNode->GetActivation();
-	double newActivation = 
-		oldActivation + (TOTAL_ACTIVATION * 0.60 - oldActivation) * scale;
+	REAL oldActivation = pNode->GetActivation();
+	REAL newActivation = 
+		oldActivation + (TOTAL_ACTIVATION * (REAL) 0.60 - oldActivation) 
+			* scale;
 
 	// set the node's new activation
 	pNode->SetActivation(newActivation);
 
 	// now, propagate the activation
 	m_pRootNode->ResetForPropagation();
-	pNode->PropagateActivation(0.4);
+	pNode->PropagateActivation((REAL) 0.4);
 
 	// normalize the nodes
 	NormalizeNodes();
+
+	// update total activation
+	m_totalActivation = GetRootNode()->GetDescendantActivation();
 
 	// sort the nodes
 	SortNodes();
 
 	// and finally regenerate the clusters (if enabled)
-	ComputeClusters();
+	// ComputeClusters();
+	// no clusters, so don't compute
+	if (NULL != m_pCluster && GetClusterCount() > 0)
+	{
+		m_pCluster->UpdateClusters();
+	}
 }
 
 
@@ -143,56 +176,98 @@ void CSpace::ActivateNode(CNode *pNode, float scale)
 // 
 // normalizes the nodes to a known sum
 //////////////////////////////////////////////////////////////////////
-void CSpace::NormalizeNodes(double sum)
+void CSpace::NormalizeNodes(REAL sum)
 {
 	// compute the scale factor for normalization
-	const double ratio = 1.5;		// primary scale / secondary scale
+	const REAL ratio = 1.25;		// primary scale / secondary scale
 
 	// scale for secondary
-	double scale_2 = sum 
+	REAL scale_2 = sum 
 		/ (ratio * m_pRootNode->GetDescendantPrimaryActivation()
 			+ m_pRootNode->GetDescendantSecondaryActivation());
 
 	// scale for primary
-	double scale_1 = scale_2 * ratio;
+	REAL scale_1 = scale_2 * ratio;
 
 	// scale for equal primary/secondary weighting
-	double scale = sum / m_pRootNode->GetDescendantActivation();
+	REAL scale = sum / m_pRootNode->GetDescendantActivation();
 
 	// normalize to equal sum
 	m_pRootNode->ScaleDescendantActivation(scale_1, scale_2);
 }
 
 
-// accessors for the clusters
-int CSpace::GetClusterCount()
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetClusterCount
+// 
+// returns the number of clusters
+//////////////////////////////////////////////////////////////////////
+int CSpace::GetClusterCount() const
 {
 	if (m_pCluster)
+	{
 		return m_pCluster->GetSiblingCount();
+	}
 	else
+	{
 		return 0;
+	}
 }
 
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetClusterCount
+// 
+// sets the number of clusters
+//////////////////////////////////////////////////////////////////////
 void CSpace::SetClusterCount(int nCount)
 {
+	// delete the existing clusters
 	delete m_pCluster;
-	m_pCluster = new CNodeCluster(this, nCount);
+	m_pCluster = NULL;
+
+	if (nCount > 0)
+	{
+		// allocate new clusters
+		m_pCluster = new CNodeCluster(this, nCount);
+	}
 }
 
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetClusterAt
+// 
+// returns a cluster by index
+//////////////////////////////////////////////////////////////////////
 CNodeCluster *CSpace::GetClusterAt(int nAt)
 {
 	if (m_pCluster)
+	{
 		return m_pCluster->GetSibling(nAt);
+	}
 	else
+	{
 		return NULL;
+	}
 }
 
-// accessors for the super node count
-int CSpace::GetSuperNodeCount()
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetSuperNodeCount
+// 
+// returns the number of super nodes
+//////////////////////////////////////////////////////////////////////
+int CSpace::GetSuperNodeCount() const
 {
-	return min(m_nSuperNodeCount, GetNodeCount());
+	return __min(m_nSuperNodeCount, GetNodeCount());
 }
 
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::SetMaxSuperNodeCount
+// 
+// sets the maximum number of super nodes
+//////////////////////////////////////////////////////////////////////
 void CSpace::SetMaxSuperNodeCount(int nSuperNodeCount)
 {
 	m_nSuperNodeCount = nSuperNodeCount;
@@ -200,6 +275,7 @@ void CSpace::SetMaxSuperNodeCount(int nSuperNodeCount)
 	// reconstruct the clusters
 	SetClusterCount(GetClusterCount());
 }
+
 
 /////////////////////////////////////////////////////////////////////////////
 // CSpace message map
@@ -227,10 +303,10 @@ BOOL CSpace::OnNewDocument()
 
 	// create a new root node
 	m_pRootNode = new CNode();
-	m_pRootNode->name.Set("root");
+	m_pRootNode->SetName("root");
 
 #ifdef USE_FAKE_NODES
-	m_pRootNode->description.Set("Eadf eeqrjij afga gdfijagg ahvuert8qu4 vadfgahg."
+	m_pRootNode->SetDescription("Eadf eeqrjij afga gdfijagg ahvuert8qu4 vadfgahg."
 		"Jkdjfwheu sdfg hahrewgakdjf asg hag7un34gafasdgha vhg haeirnga."
 		"Sdff jdf jdskljfa; lkdjfsjd fkjweu iagh eurafgnls uashfre.");
 
@@ -242,17 +318,24 @@ BOOL CSpace::OnNewDocument()
 	CrossLinkNodes(m_pRootNode->GetDescendantCount() / 50);
 #endif
 
+	AddNodeToArray(m_pRootNode);
+
 	// initialize the node activations from the root node
-	m_pRootNode->SetActivation(0.5);
+	m_pRootNode->SetActivation((REAL) 0.5);
 	m_pRootNode->ResetForPropagation();
-	m_pRootNode->PropagateActivation(0.8);
+	m_pRootNode->PropagateActivation((REAL) 0.8);
 	NormalizeNodes();
 
 	// everything OK, return TRUE
 	return TRUE;
 }
 
-// helper function to sort the nodes by activation
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::SortNodes
+// 
+// sorts the nodes by activation value
+//////////////////////////////////////////////////////////////////////
 void CSpace::SortNodes()
 {
 	// flag to indicate a rearrangement has occurred
@@ -270,7 +353,9 @@ void CSpace::SortNodes()
 			CNode *pNextNode = GetNodeAt(nAt+1);
 
 			// compare their weights
-			if (pThisNode->GetActivation() < pNextNode->GetActivation())
+			double thisAct = pThisNode->GetActivation();
+			double nextAct = pNextNode->GetActivation();
+			if (thisAct < nextAct)
 			{
 				// if first is less than second, swap
 				m_arrNodes.SetAt(nAt, pNextNode);
@@ -286,108 +371,25 @@ void CSpace::SortNodes()
 }
 
 
-void CSpace::ComputeClusters()
-{
-	// no clusters, so don't compute
-	if (!m_pCluster || GetClusterCount() == 0)
-		return;
-
-	m_pCluster->UpdateClusters();
-
-/*
-	// store total activation
-	double total_activation = m_pRootNode->GetDescendantActivation();
-	// 
-	// initialize node clusters with first N subnodes
-	// iterations for the k-mean computation
-	for (int nIter = 0; nIter < 1; nIter++)
-	{
-		// finalize node clusters
-		for (int nAtCluster = 0; nAtCluster < GetClusterCount(); nAtCluster++)
-		{
-			CNodeCluster *pCluster = GetClusterAt(nAtCluster);
-			pCluster->ResetTotalActivation();
-
-			// updates the link vector from the current weights
-			pCluster->UpdateLinkVector();
-		}
-
-		// assign nodes to the clusters based on distance
-		for (int nAtNode = GetSuperNodeCount(); 
-			nAtNode < min(GetSuperNodeCount() * GetClusterCount(), GetNodeCount()); 
-			nAtNode++)
-		{
-			CNode *pNode = GetNodeAt(nAtNode);
-
-			float p_update = 0.5;
-
-			if ((float) rand() < p_update * (float) RAND_MAX)
-			{
-				// TODO: make a member function on CNodeCluster to do this
-				float minDist = FLT_MAX;
-				CNodeCluster *pNearestCluster;
-				for (int nAtCluster = 0; nAtCluster < GetClusterCount(); nAtCluster++)
-				{
-					CNodeCluster *pCluster = GetClusterAt(nAtCluster);
-					float dist = pCluster->GetNodeDistanceSq(pNode);
-					if (dist < minDist)
-					{
-						minDist = dist;
-						pNearestCluster = pCluster;
-					}
-				}
-
-				// now add to the appropriate cluster
-				pNearestCluster->AddNodeToCluster(pNode);
-			}
-		}
-
-		// finalize node clusters
-		for (nAtCluster = 0; nAtCluster < GetClusterCount(); nAtCluster++)
-		{
-			CNodeCluster *pCluster = GetClusterAt(nAtCluster);
-			pCluster->LoadLinkWeights();
-			// pCluster->ResetTotalActivation();
-
-//			TRACE("Cluster %i at iteration %i\n", nAtCluster, nIter);
-//			pCluster->DumpLinkVector();
-
-			// load the links to other clusters
-			for (int nAtOtherCluster = 0; nAtOtherCluster < GetClusterCount(); nAtOtherCluster++)
-			{
-				CNodeCluster *pOtherCluster = GetClusterAt(nAtOtherCluster);
-				if (pCluster != pOtherCluster)
-				{
-					float weight = pCluster->GetLinkWeightToCluster(pOtherCluster);
-					pCluster->LinkTo(pOtherCluster, weight, FALSE);
-
-					// output the weights to other cluster
-//					TRACE("\tLink to cluster %i: %f\n", nAtOtherCluster, weight);
-				}
-			}
-		}
-	} */
-}
-
 //////////////////////////////////////////////////////////////////////
 // CSpace::AddChildren
 // 
 // helper function to add random children to the CSpace object
 //////////////////////////////////////////////////////////////////////
 void CSpace::AddChildren(CNode *pParent, int nLevels, 
-				 int nCount, float weight)
+				 int nCount, REAL weight)
 {
 	for (int nAt = 0; nAt < nCount; nAt++)
 	{
 		CString strChildName;
 		strChildName.Format("%s%s%d", 
-			pParent->name.Get(), "->", nAt+1);
+			pParent->GetName(), "->", nAt+1);
 		CNode *pChild = new CNode(this, strChildName);
 
 		pChild->SetDescription("Ud dfjaskf rtertj 23 adsjf.  "
 			"Lkdjfsdfj sdaf ajskjgew ajg ajsdklgj; slrj jagifj ajdfgjkld.  "
 			"I d fdmgj sdl jdsgiow mrektmrejgj migmoergmmsos m ksdfogkf.");
-		pParent->children.Add(pChild);
+		// pParent->m_arrChildren.Add(pChild);
 		pChild->SetParent(pParent);
 
 		// set the image filename
@@ -396,7 +398,7 @@ void CSpace::AddChildren(CNode *pParent, int nLevels,
 		pChild->SetImageFilename(pszImageFilename);
 
 		// generate a randomly varying weight
-		float actWeight = weight * (1.4f - 0.8f * (float) rand() / (float) RAND_MAX);
+		REAL actWeight = weight * (1.4f - 0.8f * (REAL) rand() / (REAL) RAND_MAX);
 		pChild->LinkTo(pParent, actWeight);
 
 		if (nLevels > 0)
@@ -413,7 +415,7 @@ void CSpace::AddChildren(CNode *pParent, int nLevels,
 // 
 // randomly cross-links some nodes
 //////////////////////////////////////////////////////////////////////
-void CSpace::CrossLinkNodes(int nCount, float weight)
+void CSpace::CrossLinkNodes(int nCount, REAL weight)
 {
 	// cross-link
 	for (int nAt = 0; nAt < nCount; nAt++)
@@ -426,11 +428,11 @@ void CSpace::CrossLinkNodes(int nCount, float weight)
 
 		if (pChild1 != pChild2)
 		{
-			float actWeight = weight * (1.4f - 0.8f * (float) rand() / (float) RAND_MAX);
+			REAL actWeight = weight * (1.4f - 0.8f * (REAL) rand() / (REAL) RAND_MAX);
 
 			TRACE("Linking child %s to child %s with weight %lf\n",
-				pChild1->name.Get(),
-				pChild2->name.Get(), 
+				pChild1->GetName(),
+				pChild2->GetName(), 
 				actWeight);
 
 			pChild1->LinkTo(pChild2, weight);
@@ -438,11 +440,19 @@ void CSpace::CrossLinkNodes(int nCount, float weight)
 	}
 }
 
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::AddNodeToArray
+// 
+// adds a node (and its children) to the node array
+//////////////////////////////////////////////////////////////////////
 void CSpace::AddNodeToArray(CNode *pNode)
 {
 	m_arrNodes.Add(pNode);
-	for (int nAt = 0; nAt < pNode->children.GetSize(); nAt++)
-		AddNodeToArray((CNode *)pNode->children.Get(nAt));
+	for (int nAt = 0; nAt < pNode->GetChildCount(); nAt++)
+	{
+		AddNodeToArray(pNode->GetChildAt(nAt));
+	}
 }
 
 
@@ -471,18 +481,18 @@ void CSpace::Serialize(CArchive& ar)
 
 		// and do some activation
 		ActivateNode(m_pRootNode, 0.5);
-		ActivateNode(m_pRootNode, 0.5);
+		// ActivateNode(m_pRootNode, 0.5);
 
 		// initialize clusters
-		for (int nAtCluster = 0; nAtCluster < GetClusterCount(); nAtCluster++)
+		if (GetSuperNodeCount() < GetNodeCount())
 		{
-			CNodeCluster *pCluster = GetClusterAt(nAtCluster);
-			CNode *pNode = GetNodeAt(GetSuperNodeCount() + nAtCluster);
-			pCluster->AddNodeToCluster(pNode, 0.0f);
-			pCluster->LoadLinkWeights();
-
-	//		TRACE("Cluster %i initial state\n", nAtCluster);
-	//		pCluster->DumpLinkVector();
+			for (int nAtCluster = 0; nAtCluster < GetClusterCount(); nAtCluster++)
+			{
+				CNodeCluster *pCluster = GetClusterAt(nAtCluster);
+				CNode *pNode = GetNodeAt(GetSuperNodeCount() + nAtCluster);
+				pCluster->AddNodeToCluster(pNode, 0.0f);
+				pCluster->LoadLinkWeights();
+			}
 		}
 	}
 	else
@@ -515,15 +525,15 @@ void CSpace::Dump(CDumpContext& dc) const
 {
 	CDocument::Dump(dc);
 
-	for (int nAt = 0; nAt < m_pRootNode->children.GetSize(); nAt++)
+	for (int nAt = 0; nAt < m_pRootNode->GetChildCount(); nAt++)
 	{
-		const CNode *pNode = (const CNode *) m_pRootNode->children.Get(nAt);
+		const CNode *pNode = m_pRootNode->GetChildAt(nAt);
 		for (int nAtLink = 0; nAtLink < pNode->GetLinkCount(); nAtLink++)
 		{
 			const CNodeLink *pLink = pNode->GetLinkAt(nAtLink);
 			const CNode *pLinkedNode = pLink->GetTarget();
-			dc  << "Link " << pNode->name.Get() 
-				<< " to " << pLinkedNode->name.Get() 
+			dc  << "Link " << pNode->GetName() 
+				<< " to " << pLinkedNode->GetName() 
 				<< " : " << pLink->GetWeight()
 				<< "\n";
 		}
@@ -533,3 +543,149 @@ void CSpace::Dump(CDumpContext& dc) const
 
 /////////////////////////////////////////////////////////////////////////////
 // CSpace commands
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetTotalActivation
+// 
+// returns the total activation of all nodes
+//////////////////////////////////////////////////////////////////////
+REAL CSpace::GetTotalActivation() const
+{
+	return m_totalActivation;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::LayoutNodes
+// 
+// lays out the nodes in the array
+//////////////////////////////////////////////////////////////////////
+void CSpace::LayoutNodes()
+{
+	// layout the nodes
+	m_pLayoutManager->LayoutNodes();
+
+	BOOL m_bAdjustPrinEigenvector = FALSE;
+	if (m_bAdjustPrinEigenvector)
+	{
+		// now adjust for center and rotation
+		CVector<3> vCenter = GetCentralMoment();
+		CVector<2> vPrinEigenvector;
+		REAL prinEigenvalue = Eigen(GetInertiaTensor(), 1, &vPrinEigenvector);
+		
+		if (fabs(prinEigenvalue) < EPS)
+		{
+			// compute rotation angle
+			REAL angle;
+			if (fabs(vPrinEigenvector[0]) > EPS)
+			{
+				angle = atan(vPrinEigenvector[1] / vPrinEigenvector[0]);
+			}
+			else if (vPrinEigenvector[1] > 0.0)
+			{
+				angle = PI / 2.0;
+			}
+			else
+			{
+				angle = -PI / 2.0;
+			}
+			
+			REAL scale = 1.0; // fabs(prinEigenvalue) / (fabs(prinEigenvalue) + 400.0);
+			CMatrix<2> mRotate = CreateRotate(-scale * angle);
+
+			// rotate each node about the central moment, by the angle
+			for (int nAt = 0; nAt < GetNodeCount(); nAt++)
+			{
+				CVector<3> vPosition = GetNodeAt(nAt)->GetPosition();
+				vPosition -= vCenter;
+				vPosition = CVector<3>(mRotate * CVector<2>(vPosition));
+				vPosition += vCenter;
+				GetNodeAt(nAt)->SetPosition(vPosition);
+			} 
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetDirectSound
+// 
+// returns the DirectSound object for the space
+//////////////////////////////////////////////////////////////////////
+LPDIRECTSOUND CSpace::GetDirectSound()
+{
+	if (NULL == m_pDS)
+	{
+		if (DS_OK != DirectSoundCreate(NULL, &m_pDS, NULL))
+		{
+			m_pDS = NULL;
+		}
+	}
+
+	return m_pDS;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetCentralMoment
+// 
+// returns the central moment of the space
+//////////////////////////////////////////////////////////////////////
+CVector<3> CSpace::GetCentralMoment() const
+{
+	CVector<3> vCenter;
+	REAL total_activation = (REAL) 0.0;
+
+	// for each node
+	for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
+	{
+		total_activation += GetNodeAt(nAt)->GetActivation();
+		vCenter += GetNodeAt(nAt)->GetActivation() * GetNodeAt(nAt)->GetPosition();
+	}
+
+	// scale by the total activation
+	vCenter *= (REAL) 1.0 / total_activation;
+
+	return vCenter;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetInertiaTensor
+// 
+// returns the inertia tensor for the space
+//////////////////////////////////////////////////////////////////////
+CMatrix<2> CSpace::GetInertiaTensor() const
+{
+	// get the center
+	CVector<3> vCenter = GetCentralMoment();
+
+	// initialize total activation
+	REAL total_activation = (REAL) 0.0;
+
+	// set up the inertia tensor matrix
+	CMatrix<2> mIT;
+
+	// set to all zeros
+	mIT[0][0] = 0.0;
+	mIT[0][1] = 0.0;
+	mIT[1][0] = 0.0;
+	mIT[1][1] = 0.0;
+	
+	// for each node
+	for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
+	{
+		total_activation += GetNodeAt(nAt)->GetActivation();
+		CVector<3> vVar = GetNodeAt(nAt)->GetActivation()
+			* (GetNodeAt(nAt)->GetPosition() - vCenter);
+
+		mIT[0][0] += vVar[0] * vVar[0];
+		mIT[0][1] += vVar[0] * vVar[1];
+		mIT[1][0] += vVar[1] * vVar[0];
+		mIT[1][1] += vVar[1] * vVar[1];
+	}
+
+	// scale by total activation
+	mIT *= (REAL) 1.0 / total_activation;
+
+	// return inertia tensor
+	return mIT;
+}
+

@@ -23,7 +23,7 @@ static char THIS_FILE[]=__FILE__;
 // 
 // constructs a CNodeLink to the given target, with the given weight
 //////////////////////////////////////////////////////////////////////
-CNodeLink::CNodeLink(CNode *pToNode, float weight)
+CNodeLink::CNodeLink(CNode *pToNode, REAL weight)
 	: m_pTarget(pToNode),
 		m_weight(weight),
 		m_bHasPropagated(FALSE)
@@ -52,7 +52,7 @@ IMPLEMENT_SERIAL(CNodeLink, CObject, 1)
 // 
 // returns the weight of this link
 //////////////////////////////////////////////////////////////////////
-float CNodeLink::GetWeight() const
+REAL CNodeLink::GetWeight() const
 {
 	return m_weight;
 }
@@ -63,7 +63,7 @@ float CNodeLink::GetWeight() const
 // 
 // sets the weight of this link
 //////////////////////////////////////////////////////////////////////
-void CNodeLink::SetWeight(float newWeight)
+void CNodeLink::SetWeight(REAL newWeight)
 {
 	m_weight = newWeight;
 }
@@ -134,13 +134,15 @@ void CNodeLink::Serialize(CArchive &ar)
 	if (ar.IsLoading())
 	{
 		// load the values
-		ar >> m_weight;
+		float weight;
+		ar >> weight;
+		m_weight = (REAL) weight;
 		ar >> m_pTarget;
 	}
 	else
 	{
 		// store the values
-		ar << m_weight;
+		ar << (float) m_weight;
 		ar << m_pTarget;
 	}
 }

@@ -13,13 +13,15 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include <Value.h>
-#include <Collection.h>
-#include <ModelObject.h>
 #include <Vector.h>
 
-#include <Dib.h>
+// the wave file utilities
+#include "WAVE.h"
 
+// the image utilities
+#include "Dib.h"
+
+// the links
 #include "NodeLink.h"
 
 // forward declaration of the space class
@@ -31,7 +33,7 @@ class CSpace;
 // a node object has a collection of CNodeLinks to other node objects
 // the nodes are collected into a CSpace object.
 //////////////////////////////////////////////////////////////////////
-class CNode : public CModelObject  
+class CNode : public CObject  
 {
 public:
 	// constructors/destructors
@@ -51,6 +53,11 @@ public:
 	const CNode *GetParent() const;
 	void SetParent(CNode *pParent);
 
+	// the node's children
+	int GetChildCount() const;
+	CNode *GetChildAt(int nAt);
+	const CNode *GetChildAt(int nAt) const;
+
 	//////////////////////////////////////////////////////////////////
 	// attribute accessors
 
@@ -69,6 +76,13 @@ public:
 	// loads the image file, if necessary
 	CDib *GetDib();
 
+	// a sound filename, if present
+	const CString& GetSoundFilename() const;
+	void SetSoundFilename(const CString& strSoundFilename);
+
+	// loads the sound file, if necessary
+	LPDIRECTSOUNDBUFFER GetSoundBuffer();
+
 	// the node description
 	const CString& GetUrl() const;
 	void SetUrl(const CString& strUrl);
@@ -76,7 +90,7 @@ public:
 	// the node's position
 	const CVector<3>& GetPosition() const;
 	void SetPosition(const CVector<3>& vPos);
-	CVector<3> GetSize(float activation) const;
+	CVector<3> GetSize(REAL activation) const;
 
 	//////////////////////////////////////////////////////////////////
 	// link accessors
@@ -91,10 +105,10 @@ public:
 	const CNodeLink *GetLinkTo(CNode * toNode) const;
 
 	// accessor to just get the link weight
-	float GetLinkWeight(CNode * toNode) const;
+	REAL GetLinkWeight(CNode * toNode) const;
 
 	// creates or modifies an existing link
-	void LinkTo(CNode *toNode, float weight, BOOL bReciprocalLink = TRUE);
+	void LinkTo(CNode *toNode, REAL weight, BOOL bReciprocalLink = TRUE);
 
 	// clears all links
 	void RemoveAllLinks();
@@ -104,24 +118,28 @@ public:
 	void SortLinks();
 
 	// hebbian learning
-	void LearnFromNode(CNode *pOtherNode, float k = 0.0001f);
+	void LearnFromNode(CNode *pOtherNode, REAL k = 0.000001f);
 
 	//////////////////////////////////////////////////////////////////
 	// activation accessors
 
 	// accessors for the node's activation
-	double GetActivation() const;
-	double GetPrimaryActivation() const;
-	double GetSecondaryActivation() const;
+	REAL GetActivation() const;
+	REAL GetPrimaryActivation() const;
+	REAL GetSecondaryActivation() const;
+
+	// spring activation member functions
+	REAL GetSpringActivation() const;
+	void UpdateSpring(REAL springConst = 0.0);
 
 	// returns the number of descendants of this node
 	int GetDescendantCount() const;
 
 	// returns the sum of the activation of all descendants, 
 	//		plus this node's activation
-	double GetDescendantActivation() const;
-	double GetDescendantPrimaryActivation() const;
-	double GetDescendantSecondaryActivation() const;
+	REAL GetDescendantActivation() const;
+	REAL GetDescendantPrimaryActivation() const;
+	REAL GetDescendantSecondaryActivation() const;
 
 	// returns the current maximum activator
 	CNode *GetMaxActivator();
@@ -149,18 +167,18 @@ protected:
 
 	// set accessor sets either the primary or the secondary activation, based
 	//		on whether the activator is NULL
-	void SetActivation(double newActivation, CNode *pActivator = NULL);
+	void SetActivation(REAL newActivation, CNode *pActivator = NULL);
 
 	// propagation management
 	void ResetForPropagation();
-	void PropagateActivation(double scale);
+	void PropagateActivation(REAL scale);
 
 	//////////////////////////////////////////////////////////////////
 	// descendant helper functions
 
 	// scales the activation of this node and all descendants by
 	//		the scale amount
-	void ScaleDescendantActivation(double primScale, double secScale);
+	void ScaleDescendantActivation(REAL primScale, REAL secScale);
 
 	// returns a random descendant
 	CNode * GetRandomDescendant();
@@ -172,6 +190,12 @@ private:
 	// pointer to the node's parent
 	CNode *m_pParent;
 
+	// the collection of children
+	CObArray m_arrChildren;
+
+	// the node's name
+	CString m_strName;
+
 	// the node's description
 	CString m_strDescription;
 
@@ -181,6 +205,12 @@ private:
 	// pointer to the DIB, if it is loaded
 	CDib *m_pDib;
 
+	// the node's sound filename
+	CString m_strSoundFilename;
+
+	// pointer to the DIB, if it is loaded
+	LPDIRECTSOUNDBUFFER m_pSoundBuffer;
+
 	// url
 	CString m_strUrl;
 
@@ -189,14 +219,17 @@ private:
 
 	// the collection of links
 	CObArray m_arrLinks;
-	CMap<CNode *, CNode *, float, float> m_mapLinks;
+	CMap<CNode *, CNode *, REAL, REAL> m_mapLinks;
 
 	// the current activation value of the node
-	double m_primaryActivation;
-	double m_secondaryActivation;
+	REAL m_primaryActivation;
+	REAL m_secondaryActivation;
+
+	// the spring activation
+	REAL m_springActivation;
 
 	// maximum activation delta
-	double m_maxDeltaActivation;
+	REAL m_maxDeltaActivation;
 
 	// stores a pointer to the maximum activator for this
 	//		propagation cycle
