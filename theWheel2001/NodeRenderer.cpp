@@ -10,6 +10,7 @@
 
 #include <glMatrixVector.h>
 
+#include <OpenGLView.h>
 
 const int NUM_STEPS = 4;
 
@@ -74,7 +75,8 @@ CNodeRenderer::CNodeRenderer(COpenGLView *pView)
 		borderRadius(10.0),
 		rectangularity(1.0 / sqrt(2.0)),
 		width(50.0),
-		aspectRatio(0.625)
+		aspectRatio(0.625),
+		activation(0.1)
 		// color(RGB(192, 192, 192))
 {
 	color.Set(RGB(255, 255, 255));
@@ -91,7 +93,6 @@ CNodeRenderer::~CNodeRenderer()
 {
 
 }
-
 
 CVector<3> CNodeRenderer::EvalEllipseMolding(double theta, double a, double b)
 {
@@ -148,20 +149,22 @@ CMolding *CNodeRenderer::RenderMoldingSection(double angle_start, double angle_s
 void CNodeRenderer::OnRenderScene()
 {
 	// compute the base ellipse a and b
-	double a = width.Get();
+	double a = max(width.Get(), 10.0);
 	double b = a * aspectRatio.Get();
-
+	
 	// draw an image
-	void *pBits = m_Image.GetDIBits();
+/*	void *pBits = m_Image.GetDIBits();
 	CSize bitmapSize = m_Image.GetBitmapSize();
 	float zoomFactor = (float) (2.0f * width.Get() * aspectRatio.Get() * rectangularity.Get()) 
 		/ (float) bitmapSize.cy;
 	glPixelZoom(zoomFactor, zoomFactor);
+
 	glRasterPos3d(0.0 - zoomFactor * (float) bitmapSize.cx / 2.0f, 
 		0.0 - zoomFactor * (float) bitmapSize.cy / 2.0f, 
 		borderRadius.Get());
-	glDrawPixels(bitmapSize.cx, bitmapSize.cy, GL_RGB, GL_UNSIGNED_BYTE, pBits);
 
+	glDrawPixels(bitmapSize.cx, bitmapSize.cy, GL_RGB, GL_UNSIGNED_BYTE, pBits);
+*/
 	// set the color for the node
 	glColor(color.Get());
 
@@ -196,6 +199,81 @@ void CNodeRenderer::OnRenderScene()
 
 	// delete the connecting molding
 	delete pOld;
+
+	// draw the text for this scene
+	DrawText("Testing Ellipses", CRect(0, 0, (int)(rectangularity.Get() * 2.0 * a), 
+		(int)(rectangularity.Get() * 2.0 * b)));
+}
+
+void CNodeRenderer::DrawText(const CString& strText, CRect rect)
+{
+	// create a memory device context
+	CDC dcMem;
+	dcMem.CreateCompatibleDC(NULL);
+
+	// create the drawing buffer
+	CBitmap buffer;
+	buffer.CreateBitmap(rect.Width(), rect.Height(), 1, 32, NULL); 
+	CBitmap *pOldBitmap = dcMem.SelectObject(&buffer);
+
+	// now clear the drawing buffer
+	CBrush brush;
+	brush.CreateSolidBrush(RGB(216, 216, 216));
+	CBrush *pOldBrush = dcMem.SelectObject(&brush);
+
+	CPen *pOldPen = (CPen *)dcMem.SelectStockObject(NULL_PEN);
+
+	dcMem.Rectangle(0, 0, rect.Width()+1, rect.Height()+1);
+
+	dcMem.SelectObject(pOldPen);
+	dcMem.SelectObject(pOldBrush);
+
+	// draw some text
+
+	// create a font
+	int nFontHeight = min(rect.Height(), 36);
+	CFont font;
+	font.CreateFont(nFontHeight, // height
+		0,						// width
+		0, 0,					// escapement, orientation
+		FW_DONTCARE,			// weight
+		FALSE,					// italic
+		FALSE,					// underline
+		FALSE,					// strikeout
+		ANSI_CHARSET,			// character set
+		OUT_TT_PRECIS,			// select TrueType
+		CLIP_CHARACTER_PRECIS,	// clipping
+		PROOF_QUALITY,			// quality
+		TMPF_TRUETYPE,			// pitch and family
+		"Arial");				// facename
+	CFont *pOldFont = dcMem.SelectObject(&font);
+
+	// draw the text
+	dcMem.SetBkMode(TRANSPARENT);
+	dcMem.DrawText(strText, rect, 
+		DT_CENTER | DT_END_ELLIPSIS | DT_VCENTER); 
+
+	dcMem.SelectObject(pOldFont);
+	font.DeleteObject();
+
+	dcMem.SelectObject(pOldBitmap);
+
+	// retrieve the pixels from the buffer
+	static unsigned int pixels[1024 * 1024]; 
+	// CSize bitmapSize(rect.Width(), rect.Height());
+
+	DWORD dwCount = 
+		buffer.GetBitmapBits(rect.Width() * rect.Height() * 4, pixels);
+	ASSERT(dwCount == (DWORD)(rect.Width() * rect.Height() * 4));
+	buffer.DeleteObject();
+
+	// draw the bitmap
+	float zoomFactor = 1.0;
+	glPixelZoom(zoomFactor, -zoomFactor);
+	glRasterPos3d(0.0 - zoomFactor * (float) rect.Width() / 2.0f, 
+		0.0 + zoomFactor * (float) rect.Height() / 2.0f, 
+		borderRadius.Get() + 0.1);
+	glDrawPixels(rect.Width(), rect.Height(), GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 }
 
 void CNodeRenderer::OnActivationChanged(CObservableObject *pSource, void *pOldValue)
@@ -215,3 +293,4 @@ void CNodeRenderer::OnActivationChanged(CObservableObject *pSource, void *pOldVa
 	// set the new border radius
 	borderRadius.Set(8.0 + sqrt(activation.Get()) * 10.0);
 }
+
