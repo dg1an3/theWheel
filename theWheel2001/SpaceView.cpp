@@ -44,7 +44,7 @@ const SPV_STATE_TYPE TOLERANCE =
 
 // constant for the total activation
 const SPV_STATE_TYPE TOTAL_ACTIVATION = 
-	(SPV_STATE_TYPE) 0.55f;
+	(SPV_STATE_TYPE) 0.45f;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -417,17 +417,16 @@ void CSpaceView::OnDraw(CDC* pDC)
 					CVector<2> vOffset = vTo - vFrom;
 					CVector<2> vNormal(vOffset[1], -vOffset[0]);
 					vNormal.Normalize();
-					vNormal *= 5.0;
 
 					vOffset *= 0.5;
 
 					CPoint ptPoly[6];
-					ptPoly[0] = vFrom + 4.0 * vNormal;
-					ptPoly[1] = vFrom + vOffset + vNormal;
-					ptPoly[2] = vTo + 4.0 * vNormal;
-					ptPoly[3] = vTo - 4.0 * vNormal;
-					ptPoly[4] = vFrom + vOffset - vNormal;
-					ptPoly[5] = vFrom - 4.0 * vNormal;
+					ptPoly[0] = vFrom + 12.0 * vNormal;
+					ptPoly[1] = vFrom + vOffset + 3.0 * vNormal;
+					ptPoly[2] = vTo + 12.0 * vNormal;
+					ptPoly[3] = vTo - 12.0 * vNormal;
+					ptPoly[4] = vFrom + vOffset - 3.0 * vNormal;
+					ptPoly[5] = vFrom - 12.0 * vNormal;
 
 					dcMem.Polygon(ptPoly, 6);
 				}
@@ -731,7 +730,7 @@ void CSpaceView::OnLButtonDown(UINT nFlags, CPoint point)
 		if (pNodeView->GetShape().PtInRegion(point))
 		{
 			// if so, activate it
-			ActivateNode(pNodeView, 0.25);
+			ActivateNode(pNodeView, 0.333f);
 			break;
 		}
 	}
