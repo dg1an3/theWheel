@@ -278,6 +278,10 @@ SOURCE=.\Readme.txt
 # End Source File
 # Begin Source File
 
+SOURCE=.\res\saw.cur
+# End Source File
+# Begin Source File
+
 SOURCE=.\res\space.bmp
 # End Source File
 # End Target
