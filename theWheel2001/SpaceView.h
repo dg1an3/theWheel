@@ -25,6 +25,11 @@
 #include "PowellOptimizer.h"
 #endif
 
+//////////////////////////////////////////////////////////////////////
+// class CSpaceView
+//
+// manages the dynamic layout view of the space
+//////////////////////////////////////////////////////////////////////
 class CSpaceView : public CView
 {
 protected: // create from serialization only
@@ -33,6 +38,7 @@ protected: // create from serialization only
 
 // Attributes
 public:
+	// returns the CSpace that is being displayed
 	CSpace* GetDocument();
 
 	// boolean variable to indicate that propagation is to occur
@@ -43,13 +49,24 @@ public:
 
 	// the child node views
 	CCollection<CNodeView> nodeViews;
+
+	// finds the node view for a particular node
 	CNodeView *GetViewForNode(CNode *pNode);
 
 // Operations
 public:
+	// creates the node views for the children of the passed node
+	void CreateNodeViews(CNode *pParentNode, CPoint pt, float initActivation);
+
 	// adds a new node to the space, creating and initializing the node view
 	//		along the way
 	void AddNodeToSpace(CNode *pNewNode);
+
+	// sort the node views
+	void SortNodeViews();
+
+	// centering all child views based on center-of-gravity
+	void CenterNodeViews();
 
 	// layout for all child views
 	void LayoutNodeViews();
@@ -62,6 +79,12 @@ public:
 
 	// resets the propagation flag after a propagation
 	void ResetForPropagation();
+
+	// returns the maximum node view linked to the passed node view
+	CNodeView * GetMaxLinked(CNodeView *pView);
+
+	// apply learning algorithm
+	void LearnForNode(CNodeView *pNodeView);
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -78,21 +101,28 @@ public:
 
 // Implementation
 public:
-	void SortNodeViews();
-	CNodeView * GetMaxLinked(CNodeView *pView);
-	void LearnForNode(CNodeView *pNodeView);
 	virtual ~CSpaceView();
 #ifdef _DEBUG
 	virtual void AssertValid() const;
 	virtual void Dump(CDumpContext& dc) const;
 #endif
 
-protected:
-	// creates the node views for the children of the passed node
-	void CreateNodeViews(CNode *pParentNode, CPoint pt, float initActivation);
+public:
+	// the type for the state vector
+	typedef float STATE_TYPE;
 
-	// centering all child views based on center-of-gravity
-	void CenterNodeViews();
+	// the number of dimensions in the state vector
+	enum { STATE_DIM = 24 };
+
+	// defines the type for the state vector
+	typedef CVector<STATE_DIM, STATE_TYPE> CStateVector;
+
+	// retrieves the current threshold for this CSpaceView
+	STATE_TYPE GetThreshold();
+
+	// gets and sets the state vector for this CSpaceView
+	CStateVector GetStateVector();
+	void SetStateVector(const CStateVector& vState);
 
 // Generated message map functions
 protected:

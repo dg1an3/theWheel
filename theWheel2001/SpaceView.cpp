@@ -199,14 +199,13 @@ void CSpaceView::LayoutNodeViews()
 		return;
 
 	// do the second optimization
-	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> vCurrent = 
-		m_pEnergyFunc->GetStateVector();
+	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> vCurrent = GetStateVector();
 
 	// now optimize
 	vCurrent = m_pOptimizer->Optimize(vCurrent);
 
 	// now perform the optimization
-	m_pEnergyFunc->SetStateVector(vCurrent);
+	SetStateVector(vCurrent);
 
 	CenterNodeViews();
 }
@@ -757,5 +756,65 @@ void CSpaceView::SortNodeViews()
 			}
 		}
 	} while (bRearrange);
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::GetStateVector
+// 
+// forms the state vector for the associated CSpaceView
+//////////////////////////////////////////////////////////////////////
+CSpaceView::CStateVector CSpaceView::GetStateVector()
+{
+	// compute the threshold
+	GetThreshold();
+
+	// for the state vector
+	CStateVector vState;
+	for (int nAt = 0; nAt < STATE_DIM / 2; nAt++)
+	{
+		if (nAt < nodeViews.GetSize())
+		{
+			CNodeView *pView = nodeViews.Get(nAt);
+			vState[nAt*2] = (STATE_TYPE) pView->center.Get()[0];
+			vState[nAt*2+1] = (STATE_TYPE) pView->center.Get()[1];
+		}
+	}
+
+	// return the formed state vector
+	return vState;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceViewEnergyFunction::SetStateVector
+// 
+// sets the state vector for the associated CSpaceView
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::SetStateVector(const CSpaceView::CStateVector& vState)
+{
+	// form the number of currently visualized node views
+	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
+
+	for (int nAt = 0; nAt < nNumVizNodeViews; nAt++)
+	{
+		CNodeView *pView = nodeViews.Get(nAt);
+		pView->center.Set(CVector<2>(vState[nAt*2], vState[nAt*2+1]));
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceViewEnergyFunction::GetThreshold
+// 
+// gets the threshold value for the associated CSpaceView
+// sets the static threshold value for the CNodeView class
+//////////////////////////////////////////////////////////////////////
+SPV_STATE_TYPE CSpaceView::GetThreshold()
+{
+	// form the number of currently visualized node views
+	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
+
+	CNodeView::activationThreshold = 
+		nodeViews.Get(nNumVizNodeViews - 1)->activation.Get();
+
+	return CNodeView::activationThreshold;
 }
 
