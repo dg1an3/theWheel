@@ -1,3 +1,8 @@
+////////////////////////////////////
+// Copyright (C) 1996-2000 DG Lane
+// U.S. Patent Pending
+////////////////////////////////////
+
 #include "stdafx.h"
 
 #include "SpaceViewEnergyFunction.h"
@@ -258,42 +263,45 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 	// store this input
 	m_vInput = vInput;
 
-	CRect rectWnd;
-	m_pView->GetWindowRect(&rectWnd);
-
-	CCollection<CNodeView>& nodeViews = m_pView->nodeViews;
+	// retrieve the parent's rectangle
+	CRect rectSpaceView;
+	m_pView->GetWindowRect(&rectSpaceView;);
 
 	// iterate over all child node views
 	int nAtNodeView;
-	for (nAtNodeView = 0; nAtNodeView < nodeViews.GetSize(); 
-			nAtNodeView++)
+	for (nAtNodeView = 0; nAtNodeView < m_pView->nodeViews.GetSize(); nAtNodeView++)
 	{
 		// if the node is not in the state vector, skip it
 		if (GetMap()[nAtNodeView] != -1)
 		{
+			// get convenience pointers for the current node view and node
+			CNodeView *pAtNodeView = m_pView->nodeViews.Get(nAtNodeView);
+			CNode *pAtNode = pAtNodeView->forNode.Get();
+
+			// get the rectangle for the current node view
+			CRect rectNodeView;
+			pAtNodeView->GetWindowRect(&rectNodeView);
 
 			// temporary variables to hold the derivative of the energy
 			SPV_STATE_TYPE dEnergyDx = 0.0;
 			SPV_STATE_TYPE dEnergyDy = 0.0;
 
-			// get convenience pointers for the current node view and node
-			CNodeView *pAtNodeView = nodeViews.Get(nAtNodeView);
-			CNode *pAtNode = pAtNodeView->forNode.Get();
-
-			CRect rectNodeView;
-			pAtNodeView->GetWindowRect(&rectNodeView);
-
 			// iterate over the potential linked views
 			int nAtLinkedView;
-			for (nAtLinkedView = 0; nAtLinkedView < nodeViews.GetSize(); 
+			for (nAtLinkedView = 0; nAtLinkedView < m_pView->nodeViews.GetSize(); 
 					nAtLinkedView++)
 			{
-				if (nAtLinkedView != nAtNodeView && GetMap()[nAtLinkedView] != -1)
+				// only processs the linked view if it is in the vector
+				if (nAtLinkedView != nAtNodeView 
+						&& GetMap()[nAtLinkedView] != -1)
 				{
-
 					// get convenience pointers for the linked node view and node
-					CNodeView *pAtLinkedView = nodeViews.Get(nAtLinkedView);
+					CNodeView *pAtLinkedView = m_pView->nodeViews.Get(nAtLinkedView);
 					CNode *pAtLinkedNode = pAtLinkedView->forNode.Get();
+
+					// get the rectangle of the current linked view
+					CRect rectLinked;
+					pAtLinkedView->GetWindowRect(&rectLinked);
 
 					// get the weight of the link
 					CNodeLink *pLink = pAtLinkedNode->GetLink(pAtNode);
@@ -309,9 +317,6 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 						weight2 = pLink->weight.Get();
 
 					SPV_STATE_TYPE weight = (weight1 + weight2) / 2.0f;
-
-					CRect rectLinked;
-					pAtLinkedView->GetWindowRect(&rectLinked);
 
 					SPV_STATE_TYPE ssx = MinSize((SPV_STATE_TYPE) rectLinked.Width(), 
 						(SPV_STATE_TYPE) rectWnd.Width() / 8.0f);
@@ -361,25 +366,34 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 				}
 			}
 
-			SPV_STATE_TYPE sigma = (SPV_STATE_TYPE) rectWnd.Width() + (SPV_STATE_TYPE) rectWnd.Height() / 32.0;
+			SPV_STATE_TYPE width = (SPV_STATE_TYPE) rectWnd.Width();
+			SPV_STATE_TYPE height = (SPV_STATE_TYPE) rectWnd.Height();
+			SPV_STATE_TYPE sigma = width + height / 32.0;
 
-			m_energy += CenterField(vInput[GetMap()[nAtNodeView]], 
-				vInput[GetMap()[nAtNodeView]+1],
-				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
 			m_energy += CenterField(vInput[GetMap()[nAtNodeView]] - rectNodeView.Width() / 2.0, 
 				vInput[GetMap()[nAtNodeView]+1],
 				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
+
+			m_energy += CenterField(vInput[GetMap()[nAtNodeView]], vInput[GetMap()[nAtNodeView]+1],
+				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
+
 			m_energy += CenterField(vInput[GetMap()[nAtNodeView]] + rectNodeView.Width() / 2.0, 
 				vInput[GetMap()[nAtNodeView]+1],
 				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
+
 			m_energy += CenterField(vInput[GetMap()[nAtNodeView]], 
 				vInput[GetMap()[nAtNodeView]+1] - rectNodeView.Height() / 2.0,
 				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
+
+			m_energy += CenterField(vInput[GetMap()[nAtNodeView]], vInput[GetMap()[nAtNodeView]+1],
+				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
+
 			m_energy += CenterField(vInput[GetMap()[nAtNodeView]], 
 				vInput[GetMap()[nAtNodeView]+1] + rectNodeView.Height() / 2.0,
 				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);
 
 #ifdef USE_GRAD
+
 			dEnergyDx += dCenterFieldDx(vInput[GetMap()[nAtNodeView]], 
 				vInput[GetMap()[nAtNodeView]+1],
 				(SPV_STATE_TYPE) rectWnd.Width(), (SPV_STATE_TYPE) rectWnd.Height(), sigma);

@@ -3,6 +3,11 @@
 
 #include "Optimizer.h"
 
+////////////////////////////////////
+// Copyright (C) 1996-2000 DG Lane
+// U.S. Patent Pending
+////////////////////////////////////
+
 typedef double SPV_STATE_TYPE;
 const int SPV_STATE_DIM = 20;
 

@@ -1,3 +1,8 @@
+////////////////////////////////////
+// Copyright (C) 1996-2000 DG Lane
+// U.S. Patent Pending
+////////////////////////////////////
+
 // SpaceView.cpp : implementation of the CSpaceView class
 //
 

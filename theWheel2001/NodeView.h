@@ -1,3 +1,8 @@
+////////////////////////////////////
+// Copyright (C) 1996-2000 DG Lane
+// U.S. Patent Pending
+////////////////////////////////////
+
 #if !defined(AFX_NODEVIEW_H__0C8AA66F_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
 #define AFX_NODEVIEW_H__0C8AA66F_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_
 
