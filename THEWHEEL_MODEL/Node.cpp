@@ -35,7 +35,8 @@ CNode::CNode(CSpace *pSpace,
 		description(strDesc),
 		m_pDib(NULL),
 		// initialize with a very small activation
-		m_activation(0.01),
+		m_primaryActivation(0.005),
+		m_secondaryActivation(0.005),
 		m_maxDeltaActivation(0.0),
 		m_pMaxActivator(NULL),
 		m_pView(NULL)
@@ -51,6 +52,9 @@ CNode::CNode(CSpace *pSpace,
 //////////////////////////////////////////////////////////////////////
 CNode::~CNode()
 {
+	children.RemoveAll();
+	links.RemoveAll();
+
 	// delete the DIB, if present
 	delete m_pDib;
 }
@@ -94,6 +98,8 @@ CDib *CNode::GetDib()
 //////////////////////////////////////////////////////////////////////
 void CNode::LinkTo(CNode *pToNode, float weight)
 {
+	ASSERT(pToNode != NULL);
+
 	// find any existing links
 	CNodeLink *pLink = GetLink(pToNode);
 
@@ -201,7 +207,27 @@ void CNode::SortLinks()
 //////////////////////////////////////////////////////////////////////
 double CNode::GetActivation()
 {
-	return m_activation;
+	return m_primaryActivation + m_secondaryActivation;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetPrimaryActivation
+// 
+// returns the node's primary activation
+//////////////////////////////////////////////////////////////////////
+double CNode::GetPrimaryActivation()
+{
+	return m_primaryActivation;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetSecondaryActivation
+// 
+// returns the node's secondary activation
+//////////////////////////////////////////////////////////////////////
+double CNode::GetSecondaryActivation()
+{
+	return m_secondaryActivation;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -215,8 +241,15 @@ void CNode::SetActivation(double newActivation, CNode *pActivator)
 	// compute the delta
 	double deltaActivation = newActivation - GetActivation();
 
-	// set the activation
-	m_activation = newActivation;
+	// set the activation, based on whether primary or secondary
+	if (pActivator == NULL)
+	{
+		m_primaryActivation += deltaActivation;
+	}
+	else
+	{
+		m_secondaryActivation += deltaActivation;
+	}
 
 	// compare the delta for a new max activator
 	if (deltaActivation > m_maxDeltaActivation 
@@ -261,14 +294,66 @@ double CNode::GetDescendantActivation()
 }
 
 //////////////////////////////////////////////////////////////////////
+// CNode::GetDescendantPrimaryActivation
+// 
+// sums the primary activation value of this node with all children 
+// nodes
+//////////////////////////////////////////////////////////////////////
+double CNode::GetDescendantPrimaryActivation()
+{
+	// initialize with the activation of this node
+	double sum = GetPrimaryActivation();
+
+	// iterate over child nodes
+	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	{
+		// for each child node
+		CNode *pNode = (CNode *)children.Get(nAt);
+
+		// sum its descendent activation
+		sum += pNode->GetDescendantPrimaryActivation();
+	}
+
+	// return the sum
+	return sum;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetDescendantSecondaryActivation
+// 
+// sums the primary activation value of this node with all children 
+// nodes
+//////////////////////////////////////////////////////////////////////
+double CNode::GetDescendantSecondaryActivation()
+{
+	// initialize with the activation of this node
+	double sum = GetSecondaryActivation();
+
+	// iterate over child nodes
+	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	{
+		// for each child node
+		CNode *pNode = (CNode *)children.Get(nAt);
+
+		// sum its descendent activation
+		sum += pNode->GetDescendantSecondaryActivation();
+	}
+
+	// return the sum
+	return sum;
+}
+
+//////////////////////////////////////////////////////////////////////
 // CNode::ScaleDescendantActivation
 // 
 // sums the activation value of this node with all children nodes
 //////////////////////////////////////////////////////////////////////
-void CNode::ScaleDescendantActivation(double scale)
+void CNode::ScaleDescendantActivation(double primScale, double secScale)
 {
 	// scale this node's activation
-	SetActivation(GetActivation() * scale);
+	m_primaryActivation *= primScale;
+	m_secondaryActivation *= secScale;
+	// SetActivation(GetActivation() * scale);
 
 	// iterate over child nodes
 	for (int nAt = 0; nAt < children.GetSize(); nAt++)
@@ -277,7 +362,7 @@ void CNode::ScaleDescendantActivation(double scale)
 		CNode *pNode = (CNode *)children.Get(nAt);
 
 		// scale the child's activation
-		pNode->ScaleDescendantActivation(scale);
+		pNode->ScaleDescendantActivation(primScale, secScale);
 	}
 }
 

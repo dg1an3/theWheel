@@ -43,18 +43,34 @@ public:
 	DECLARE_SERIAL(CNode)
 
 	// the node's parent
+	CNode *GetParent();
+	void SetParent(CNode *pParent);
+
+	// DEPRECATED
 	CAssociation< CNode > parent;
 
 	// the node description
+	const CString& GetDescription();
+	void SetDescription(const CString& strDesc);
+
+	// DEPRECATED
 	CValue< CString > description;
 
 	// an image filename, if present
+	const CString& GetImageFilename();
+	void SetImageFilename(const CString& strImageFilename);
+
+	// DEPRECATED
 	CValue< CString > imageFilename;
 
 	// loads the image file, if necessary
 	CDib *GetDib();
 
-	// the node links
+	// accessors for the node links
+	int GetLinkCount();
+	CNodeLink *GetLink(int nAt);
+
+	// DEPRECATED
 	CCollection< CNodeLink > links;
 
 	// accessor helpers for the links
@@ -67,6 +83,11 @@ public:
 
 	// accessors for the node's activation
 	double GetActivation();
+	double GetPrimaryActivation();
+	double GetSecondaryActivation();
+
+	// set accessor sets either the primary or the secondary activation, based
+	//		on whether the activator is NULL
 	void SetActivation(double newActivation, CNode *pActivator = NULL);
 
 	// returns the current maximum activator
@@ -75,10 +96,12 @@ public:
 	// returns the sum of the activation of all descendants, 
 	//		plus this node's activation
 	double GetDescendantActivation();
+	double GetDescendantPrimaryActivation();
+	double GetDescendantSecondaryActivation();
 
 	// scales the activation of this node and all descendants by
 	//		the scale amount
-	void ScaleDescendantActivation(double scale);
+	void ScaleDescendantActivation(double primScale, double secScale);
 
 	// returns the number of descendants of this node
 	int GetDescendantCount();
@@ -105,7 +128,8 @@ protected:
 	CDib *m_pDib;
 
 	// the current activation value of the node
-	double m_activation;
+	double m_primaryActivation;
+	double m_secondaryActivation;
 
 	// maximum activation delta
 	double m_maxDeltaActivation;
