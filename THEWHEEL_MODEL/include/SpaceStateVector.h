@@ -38,6 +38,7 @@ public:
 	// state vectors can be serialized
 	DECLARE_SERIAL(CSpaceStateVector);
 
+	// returns the current node count for the vector
 	int GetNodeCount() const;
 
 	// accessors for the activation vector
@@ -45,8 +46,11 @@ public:
 	void SetActivationsVector(const CVectorN<>& vActivation);
 
 	// accessors for the positions vector
-	void GetPositionsVector(CVectorN<>& vPositions);
+	void GetPositionsVector(CVectorN<>& vPositions, BOOL perturb = FALSE);
 	void SetPositionsVector(const CVectorN<>& vPositions);
+
+	// returns the net error for the positions vector
+	REAL GetPositionsError(const CVectorN<>& vPosition);
 
 	// lsq fit to the other state vector
 	void RotateTranslateTo(const CVectorN<>& vMatchPositions);
