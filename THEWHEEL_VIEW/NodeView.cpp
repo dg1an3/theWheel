@@ -135,8 +135,11 @@ REAL CNodeView::GetThresholdedActivation()
 // returns the thresholded activation value for the node view
 //////////////////////////////////////////////////////////////////////
 REAL CNodeView::GetSpringActivation() 
-{ 
-	return m_springActivation; 
+{
+	REAL dist = (GetSpringCenter() - GetNode()->GetPosition()).GetLength();
+	REAL factor = 0.8 + 0.5 * (1.0 / (0.5 * dist * dist + 1.0));
+
+	return factor * m_springActivation; 
 }
 
 
@@ -178,16 +181,10 @@ CRgn& CNodeView::GetShape()
 //////////////////////////////////////////////////////////////////////
 void CNodeView::UpdateSprings(REAL springConst)
 {
-	// update node's spring activation
-	// GetNode()->UpdateSpring(springConst);
-
 	// update spring activation
  	m_springActivation 
 		= GetThresholdedActivation() * (1.0f - springConst * 0.90)
 			+ m_springActivation * springConst * 0.90;
-
-	// update spring center
-	// springConst *= (REAL) 1.02f;
 
 	// compute the scale
 	CRect rectParent;
@@ -206,19 +203,14 @@ void CNodeView::UpdateSprings(REAL springConst)
 	CVectorD<3> vScaledPos 
 		= scale * (GetNode()->GetPosition() - vCenter) + vCenter;
 
-	// update the center spring
-	CVectorD<3> vNewSpringCenter 
-		= vScaledPos * (1.0f - springConst)
-			+ m_vSpringCenter * (springConst);
-	CVectorD<3> vCenterDiff = vNewSpringCenter - m_vSpringCenter;
-	if (vCenterDiff.GetLength() > 500.0)
-	{
-		vCenterDiff *= 500.0 / vCenterDiff.GetLength();
-	}
-	m_vSpringCenter += vCenterDiff;
+	// compute a new spring constant
+	REAL factor = exp(GetThresholdedActivation() - GetSpringActivation())
+		/ (exp(GetThresholdedActivation() - GetSpringActivation()) + 0.01);
+	springConst = springConst * (0.2 + 0.8 * factor);
 
-	// trigger re-computing the shape
-	// m_shape.DeleteObject();	
+	// update the center spring
+	m_vSpringCenter = vScaledPos 
+		* (1.0f - springConst) + m_vSpringCenter * (springConst);
 
 	// and invalidate the parent window
 	m_pParent->Invalidate(FALSE);
@@ -231,14 +223,14 @@ void CNodeView::UpdateSprings(REAL springConst)
 //////////////////////////////////////////////////////////////////////
 void CNodeView::Draw(CDC *pDC)
 {
-	// get the inner rectangle for drawing the text
-	CRect rectInner = GetInnerRect();
-
 	// only draw if it has a substantial area
-	if (rectInner.Height() > 5)
+	if (GetOuterRect().Height() >= 10)
 	{
+		// get the inner rectangle for drawing 
+		CRect rectInner = GetInnerRect();
 		rectInner.DeflateRect(5, 5, 5, 5);
 
+		// draw the title band first
 		DrawTitleBand(pDC, rectInner);
 
 		// draw the image (if any)
@@ -282,12 +274,11 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 		{
 			CNodeLink *pLink = GetNode()->GetLinkAt(nAtLink);
 			CNodeView *pLinkedView = (CNodeView *)pLink->GetTarget()->GetView();
-			ASSERT(pLinkedView != NULL);
-				
+
 			// only draw the link to node view's with activations greater than the current
-			if (pLink->GetWeight() > 0.1
+			if (!pLink->IsStabilizer()
+				&& pLink->GetWeight() > 0.1
 				&& pLinkedView != NULL
-				// && pLinkedView->GetThresholdedActivation() > 0.0
 				&& pLinkedView->GetSpringActivation() > GetSpringActivation())
 			{
 				// draw the link

@@ -133,6 +133,12 @@ void CLinkPropDlg::UpdateLinkList(CNode *pOtherNode, int nLevels)
 			// now insert the subitem for the link weight
 			BOOL bResult = m_LinkList.SetItem(&lvitem); 
 
+			// now insert the subitem for the stabilizer flag
+			lvitem.mask = LVIF_TEXT;
+			lvitem.iSubItem = 2;
+			lvitem.pszText = pLink->IsStabilizer() ? "X" : " ";
+			bResult = m_LinkList.SetItem(&lvitem); 
+
 			// flag for re-sorting
 			m_bSort = TRUE;
 
@@ -164,6 +170,7 @@ void CLinkPropDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CLinkPropDlg, CDialog)
 	//{{AFX_MSG_MAP(CLinkPropDlg)
 	ON_WM_SIZE()
+	ON_NOTIFY(NM_CLICK, IDC_LINKLIST, OnClickLinklist)
 	ON_NOTIFY(LVN_ENDLABELEDIT, IDC_LINKLIST, OnEndlabeleditLinklist)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
@@ -186,8 +193,9 @@ void CLinkPropDlg::OnSize(UINT nType, int cx, int cy)
 		m_LinkList.MoveWindow(&rectCtrl);
 
 		m_LinkList.GetWindowRect(&rectCtrl);
-		m_LinkList.SetColumnWidth(0, rectCtrl.Width() * 1 / 4);
-		m_LinkList.SetColumnWidth(1, rectCtrl.Width());
+		m_LinkList.SetColumnWidth(0, rectCtrl.Width() / 4);
+		m_LinkList.SetColumnWidth(1, rectCtrl.Width() / 2);
+		m_LinkList.SetColumnWidth(2, rectCtrl.Width() / 4);
 	}
 }
 
@@ -198,8 +206,9 @@ BOOL CLinkPropDlg::OnInitDialog()
 	// initialize the link list control
 	CRect rect;
 	m_LinkList.GetWindowRect(&rect); 
-    m_LinkList.InsertColumn(0, "Weight", LVCFMT_LEFT, rect.Width() * 1/4, 0); 
-    m_LinkList.InsertColumn(1, "To Node", LVCFMT_LEFT, rect.Width(), 1); 
+    m_LinkList.InsertColumn(0, "Weight", LVCFMT_LEFT, rect.Width() / 4, 0); 
+    m_LinkList.InsertColumn(1, "To Node", LVCFMT_LEFT, rect.Width() / 2, 1); 
+    m_LinkList.InsertColumn(2, "S", LVCFMT_LEFT, rect.Width() / 4, 2); 
 	
 	return TRUE;  // return TRUE unless you set the focus to a control
 	              // EXCEPTION: OCX Property Pages should return FALSE
@@ -238,4 +247,42 @@ void CLinkPropDlg::OnEndlabeleditLinklist(NMHDR* pNMHDR, LRESULT* pResult)
 	}
 	
 	*pResult = FALSE;
+}
+
+void CLinkPropDlg::OnClickLinklist(NMHDR* pNMHDR, LRESULT* pResult) 
+{
+	LPNMLISTVIEW pNMLISTVIEW = (LPNMLISTVIEW) pNMHDR;
+
+	LVHITTESTINFO htinfo;
+	memset(&htinfo, 0, sizeof(htinfo));
+	htinfo.pt = pNMLISTVIEW->ptAction;
+
+	// test for a click on the stabilizer field of one of the list items
+	if (m_LinkList.SubItemHitTest(&htinfo) != -1
+		&& htinfo.iSubItem == 2)
+	{
+		CNode *pLinkedNode = (CNode *)m_LinkList.GetItemData(htinfo.iItem);
+		if (pLinkedNode)
+		{
+			CNodeLink *pLink = m_pCurNode->GetLinkTo(pLinkedNode);
+			if (pLink != NULL)
+			{
+				// flip-flop flag
+				pLink->SetStabilizer(!pLink->IsStabilizer());
+				
+				// set item text
+				m_LinkList.SetItemText(htinfo.iItem, 2, 
+					pLink->IsStabilizer() ? "X" : " ");
+
+				// flip-flop reverse link
+				CNodeLink *pRevLink = pLinkedNode->GetLinkTo(m_pCurNode);
+				if (pRevLink)
+				{
+					pRevLink->SetStabilizer(pLink->IsStabilizer());
+				}
+			}
+		}
+	}
+
+	*pResult = 0;
 }
