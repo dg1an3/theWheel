@@ -174,7 +174,7 @@ BOOL CtheWheelApp::OnIdle(LONG lCount)
 	// update the privates
 	int nAt;
 	for (nAt = 0; nAt < pSpaceView->nodeViews.GetSize(); nAt++)
-		pSpaceView->nodeViews.Get(nAt)->UpdatePrivates();
+		pSpaceView->nodeViews.Get(nAt)->UpdateSprings();
 
 	return FALSE;
 }
