@@ -77,7 +77,6 @@ IDR_WLSPCTYPE           ICON    DISCARDABLE     "res\\Space.ico"
 
 IDR_MAINFRAME           BITMAP  MOVEABLE PURE   "res\\Toolbar.bmp"
 IDB_NODE                BITMAP  DISCARDABLE     "res\\node.bmp"
-IDB_DITHER50            BITMAP  DISCARDABLE     "res\\dither50.bmp"
 
 /////////////////////////////////////////////////////////////////////////////
 //
