@@ -260,7 +260,7 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt,
 	int nAtNode;
 	for (nAtNode = 0; nAtNode < pParentNode->children.GetSize(); nAtNode++)
 	{
-		CNode *pNode = pParentNode->children.Get(nAtNode);
+		CNode *pNode = (CNode *) pParentNode->children.Get(nAtNode);
 
 		// construct a new node view for this node
 		CNodeView *pNewNodeView = new CNodeView(pNode);
@@ -302,7 +302,7 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt,
 	// now place the children
 	for (nAtNode = 0; nAtNode < pParentNode->children.GetSize(); nAtNode++)
 	{
-		CNode *pNode = pParentNode->children.Get(nAtNode);
+		CNode *pNode = (CNode *) pParentNode->children.Get(nAtNode);
 
 		// construct a new node view for this node
 		CPoint ptCenter = arrNodeViews[nAtNode]->center.Get();
