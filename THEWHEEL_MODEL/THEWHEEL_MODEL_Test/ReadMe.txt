@@ -36,6 +36,26 @@ Resource.h
 /////////////////////////////////////////////////////////////////////////////
 Other notes:
 
+Test Cases:
+
+1) Initializing / loading a space
+2) Propagating activation
+3) Normalizing activation
+4) Laying out nodes
+	-> Objective function value
+	-> Gradient value
+	-> Layout (no nodes on top of each other)
+	-> New Super layout
+	-> Post-Super layout
+5) Centering nodes
+6) Saving a space
+
+Test Data:
+
+1) Four node (basic)
+2) Medium node count (Origin.spx)
+3) High node count (SonicSpace.spx)
+
 AppWizard uses "TODO:" to indicate parts of the source code you
 should add to or customize.
 

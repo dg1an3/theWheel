@@ -22,6 +22,12 @@
 
 #include <iostream>
 
+// multimedia and sound includes
+#include <mmsystem.h>
+#include <mmreg.h>
+#include <msacm.h>
+#include <dsound.h>
+
 #include <afxtempl.h>
 
 //{{AFX_INSERT_LOCATION}}

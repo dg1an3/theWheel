@@ -12,6 +12,237 @@ static char THIS_FILE[] = __FILE__;
 
 #include <Space.h>
 
+// constants for the distance scale vs. activation curve
+const REAL DIST_SCALE_MIN = 1.0;
+const REAL DIST_SCALE_MAX = 1.35;
+const REAL ACTIVATION_MIDPOINT = 0.25;
+const REAL MIDWEIGHT = 0.5;
+const REAL OPT_DIST = DIST_SCALE_MIN + (DIST_SCALE_MAX - DIST_SCALE_MIN) 
+		* (1.0 - MIDWEIGHT / (MIDWEIGHT + ACTIVATION_MIDPOINT));
+
+// scale for the sizes of the nodes
+const REAL SIZE_SCALE = 100.0;
+
+REAL GetSizeLogScale(int nChildren)
+{
+	return SIZE_SCALE
+		* (0.35 * log(0.5 * nChildren + 1.5) + 0.5);
+}
+
+REAL RandFlt(REAL size)
+{
+	return size - (2.0 * size * rand() / (REAL) RAND_MAX);
+}
+
+REAL ComputeEpsilon(REAL forValue, REAL epsMin = 1e-6)
+{
+	return epsMin * (1.0 + forValue);
+}
+
+class CTestLayoutManager : public CSpaceLayoutManager
+{
+public:
+	CTestLayoutManager(CSpace *pSpace)
+		: CSpaceLayoutManager(pSpace) { }
+
+	REAL Evaluate(const CVectorN<>& vInput);
+	CVectorN<> EvaluateGrad(const CVectorN<>& vInput, REAL delta);
+
+	REAL EvaluatePos(REAL x, REAL y, CVectorD<3> vSz, REAL act, REAL weight);
+	REAL EvaluateRep(REAL x, REAL y, CVectorD<3> vSz, REAL act);
+
+	// evaluates the energy function
+	virtual REAL operator()(const CVectorN<>& vInput, 
+		CVectorN<> *pGrad = NULL);
+};
+
+REAL CTestLayoutManager::EvaluatePos(REAL x, REAL y, CVectorD<3> vSz, REAL act, REAL weight)
+{
+	// compute the relative actual distance
+	const REAL act_dist = (REAL) sqrt(x * x / (vSz[0] * vSz[0])
+		+ y * y / (vSz[1] * vSz[1])) + 0.001;
+
+	// compute the distance error
+	const REAL dist_error = act_dist - OPT_DIST;
+
+	// compute the factor controlling the importance of the
+	//		attraction term
+	const REAL factor = GetKPos() * act * weight;
+
+	// and add the attraction term to the energy
+	return factor * dist_error * dist_error;
+}
+
+REAL CTestLayoutManager::EvaluateRep(REAL x, REAL y, CVectorD<3> vSz, REAL act)
+{
+	// compute the energy due to this interation
+	const REAL x_ratio = x * x / (vSz[0] * vSz[0]);
+	const REAL y_ratio = y * y / (vSz[1] * vSz[1]);
+
+	// compute the energy term
+	const REAL inv_sq = 1.0 / (x_ratio + y_ratio + 0.1);
+	const REAL factor_rep = GetKRep() * act;
+
+	// add to total energy
+	return factor_rep * inv_sq;
+}
+
+REAL CTestLayoutManager::Evaluate(const CVectorN<>& vInput)
+{
+	// reset the energy
+	REAL energy = 0.0;
+
+	// and the total number of nodes plus clusters
+	int nNodeCount = GetStateDim() / 2;
+
+	// iterate over all current visualized node views
+	int nAtNode;
+	for (nAtNode = 0; nAtNode < nNodeCount; nAtNode++)
+	{
+		CNode *pNode = m_pSpace->GetNodeAt(nAtNode);
+
+		// iterate over the potential linked views
+		int nAtLinked;
+		for (nAtLinked = 0; nAtLinked < nNodeCount; nAtLinked++)
+		{
+			if (nAtLinked != nAtNode)
+			{
+				CNode *pLinked = m_pSpace->GetNodeAt(nAtLinked);
+	
+				//////////////////////////////////////////////////////////////
+				// set up some common values
+
+				// compute the x- and y-offset between the views
+				const REAL x = vInput[nAtNode*2 + 0] - vInput[nAtLinked*2 + 0];
+				const REAL y = vInput[nAtNode*2 + 1] - vInput[nAtLinked*2 + 1];
+
+				// compute the x- and y-scales for the fields -- average of
+				//		two rectangles
+				CVectorD<3> vSz = 0.5 * 
+					(pNode->GetSize(pNode->GetActivation())
+						* GetSizeLogScale(pNode->GetChildCount())
+					+ pLinked->GetSize(pLinked->GetActivation())
+						* GetSizeLogScale(pLinked->GetChildCount()));
+				vSz += CVectorD<3>(10.0, 10.0, 0.0);
+
+				//////////////////////////////////////////////////////////////
+				// compute the attraction field
+
+				// store the weight, for convenience
+				const REAL weight = 0.5 *
+					(pNode->GetLinkWeight(pLinked)
+						+ pLinked->GetLinkWeight(pNode)) + 0.0001;
+
+				energy += EvaluatePos(x, y, vSz, pNode->GetActivation(), weight);
+
+				//////////////////////////////////////////////////////////////
+				// compute the repulsion field
+				// add to total energy
+				energy += EvaluateRep(x, y, vSz, pNode->GetActivation());
+			} 
+		}
+	}
+
+	// energy *= 1.0 / (REAL) nVizNodeCount;
+
+	return energy;
+}
+
+CVectorN<> CTestLayoutManager::EvaluateGrad(const CVectorN<>& vInput, REAL delta)
+{
+	CVectorN<> vGrad;
+	vGrad.SetDim(vInput.GetDim());
+
+	// working copy of input
+	CVectorN<> vInWork(vInput);
+
+	for (int nAt = 0; nAt < vInput.GetDim(); nAt++)
+	{
+		vInWork[nAt] -= delta;
+		REAL energy1 = Evaluate(vInWork);
+
+		vInWork[nAt] += 2.0 * delta;
+		REAL energy2 = Evaluate(vInWork);
+
+		vInWork[nAt] -= delta;
+
+		vGrad[nAt] = (energy2 - energy1) / (2.0 * delta);
+	}
+
+	return vGrad;
+}
+
+REAL CTestLayoutManager::operator()(const CVectorN<>& vInput, 
+		CVectorN<> *pGrad)
+{
+	// evaluate base class
+	REAL energy = CSpaceLayoutManager::operator()(vInput, pGrad);
+
+	// prepare the input vector for the full positional information
+	ASSERT(m_vConstPositions.GetDim() + vInput.GetDim() == m_nStateDim);
+
+	// compute full vector (in case there is a constant component)
+	CVectorN<> vAll;
+	vAll.SetDim(m_nStateDim);
+	vAll.CopyElements(m_vConstPositions, 0, 
+		m_vConstPositions.GetDim());
+	vAll.CopyElements(vInput, 0, vInput.GetDim(),
+		m_vConstPositions.GetDim());
+
+	// make sure the synthetic full vector is equal to the one
+	//		calculated by the base class
+	ASSERT(vAll == m_vInput);
+
+	// now evaluate for this
+	REAL testEnergy = Evaluate(vAll);
+
+	// compute the epsilon for comparison
+	REAL epsilon = ComputeEpsilon(testEnergy);
+
+	// test for approximate equality
+	ASSERT(IsApproxEqual(energy, testEnergy, epsilon));
+
+	// are we testing gradient also?
+	if (pGrad)
+	{
+		// compute the delta for numerical gradient approximation
+		REAL delta = 1e-4 * epsilon;
+
+		// numerically evaluate the gradient
+		CVectorN<> vTestGrad = EvaluateGrad(vAll, delta);
+
+		// extract the partial gradient (for comparison to pGrad)
+		CVectorN<> vPartGrad;
+		vPartGrad.SetDim(pGrad->GetDim());
+		vPartGrad.CopyElements(vTestGrad, m_vConstPositions.GetDim(),
+			vPartGrad.GetDim());
+
+		// compute the error distance between the two gradient vectors
+		// REAL errDist = (vPartGrad - (*pGrad)).GetLength();
+
+		// compute the average length of the gradient, for the epsilon
+		REAL avgGradLength = (vPartGrad.GetLength() 
+			+ pGrad->GetLength()) / 2.0;
+
+		// compute the epsilon for gradient comparison
+		REAL epsGrad = ComputeEpsilon(avgGradLength, 1e-3);
+		
+		// test for gradient approximate equality
+		ASSERT(pGrad->IsApproxEqual(vPartGrad, epsGrad));
+
+		/* if (errDist > epsGrad)
+		{
+			TRACE("Error in gradient\n");
+			TRACE_VECTOR("vPartGrad", vPartGrad);
+			TRACE_VECTOR("pGrad", (*pGrad));
+			ASSERT(FALSE);
+		} */
+	}
+
+	// return the total energy
+	return energy;
+}
+
 /////////////////////////////////////////////////////////////////////////////
 // The one and only application object
 
@@ -19,11 +250,30 @@ CWinApp theApp;
 
 using namespace std;
 
-void PrintInfo(CNode *pNode)
+
+void PrintInfo(CSpace *pSpace, BOOL bPosition = FALSE)
 {
-	const char *strName = pNode->name.Get();
-	cout << strName << ": " << pNode->activation.Get() << endl;
+	// and print some activation values
+	for (int nAt = 0; nAt < pSpace->GetSuperNodeCount(); nAt++)
+	{
+		CNode *pNode = pSpace->GetNodeAt(nAt);
+
+		const char *strName = pNode->GetName();
+		cout << "\tName = " << '"' << strName << '"';
+		cout << ", Act = " << pNode->GetActivation();
+		if (bPosition)
+		{
+			cout << ", Pos = " << pNode->GetPosition();
+		}
+		else
+		{
+			cout << endl;
+		}
+	}
+
+	cout << endl;
 }
+
 
 int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 {
@@ -38,12 +288,20 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 	}
 	else
 	{
-		CSpace *pSpace = (CSpace *)RUNTIME_CLASS(CSpace)->CreateObject();
-		pSpace->OnNewDocument();
+		CSpace *pSpace = (CSpace *) RUNTIME_CLASS(CSpace)->CreateObject();
+
+		if (argc < 2)
+		{
+			pSpace->OnNewDocument();
+		}
+		else
+		{
+			pSpace->OnOpenDocument(argv[1]);
+		}
 
 		// write the activation for all nodes (before)
 		cout << "Total activation of all nodes = " 
-			<< pSpace->rootNode.GetDescendantActivation()
+			<< pSpace->GetTotalActivation()
 			<< endl;
 
 		// now normalize
@@ -51,33 +309,92 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 
 		// write the activation for all nodes (after normalization)
 		cout << "Total activation of all nodes = " 
-			<< pSpace->rootNode.GetDescendantActivation()
+			<< pSpace->GetTotalActivation()
 			<< endl;
 
 		// now try a propagation
+		CNode *pMainNode = pSpace->GetNodeAt(0);
 
-		// boost the root node up to about 10 times the other nodes
-		double rootActivation = pSpace->rootNode.activation.Get();
-		pSpace->rootNode.activation.Set(rootActivation * 100.0);
+		// perform 1st activation
+		cout << "**** 2nd Activation ****" << endl;
 
-		// and propagate the activation at a scale of 0.8
-		pSpace->rootNode.PropagateActivation(0.8);
-		pSpace->rootNode.ResetForPropagation();
+		// boost the root node up to about 100 times the other nodes
+		pSpace->ActivateNode(pMainNode, 1.0 / 0.6);
 
-		// now normalize
-		pSpace->NormalizeNodes();
+		PrintInfo(pSpace);
 
-		// and print some activation values
-		PrintInfo(&pSpace->rootNode);
-		for (int nAt = 0; nAt < pSpace->rootNode.children.GetSize(); nAt++)
+		// perform 2nd activation
+		cout << "**** 2nd Activation ****" << endl;
+
+		// boost the root node up to about 100 times the other nodes
+		pSpace->ActivateNode(pMainNode, 1.0 / 0.6);
+
+		PrintInfo(pSpace);
+
+		// perform 3rd activation
+		cout << "**** 3rd Activation ****" << endl;
+
+		// boost the root node up to about 100 times the other nodes
+		pSpace->ActivateNode(pMainNode, 1.0 / 0.6);
+
+		PrintInfo(pSpace);
+
+		// output node w/ positions
+		cout << "**** Layout Test ****" << endl;
+
+		// set all nodes to zero position
+		for (int nAt = 0; nAt < pSpace->GetNodeCount(); nAt++)
 		{
-			CNode *pNode = (CNode *)pSpace->rootNode.children.Get(nAt);
-			PrintInfo(pNode);
-			for (int nAt2 = 0; nAt2 < pNode->children.GetSize(); nAt2++)
-			{
-				PrintInfo((CNode *)pNode->children.Get(nAt2));
-			}
+			pSpace->GetNodeAt(nAt)->SetPosition(CVectorD<3>(0.0, 0.0, 0.0));
 		}
+
+		// output node w/ positions
+		cout << "**** Initial node positions ****" << endl;
+
+		PrintInfo(pSpace, TRUE);
+
+		// now test layout
+		CTestLayoutManager *pTestLayoutManager = 
+			new CTestLayoutManager(pSpace);
+		pTestLayoutManager->SetStateDim(pSpace->GetLayoutManager()->GetStateDim());
+		pTestLayoutManager->SetKPos(pSpace->GetLayoutManager()->GetKPos());
+		pTestLayoutManager->SetKRep(pSpace->GetLayoutManager()->GetKRep());
+
+		pTestLayoutManager->LayoutNodes(pSpace->GetStateVector(), 0);
+
+		// output node w/ positions
+		cout << "**** Final node positions ****" << endl;
+
+		// output node w/ positions
+		PrintInfo(pSpace, TRUE);
+
+		// output node w/ positions
+		cout << "**** Final node positions -- second layout ****" << endl;
+
+		pTestLayoutManager->LayoutNodes(pSpace->GetStateVector(), 0);
+
+		// output node w/ positions
+		PrintInfo(pSpace, TRUE);
+
+		// output node w/ positions
+		cout << "**** Node positions -- partial layout ****" << endl;
+
+		int nConstNodes = pTestLayoutManager->GetStateDim() / 2;
+		nConstNodes = nConstNodes * rand() / RAND_MAX;
+
+		for (nAt = nConstNodes; nAt < pSpace->GetSuperNodeCount(); nAt++)
+		{
+			CVectorD<3> vRandomPosition( RandFlt(50.0), RandFlt(50.0), 0.0);
+			pSpace->GetNodeAt(nAt)->SetPosition(vRandomPosition);
+		}
+
+		pTestLayoutManager->LayoutNodes(pSpace->GetStateVector(), nConstNodes);
+
+		// output node w/ positions
+		PrintInfo(pSpace, TRUE);
+
+		delete pTestLayoutManager;
+		delete pSpace;
 	}
 
 	return nRetCode;
