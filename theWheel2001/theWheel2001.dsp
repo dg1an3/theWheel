@@ -90,11 +90,11 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\MainFrm.cpp
+SOURCE=.\EditNodeDlg.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\NewNodeDlg.cpp
+SOURCE=.\MainFrm.cpp
 # End Source File
 # Begin Source File
 
@@ -133,11 +133,11 @@ SOURCE=.\theWheel2001.rc
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=.\MainFrm.h
+SOURCE=.\EditNodeDlg.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\NewNodeDlg.h
+SOURCE=.\MainFrm.h
 # End Source File
 # Begin Source File
 

@@ -22,7 +22,7 @@
 #include "NodeView.h"
 
 // the new node dialog
-#include "NewNodeDlg.h"
+#include "EditNodeDlg.h"
 
 
 #ifdef _DEBUG
@@ -645,7 +645,7 @@ void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI)
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnNewNode() 
 {
-	CNewNodeDlg newDlg(this);
+	CEditNodeDlg newDlg(this);
 
 	if (newDlg.DoModal() == IDOK)
 	{
