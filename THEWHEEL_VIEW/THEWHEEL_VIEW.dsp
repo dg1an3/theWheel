@@ -102,6 +102,10 @@ SOURCE=.\NodeViewSkin.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\OptionsDlg.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\SpaceTreeView.cpp
 # End Source File
 # Begin Source File
@@ -141,6 +145,10 @@ SOURCE=.\include\NodeViewSkin.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\include\OptionsDlg.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\include\SpaceTreeView.h
 # End Source File
 # Begin Source File
@@ -155,6 +163,10 @@ SOURCE=.\StdAfx.h
 # Begin Source File
 
 SOURCE=.\res\H_point.cur
+# End Source File
+# Begin Source File
+
+SOURCE=.\res\node.bmp
 # End Source File
 # Begin Source File
 

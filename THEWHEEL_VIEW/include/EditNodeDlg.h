@@ -35,6 +35,7 @@ public:
 	CString	m_strDesc;
 	CString	m_strImageFilename;
 	CString	m_strUrl;
+	CString	m_strClass;
 	//}}AFX_DATA
 
 	// a pointer to the node being edited

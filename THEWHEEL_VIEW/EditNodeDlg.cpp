@@ -35,6 +35,7 @@ CEditNodeDlg::CEditNodeDlg(CWnd* pParent /*=NULL*/)
 	m_strDesc = _T("");
 	m_strImageFilename = _T("");
 	m_strUrl = _T("");
+	m_strClass = _T("");
 	//}}AFX_DATA_INIT
 }
 
@@ -54,6 +55,7 @@ void CEditNodeDlg::DoDataExchange(CDataExchange* pDX)
 		m_strDesc = m_pNode->GetDescription();
 		m_strImageFilename = m_pNode->GetImageFilename();
 		m_strUrl = m_pNode->GetUrl();
+		m_strClass = m_pNode->GetClass();
 	}
 
 	//{{AFX_DATA_MAP(CEditNodeDlg)
@@ -62,6 +64,7 @@ void CEditNodeDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDITDESC, m_strDesc);
 	DDX_Text(pDX, IDC_EDITIMAGEFILENAME, m_strImageFilename);
 	DDX_Text(pDX, IDC_EDITURL, m_strUrl);
+	DDX_Text(pDX, IDC_EDITCLASS, m_strClass);
 	//}}AFX_DATA_MAP
 }
 
@@ -247,4 +250,5 @@ void CEditNodeDlg::OnOK()
 	m_pNode->SetDescription(m_strDesc);
 	m_pNode->SetImageFilename(m_strImageFilename);
 	m_pNode->SetUrl(m_strUrl);
+	m_pNode->SetClass(m_strClass);
 }

@@ -23,6 +23,8 @@
 // the displayed model object
 #include <Node.h>
 
+#include <Eevorg.h>
+
 // #include "resource.h"
 
 #ifdef _DEBUG
@@ -30,6 +32,8 @@
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+
+const COLORREF DEFAULT_TITLE = RGB(149, 205, 208);
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -57,8 +61,9 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 	CRect rectParent;
 	pParent->GetClientRect(&rectParent);
 
-	m_vSpringCenter = CVector<3>(rectParent.Width() / 2, 
-		rectParent.Height() / 2);
+	m_vSpringCenter = GetNode()->GetPosition();
+		// CVector<3>(rectParent.Width() / 2, 
+		// rectParent.Height() / 2);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -264,6 +269,17 @@ void CNodeView::Draw(CDC *pDC, CNodeViewSkin *pSkin)
 
 		rectInner.DeflateRect(5, 5, 5, 5);
 
+		if (GetNode()->IsKindOf(RUNTIME_CLASS(CEevorg)))
+		{
+			CEevorg *pEevorg = (CEevorg *) GetNode();
+			pEevorg->DrawAt(pDC, 
+				rectInner.CenterPoint().x, 
+				rectInner.CenterPoint().y - rectInner.Height() / 2, 
+				rectInner.Height());
+
+			return;
+		}
+
 		// draw the image (if any)
 		if (m_bBackgroundImage)
 		{
@@ -357,7 +373,20 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 		DT_CALCRECT | DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	// draw the background for the title
-	CBrush backBrush(RGB(149, 205, 208));
+	CBrush backBrush;
+	if (GetNode()->GetClass() == "Genre")
+	{
+		backBrush.CreateSolidBrush(RGB(174, 220, 154));
+	}
+	else if (GetNode()->GetClass() == "Artist")
+	{
+		backBrush.CreateSolidBrush(RGB(182, 139, 224));
+	}
+	else
+	{
+		backBrush.CreateSolidBrush(DEFAULT_TITLE);
+	}
+
 	CBrush *pOldBrush = pDC->SelectObject(&backBrush);
 	CPen *pOldPen = (CPen *)pDC->SelectStockObject(NULL_PEN);
 	CRect rectTitle = GetOuterRect();

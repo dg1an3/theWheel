@@ -6,29 +6,29 @@
 #define IDB_NODE                        202
 #define IDC_HANDPOINT                   203
 #define IDR_SPACE_POPUP                 204
+#define IDD_OPTIONSDIALOG               205
+#define IDC_SUPERNODECOUNT              1001
+#define IDC_TOLERANCE                   1002
+#define IDC_K_POS                       1003
+#define IDC_K_REP                       1004
+#define IDC_SPRING                      1005
 #define IDC_EDITNAME                    2001
 #define IDC_EDITDESC                    2002
 #define IDC_EDITIMAGEFILENAME           2003
 #define IDC_EDITURL                     2004
 #define IDC_LINKLIST                    2005
+#define IDC_EDITCLASS                   2006
 #define ID_NEW_NODE                     39001
-#define ID_VIEW_LAYOUT                  39002
-#define ID_VIEW_WAVE                    39003
-#define ID_VIEW_PROPAGATE               39004
+#define ID_EDIT_OPTIONS                 39005
+#define ID_NEW_EEVORG                   39006
 
 // Next default values for new objects
 // 
-// Ranges are:
-//					Application		Appl.View		GEOM_VIEW
-//		Resources	101   - 199		201   - 299		301   - 399
-//		Commands	40001 -	40999	39001 -	39999	38001 - 38999
-//		Controls	1001  -	1999	2001  - 2999	3001  - 3999
-//
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        205
-#define _APS_NEXT_COMMAND_VALUE         39005
-#define _APS_NEXT_CONTROL_VALUE         2006
-#define _APS_NEXT_SYMED_VALUE           101
+#define _APS_NEXT_RESOURCE_VALUE        206
+#define _APS_NEXT_COMMAND_VALUE         39007
+#define _APS_NEXT_CONTROL_VALUE         2008
+#define _APS_NEXT_SYMED_VALUE           102
 #endif
 #endif

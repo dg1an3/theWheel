@@ -51,7 +51,7 @@ public:
 	CNodeView *FindNodeViewAt(CPoint pt);
 
 	// pointer to the connected browser (for navigating to a link);
-	CHtmlView *m_pBrowser;
+	// CHtmlView *m_pBrowser;
 
 // Operations
 public:
@@ -73,6 +73,8 @@ public:
 
 // Implementation
 public:
+	double GetSpringConst();
+	void SetSpringConst(double springConst);
 	// creates the node views for the children of the passed node
 	void CreateNodeViews(CNode *pParentNode, CPoint pt);
 
@@ -111,15 +113,17 @@ protected:
 	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnTimer(UINT nIDEvent);
 	afx_msg void OnNewNode();
-	afx_msg void OnViewWave();
-	afx_msg void OnUpdateViewWave(CCmdUI* pCmdUI);
-	afx_msg void OnViewLayout();
+	afx_msg void OnNewEevorg();
+	afx_msg void OnEditOptions();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
 private:
 	// the child node views
 	CObArray m_arrNodeViews;
+
+	// spring constant for node views
+	double m_springConst;
 
 	// the skin for the node views
 	CNodeViewSkin m_skin;

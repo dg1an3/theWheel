@@ -22,14 +22,15 @@
 #include <afxcmn.h>			// MFC support for Windows Common Controls
 #endif // _AFX_NO_AFXCMN_SUPPORT
 
-#include <afxmt.h>
-#include <afxhtml.h>
+#include <afxmt.h>			// MFC support for multithreading
+#include <afxhtml.h>		// MFC support for HTML browser
 
 // internet includes for web pages
 #include <wininet.h> 
 #include <urlmon.h> 
 #include <mshtml.h> 
 
+// common definitions
 #include <comdef.h>
 
 // multimedia and sound includes

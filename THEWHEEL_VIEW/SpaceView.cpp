@@ -24,8 +24,12 @@
 // child node views
 #include "NodeView.h"
 
+// Eevorg
+#include "Eevorg.h"
+
 // the new node dialog
 #include "EditNodeDlg.h"
+#include "OptionsDlg.h"
 
 #include <HTMLNode.h>
 
@@ -60,7 +64,8 @@ BOOL CheckNodeViews(CNode *pNode)
 // constructs a new CSpaceView object 
 //////////////////////////////////////////////////////////////////////
 CSpaceView::CSpaceView()
-: m_pBrowser(NULL),
+: // m_pBrowser(NULL),
+	m_springConst(0.95),
 	m_bWaveMode(TRUE),
 	m_lpDD(NULL),			// DirectDraw object
 	m_lpDDSPrimary(NULL),	// DirectDraw primary surface
@@ -122,7 +127,8 @@ CNodeView *CSpaceView::GetNodeView(int nAt)
 int CSpaceView::GetVisibleNodeCount()
 {
 	int nNumVizNodeViews = __min(m_arrNodeViews.GetSize(), 
-		STATE_DIM / 2 - GetDocument()->GetClusterCount());
+		GetDocument()->GetLayoutManager()->GetStateDim() / 2 
+			- GetDocument()->GetClusterCount());
 
 	return nNumVizNodeViews;
 }
@@ -291,13 +297,32 @@ void CSpaceView::OnInitialUpdate()
 {
 	CView::OnInitialUpdate();
 
+	// get the layout manager
+	CSpaceLayoutManager *pLayoutManager = 
+		GetDocument()->GetLayoutManager();
+
+	// load the options
+	pLayoutManager->SetKPos(::AfxGetApp()->GetProfileInt("LAYOUT", "K_POS", 
+		pLayoutManager->GetKPos()));
+	pLayoutManager->SetKRep(::AfxGetApp()->GetProfileInt("LAYOUT", "R_POS", 
+		pLayoutManager->GetKRep()));
+	pLayoutManager->SetStateDim(::AfxGetApp()->GetProfileInt("LAYOUT", "STATE_DIM", 
+		pLayoutManager->GetStateDim()));
+	pLayoutManager->SetTolerance( 1.0 / 10.0 * 
+		(double) ::AfxGetApp()->GetProfileInt("LAYOUT", "TOLERANCE", 
+			10.0 * pLayoutManager->GetTolerance()));
+	SetSpringConst( 1.0 / 100.0 * 
+		(double) ::AfxGetApp()->GetProfileInt("LAYOUT", "SPRING_CONST", 
+			100.0 * GetSpringConst()));
+
 #if defined(_DEBUG)
 	GetDocument()->Dump(afxDump);
 #endif
 
 	// make sure super node count + clusters = STATE_DIM
 	GetDocument()->SetMaxSuperNodeCount(
-		STATE_DIM / 2 - GetDocument()->GetClusterCount());
+		GetDocument()->GetLayoutManager()->GetStateDim() / 2 
+			- GetDocument()->GetClusterCount());
 
 	// get rid of the node views
 	for (int nAt = 0; nAt < m_arrNodeViews.GetSize(); nAt++)
@@ -677,9 +702,8 @@ BEGIN_MESSAGE_MAP(CSpaceView, CView)
 	ON_WM_RBUTTONDOWN()
 	ON_WM_TIMER()
 	ON_COMMAND(ID_NEW_NODE, OnNewNode)
-	ON_COMMAND(ID_VIEW_WAVE, OnViewWave)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_WAVE, OnUpdateViewWave)
-	ON_COMMAND(ID_VIEW_LAYOUT, OnViewLayout)
+	ON_COMMAND(ID_NEW_EEVORG, OnNewEevorg)
+	ON_COMMAND(ID_EDIT_OPTIONS, OnEditOptions)
 	//}}AFX_MSG_MAP
 	// Standard printing commands
 	ON_COMMAND(ID_FILE_PRINT, CView::OnFilePrint)
@@ -892,10 +916,10 @@ void CSpaceView::OnLButtonDown(UINT nFlags, CPoint point)
 		ActivateNodeView(pSelectedView, 0.45f);
 
 		// and then navigate to its URL, if it has one
-		if (m_pBrowser && pSelectedView->GetNode()->GetUrl() != "")
+/*		if (m_pBrowser && pSelectedView->GetNode()->GetUrl() != "")
 		{
 			m_pBrowser->Navigate2(pSelectedView->GetNode()->GetUrl());
-		}
+		} */
 	}
 
 	// update the recent click list
@@ -989,6 +1013,11 @@ void CSpaceView::OnRButtonDown(UINT nFlags, CPoint point)
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnTimer(UINT nIDEvent) 
 {
+	if (NULL == m_pDocument)
+	{
+		return;
+	}
+
 	// get the sync object
 	if (!m_sync.Lock())
 	{
@@ -1025,16 +1054,17 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 			double saccadeFactor = GetSaccadeFactor(nSize-3);
 			int nSaccadeFactor = (int) saccadeFactor;
 
-			// and put an ellipse at the point
+			/* // and put an ellipse at the point
 			CPoint ptAt = (m_arrPoints[nSize-3]);
 			GetDC()->Ellipse(ptAt.x - nSaccadeFactor, ptAt.y - nSaccadeFactor, 
-				ptAt.x + nSaccadeFactor, ptAt.y + nSaccadeFactor);	
+				ptAt.x + nSaccadeFactor, ptAt.y + nSaccadeFactor);	 */
 
 			// find the node view containing the point
-			CNodeView *pSelectedView = FindNodeViewAt(ptAt);
+			CNodeView *pSelectedView = FindNodeViewAt(point); // ptAt);
 			if (NULL != pSelectedView)
 			{
-				pSelectedView->m_pendingActivation += 0.0; // saccadeFactor;
+				pSelectedView->m_pendingActivation += 
+					0.02 + 0.0 * saccadeFactor;
 			}
 		}
 	}
@@ -1053,13 +1083,32 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 #endif
 
 	// perform any pending activations
-	for (int nAt = 0; nAt < this->GetNodeViewCount(); nAt++)
+	for (int nAt = 0; nAt < GetVisibleNodeCount(); // GetNodeViewCount(); 
+			nAt++)
 	{
 		CNodeView *pNodeView = GetNodeView(nAt);
 		if (pNodeView->m_pendingActivation > 0.0f)
 		{
 			ActivateNodeView(pNodeView, pNodeView->m_pendingActivation);
 			pNodeView->m_pendingActivation = 0.0f;
+
+		}
+
+		// check to spawn
+		if (pNodeView->GetNode()->IsKindOf(RUNTIME_CLASS(CEevorg)))
+		{
+			CEevorg *pEevorg = (CEevorg *)pNodeView->GetNode();
+			if (pEevorg->GetActivation() > 0.1
+				&& pEevorg->GetChildCount() < 5
+				&& rand() < RAND_MAX / 2)
+			{
+				CEevorg *pNewChild = 
+					new CEevorg(GetDocument(), pEevorg, TRUE);
+				pEevorg->LinkTo(pNewChild, 
+					0.3 + 0.7 * (double) rand() / (double) RAND_MAX, 
+					TRUE);
+				GetDocument()->AddNode(pNewChild, pEevorg);
+			}
 		}
 	}
 
@@ -1074,7 +1123,7 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 	// update the privates
 	for (nAt = 0; nAt < GetNodeViewCount(); nAt++)
 	{
-		GetNodeView(nAt)->UpdateSprings();
+		GetNodeView(nAt)->UpdateSprings(m_springConst);
 	}
 
 	// update the clusters
@@ -1146,42 +1195,26 @@ void CSpaceView::OnNewNode()
 }
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::OnViewWave
+// CSpaceView::OnNewNode
 // 
-// changes the wave mode view state
+// launches the new node dialog box
 //////////////////////////////////////////////////////////////////////
-void CSpaceView::OnViewWave() 
+void CSpaceView::OnNewEevorg() 
 {
-	m_bWaveMode = !m_bWaveMode;	
-}
+	// kill the the timer for a modal dialog
+	KillTimer(m_nTimerID);
 
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::OnUpdateViewWave
-// 
-// sets/unsets the wave mode toggle button
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI) 
-{
-	pCmdUI->SetCheck(m_bWaveMode ? 1 : 0);		
-}
+	// sort the node views, so that the max node view is first
+	SortNodeViews();
+	CNode *pParentNode = GetNodeView(0)->GetNode();
 
-void CSpaceView::OnViewLayout() 
-{
-// 	GetDocument()->ComputeClusters();	
+	// add the node to the space, with the given parent
+	GetDocument()->AddNode(new CEevorg(GetDocument(), pParentNode, TRUE), 
+		pParentNode);
 
-	CHTMLNode *pTestNode = new CHTMLNode();
-	pTestNode->SetUrl("http://www.microsoft.com");
-
-	// init sets up the connection point
-	HRESULT hr;
-	
-	if (SUCCEEDED(hr = pTestNode->Init()))
-	{
-		if (SUCCEEDED(hr = pTestNode->Run()))
-		{
-			// hr = testNode.Term();
-		}
-	}
+	// restart the timer
+ 	m_nTimerID = SetTimer(7, 10, NULL);
+	ASSERT(m_nTimerID != 0);
 }
 
 CVector<2> CSpaceView::GetVelocity(int nIndex)
@@ -1249,4 +1282,58 @@ double CSpaceView::GetSaccadeFactor(int nIndex)
 
 	// now compute the adjusted deceleration
 	return (saccadeFactor > 0.0) ? saccadeFactor : 0.0;
+}
+
+void CSpaceView::OnEditOptions() 
+{
+	// stop the timer for the options dialog
+	KillTimer(m_nTimerID);
+
+	// get a pointer to the layout manager
+	CSpaceLayoutManager *pLayoutManager = GetDocument()->GetLayoutManager();
+
+	// create an options dialog box
+	COptionsDlg dlgOptions;
+
+	// get the space layout manager, which contains all of the options
+	dlgOptions.m_k_pos = pLayoutManager->GetKPos();
+	dlgOptions.m_k_rep = pLayoutManager->GetKRep();
+	dlgOptions.m_nSuperNodeCount = pLayoutManager->GetStateDim() / 2;
+	dlgOptions.m_tolerance = pLayoutManager->GetTolerance();
+	dlgOptions.m_springConst = m_springConst;
+
+	if (dlgOptions.DoModal() == IDOK)	
+	{
+		pLayoutManager->SetKPos(dlgOptions.m_k_pos);
+		pLayoutManager->SetKRep(dlgOptions.m_k_rep);
+		pLayoutManager->SetStateDim(dlgOptions.m_nSuperNodeCount * 2);
+		pLayoutManager->SetTolerance(dlgOptions.m_tolerance);
+		m_springConst = dlgOptions.m_springConst;
+
+		// save the options to the registry
+		::AfxGetApp()->WriteProfileInt("LAYOUT", "K_POS", 
+			pLayoutManager->GetKPos());
+		::AfxGetApp()->WriteProfileInt("LAYOUT", "R_POS", 
+			pLayoutManager->GetKRep());
+		::AfxGetApp()->WriteProfileInt("LAYOUT", "STATE_DIM", 
+			pLayoutManager->GetStateDim());
+		::AfxGetApp()->WriteProfileInt("LAYOUT", "TOLERANCE", 
+			10.0 * pLayoutManager->GetTolerance());
+		::AfxGetApp()->WriteProfileInt("LAYOUT", "SPRING_CONST", 
+			100.0 * GetSpringConst());
+	}
+
+	// restart the timer
+ 	m_nTimerID = SetTimer(7, 10, NULL);
+	ASSERT(m_nTimerID != 0);
+}
+
+void CSpaceView::SetSpringConst(double springConst)
+{
+	m_springConst = springConst;
+}
+
+double CSpaceView::GetSpringConst()
+{
+	return m_springConst;
 }

@@ -120,6 +120,11 @@ CSpace* CSpaceTreeView::GetDocument() // non-debug version is inline
 
 void CSpaceTreeView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint) 
 {
+	if (NULL == GetDocument())
+	{
+		return;
+	}
+
 	CNode *pNode = GetDocument()->GetRootNode();
 
 	// if there is a hint, it is a CNode
@@ -131,6 +136,12 @@ void CSpaceTreeView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 	{
 		GetTreeCtrl().DeleteAllItems();
 		m_mapItemHandles.RemoveAll();
+	}
+
+	// don't add the item if it has no name
+	if ("" == pNode->GetName())
+	{
+		return;
 	}
 
 	// first check to see if an item exists for this node
@@ -190,11 +201,15 @@ void CSpaceTreeView::AddNodeItem(CNode *pNode, HTREEITEM hParentItem)
     // add the inserted item to the handle map
     m_mapItemHandles.SetAt(pNode, hTreeItem);
 
-	// add the children to the tree
-	for (int nAt = pNode->GetChildCount()-1; nAt >= 0 ; nAt--)
+	// only add children if node has name
+	if ("" != pNode->GetName())
 	{
-		CNode *pChild = (CNode *)pNode->GetChildAt(nAt);
-		AddNodeItem(pChild, hTreeItem);
+		// add the children to the tree
+		for (int nAt = pNode->GetChildCount()-1; nAt >= 0 ; nAt--)
+		{
+			CNode *pChild = (CNode *)pNode->GetChildAt(nAt);
+			AddNodeItem(pChild, hTreeItem);
+		}
 	}
 
 	// select the added item
