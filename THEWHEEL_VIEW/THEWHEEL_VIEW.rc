@@ -58,6 +58,14 @@ IDC_SAW                 CURSOR  DISCARDABLE     "res\\saw.cur"
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// Bitmap
+//
+
+IDB_GO_BUTTON           BITMAP  DISCARDABLE     "res\\green_button.bmp"
+IDB_GO_BUTTON_DOWN      BITMAP  DISCARDABLE     "res\\green_button_down.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // String Table
 //
 

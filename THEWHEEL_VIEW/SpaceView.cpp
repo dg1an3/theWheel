@@ -867,6 +867,7 @@ BEGIN_MESSAGE_MAP(CSpaceView, CView)
 	ON_WM_TIMER()
 	ON_WM_KEYDOWN()
 	ON_WM_LBUTTONDBLCLK()
+	ON_BN_CLICKED(IDB_GO, OnGoClicked)
 	//}}AFX_MSG_MAP
 	// Standard printing commands
 	ON_COMMAND(ID_FILE_PRINT, CView::OnFilePrint)
@@ -902,6 +903,13 @@ int CSpaceView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	ASSERT(m_nTimerID != 0);
 
 	if (!m_dropTarget.Register(this))
+		return -1;
+
+	if (!m_btnGo.Create("Go", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, 
+		CRect(-30, -30, 0, 0), this, IDB_GO))
+		return -1;
+
+	if (!m_btnGo.LoadBitmaps(IDB_GO_BUTTON, IDB_GO_BUTTON_DOWN))
 		return -1;
 
 	return 0;
@@ -1048,6 +1056,7 @@ void CSpaceView::OnPaint()
 			// release the DC
 			RELEASE_DETACH_DC(m_lpDDSOne, dc);
 		}
+
 
 		// form the destination (screen) rectangle
 		CRect rectDest = rectClient;
@@ -1281,3 +1290,8 @@ DROPEFFECT CSpaceView::OnDragOver(COleDataObject* pDataObject, DWORD dwKeyState,
 	return de;	
 }
 
+
+void CSpaceView::OnGoClicked()
+{
+	::AfxMessageBox("Go Clicked", MB_OK);
+}

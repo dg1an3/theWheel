@@ -354,6 +354,11 @@ void CNodeView::SetMaximized(BOOL bMax)
 {
 	m_bMaximized = bMax;
 
+	if (!m_bMaximized)
+	{
+		m_pParent->m_btnGo.MoveWindow(-30, -30, 0, 0, FALSE);
+	}
+
 }	// CNodeView::SetMaximized
 
 
@@ -629,6 +634,17 @@ void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
 							GetNode()->GetIcon(), 
 							rectImage.Width(), rectImage.Height(), 
 							0, NULL, DI_NORMAL);
+				}
+
+				if (m_bMaximized)
+				{
+					CRect rectBtn(rectImage);
+					rectBtn.top = rectBtn.bottom + 5;
+					rectBtn.bottom = rectBtn.top + 30;
+					m_pParent->m_btnGo.MoveWindow(&rectBtn, FALSE);
+					CPoint ptOrig = pDC->SetViewportOrg(rectBtn.TopLeft());
+					m_pParent->m_btnGo.PrintClient(pDC, PRF_CLIENT);
+					pDC->SetViewportOrg(ptOrig);
 				}
 
 				// adjust the rectangle to account for the bitmap

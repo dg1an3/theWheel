@@ -88,6 +88,7 @@ public:
 	virtual DROPEFFECT OnDragEnter(COleDataObject* pDataObject, DWORD dwKeyState, CPoint point);
 	virtual void OnDragLeave();
 	virtual DROPEFFECT OnDragOver(COleDataObject* pDataObject, DWORD dwKeyState, CPoint point);
+	afx_msg void OnGoClicked();
 	protected:
 	virtual void OnInitialUpdate(); // called first time after construct
 	virtual void OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint);
@@ -112,6 +113,9 @@ public:
 
 	// activates pending
 	void ActivatePending();
+
+	// "Go" button
+	CBitmapButton m_btnGo;
 
 #ifdef _DEBUG
 	virtual void AssertValid() const;
