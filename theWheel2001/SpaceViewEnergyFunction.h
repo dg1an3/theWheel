@@ -4,7 +4,7 @@
 #include "Optimizer.h"
 
 typedef double SPV_STATE_TYPE;
-const int SPV_STATE_DIM = 20;
+const int SPV_STATE_DIM = 30;
 
 class CSpaceView;
 

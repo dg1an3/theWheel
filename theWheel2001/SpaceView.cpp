@@ -54,7 +54,7 @@ CSpaceView::CSpaceView()
 {
 	m_pEnergyFunc = new CSpaceViewEnergyFunction();
 	m_pEnergyFunc->m_pView = this;
-	m_pOptimizer = new CPowellOptimizer<20, double>(m_pEnergyFunc);
+	m_pOptimizer = new CPowellOptimizer<SPV_STATE_DIM, double>(m_pEnergyFunc);
 
 	// set the tolerance
 	m_pOptimizer->tolerance.Set(TOLERANCE);
@@ -121,6 +121,9 @@ void CSpaceView::AddNodeToSpace(CNode *pNewNode)
 	CNodeView *pNewNodeView = new CNodeView(pNewNode);
 	pNewNodeView->isWaveMode.SyncTo(&isWaveMode);
 
+	// set the activation for the new node
+	pNewNodeView->activation.Set(maxWeight * 0.25f);
+
 	// compute the initial rectangle for the node view
 	CRect rect(ptInit.x - 100, ptInit.y - 75, 
 		ptInit.x + 100, ptInit.y + 75);
@@ -130,7 +133,7 @@ void CSpaceView::AddNodeToSpace(CNode *pNewNode)
 
 	// create it
 	if (!pNewNodeView->CreateEx(WS_EX_TRANSPARENT, NULL, NULL, dwStyle, 
-			rect, this, nodeViews.GetSize() + 1100))
+			rect, this, nNodeID++))
 	{
 	}
 

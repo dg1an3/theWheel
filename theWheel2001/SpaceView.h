@@ -98,7 +98,7 @@ protected:
 
 private:
 	// the optimizer used to lay out the child views
-	CPowellOptimizer<20, double> *m_pOptimizer;
+	CPowellOptimizer<SPV_STATE_DIM, double> *m_pOptimizer;
 
 	// the energy function that the optimizer uses as an objective function
 	CSpaceViewEnergyFunction *m_pEnergyFunc;
