@@ -153,6 +153,8 @@ BEGIN
         MENUITEM "&Wave",                       ID_VIEW_WAVE
         MENUITEM SEPARATOR
         MENUITEM "&Layout Now",                 ID_VIEW_LAYOUT
+        MENUITEM SEPARATOR
+        MENUITEM "Options...",                  ID_VIEW_OPTIONS
     END
     POPUP "&Help"
     BEGIN
