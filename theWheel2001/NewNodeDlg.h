@@ -19,6 +19,7 @@ public:
 // Dialog Data
 	//{{AFX_DATA(CNewNodeDlg)
 	enum { IDD = IDD_NEWNODE };
+	CListCtrl	m_LinkList;
 	CString	m_strName;
 	CString	m_strDesc;
 	CString	m_strImageFilename;

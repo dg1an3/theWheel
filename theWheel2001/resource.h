@@ -12,6 +12,7 @@
 #define IDC_EDITNAME                    1000
 #define IDC_EDITDESC                    1001
 #define IDC_EDITIMAGEFILENAME           1002
+#define IDC_LINKLIST                    1004
 #define ID_NEW_NODE                     32773
 #define ID_VIEW_LAYOUT                  32774
 #define ID_VIEW_PROPAGATE               32775
@@ -24,7 +25,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        133
 #define _APS_NEXT_COMMAND_VALUE         32777
-#define _APS_NEXT_CONTROL_VALUE         1001
+#define _APS_NEXT_CONTROL_VALUE         1005
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -30,6 +30,7 @@ void CNewNodeDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
 	//{{AFX_DATA_MAP(CNewNodeDlg)
+	DDX_Control(pDX, IDC_LINKLIST, m_LinkList);
 	DDX_Text(pDX, IDC_EDITNAME, m_strName);
 	DDX_Text(pDX, IDC_EDITDESC, m_strDesc);
 	DDX_Text(pDX, IDC_EDITIMAGEFILENAME, m_strImageFilename);
