@@ -3,6 +3,18 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
+Project: "GEOM_BASE"="..\GEOM_BASE\GEOM_BASE.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "GUI_BASE"="..\GUI_BASE\GUI_BASE.dsp" - Package Owner=<4>
 
 Package=<5>
@@ -70,6 +82,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name GUI_BASE
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name GEOM_BASE
     End Project Dependency
 }}}
 
