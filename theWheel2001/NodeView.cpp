@@ -511,9 +511,9 @@ void CNodeView::UpdatePrivates()
 	{
 		vNewCenter = center.Get() * 0.125 + privCenter.Get() * 0.875;
 	}
-	else
+	else if (pParentView != NULL)
 	{
-		vNewCenter = pParentView->center.Get();
+		vNewCenter = center.Get() * 0.875 + pParentView->center.Get() * 0.125;
 		center.Set(vNewCenter);
 	}
 	privCenter.Set(vNewCenter);
