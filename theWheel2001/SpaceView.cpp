@@ -37,6 +37,8 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
+// #define USE_NODES3D
+
 /////////////////////////////////////////////////////////////////////////////
 // Constants for the CSpaceView
 /////////////////////////////////////////////////////////////////////////////
@@ -46,7 +48,7 @@ int g_nNodeID = 1100;
 
 // constant for the tolerance of the optimization
 const SPV_STATE_TYPE TOLERANCE = 
-	(SPV_STATE_TYPE) 0.2;
+	(SPV_STATE_TYPE) 0.1;
 
 // constant for the total activation
 const SPV_STATE_TYPE TOTAL_ACTIVATION = 
@@ -264,12 +266,16 @@ void CSpaceView::CenterNodeViews()
 	if (nodeViews.GetSize() == 0)
 		return;
 	
-	CVector<2> vMeanCenter;
+	CVector<3> vMeanCenter;
 
 	// compute the vector sum of all node views' centers
 	int nAt = 0;
 	double totalScaleFactor = 0.0f;
+#ifdef USE_NODES3D
+	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 3);
+#else
 	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
+#endif
 	for (nAt = 0; nAt < nNumVizNodeViews; nAt++)
 	{
 		CNodeView *pView = nodeViews.Get(nAt);
@@ -291,8 +297,8 @@ void CSpaceView::CenterNodeViews()
 	//		window center
 	CRect rectWnd;
 	GetClientRect(&rectWnd);
-	CVector<2> vOffset = vMeanCenter 
-		- CVector<2>(rectWnd.CenterPoint()); // rectWnd.Width() / 2, rectWnd.Height() / 2);
+	CVector<3> vOffset = vMeanCenter 
+		- CVector<3>(rectWnd.CenterPoint()); // rectWnd.Width() / 2, rectWnd.Height() / 2);
 
 	// offset each node view by the difference between the mean and the 
 	//		window center
@@ -320,7 +326,22 @@ void CSpaceView::LayoutNodeViews()
 	// now optimize
 	m_pEnergyFunc->LoadSizesLinks();
 	m_pEnergyFunc->m_nEvaluations = 0;
-	vCurrent = m_pOptimizer->Optimize(vCurrent);
+
+//	if (rand() > 7 * RAND_MAX / 8)
+	{
+		vCurrent = m_pOptimizer->Optimize(vCurrent);
+	} 
+/*	else
+	{
+		// gradient descent
+		CVector<SPV_STATE_DIM, SPV_STATE_TYPE> vGrad;
+		do
+		{
+			vGrad = m_pEnergyFunc->Grad(vCurrent);
+			vCurrent -= 0.5f * vGrad;
+		} while (vGrad.GetLength() > 2.0f);
+	}
+*/
 	LOG_TRACE("Iterations for layout = %i\n", m_pEnergyFunc->m_nEvaluations);
 
 	// now perform the optimization
@@ -358,7 +379,11 @@ void CSpaceView::ActivateNode(CNodeView *pNodeView, float scale)
 	//		all node views
 
 	// form the number of currently visualized node views
+#ifdef USE_NODES3D
+	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 3);
+#else
 	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
+#endif
 	double activationThreshold = 
 		nodeViews.Get(nNumVizNodeViews - 1)->forNode->GetActivation();
 
@@ -447,14 +472,14 @@ void CSpaceView::OnDraw(CDC* pDC)
 				if (pLinkedView->GetThresholdedActivation() > pNodeView->GetThresholdedActivation())
 				{
 					// draw the link
-					CVector<2> vFrom = pNodeView->GetSpringCenter();
-					CVector<2> vTo = pLinkedView->GetSpringCenter();
+					CVector<3> vFrom = pNodeView->GetSpringCenter();
+					CVector<3> vTo = pLinkedView->GetSpringCenter();
 
-					CVector<2> vOffset = vTo - vFrom;
-					CVector<2> vNormal(vOffset[1], -vOffset[0]);
+					CVector<3> vOffset = vTo - vFrom;
+					CVector<3> vNormal(vOffset[1], -vOffset[0]);
 					vNormal.Normalize();
 
-					vOffset *= 0.5;
+/*					vOffset *= 0.5;
 
 					CPoint ptPoly[6];
 					ptPoly[0] = vFrom + 12.0 * vNormal;
@@ -463,8 +488,21 @@ void CSpaceView::OnDraw(CDC* pDC)
 					ptPoly[3] = vTo - 12.0 * vNormal;
 					ptPoly[4] = vFrom + vOffset - 3.0 * vNormal;
 					ptPoly[5] = vFrom - 12.0 * vNormal;
+*/
+					vOffset *= 0.1;
 
-					pDC->Polygon(ptPoly, 6);
+					CPoint ptPoly[8];
+					ptPoly[0] = vFrom;
+					ptPoly[1] = vFrom +       vOffset + 12.0 * vNormal;
+					ptPoly[2] = vFrom + 5.0 * vOffset +  3.0 * vNormal;
+					ptPoly[3] = vFrom + 9.0 * vOffset + 12.0 * vNormal;
+					ptPoly[4] = vTo;
+					ptPoly[5] = vFrom + 9.0 * vOffset - 12.0 * vNormal;
+					ptPoly[6] = vFrom + 5.0 * vOffset -  3.0 * vNormal;
+					ptPoly[7] = vFrom +       vOffset - 12.0 * vNormal;
+					// ptPoly[5] = vFrom                 - 12.0 * vNormal;
+
+					pDC->Polygon(ptPoly, 8);
 				}
 			}
 
@@ -614,13 +652,23 @@ CSpaceView::CStateVector CSpaceView::GetStateVector()
 {
 	// for the state vector
 	CStateVector vState;
+#ifdef USE_NODES3D
+	for (int nAt = 0; nAt < STATE_DIM / 3; nAt++)
+#else
 	for (int nAt = 0; nAt < STATE_DIM / 2; nAt++)
+#endif
 	{
 		if (nAt < nodeViews.GetSize())
 		{
 			CNodeView *pView = nodeViews.Get(nAt);
+#ifdef USE_NODES3D
+			vState[nAt*3] = (STATE_TYPE) pView->GetCenter()[0];
+			vState[nAt*3+1] = (STATE_TYPE) pView->GetCenter()[1];
+			vState[nAt*3+2] = (STATE_TYPE) pView->GetCenter()[2];
+#else
 			vState[nAt*2] = (STATE_TYPE) pView->GetCenter()[0];
 			vState[nAt*2+1] = (STATE_TYPE) pView->GetCenter()[1];
+#endif
 		}
 	}
 
@@ -636,11 +684,19 @@ CSpaceView::CStateVector CSpaceView::GetStateVector()
 void CSpaceView::SetStateVector(const CSpaceView::CStateVector& vState)
 {
 	// form the number of currently visualized node views
+#ifdef USE_NODES3D
+	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 3);
+#else
 	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
+#endif
 
 	for (int nAt = 0; nAt < nNumVizNodeViews; nAt++)
 	{
-		CVector<2> vNewCenter = CVector<2>(vState[nAt*2], vState[nAt*2+1]);
+#ifdef USE_NODES3D
+		CVector<3> vNewCenter = CVector<3>(vState[nAt*3], vState[nAt*3+1], vState[nAt*3+2]);
+#else
+		CVector<3> vNewCenter = CVector<3>(vState[nAt*2], vState[nAt*2+1], 0.0);
+#endif
 		CNodeView *pView = nodeViews.Get(nAt);
 		pView->SetCenter(vNewCenter);
 	}
@@ -788,18 +844,46 @@ void CSpaceView::OnMouseMove(UINT nFlags, CPoint point)
 			::SetCursor(::LoadCursor(GetModuleHandle(NULL), 
 				MAKEINTRESOURCE(IDC_HANDPOINT)));
 
+// #define USE_GAUSS_ACT
 			if (isWaveMode.Get())
 			{
+#if !defined(USE_GAUSS_ACT)
 				ActivateNode(pNodeView, 0.05f);
+#endif
 	
 				m_pRecentClick2 = m_pRecentClick1;
 				m_pRecentClick1 = pNodeView;
 			}
 
+#if !defined (USE_GAUSS_ACT)
 			CView::OnMouseMove(nFlags, point);
 
 			return;
+#endif
 		}
+
+#ifdef USE_GAUSS_ACT
+		if (pNodeView->GetThresholdedActivation() > 0.01)
+		{
+			// compute the weight
+			CVector<3> vOffset =  pNodeView->GetCenter() - CVector<3>(point);
+			double dist = vOffset.GetLength();
+			// TRACE1("dist = %lf\n", dist);
+			dist *= dist;
+
+			const double sx = pNodeView->GetOuterRect().Width() / 2.0;
+			const double sy = pNodeView->GetOuterRect().Height() / 2.0;
+			// const double norm = 1.0 / sqrt(2.0 * PI * sigma * sigma);
+			double weight = // Gauss2D<double>(vOffset[0], vOffset[1], sigma, sigma); // 
+				exp(-dist / (2.0 * sx * sy));
+
+			if (weight > 0.1)
+			{
+				TRACE1("Weight = %lf\n", weight);
+				ActivateNode(pNodeView, weight * 0.0001f);
+			}
+		}
+#endif
 	}
 
 	// set the standard cursor
