@@ -12,6 +12,8 @@
 
 #include "SpaceView.h"
 
+#include "NewNodeDlg.h"
+
 #include "math.h"
 
 #ifdef _DEBUG
@@ -210,6 +212,7 @@ BEGIN_MESSAGE_MAP(CNodeView, CWnd)
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
 	ON_WM_MOUSEMOVE()
+	ON_WM_LBUTTONDBLCLK()
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -302,7 +305,7 @@ void CNodeView::OnPaint()
 	ASSERT(bResult);
 
 	dc.SelectObject(&smallFont);
-	dc.DrawText(forNode->name.Get(), rectText, 
+	dc.DrawText(forNode->description.Get(), rectText, 
 		DT_LEFT | DT_END_ELLIPSIS | DT_WORDBREAK);
 
 	// get the guide rectangles
@@ -564,4 +567,22 @@ void CNodeView::UpdatePrivates()
 		newActivation = privActivation.Get() * 0.75f;
 
 	privActivation.Set(newActivation);
+}
+
+void CNodeView::OnLButtonDblClk(UINT nFlags, CPoint point) 
+{
+	CNewNodeDlg newDlg(GetParent());
+
+	newDlg.m_strName = forNode->name.Get();
+	newDlg.m_strDesc = forNode->description.Get();
+
+	if (newDlg.DoModal() == IDOK)
+	{
+		forNode->name.Set(newDlg.m_strName);
+		forNode->description.Set(newDlg.m_strDesc);
+		
+		Invalidate();
+	}
+	
+	CWnd::OnLButtonDblClk(nFlags, point);
 }
