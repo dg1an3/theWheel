@@ -157,8 +157,8 @@ void CNodeRenderer::OnRenderScene()
 	float zoomFactor = (float) (2.0f * width.Get() * aspectRatio.Get() * rectangularity.Get()) 
 		/ (float) bitmapSize.cy;
 	glPixelZoom(zoomFactor, zoomFactor);
-	glRasterPos3d(0.0 + zoomFactor * (float) bitmapSize.cx / 2.0f, 
-		0.0 + zoomFactor * (float) bitmapSize.cy / 2.0f, 
+	glRasterPos3d(0.0 - zoomFactor * (float) bitmapSize.cx / 2.0f, 
+		0.0 - zoomFactor * (float) bitmapSize.cy / 2.0f, 
 		borderRadius.Get());
 	glDrawPixels(bitmapSize.cx, bitmapSize.cy, GL_RGB, GL_UNSIGNED_BYTE, pBits);
 
