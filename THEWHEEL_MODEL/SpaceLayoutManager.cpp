@@ -25,9 +25,6 @@
 // header file for the CSpace object
 #include "Space.h"
 
-// least-squares fitting
-#include "LeastSquaresFit2D.h"
-
 // header files for the class
 #include "SpaceLayoutManager.h"
 
