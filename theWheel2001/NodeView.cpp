@@ -633,9 +633,9 @@ void CNodeView::UpdatePrivates()
 
 	float newActivation;
 	if (activation.Get() > activationThreshold)
-		newActivation = activation.Get() * 0.25f + privActivation.Get() * 0.75f;
+		newActivation = activation.Get() * 0.125f + privActivation.Get() * 0.875f;
 	else
-		newActivation = privActivation.Get() * 0.75f;
+		newActivation = privActivation.Get() * 0.875f;
 
 	if (activation.Get() > activationThreshold)
 	{
@@ -646,7 +646,7 @@ void CNodeView::UpdatePrivates()
 		CNodeView *pMaxLinked = pSpaceView->GetMaxLinked(this);
 		if (pMaxLinked != NULL)
 		{
-			vNewCenter = center.Get() * 0.875 + pMaxLinked->center.Get() * 0.125;
+			vNewCenter = center.Get() * 0.9375 + pMaxLinked->center.Get() * 0.0625;
 			center.Set(vNewCenter);
 		}
 	}
