@@ -27,7 +27,7 @@ typedef float SPV_STATE_TYPE;
 // declaration for the dimensionality of the energy function state
 //		vector
 //////////////////////////////////////////////////////////////////////
-const int SPV_STATE_DIM = 36;
+const int SPV_STATE_DIM = 34;
 
 //////////////////////////////////////////////////////////////////////
 // class CSpaceViewEnergyFunction
@@ -58,8 +58,20 @@ private:
 	// lookup function for the attraction field
 	CLookupFunction<SPV_STATE_TYPE> m_attractFunc;
 
+	// lookup function for the attraction field
+	CLookupFunction<SPV_STATE_TYPE> m_dattractFunc_dx;
+
+	// lookup function for the attraction field
+	CLookupFunction<SPV_STATE_TYPE> m_dattractFunc_dy;
+
 	// lookup function for the spacer field
 	CLookupFunction<SPV_STATE_TYPE> m_spacerFunc;
+
+	// lookup function for the spacer field
+	CLookupFunction<SPV_STATE_TYPE> m_dspacerFunc_dx;
+
+	// lookup function for the spacer field
+	CLookupFunction<SPV_STATE_TYPE> m_dspacerFunc_dy;
 
 	// caches previous input vector
 	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> m_vInput;

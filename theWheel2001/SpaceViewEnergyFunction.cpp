@@ -29,6 +29,28 @@ SPV_STATE_TYPE attract_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 }
 
 //////////////////////////////////////////////////////////////////////
+// dattract_func_dx
+// 
+// function which evaluates a derivative of gaussian attraction 
+//		field at a given point
+//////////////////////////////////////////////////////////////////////
+SPV_STATE_TYPE dattract_func_dx(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
+{
+	return dGauss2D_dx<SPV_STATE_TYPE>(x, y , 1.0f, 1.0f);
+}
+
+//////////////////////////////////////////////////////////////////////
+// dattract_func_dy
+// 
+// function which evaluates a derivative of gaussian attraction 
+//		field at a given point
+//////////////////////////////////////////////////////////////////////
+SPV_STATE_TYPE dattract_func_dy(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
+{
+	return dGauss2D_dy<SPV_STATE_TYPE>(x, y , 1.0f, 1.0f);
+}
+
+//////////////////////////////////////////////////////////////////////
 // spacer_func
 // 
 // function which evaluates a gaussian spacer field at a given 
@@ -41,6 +63,44 @@ SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 		+ 2.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
 		+ 4.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 4.0f, 1.0f / 4.0f)
 		+ 8.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 8.0f, 1.0f / 8.0f);
+}
+
+//////////////////////////////////////////////////////////////////////
+// dspacer_func_dx
+// 
+// function which evaluates a gaussian spacer field at a given 
+//		point
+//////////////////////////////////////////////////////////////////////
+SPV_STATE_TYPE dspacer_func_dx(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
+{
+	return
+		+ 1.0f * dGauss2D_dx<SPV_STATE_TYPE>(x, y, 1.0f, 1.0f) 
+				/ ((SPV_STATE_TYPE) 2.0 * 1.0f * 1.0f)
+		+ 2.0f * dGauss2D_dx<SPV_STATE_TYPE>(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
+				/ ((SPV_STATE_TYPE) 2.0 * 1.0f / 2.0f * 1.0f / 2.0f)
+		+ 4.0f * dGauss2D_dx<SPV_STATE_TYPE>(x, y, 1.0f / 4.0f, 1.0f / 4.0f)
+				/ ((SPV_STATE_TYPE) 2.0 * 1.0f / 4.0f * 1.0f / 4.0f)
+		+ 8.0f * dGauss2D_dx<SPV_STATE_TYPE>(x, y, 1.0f / 8.0f, 1.0f / 8.0f)
+				/ ((SPV_STATE_TYPE) 2.0 * 1.0f / 8.0f * 1.0f / 8.0f);
+}
+
+//////////////////////////////////////////////////////////////////////
+// dspacer_func_dy
+// 
+// function which evaluates a gaussian spacer field at a given 
+//		point
+//////////////////////////////////////////////////////////////////////
+SPV_STATE_TYPE dspacer_func_dy(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
+{
+	return
+		+ 1.0f * dGauss2D_dy<SPV_STATE_TYPE>(x, y, 1.0f, 1.0f) 
+				/ ((SPV_STATE_TYPE) 2.0 * 1.0f * 1.0f)
+		+ 2.0f * dGauss2D_dy<SPV_STATE_TYPE>(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
+				/ ((SPV_STATE_TYPE) 2.0 * 1.0f / 2.0f * 1.0f / 2.0f)
+		+ 4.0f * dGauss2D_dy<SPV_STATE_TYPE>(x, y, 1.0f / 4.0f, 1.0f / 4.0f)
+				/ ((SPV_STATE_TYPE) 2.0 * 1.0f / 4.0f * 1.0f / 4.0f)
+		+ 8.0f * dGauss2D_dy<SPV_STATE_TYPE>(x, y, 1.0f / 8.0f, 1.0f / 8.0f)
+				/ ((SPV_STATE_TYPE) 2.0 * 1.0f / 8.0f * 1.0f / 8.0f);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -58,8 +118,16 @@ CSpaceViewEnergyFunction::CSpaceViewEnergyFunction(CSpaceView *pView)
 
 		m_attractFunc(&attract_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
 			"ATTRFUNC.TMP", __TIMESTAMP__),
+		m_dattractFunc_dx(&dattract_func_dx, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
+			"ATTRFUNC_DX.TMP", __TIMESTAMP__),
+		m_dattractFunc_dy(&dattract_func_dy, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
+			"ATTRFUNC_DY.TMP", __TIMESTAMP__),
 		m_spacerFunc(&spacer_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
-			"SPACERFUNC.TMP", __TIMESTAMP__)
+			"SPACERFUNC.TMP", __TIMESTAMP__),
+		m_dspacerFunc_dx(&dspacer_func_dx, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
+			"SPACERFUNC_DX.TMP", __TIMESTAMP__),
+		m_dspacerFunc_dy(&dspacer_func_dy, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
+			"SPACERFUNC_DY.TMP", __TIMESTAMP__)
 {
 }
 
@@ -73,6 +141,9 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
 {
 	// reset the energy
 	m_energy = 0.0;
+
+	// initialize the gradient vector to zeros
+	m_vGrad = CVector<SPV_STATE_DIM, SPV_STATE_TYPE>();
 
 	// store this input
 	m_vInput = vInput;
