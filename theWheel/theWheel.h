@@ -14,6 +14,7 @@
 
 #include "resource.h"       // main symbols
 #include "THEWHEEL_VIEW_resource.h"
+#include "THEWHEEL_TREEVIEW_resource.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // theWheelApp:

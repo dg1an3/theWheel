@@ -3,6 +3,7 @@
 // Used by theWheel.rc
 //
 #define IDD_ABOUTBOX                    100
+#define ID_EDIT_OPTIONS					101
 #define IDP_SOCKETS_INIT_FAILED         104
 #define IDR_MAINFRAME                   128
 #define IDR_SPACETYPE                   129

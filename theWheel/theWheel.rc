@@ -10,6 +10,7 @@
 #include "afxres.h"
 
 #include "THEWHEEL_VIEW_resource.h"
+#include "THEWHEEL_TREEVIEW_resource.h"
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -37,7 +38,8 @@ END
 BEGIN
     "#include ""afxres.h""\r\n"
     "\r\n"
-    "#include ""THEWHEEL_VIEW_resource.h""\0"
+    "#include ""THEWHEEL_VIEW_resource.h""\r\n"
+    "#include ""THEWHEEL_TREEVIEW_resource.h""\0"
 END
 
 3 TEXTINCLUDE DISCARDABLE 
@@ -58,7 +60,7 @@ BEGIN
     "#endif\r\n"
     "\r\n"
     "#include ""THEWHEEL_VIEW.rc""\r\n"
-    "\0"
+    "#include ""THEWHEEL_TREEVIEW.rc""\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -135,9 +137,6 @@ BEGIN
         MENUITEM "&Copy\tCtrl+C",               ID_EDIT_COPY
         MENUITEM "&Paste\tCtrl+V",              ID_EDIT_PASTE
         MENUITEM SEPARATOR
-        MENUITEM "Ne&w Node\tCtrl+W",           ID_NEW_NODE
-        MENUITEM SEPARATOR
-        MENUITEM "&Options...",                 ID_EDIT_OPTIONS
     END
     POPUP "&View"
     BEGIN
@@ -184,16 +183,16 @@ END
 // Dialog
 //
 
-IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 235, 55
+IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 235, 57
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About theWheel"
-FONT 8, "MS Sans Serif"
+FONT 10, "Trebuchet MS"
 BEGIN
-    ICON            IDR_MAINFRAME,IDC_STATIC,11,17,20,20
-    LTEXT           "theWheel Version 1.0",IDC_STATIC,40,10,119,8,
-                    SS_NOPREFIX
+    ICON            IDR_MAINFRAME,IDC_STATIC,11,17,21,20
+    LTEXT           "theWheel Version 1.0\nBuild 2003.05.18",IDC_STATIC,40,
+                    10,119,20,SS_NOPREFIX
     LTEXT           "Copyright (C) 1996-2003  Quicksilver Methods\nU.S. Patent Pending\tAll Rights Reserved",
-                    IDC_STATIC,40,29,166,19
+                    IDC_STATIC,40,31,166,19
     DEFPUSHBUTTON   "OK",IDOK,178,7,50,14,WS_GROUP
 END
 
@@ -257,7 +256,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 228
         TOPMARGIN, 7
-        BOTTOMMARGIN, 48
+        BOTTOMMARGIN, 50
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -420,7 +419,7 @@ LANGUAGE 9, 1
 #endif
 
 #include "THEWHEEL_VIEW.rc"
-
+#include "THEWHEEL_TREEVIEW.rc"
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 
