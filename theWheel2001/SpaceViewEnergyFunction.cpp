@@ -17,16 +17,6 @@
 #include "SpaceViewEnergyFunction.h"
 #include "SpaceView.h"
 
-
-//////////////////////////////////////////////////////////////////////
-// pszEnergyFunctionFileId
-// 
-// constant containing a string that indicates the file 
-//		identification and version
-//////////////////////////////////////////////////////////////////////
-const char *pszEnergyFunctionFileId = 
-	"$Id$";
-
 //////////////////////////////////////////////////////////////////////
 // attract_func
 // 
@@ -67,9 +57,9 @@ CSpaceViewEnergyFunction::CSpaceViewEnergyFunction(CSpaceView *pView)
 		m_energy(0.0),
 
 		m_attractFunc(&attract_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
-			"ATTRFUNC.TMP", pszEnergyFunctionFileId),
+			"ATTRFUNC.TMP", __TIMESTAMP__),
 		m_spacerFunc(&spacer_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
-			"SPACERFUNC.TMP", pszEnergyFunctionFileId)
+			"SPACERFUNC.TMP", __TIMESTAMP__)
 {
 }
 
