@@ -177,7 +177,6 @@ END
 
 IDB_NODE                BITMAP  DISCARDABLE     "res\\node.bmp"
 IDB_SPACE               BITMAP  DISCARDABLE     "res\\space.bmp"
-IDB_NODEBUBBLE          BITMAP  DISCARDABLE     "res\\bitmap1.bmp"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -186,7 +185,7 @@ IDB_NODEBUBBLE          BITMAP  DISCARDABLE     "res\\bitmap1.bmp"
 
 IDC_HANDPOINT           CURSOR  DISCARDABLE     "res\\H_point.cur"
 IDC_LINK                CURSOR  DISCARDABLE     "res\\link.cur"
-IDC_SAW                 CURSOR  DISCARDABLE     "res\\link1.cur"
+IDC_SAW                 CURSOR  DISCARDABLE     "res\\saw.cur"
 
 /////////////////////////////////////////////////////////////////////////////
 //
