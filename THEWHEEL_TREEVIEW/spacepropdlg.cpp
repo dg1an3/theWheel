@@ -43,7 +43,7 @@ void CSpacePropDlg::DoDataExchange(CDataExchange* pDX)
 
 	//{{AFX_DATA_MAP(CSpacePropDlg)
 	DDX_Text(pDX, IDC_SPRING, m_spring);
-	DDV_MinMaxDouble(pDX, m_spring, 0.1, 0.9);
+	DDV_MinMaxDouble(pDX, m_spring, 0.1, 0.99);
 	DDX_Text(pDX, IDC_PRIMSEC, m_primSec);
 	DDV_MinMaxDouble(pDX, m_primSec, 0.1, 10.);
 	//}}AFX_DATA_MAP

@@ -57,14 +57,14 @@ void CSpaceOptDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_TOLERANCE, m_tolerance);
 	DDV_MinMaxDouble(pDX, m_tolerance, 0.001, 10.);
 	DDX_Text(pDX, IDC_K_POS, m_kpos);
-	DDV_MinMaxDouble(pDX, m_kpos, 100., 1000.);
+	DDV_MinMaxDouble(pDX, m_kpos, 100., 100000.);
 	DDX_Text(pDX, IDC_K_REP, m_krep);
-	DDV_MinMaxDouble(pDX, m_krep, 100., 1000.);
+	DDV_MinMaxDouble(pDX, m_krep, 100., 100000.);
 	//}}AFX_DATA_MAP
 	
 	if (pDX->m_bSaveAndValidate && pSLM != NULL)
 	{
-		pSLM->SetStateDim(m_nSuperNodeCount * 2);
+		m_pSpace->SetMaxSuperNodeCount(m_nSuperNodeCount);
 		pSLM->SetTolerance(m_tolerance);
 		pSLM->SetKPos(m_kpos);
 		pSLM->SetKRep(m_krep);	
