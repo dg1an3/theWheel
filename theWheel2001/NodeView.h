@@ -57,7 +57,7 @@ public:
 // Operations
 public:
 	// smooth updating of spring state variables
-	void UpdateSprings(double springConst = 0.875);
+	void UpdateSprings(double springConst = 0.90);
 
 	// draws the node view
 	void Draw(CDC *pDC);
