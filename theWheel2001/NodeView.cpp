@@ -269,8 +269,9 @@ void CNodeView::UpdateSprings(double springConst)
 	}
 
 	// update spring center
+	springConst *= 1.02;
 	m_vSpringCenter = GetCenter() * (1.0 - springConst)
-		+ m_vSpringCenter * springConst;
+		+ m_vSpringCenter * (springConst);
 
 	// compute the area interpreting springActivation as the fraction of the 
 	//		parent's total area
@@ -454,7 +455,8 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 {
 	pDC->SetBkMode(TRANSPARENT);
 
-	int nDesiredHeight = min(rectInner.Height() / 3, 20);
+	int nDesiredHeight = min(rectInner.Height() / 4, 30);
+	nDesiredHeight = max(nDesiredHeight, 15);
 	int nDesiredWidth = rectInner.Width() / 80;
 
 	CFont font;
@@ -483,7 +485,7 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 		DT_CALCRECT | DT_CENTER | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	// now draw the description body
-	if (m_springActivation >= 0.05)
+	if (m_springActivation >= 0.01)
 	{
 		rectText = rectInner;
 		rectText.DeflateRect(5, 5, 5, 5);
@@ -505,7 +507,13 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 			rectText.left += rectText.Height();
 		}
 
-		nDesiredHeight = max(nDesiredHeight / 2, 12);
+		nDesiredHeight = max(nDesiredHeight / 2, 14);
+
+		// adjust height of rectangle for text
+		rectText.bottom -= rectText.Height() - 
+			rectText.Height() / nDesiredHeight
+				* nDesiredHeight;
+
 		CFont smallFont;
 		bResult = smallFont.CreateFont(nDesiredHeight, 0, //nDesiredWidth,
 			0, 0, FW_NORMAL, 
