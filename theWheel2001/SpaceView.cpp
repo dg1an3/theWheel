@@ -46,7 +46,7 @@ int g_nNodeID = 1100;
 
 // constant for the tolerance of the optimization
 const SPV_STATE_TYPE TOLERANCE = 
-	(SPV_STATE_TYPE) 0.7;
+	(SPV_STATE_TYPE) 0.2;
 
 // constant for the total activation
 const SPV_STATE_TYPE TOTAL_ACTIVATION = 
@@ -318,7 +318,10 @@ void CSpaceView::LayoutNodeViews()
 	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> vCurrent = GetStateVector();
 
 	// now optimize
+	m_pEnergyFunc->LoadSizesLinks();
+	m_pEnergyFunc->m_nEvaluations = 0;
 	vCurrent = m_pOptimizer->Optimize(vCurrent);
+	LOG_TRACE("Iterations for layout = %i\n", m_pEnergyFunc->m_nEvaluations);
 
 	// now perform the optimization
 	SetStateVector(vCurrent);
