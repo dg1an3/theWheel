@@ -111,6 +111,50 @@ language of the operating system.
 /////////////////////////////////////////////////////////////////////////////
 TODO
 
+
+To Make a browser
+--------
+1) Move SpaceViewEnergyFunction 
+	-> MODEL:CSpaceLayoutMgr
+
+2) Move CSpaceView::LayoutNodeViews -> CSpace::LayoutNodes
+	-> should manage super/subthreshold transition
+	-> change CNode's SetPosition()
+
+3) CSpaceView::CenterNodeViews -> CSpaceView::UpdateViewTransform
+	-> compute shift, scale, rotation for visualizing the space
+
+4) CSpaceView::SortNodeView
+	-> sort by display order? instead of by raw activation
+		-> display order = diff. between spring act. and act.
+
+5) Add full navigation to the browser
+6) Add rt. click menus to nodes
+	a) New child node	(for permanent nodes)
+	b) Select in tree 	(for permanent nodes)
+	c) Edit Node 		(for permanent nodes)
+	d) Delete		(for permanent nodes)
+	e) Add to space 	(for temporary nodes)
+		- determine linkage rule
+7) Add rt. click menus to tree view
+	a) New child node
+	b) Edit NOde
+	c) Delete
+8) Make edit dialog into a property sheet
+9) Add property sheet to bottom of tree control
+10) Define notification mechanism and implement
+
+Wishlist
+--------
+1) Pre-fetch HTML linked nodes
+
+2) Instantiate CNodeRenderers instead of CNodeViews
+
+3) Mouse saccade processing
+
+
+Cleanup
+-------
 1) Files to be cleaned:
 
 	MainFrm.h
@@ -124,11 +168,16 @@ TODO
 
 2) Update Application Icon / Document Icon
 
-3) Fix the node adding routine
+4) Re-arrange text drawing code in CNodeView : split DrawTitle/DrawText, etc.
 
-4) Re-arrange text drawing code in CNodeView
+5) Re-arrange cluster computation -- move into CNodeCluster class
 
-5) Make CSpaceView : public COpenGLView
 
-6) Instantiate CNodeRenderers instead of CNodeViews
+ActiveX controlifying
+---------------------
+2) CNode, CNodeLink, and CSpace that minimally dependent on MFC
+3) Serialization of ^^^ that is only dependent on ATL
+3) CSpaceLayoutWnd that is only dependent on ATL
+	-> needs menus, though, for popups
+4) CNodeView that is only dependent on ATL
 
