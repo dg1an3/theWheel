@@ -107,28 +107,8 @@ BOOL CSpace::OnNewDocument()
 
 void CSpace::Serialize(CArchive& ar)
 {
-	// myNodes.Serialize(ar);
-
-	// CObArray arrNodes;
-	if (ar.IsStoring())
-	{
-		rootNode. // children.
-			Serialize(ar);
-//
-//		for (int nAt = 0; nAt < myNodes.GetSize(); nAt++)
-//			arrNodes.Add(myNodes.Get(nAt));
-//		arrNodes.Serialize(ar);
-	}
-	else
-	{
-		rootNode. // children.
-			Serialize(ar);
-//		rootNode.NormalizeLinks(0.04f);
-
-//		arrNodes.Serialize(ar);
-//		for (int nAt = 0; nAt < arrNodes.GetSize(); nAt++)
-//			myNodes.Add((CNode *)arrNodes.GetAt(nAt));
-	}
+	// just serialize the root node
+	rootNode.Serialize(ar);
 }
 
 /////////////////////////////////////////////////////////////////////////////
