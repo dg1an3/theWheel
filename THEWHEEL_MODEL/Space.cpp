@@ -21,6 +21,15 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
+
+/////////////////////////////////////////////////////////////////////////////
+// Constants
+/////////////////////////////////////////////////////////////////////////////
+
+// the scale factor for normalization
+const REAL PRIM_SEC_RATIO = 1.4;		// primary scale / secondary scale
+
+
 /////////////////////////////////////////////////////////////////////////////
 // CSpace construction/destruction
 /////////////////////////////////////////////////////////////////////////////
@@ -178,16 +187,13 @@ void CSpace::ActivateNode(CNode *pNode, REAL scale)
 //////////////////////////////////////////////////////////////////////
 void CSpace::NormalizeNodes(REAL sum)
 {
-	// compute the scale factor for normalization
-	const REAL ratio = 1.25;		// primary scale / secondary scale
-
 	// scale for secondary
 	REAL scale_2 = sum 
-		/ (ratio * m_pRootNode->GetDescendantPrimaryActivation()
+		/ (PRIM_SEC_RATIO * m_pRootNode->GetDescendantPrimaryActivation()
 			+ m_pRootNode->GetDescendantSecondaryActivation());
 
 	// scale for primary
-	REAL scale_1 = scale_2 * ratio;
+	REAL scale_1 = scale_2 * PRIM_SEC_RATIO;
 
 	// scale for equal primary/secondary weighting
 	REAL scale = sum / m_pRootNode->GetDescendantActivation();
