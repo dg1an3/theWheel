@@ -83,9 +83,6 @@ public:
 	// returns the maximum node view linked to the passed node view
 	CNodeView * GetMaxLinked(CNodeView *pView);
 
-	// apply learning algorithm
-	void LearnForNode(CNodeView *pNodeView);
-
 // Overrides
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(CSpaceView)
@@ -136,7 +133,6 @@ protected:
 	afx_msg void OnUpdateViewPropagate(CCmdUI* pCmdUI);
 	afx_msg void OnViewWave();
 	afx_msg void OnUpdateViewWave(CCmdUI* pCmdUI);
-	afx_msg void OnTimer(UINT nIDEvent);
 	//}}AFX_MSG
 	afx_msg void OnStyleChanged(int nStyleType, LPSTYLESTRUCT lpStyleStruct);
 	DECLARE_MESSAGE_MAP()

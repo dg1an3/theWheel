@@ -533,7 +533,7 @@ void CNodeView::OnLButtonDown(UINT nFlags, CPoint point)
 		pParent->SortNodeViews();
 
 		// apply the delta learning rule
-		pParent->LearnForNode(this);
+		// pParent->LearnForNode(this);
 #endif
 	}
 
@@ -570,7 +570,7 @@ void CNodeView::OnLButtonUp(UINT nFlags, CPoint point)
 		pParent->SortNodeViews();
 
 		// apply the delta learning rule
-		pParent->LearnForNode(this);
+		// pParent->LearnForNode(this);
 	}
 #endif
 

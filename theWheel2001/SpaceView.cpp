@@ -23,26 +23,11 @@ int nNodeID = 1100;
 const SPV_STATE_TYPE TOLERANCE = (SPV_STATE_TYPE) 0.7;
 const SPV_STATE_TYPE TOTAL_ACTIVATION = (SPV_STATE_TYPE) 0.35f;
 
-#define LEARNING_EPSILON 10.0
-
-// extern CLookupFunction<SPV_STATE_TYPE> attractFunc; // (&attract_func, 
-		// -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "ATTRFUNC.TMP");
-
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
-
-SPV_STATE_TYPE MinSize(SPV_STATE_TYPE x, SPV_STATE_TYPE xmin)
-{
-	return 0.0;
-}
-//{
-//	SPV_STATE_TYPE frac = x / (x + xmin);
-//
-//	return (1.0f - frac) * xmin + frac * x;
-//}
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -635,85 +620,6 @@ void CSpaceView::OnViewWave()
 void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI) 
 {
 	pCmdUI->SetCheck(isWaveMode.Get() ? 1 : 0);		
-}
-
-void CSpaceView::LearnForNode(CNodeView *pNodeView)
-{
-	return;
-
-	// get the rectangle for the target node view
-	CRect rectNodeView;
-	pNodeView->GetWindowRect(&rectNodeView);
-
-	int nAtNodeView;
-	for (nAtNodeView = 0; nAtNodeView < nodeViews.GetSize(); nAtNodeView++)
-	{
-		// retrieve the node view
-		CNodeView *pOtherNodeView = nodeViews.Get(nAtNodeView);
-
-		if (pOtherNodeView != pNodeView)
-		{
-			// get the link for the node
-			CNodeLink *pLink = 
-				pOtherNodeView->forNode->GetLink(pNodeView->forNode.Get());
-
-			if (pLink != NULL)
-			{
-				// get the rectangle of the current linked view
-				CRect rectLinked;
-				pOtherNodeView->GetWindowRect(&rectLinked);
-
-				// compute the x and y offsets between the node views
-				CVector<2> vOffset = pNodeView->center.Get() 
-					- pOtherNodeView->center.Get();
-
-				// compute the interaction field parameters
-				SPV_STATE_TYPE ssx = MinSize((SPV_STATE_TYPE) rectLinked.Width(), 
-					(SPV_STATE_TYPE) rectNodeView.Width() / 8.0f);
-				SPV_STATE_TYPE ssy = MinSize((SPV_STATE_TYPE) rectLinked.Height(), 
-					(SPV_STATE_TYPE) rectNodeView.Height() / 8.0f);
-
-				// now compute the delta for the link weight
-				float dWeight = (float) LEARNING_EPSILON 
-					* pNodeView->activation.Get() 
-					* pOtherNodeView->activation.Get()
-					* pLink->weight.Get();
-					// * (float) attractFunc(vOffset[0] / (ssx * 3.0), 
-					//	vOffset[1] / (ssy * 3.0));
-
-				if (dWeight > 0.001)
-				{
-					TRACE3("Learning delta from %s to %s = %f\n", 
-						pOtherNodeView->forNode->name.Get(), 
-						pNodeView->forNode->name.Get(), dWeight);
-					TRACE1("New weight = %f\n", pLink->weight.Get() + dWeight);
-				}
-
-				// and update the link weight
-				pLink->weight.Set(pLink->weight.Get() + dWeight);
-
-				// normalize the links
-				// pOtherNodeView->forNode->NormalizeLinks();
-			}
-		}
-	}
-}
-
-void CSpaceView::OnTimer(UINT nIDEvent) 
-{
-//	if (GetQueueStatus(QS_MOUSE) == 0)
-//	{
-//		// do a layout
-//		LayoutNodeViews();
-//	}
-//
-//	// update the privates
-//	int nAt;
-//	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-//		nodeViews.Get(nAt)->UpdatePrivates();
-//
-	
-	CView::OnTimer(nIDEvent);
 }
 
 CNodeView * CSpaceView::GetMaxLinked(CNodeView *pView)
