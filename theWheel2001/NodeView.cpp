@@ -529,6 +529,9 @@ void CNodeView::OnLButtonDown(UINT nFlags, CPoint point)
 		// now normalize all children
 		pParent->NormalizeNodeViews();
 
+		// ensure the nodeviews are sorted
+		pParent->SortNodeViews();
+
 		// apply the delta learning rule
 		pParent->LearnForNode(this);
 #endif
@@ -562,6 +565,9 @@ void CNodeView::OnLButtonUp(UINT nFlags, CPoint point)
 
 		// now normalize all children
 		pParent->NormalizeNodeViews();
+
+		// ensure the nodeviews are sorted
+		pParent->SortNodeViews();
 
 		// apply the delta learning rule
 		pParent->LearnForNode(this);
@@ -615,6 +621,9 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 			// now normalize all children
 			pParent->NormalizeNodeViews();
 
+			// ensure the nodeviews are sorted
+			pParent->SortNodeViews();
+
 			m_ptMouseDown = point;
 		}
 	}
@@ -632,12 +641,12 @@ void CNodeView::UpdatePrivates()
 	CVector<2> vNewCenter(rect.CenterPoint());
 
 	float newActivation;
-	if (activation.Get() > activationThreshold)
+	if (activation.Get() >= activationThreshold)
 		newActivation = activation.Get() * 0.125f + privActivation.Get() * 0.875f;
 	else
 		newActivation = privActivation.Get() * 0.875f;
 
-	if (activation.Get() > activationThreshold)
+	if (activation.Get() >= activationThreshold)
 	{
 		vNewCenter = center.Get() * 0.125 + privCenter.Get() * 0.875;
 	}
