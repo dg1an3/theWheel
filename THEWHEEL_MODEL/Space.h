@@ -30,7 +30,7 @@ protected: // create from serialization only
 // Attributes
 public:
 	// the parent node contains all of this space's nodes as children
-	CNode rootNode;
+	CNode *m_pRootNode;
 
 // Operations
 public:

@@ -28,7 +28,8 @@ static char THIS_FILE[] = __FILE__;
 // constructs an empty CSpace object.  use OnNewDocument to initialize
 //////////////////////////////////////////////////////////////////////
 CSpace::CSpace()
-	: m_totalActivation(0.0)
+	: m_pRootNode(NULL),
+		m_totalActivation(0.0)
 {
 }
 
@@ -39,6 +40,7 @@ CSpace::CSpace()
 //////////////////////////////////////////////////////////////////////
 CSpace::~CSpace()
 {
+	delete m_pRootNode;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -54,14 +56,24 @@ IMPLEMENT_DYNCREATE(CSpace, CDocument)
 void CSpace::NormalizeNodes(double sum)
 {
 	// compute the scale factor for normalization
-	double scale = sum 
-		/ rootNode.GetDescendantActivation();
+	const double ratio = 1.2;		// primary scale / secondary scale
+
+	// scale for secondary
+	double scale_2 = sum 
+		/ (ratio * m_pRootNode->GetDescendantPrimaryActivation()
+			+ m_pRootNode->GetDescendantSecondaryActivation());
+
+	// scale for primary
+	double scale_1 = scale_2 * ratio;
+
+	// scale for equal primary/secondary weighting
+	double scale = sum / m_pRootNode->GetDescendantActivation();
 
 	// normalize to equal sum
-	rootNode.ScaleDescendantActivation(scale);
+	m_pRootNode->ScaleDescendantActivation(scale_1, scale_2);
 
 	// set the total activation for the space
-	m_totalActivation = rootNode.GetDescendantActivation();
+	m_totalActivation = m_pRootNode->GetDescendantActivation();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -85,12 +97,14 @@ BOOL CSpace::OnNewDocument()
 		return FALSE;
 
 	// remove all nodes
-	// TODO: ensure that this really deletes all children
-	rootNode.children.RemoveAll();
+	delete m_pRootNode;
 
-	// set the name of the root node
-	rootNode.name.Set("root");
-	rootNode.description.Set("Eadf eeqrjij afga gdfijagg ahvuert8qu4 vadfgahg."
+	// create a new root node
+	m_pRootNode = new CNode();
+	m_pRootNode->name.Set("root");
+
+#ifdef USE_FAKE_NODES
+	m_pRootNode->description.Set("Eadf eeqrjij afga gdfijagg ahvuert8qu4 vadfgahg."
 		"Jkdjfwheu sdfg hahrewgakdjf asg hag7un34gafasdgha vhg haeirnga."
 		"Sdff jdf jdskljfa; lkdjfsjd fkjweu iagh eurafgnls uashfre.");
 
@@ -99,12 +113,13 @@ BOOL CSpace::OnNewDocument()
 
 	// add random children to the root node
 	AddChildren(&rootNode, 4, 3);
-	CrossLinkNodes(rootNode.GetDescendantCount() / 50);
+	CrossLinkNodes(m_pRootNode->GetDescendantCount() / 50);
+#endif
 
 	// initialize the node activations from the root node
-	rootNode.SetActivation(0.5);
-	rootNode.ResetForPropagation();
-	rootNode.PropagateActivation(0.8);
+	m_pRootNode->SetActivation(0.5);
+	m_pRootNode->ResetForPropagation();
+	m_pRootNode->PropagateActivation(0.8);
 	NormalizeNodes();
 
 	// everything OK, return TRUE
@@ -161,10 +176,10 @@ void CSpace::CrossLinkNodes(int nCount, float weight)
 	for (int nAt = 0; nAt < nCount; nAt++)
 	{
 		// select the first random child
-		CNode *pChild1 = rootNode.GetRandomDescendant();
+		CNode *pChild1 = m_pRootNode->GetRandomDescendant();
 
 		// select the second random child
-		CNode *pChild2 = rootNode.GetRandomDescendant();
+		CNode *pChild2 = m_pRootNode->GetRandomDescendant();
 
 		if (pChild1 != pChild2)
 		{
@@ -187,10 +202,20 @@ void CSpace::CrossLinkNodes(int nCount, float weight)
 //////////////////////////////////////////////////////////////////////
 void CSpace::Serialize(CArchive& ar)
 {
-	// just serialize the root node
-	rootNode.Serialize(ar);
+	// if we are loading the space...
+	if (ar.IsLoading())
+	{
+		// delete the current root node
+		delete m_pRootNode;
 
-	// TODO: now set the space pointers for the nodes to this
+		// read in the root node pointer
+		ar >> m_pRootNode;
+	}
+	else
+	{
+		// just serialize the root node pointer
+		ar << m_pRootNode;
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -216,9 +241,9 @@ void CSpace::Dump(CDumpContext& dc) const
 {
 	CDocument::Dump(dc);
 
-	for (int nAt = 0; nAt < rootNode.children.GetSize(); nAt++)
+	for (int nAt = 0; nAt < m_pRootNode->children.GetSize(); nAt++)
 	{
-		const CNode *pNode = (const CNode *) rootNode.children.Get(nAt);
+		const CNode *pNode = (const CNode *) m_pRootNode->children.Get(nAt);
 		for (int nAtLink = 0; nAtLink < pNode->links.GetSize(); nAtLink++)
 		{
 			const CNodeLink *pLink = pNode->links.Get(nAtLink);
