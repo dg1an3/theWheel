@@ -75,7 +75,7 @@ BOOL CSpace::OnNewDocument()
 	pNewRoot->name.Set("root");
 
 	// add random children to the root node
-	AddChildren(pNewRoot, 3, 4);
+	AddChildren(pNewRoot, 3, 3);
 
 // #define VSIM
 #ifdef VSIM
