@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Developer Studio generated include file.
-// Used by C:\Documents and Settings\DLane\My Documents\port-src\THEWHEEL_VIEW\THEWHEEL_VIEW.rc
+// Used by C:\My Documents\SOM2001\src\THEWHEEL_VIEW\THEWHEEL_VIEW.rc
 //
 #define IDD_NODEPROP                    201
 #define IDB_NODE                        202
