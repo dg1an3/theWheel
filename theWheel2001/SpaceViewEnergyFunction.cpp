@@ -86,8 +86,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
 		CNode *pAtNode = pAtNodeView->forNode.Get();
 
 		// get the rectangle for the current node view
-		CRect rectNodeView;
-		pAtNodeView->GetWindowRect(&rectNodeView);
+		CRect rectNodeView = pAtNodeView->GetOuterRect();
 
 		// iterate over the potential linked views
 		int nAtLinkedView;
@@ -101,8 +100,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
 				CNode *pAtLinkedNode = pAtLinkedView->forNode.Get();
 
 				// get the rectangle of the current linked view
-				CRect rectLinked;
-				pAtLinkedView->GetWindowRect(&rectLinked);
+				CRect rectLinked = pAtLinkedView->GetOuterRect();
 
 				// retrieve the link weight for layout
 				SPV_STATE_TYPE weight = (SPV_STATE_TYPE) 0.5 *
