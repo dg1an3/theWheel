@@ -22,7 +22,7 @@
 //////////////////////////////////////////////////////////////////////
 // constant for total allowed activation of nodes
 //////////////////////////////////////////////////////////////////////
-const REAL TOTAL_ACTIVATION = (REAL) 0.50;
+const REAL TOTAL_ACTIVATION = (REAL) 0.55;
 
 //////////////////////////////////////////////////////////////////////
 // Event Tags
@@ -78,6 +78,9 @@ public:
 
 	// adjusts nodes so that sum of all activations = sum
 	void NormalizeNodes(REAL sum = 1.0);
+
+	// relaxes the node link weights
+	void Relax();
 
 	// returns the total activation of the space
 	REAL GetTotalActivation(BOOL bCompute = FALSE) const;
@@ -168,8 +171,7 @@ private:
 	// the array of nodes
 	CObArray m_arrNodes;
 
-public:
-	void Relax();
+	// stores the last post-super node index
 	int m_nLastPostSuper;
 
 	// flag to indicate sorting
@@ -188,6 +190,7 @@ public:
 	CSpaceLayoutManager *m_pLayoutManager;
 
 	// the center of the node views
+public:
 	CVectorD<3> m_vCenter;
 
 	// primary/secondary ratio for the space
@@ -198,7 +201,9 @@ public:
 
 	// the mapping from classes to colors
 	CMap<CString, LPCSTR, COLORREF, COLORREF> m_mapClassColors;
-};
+
+};	// class CSpace
+
 
 /////////////////////////////////////////////////////////////////////////////
 

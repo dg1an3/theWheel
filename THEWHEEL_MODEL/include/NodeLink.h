@@ -41,6 +41,7 @@ public:
 	REAL GetWeight() const;
 
 	// accessors for gain setting
+	REAL GetGain();
 	void SetGain(REAL gain);
 	REAL GetGainWeight() const;
 
@@ -77,7 +78,6 @@ private:
 	// weight of this link
 	REAL m_weight;
 
-public:
 	// link's gain
 	REAL m_gain;
 
@@ -89,6 +89,8 @@ public:
 
 	// flag to indicate that propagation has already occurred
 	BOOL m_bHasPropagated;
-};
+
+};	// class CNodeLink
+
 
 #endif // !defined(NODELINK_H)
