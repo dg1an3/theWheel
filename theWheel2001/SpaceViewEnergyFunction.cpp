@@ -58,7 +58,8 @@ CLookupFunction<SPV_STATE_TYPE> dAttractFuncDy(&attract_func,
 
 SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
-	return Gauss2D(x, y, 1.0f, 1.0f)
+	return 0.5 * Gauss2D(x, y, 2.0f, 2.0f)
+		+ Gauss2D(x, y, 1.0f, 1.0f)
 		+ 2.0f * Gauss2D(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
 		+ 4.0f * Gauss2D(x, y, 1.0f / 4.0f, 1.0f / 4.0f);
 }
@@ -355,15 +356,15 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 #endif
 						}
 
-					m_energy -= weight * 4.5
-						* attractFunc(x / (ssx * 2.0), y / (ssy * 2.0));
+					m_energy -= weight * 10.0
+						* attractFunc(x / (ssx * 4.0), y / (ssy * 4.0));
 
 #ifdef USE_GRAD
-					dEnergyDx -= weight * 4.5
+					dEnergyDx -= weight * 10.0
 						* dAttractFuncDx(x / (ssx * 2.0), y / (ssy * 2.0))
 							/ (ssx * 2.0);
 
-					dEnergyDy -= weight * 4.5
+					dEnergyDy -= weight * 10.0
 						* dAttractFuncDy(x / (ssx * 2.0), y / (ssy * 2.0))
 							/ (ssy * 2.0);
 #endif

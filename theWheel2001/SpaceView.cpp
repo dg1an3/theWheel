@@ -17,15 +17,52 @@
 
 #include <math.h>
 
+#include "LookupFunction.h"
+
 int nNodeID = 1100;
 const SPV_STATE_TYPE TOLERANCE = 0.7;
 const SPV_STATE_TYPE TOTAL_ACTIVATION = 0.35f;
+
+#define LEARNING_EPSILON 100.0
+
+extern SPV_STATE_TYPE Gauss2D(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE sx, SPV_STATE_TYPE sy);
+//{
+//	SPV_STATE_TYPE d = (x * x) / (2.0f * sx * sx) 
+//		+ (y * y) / (2.0f * sy * sy);
+//
+//	return (SPV_STATE_TYPE) exp(-d)
+//		/ (SPV_STATE_TYPE) (sqrt(2.0f * PI * sx * sy));
+//}
+
+//SPV_STATE_TYPE Gauss(SPV_STATE_TYPE x, SPV_STATE_TYPE s)
+//{
+//	SPV_STATE_TYPE d = (x * x) / (2.0f * s * s); 
+//
+//	return (SPV_STATE_TYPE) exp(-d)
+//		/ (SPV_STATE_TYPE) (sqrt(2.0f * PI * s));
+//}
+
+//SPV_STATE_TYPE attract_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
+//{
+//	return Gauss2D(x, y, 1.0f, 1.0f);
+//}
+
+extern CLookupFunction<SPV_STATE_TYPE> attractFunc; // (&attract_func, 
+		// -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "ATTRFUNC.TMP");
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+
+extern SPV_STATE_TYPE MinSize(SPV_STATE_TYPE x, SPV_STATE_TYPE xmin);
+//{
+//	SPV_STATE_TYPE frac = x / (x + xmin);
+//
+//	return (1.0f - frac) * xmin + frac * x;
+//}
+
 
 /////////////////////////////////////////////////////////////////////////////
 // CSpaceView
@@ -617,6 +654,10 @@ void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI)
 
 void CSpaceView::LearnForNode(CNodeView *pNodeView)
 {
+	// get the rectangle for the target node view
+	CRect rectNodeView;
+	pNodeView->GetWindowRect(&rectNodeView);
+
 	int nAtNodeView;
 	for (nAtNodeView = 0; nAtNodeView < nodeViews.GetSize(); nAtNodeView++)
 	{
@@ -629,24 +670,42 @@ void CSpaceView::LearnForNode(CNodeView *pNodeView)
 			CNodeLink *pLink = 
 				pOtherNodeView->forNode->GetLink(pNodeView->forNode.Get());
 
-			if (pLink == NULL)
-				break;
-
-			// compute the new link weight
-			float putativeAct = 
-				pOtherNodeView->activation.Get() * pLink->weight.Get();
-
-			if (pNodeView->activation.Get() < putativeAct)
+			if (pLink != NULL)
 			{
-				// compute the new weight
-				float newWeight = pLink->weight.Get()
-					* putativeAct / pNodeView->activation.Get();
+				// get the rectangle of the current linked view
+				CRect rectLinked;
+				pOtherNodeView->GetWindowRect(&rectLinked);
 
-				// adjust the link weight using the node views
-				pLink->weight.Set(pLink->weight.Get() * 0.75f + newWeight * 0.25f);
+				// compute the x and y offsets between the node views
+				CVector<2> vOffset = pNodeView->center.Get() 
+					- pOtherNodeView->center.Get();
 
-				// now normalize the links on the node
-				pOtherNodeView->forNode->NormalizeLinks(); // 0.3f);
+				// compute the interaction field parameters
+				SPV_STATE_TYPE ssx = MinSize((SPV_STATE_TYPE) rectLinked.Width(), 
+					(SPV_STATE_TYPE) rectNodeView.Width() / 8.0f);
+				SPV_STATE_TYPE ssy = MinSize((SPV_STATE_TYPE) rectLinked.Height(), 
+					(SPV_STATE_TYPE) rectNodeView.Height() / 8.0f);
+
+				// now compute the delta for the link weight
+				float dWeight = LEARNING_EPSILON 
+					* pNodeView->activation.Get() 
+					* pOtherNodeView->activation.Get()
+					* pLink->weight.Get()
+					* attractFunc(vOffset[0] / (ssx * 3.0), vOffset[1] / (ssy * 3.0));
+
+				if (dWeight > 0.001)
+				{
+					TRACE3("Learning delta from %s to %s = %f\n", 
+						pOtherNodeView->forNode->name.Get(), 
+						pNodeView->forNode->name.Get(), dWeight);
+					TRACE1("New weight = %f\n", pLink->weight.Get() + dWeight);
+				}
+
+				// and update the link weight
+				pLink->weight.Set(pLink->weight.Get() + dWeight);
+
+				// normalize the links
+				pOtherNodeView->forNode->NormalizeLinks();
 			}
 		}
 	}
