@@ -15,10 +15,13 @@
 
 #include "Space.h"
 #include "NodeView.h"
-
+#include "NodeViewSkin.h"
 #include "SpaceViewEnergyFunction.h"
 
 #include <Optimizer.h>
+
+#include <ddraw.h>
+#include "ddutil.h"
 
 //////////////////////////////////////////////////////////////////////
 // class CSpaceView
@@ -39,24 +42,39 @@ public:
 	// returns the CSpace that is being displayed
 	CSpace* GetDocument();
 
-	// boolean variable to indicate that propagation is to occur
-	CValue<BOOL> isPropagating;
+	// accessors for the child node views
+	int GetNodeViewCount();
+	CNodeView *GetNodeView(int nAt);
 
-	// flag to indicate we are in wave mode
-	CValue<BOOL> isWaveMode;
+	// returns the number of currently visible nodes
+	int GetVisibleNodeCount();
 
-	// the child node views
-	CCollection<CNodeView> nodeViews;
+	// locates the topmost node view containing the specified point
+	CNodeView *FindNodeViewAt(CPoint pt);
 
-	// finds the node view for a particular node
-	CNodeView *GetViewForNode(CNode *pNode);
+	// pointer to the connected browser (for navigating to a link);
+	CHtmlView *m_pBrowser;
 
 // Operations
 public:
-	// adds a new node to the space, creating and initializing the node view
-	//		along the way
-	void AddNodeToSpace(CNode *pNewNode);
+	// activates a particular node by a particular scale factor
+	void ActivateNodeView(CNodeView *pNodeView, float scale);
 
+// Overrides
+	// ClassWizard generated virtual function overrides
+	//{{AFX_VIRTUAL(CSpaceView)
+	public:
+	virtual void OnDraw(CDC* pDC);  // overridden to draw this view
+	protected:
+	virtual void OnInitialUpdate(); // called first time after construct
+	virtual void OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint);
+	virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
+	virtual void OnBeginPrinting(CDC* pDC, CPrintInfo* pInfo);
+	virtual void OnEndPrinting(CDC* pDC, CPrintInfo* pInfo);
+	//}}AFX_VIRTUAL
+
+// Implementation
+public:
 	// creates the node views for the children of the passed node
 	void CreateNodeViews(CNode *pParentNode, CPoint pt);
 
@@ -69,46 +87,11 @@ public:
 	// layout for all child views
 	void LayoutNodeViews();
 
-	// activates a particular node by a particular scale factor
-	void ActivateNode(CNodeView *pNodeView, float scale);
-
+	// initializes the direct draw surfaces
 	BOOL InitDDraw();
 
-// Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CSpaceView)
-	public:
-	virtual void OnDraw(CDC* pDC);  // overridden to draw this view
-	protected:
-	virtual void OnInitialUpdate(); // called first time after construct
-	virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
-	virtual void OnBeginPrinting(CDC* pDC, CPrintInfo* pInfo);
-	virtual void OnEndPrinting(CDC* pDC, CPrintInfo* pInfo);
-	//}}AFX_VIRTUAL
-
-// Implementation
-public:
-	// the type for the state vector
-	typedef SPV_STATE_TYPE STATE_TYPE;
-
-	// the number of dimensions in the state vector
-	enum { STATE_DIM = SPV_STATE_DIM };
-
-	// defines the type for the state vector
-	typedef CVector<STATE_DIM, STATE_TYPE> CStateVector;
-
-	// gets and sets the state vector for this CSpaceView
-	CStateVector GetStateVector();
-	void SetStateVector(const CStateVector& vState);
-
-	// pointers to recently selected node views
-	CNodeView *m_pRecentClick1;
-	CNodeView *m_pRecentClick2;
-
-	// back buffer for drawing
-	CDC m_dcMem;
-	CBitmap *m_pBuffer;
-	CBitmap *m_pOldBitmap;
+	// processes a mouse wave activation
+	void WaveActivate(CPoint pt);
 
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -118,28 +101,55 @@ public:
 // Generated message map functions
 protected:
 	//{{AFX_MSG(CSpaceView)
-	afx_msg void OnViewLayout();
-	afx_msg void OnViewPropagate();
-	afx_msg void OnUpdateViewPropagate(CCmdUI* pCmdUI);
-	afx_msg void OnViewWave();
-	afx_msg void OnUpdateViewWave(CCmdUI* pCmdUI);
-	afx_msg void OnNewNode();
-	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
-	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
-	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
-	afx_msg void OnTimer(UINT nIDEvent);
+	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnPaint();
-	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
+	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnTimer(UINT nIDEvent);
+	afx_msg void OnNewNode();
+	afx_msg void OnViewWave();
+	afx_msg void OnUpdateViewWave(CCmdUI* pCmdUI);
+	afx_msg void OnViewLayout();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
 private:
+	// the child node views
+	CObArray m_arrNodeViews;
+
+	// the skin for the node views
+	CNodeViewSkin m_skin;
+
 	// the optimizer used to lay out the child views
-	COptimizer<SPV_STATE_DIM, SPV_STATE_TYPE> *m_pOptimizer;
+	COptimizer<STATE_DIM, STATE_TYPE> *m_pOptimizer;
 
 	// the energy function that the optimizer uses as an objective function
 	CSpaceViewEnergyFunction *m_pEnergyFunc;
+
+	// back buffer for drawing
+	LPDIRECTDRAW		m_lpDD;			// DirectDraw object
+	LPDIRECTDRAWSURFACE	m_lpDDSPrimary;	// DirectDraw primary surface
+	LPDIRECTDRAWSURFACE	m_lpDDSOne;		// Offscreen surface 1
+	LPDIRECTDRAWSURFACE	m_lpDDSBitmap;	// Offscreen surface 1
+	LPDIRECTDRAWCLIPPER m_lpClipper;	// clipper for primary
+
+	// holds the timer ID
+	UINT m_nTimerID;
+
+	// sync object for thread synchronization
+	CCriticalSection m_sync;
+
+	// flag to indicate we are in wave mode
+	BOOL m_bWaveMode;
+
+	// pointers to recently selected node views
+	CNodeView *m_pRecentClick[2];
+
+	// array of previous mouse movement points
+	CPoint m_ptPrev;
 };
 
 #ifndef _DEBUG  // debug version in SpaceView.cpp

@@ -15,6 +15,9 @@
 // the class definition
 #include "SpaceView.h"
 
+// include for some constants
+#include <float.h>
+
 // the optimizers
 #include <ConjGradOptimizer.h>
 #include <PowellOptimizer.h>
@@ -24,20 +27,18 @@
 
 // child node views
 #include "NodeView.h"
+#include "NodeViewEnergyFunction.h"
 
 // the new node dialog
 #include "EditNodeDlg.h"
 
-#include <ddraw.h>
-#include "ddutil.h"
+#include <HTMLNode.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
-
-// #define USE_NODES3D
 
 /////////////////////////////////////////////////////////////////////////////
 // Constants for the CSpaceView
@@ -47,12 +48,22 @@ static char THIS_FILE[] = __FILE__;
 int g_nNodeID = 1100;
 
 // constant for the tolerance of the optimization
-const SPV_STATE_TYPE TOLERANCE = 
-	(SPV_STATE_TYPE) 0.1;
+const STATE_TYPE TOLERANCE = (STATE_TYPE) 0.5;
 
-// constant for the total activation
-const SPV_STATE_TYPE TOTAL_ACTIVATION = 
-	(SPV_STATE_TYPE) 0.50f;
+//////////////////////////////////////////////////////////////////////
+// CheckNodeViews
+// 
+// helper function to check for the existence of node views for 
+//		every node
+//////////////////////////////////////////////////////////////////////
+BOOL CheckNodeViews(CNode *pNode)
+{
+	CNodeView *pView = (CNodeView *)pNode->GetView();
+	BOOL bOK = (pView != NULL); // pView->IsKindOf(RUNTIME_CLASS(CNodeView));
+	for (int nAt = 0; nAt < pNode->children.GetSize(); nAt++)
+		bOK = bOK && CheckNodeViews((CNode *)(pNode->children.Get(nAt)));
+	return bOK;
+}
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -64,28 +75,30 @@ const SPV_STATE_TYPE TOTAL_ACTIVATION =
 // constructs a new CSpaceView object 
 //////////////////////////////////////////////////////////////////////
 CSpaceView::CSpaceView()
-: isPropagating(TRUE),
-	isWaveMode(FALSE),
-	m_pRecentClick1(NULL),
-	m_pRecentClick2(NULL),
-	m_pBuffer(NULL),
-	m_pOldBitmap(NULL)
+: m_pBrowser(NULL),
+	m_bWaveMode(FALSE),
+	m_lpDD(NULL),			// DirectDraw object
+	m_lpDDSPrimary(NULL),	// DirectDraw primary surface
+	m_lpDDSOne(NULL),		// Offscreen surface 1
+	m_lpDDSBitmap(NULL),	// Offscreen surface 1
+	m_lpClipper(NULL)		// clipper for primary
 {
 	// create the energy function
 	m_pEnergyFunc = new CSpaceViewEnergyFunction(this);
 
 	// create the optimizer
 #ifdef USE_GRADIENT
-	m_pOptimizer = new CConjGradOptimizer<SPV_STATE_DIM, SPV_STATE_TYPE>(m_pEnergyFunc);
+	m_pOptimizer = new CConjGradOptimizer<STATE_DIM, STATE_TYPE>(m_pEnergyFunc);
 #else
-	m_pOptimizer = new CPowellOptimizer<SPV_STATE_DIM, SPV_STATE_TYPE>(m_pEnergyFunc);
+	m_pOptimizer = new CPowellOptimizer<STATE_DIM, STATE_TYPE>(m_pEnergyFunc);
 #endif
 
 	// set the tolerance
 	m_pOptimizer->SetTolerance(TOLERANCE);
 
-	// initialize the buffer
-	m_dcMem.CreateCompatibleDC(NULL);
+	// initialize the recent click list
+	for (int nAt = 0; nAt < 2; nAt++)
+		m_pRecentClick[nAt] = NULL;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -96,20 +109,13 @@ CSpaceView::CSpaceView()
 CSpaceView::~CSpaceView()
 {
 	// get rid of the node views
-	nodeViews.RemoveAll();
+	for (int nAt = 0; nAt < m_arrNodeViews.GetSize(); nAt++)
+		delete m_arrNodeViews[nAt];
+	m_arrNodeViews.RemoveAll();
 
 	// delete the optimizer and energy function
 	delete m_pEnergyFunc;
 	delete m_pOptimizer;
-
-	// select out the bitmap
-	m_dcMem.SelectObject(m_pOldBitmap);
-
-	// delete the bitmap buffer
-	delete m_pBuffer;
-
-	// delete the device context
-	m_dcMem.DeleteDC();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -117,292 +123,87 @@ CSpaceView::~CSpaceView()
 //////////////////////////////////////////////////////////////////////
 IMPLEMENT_DYNCREATE(CSpaceView, CView)
 
+
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::GetViewForNode
+// CSpaceView::GetNodeViewCount
 // 
-// locates and returns the node view for the given node
+// returns the number of node views
 //////////////////////////////////////////////////////////////////////
-CNodeView *CSpaceView::GetViewForNode(CNode *pNode)
+int CSpaceView::GetNodeViewCount()
 {
-	return (CNodeView *)pNode->GetView();
+	return m_arrNodeViews.GetSize();
 }
 
+
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::AddNodeToSpace
+// CSpaceView::GetNodeView
 // 
-// adds a new node to the space, setting the link weights based on
-//		the current node activations
+// returns the node view at the given index position
 //////////////////////////////////////////////////////////////////////
-void CSpaceView::AddNodeToSpace(CNode *pNewNode)
+CNodeView *CSpaceView::GetNodeView(int nAt)
 {
-	// compute the total weight (for determining initial link weights)
-	double totalWeight = 0.0;
-	int nAt;
-	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-	{
-		CNodeView *pView = nodeViews.Get(nAt);
-		totalWeight += pView->forNode->GetActivation();
-	}
-
-	// accumulate max weight, and set the parent node and initial
-	//		point along the way
-	float maxWeight = 0.0f;
-	CNode *pParentNode = NULL;
-	CPoint ptInit;
-
-	// set the link weights based on the activation
-	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-	{
-		// get the next node view
-		CNodeView *pView = nodeViews.Get(nAt);
-
-		// determine the appropriate link weight
-		double weight = pView->forNode->GetActivation() / totalWeight;
-
-		// establish the link
-		pNewNode->LinkTo(pView->forNode.Get(), (float) weight);
-
-		// is this a potential parent?
-		if (weight > maxWeight)
-		{
-			maxWeight = (float) weight;
-			pParentNode = pView->forNode.Get();
-			ptInit = pView->GetCenter();
-		}
-	}
-
-	// add the new node to the parent
-	pParentNode->children.Add(pNewNode);
-
-	// construct a new node view for this node
-	CNodeView *pNewNodeView = new CNodeView(pNewNode, this);
-
-	// set the activation for the new node
-	pNewNodeView->forNode->SetActivation(maxWeight * 0.25f);
-
-	// compute the initial rectangle for the node view
-	CRect rect(ptInit.x - 100, ptInit.y - 75, 
-		ptInit.x + 100, ptInit.y + 75);
-
-	// and add to the array
-	nodeViews.Add(pNewNodeView);
-	ActivateNode(pNewNodeView, (float) 1.6);
-
-	// and lay them out
-	LayoutNodeViews();
-
-	// update all other views
-	GetDocument()->UpdateAllViews(this);
+	return (CNodeView *) m_arrNodeViews.GetAt(nAt);
 }
 
+
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::CreateNodeViews
+// CSpaceView::GetVisibleNodeCount
 // 
-// creates the node view for the parent, as well as all child node 
-//		views
+// returns the number of visible nodes
 //////////////////////////////////////////////////////////////////////
-void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt)
+int CSpaceView::GetVisibleNodeCount()
 {
-	// construct a new node view for this node
-	CNodeView *pNewNodeView = new CNodeView(pParentNode, this);
-
-	// and add to the array
-	nodeViews.Add(pNewNodeView);
-
-	// TODO: should we lay out the node views here and use the new
-	//		position on the children?
-
-	// and finally, create the child node views
-	int nAtNode;
-	for (nAtNode = 0; nAtNode < pParentNode->children.GetSize(); nAtNode++)
-	{
-		// construct a new node view for this node
-		CreateNodeViews((CNode *) pParentNode->children.Get(nAtNode), pt);
-	}
-
-	// activate this node view after creating children (to maximize size)
-	ActivateNode(pNewNodeView, 0.5);
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::SortNodeViews
-// 
-// sorts the children node views
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::SortNodeViews()
-{
-	BOOL bRearrange;
-	do 
-	{
-		bRearrange = FALSE;
-		for (int nAt = 0; nAt < nodeViews.GetSize()-1; nAt++)
-		{
-			CNodeView *pThisNodeView = nodeViews.Get(nAt);
-			CNodeView *pNextNodeView = nodeViews.Get(nAt+1);
-
-			if (pThisNodeView->forNode->GetActivation() < 
-					pNextNodeView->forNode->GetActivation())
-			{
-				nodeViews.Set(nAt, pNextNodeView);
-				nodeViews.Set(nAt+1, pThisNodeView);
-				bRearrange = TRUE;
-			}
-		}
-	} while (bRearrange);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-// CSpaceView::CenterNodeViews
-//
-// Centering algorithm 
-//		Compute vector mean for all node view centers 
-//		Offset = mean of centers - center of window 
-//		For all node views, SetWindowCenter to the offset + GetWindowCenter 
-//
-/////////////////////////////////////////////////////////////////////////////
-void CSpaceView::CenterNodeViews()
-{
-	// only center if there are children
-	if (nodeViews.GetSize() == 0)
-		return;
-	
-	CVector<3> vMeanCenter;
-
-	// compute the vector sum of all node views' centers
-	int nAt = 0;
-	double totalScaleFactor = 0.0f;
 #ifdef USE_NODES3D
-	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 3);
+	int nNumVizNodeViews = min(m_arrNodeViews.GetSize(), STATE_DIM / 3);
 #else
-	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
+	int nNumVizNodeViews = min(m_arrNodeViews.GetSize(), STATE_DIM / 2 - GetDocument()->GetClusterCount());
 #endif
-	for (nAt = 0; nAt < nNumVizNodeViews; nAt++)
-	{
-		CNodeView *pView = nodeViews.Get(nAt);
-		double scaleFactor = 10000.0 * pView->forNode->GetActivation();
 
-		if (pView == m_pRecentClick1)
-			scaleFactor *= 4.0;
-		else if (pView == m_pRecentClick2)
-			scaleFactor *= 2.0;
-		vMeanCenter = vMeanCenter 
-			+ pView->GetCenter() * scaleFactor; 
-		totalScaleFactor += scaleFactor;
-	}
-
-	// divide by number of node views
-	vMeanCenter *= 1.0 / totalScaleFactor;
-
-	// compute the vector offset for the node views
-	//		window center
-	CRect rectWnd;
-	GetClientRect(&rectWnd);
-	CVector<3> vOffset = vMeanCenter 
-		- CVector<3>(rectWnd.CenterPoint()); // rectWnd.Width() / 2, rectWnd.Height() / 2);
-
-	// offset each node view by the difference between the mean and the 
-	//		window center
-	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-	{
-		CNodeView *pView = nodeViews.Get(nAt);
-		pView->SetCenter(pView->GetCenter() - vOffset);
-	}
+	return nNumVizNodeViews;
 }
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::LayoutNodeViews
-// 
-// applies the optimizer to layout the node views
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::LayoutNodeViews()
-{
-	// only layout if there are children
-	if (nodeViews.GetSize() == 0)
-		return;
-
-	// do the second optimization
-	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> vCurrent = GetStateVector();
-
-	// now optimize
-	m_pEnergyFunc->LoadSizesLinks();
-	m_pEnergyFunc->m_nEvaluations = 0;
-
-//	if (rand() > 7 * RAND_MAX / 8)
-	{
-		vCurrent = m_pOptimizer->Optimize(vCurrent);
-	} 
-/*	else
-	{
-		// gradient descent
-		CVector<SPV_STATE_DIM, SPV_STATE_TYPE> vGrad;
-		do
-		{
-			vGrad = m_pEnergyFunc->Grad(vCurrent);
-			vCurrent -= 0.5f * vGrad;
-		} while (vGrad.GetLength() > 2.0f);
-	}
-*/
-	LOG_TRACE("Iterations for layout = %i\n", m_pEnergyFunc->m_nEvaluations);
-
-	// now perform the optimization
-	SetStateVector(vCurrent);
-
-	// center the node views as part of the layout
-	//		TODO: check this, see if it is really necessary
-	CenterNodeViews();
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::ActivateNode
+// CSpaceView::ActivateNodeView
 // 
 // activates and propagates on a particular node view
 //////////////////////////////////////////////////////////////////////
-void CSpaceView::ActivateNode(CNodeView *pNodeView, float scale)
+void CSpaceView::ActivateNodeView(CNodeView *pNodeView, float scale)
 {
-	// first, increase the activation of the node up to the max (from OnLMouseButton)
-	double oldActivation = pNodeView->forNode->GetActivation();
-	double newActivation = oldActivation 
-		+ (TOTAL_ACTIVATION - oldActivation) * scale;
-	pNodeView->forNode->SetActivation(newActivation);
+	// first activate the node
+	GetDocument()->ActivateNode(pNodeView->GetNode(), scale);
 
-	// now, propagate the activation
-	GetDocument()->rootNode.ResetForPropagation();
-	pNodeView->forNode->PropagateActivation(0.6);
+	CObArray arrVizNode;
+	arrVizNode.Copy(m_arrNodeViews);
+	arrVizNode.RemoveAt(GetVisibleNodeCount(),
+		GetNodeViewCount() - GetVisibleNodeCount());
 
-	// normalize the nodes
-	GetDocument()->NormalizeNodes();
-
-	// sort the node views
+	// now sort the node views
 	SortNodeViews();
 
 	// compute the activation threshold, and set the thresholded activation on 
 	//		all node views
 
 	// form the number of currently visualized node views
-#ifdef USE_NODES3D
-	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 3);
-#else
-	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
-#endif
 	double activationThreshold = 
-		nodeViews.Get(nNumVizNodeViews - 1)->forNode->GetActivation();
+		GetNodeView(GetVisibleNodeCount() - 1)->GetNode()->GetActivation();
 
 	// compute the normalization factor for super-threshold node views
 	double superThresholdSum = 0.0;
-	for (int nAt = 0; nAt < nNumVizNodeViews; nAt++)
+	for (int nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
 	{
-		superThresholdSum += nodeViews.Get(nAt)->forNode->GetActivation();
+		superThresholdSum += GetNodeView(nAt)->GetNode()->GetActivation();
 	}
-	double superThresholdScale = TOTAL_ACTIVATION / superThresholdSum;
+	double superThresholdScale = TOTAL_ACTIVATION * 1.2f
+		/ GetDocument()->GetRootNode()->GetDescendantActivation();
 
 	// now set the thresholdedActivation for all node views
-	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
+	for (nAt = 0; nAt < GetNodeViewCount(); nAt++)
 	{
-		CNodeView *pNodeView = nodeViews.Get(nAt);
-		double activation = pNodeView->forNode->GetActivation();
+		CNodeView *pNodeView = GetNodeView(nAt);
+		double activation = pNodeView->GetNode()->GetActivation();
 
 		// for super-threshold nodes,
-		if (activation > activationThreshold)
+		if (activation >= activationThreshold)
 		{
 			// scale so that super-thresholded activations are (roughly)
 			//		normalized
@@ -418,16 +219,78 @@ void CSpaceView::ActivateNode(CNodeView *pNodeView, float scale)
 			pNodeView->SetThresholdedActivation(0.0);
 		}
 	}
+
+//	LayoutNodeViews();
+
+	// find all newly visible nodes
+/*	for (nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
+	{
+		CNodeView *pNodeView = GetNodeView(nAt);
+		BOOL bFound = FALSE;
+		for (int nO = 0; nO < arrVizNode.GetSize(); nO++)
+		{
+			if (pNodeView == (CNodeView *) arrVizNode.GetAt(nO))
+				bFound = TRUE;
+		}
+
+		if (!bFound)
+		{
+			// create the energy function
+			CNodeViewEnergyFunction *pFunc = new CNodeViewEnergyFunction(this);
+			pFunc->m_pNodeView = pNodeView;
+			pFunc->LoadSizesLinks();
+
+			CPowellOptimizer<2, STATE_TYPE> *pOpt = 
+				new CPowellOptimizer<2, STATE_TYPE>(pFunc);
+
+			pOpt->SetTolerance(1.0f);
+
+			CVector<3> vPiggybackCenter = pNodeView->GetNode()->GetPosition(); // GetPiggybackCenter();
+			CVector<2, float> vInput;
+			vInput[0] = vPiggybackCenter[0];
+			vInput[1] = vPiggybackCenter[1];
+
+			CVector<2, STATE_TYPE> vOutput = pOpt->Optimize(vInput);
+
+			delete pFunc;
+			delete pOpt;
+
+			// promote spring position
+			pNodeView->m_vSpringCenter = CVector<3>(vOutput);			
+			pNodeView->GetNode()->SetPosition(CVector<3>(vOutput));
+		}
+	} */
 }
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::FindNodeViewAt
+// 
+// finds the topmost node view containing the point
+//////////////////////////////////////////////////////////////////////
+CNodeView *CSpaceView::FindNodeViewAt(CPoint pt)
+{
+	// search throught the node views
+	for (int nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
+	{
+		// get the current node view
+		CNodeView *pNodeView = GetNodeView(nAt);
+
+		// see if the mouse-click was within it
+		const CRgn& rgnShape = pNodeView->GetShape();
+		if (rgnShape.m_hObject && rgnShape.PtInRegion(pt))
+		{
+			return pNodeView;
+		}
+	}
+
+	// return NULL for no result
+	return (CNodeView *)NULL;
+}
+
 
 /////////////////////////////////////////////////////////////////////////////
 // CSpaceView drawing
-
-LPDIRECTDRAW		lpDD = NULL;			// DirectDraw object
-LPDIRECTDRAWSURFACE	lpDDSPrimary = NULL;	// DirectDraw primary surface
-LPDIRECTDRAWSURFACE	lpDDSOne = NULL;		// Offscreen surface 1
-LPDIRECTDRAWSURFACE	lpDDSBitmap = NULL;		// Offscreen surface 1
-LPDIRECTDRAWCLIPPER lpClipper = NULL;		// clipper for primary
 
 //////////////////////////////////////////////////////////////////////
 // CSpaceView::OnDraw
@@ -444,138 +307,82 @@ void CSpaceView::OnDraw(CDC* pDC)
 	CBrush brush(RGB(192, 192, 192));
 	pDC->FillRect(&rectClient, &brush);
 
-	// grey brush for drawing links
-	CBrush greyBrush(RGB(160, 160, 160));
+// #define NO_DRAW_SPACEVIEW
+#ifdef NO_DRAW_SPACEVIEW
+	return; 
+#endif
 
-	// draw the node views
-	int nAtNodeView;
-	for (nAtNodeView = nodeViews.GetSize()-1; nAtNodeView >= 0; nAtNodeView--)
+	static BOOL bFirst = TRUE;
+
+	if (!bFirst)
 	{
-		CNodeView *pNodeView = (CNodeView *)nodeViews.Get(nAtNodeView);
-
-		// get the inner rectangle for drawing the text
-		CRect rectInner = pNodeView->GetInnerRect();
-
-		// only draw if it has a substantial area
-		if (rectInner.Height() > 1)
+		// draw the node views
+		int nAtNodeView;
+		for (nAtNodeView = 0; nAtNodeView < GetNodeViewCount(); nAtNodeView++)
 		{
-			// select the brush for drawing the links
-			CBrush *pOldBrush = pDC->SelectObject(&greyBrush);
-	
-			// draw the links
-			for (int nAtLink = 0; nAtLink < pNodeView->forNode->links.GetSize(); nAtLink++)
-			{
-				CNodeLink *pLink = pNodeView->forNode->links.Get(nAtLink);
-				CNodeView *pLinkedView = GetViewForNode(pLink->forTarget.Get());
-
-				// only draw the link to node view's with activations greater than the current
-				if (pLinkedView->GetThresholdedActivation() > pNodeView->GetThresholdedActivation())
-				{
-					// draw the link
-					CVector<3> vFrom = pNodeView->GetSpringCenter();
-					CVector<3> vTo = pLinkedView->GetSpringCenter();
-
-					CVector<3> vOffset = vTo - vFrom;
-					CVector<3> vNormal(vOffset[1], -vOffset[0]);
-					vNormal.Normalize();
-
-/*					vOffset *= 0.5;
-
-					CPoint ptPoly[6];
-					ptPoly[0] = vFrom + 12.0 * vNormal;
-					ptPoly[1] = vFrom + vOffset + 3.0 * vNormal;
-					ptPoly[2] = vTo + 12.0 * vNormal;
-					ptPoly[3] = vTo - 12.0 * vNormal;
-					ptPoly[4] = vFrom + vOffset - 3.0 * vNormal;
-					ptPoly[5] = vFrom - 12.0 * vNormal;
-*/
-					vOffset *= 0.1;
-
-					CPoint ptPoly[8];
-					ptPoly[0] = vFrom;
-					ptPoly[1] = vFrom +       vOffset + 12.0 * vNormal;
-					ptPoly[2] = vFrom + 5.0 * vOffset +  3.0 * vNormal;
-					ptPoly[3] = vFrom + 9.0 * vOffset + 12.0 * vNormal;
-					ptPoly[4] = vTo;
-					ptPoly[5] = vFrom + 9.0 * vOffset - 12.0 * vNormal;
-					ptPoly[6] = vFrom + 5.0 * vOffset -  3.0 * vNormal;
-					ptPoly[7] = vFrom +       vOffset - 12.0 * vNormal;
-					// ptPoly[5] = vFrom                 - 12.0 * vNormal;
-
-					pDC->Polygon(ptPoly, 8);
-				}
-			}
-
-			// unselect the brsuh and pen for drawing the links
-			pDC->SelectObject(pOldBrush);
+			// get the current node view
+			CNodeView *pNodeView = GetNodeView(nAtNodeView);
 
 			// draw the node view
-			pNodeView->Draw(pDC);
-		}
-	} 
+			pNodeView->DrawLinks(pDC);
+		} 
+	}
+	bFirst = FALSE;
 
-	// delete the link brush
-	greyBrush.DeleteObject();
-}
+	CNodeView::m_arrNodeViewsToDraw.RemoveAll();
+	CNodeView::m_arrNodeViewsToDraw.Copy(m_arrNodeViews);
 
-BOOL CSpaceView::InitDDraw()
-{
-    DDSURFACEDESC	ddsd;
-    HRESULT		ddrval;
-
-    /*
-     * create the main DirectDraw object
-     */
-    ddrval = DirectDrawCreate( NULL, &lpDD, NULL );
-    if( ddrval != DD_OK )
-    {
-		return FALSE;
-    }
-    ddrval = lpDD->SetCooperativeLevel( m_hWnd, DDSCL_NORMAL );
-
-    // Create the primary surface
-    ddsd.dwSize = sizeof( ddsd );
-    ddsd.dwFlags = DDSD_CAPS;
-    ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
-
-    ddrval = lpDD->CreateSurface( &ddsd, &lpDDSPrimary, NULL );
-    if( ddrval != DD_OK )
-    {
-		return FALSE;
-    }
-
-    // create a clipper for the primary surface
-    ddrval = lpDD->CreateClipper( 0, &lpClipper, NULL );
-    if( ddrval != DD_OK )
-    {
-		return FALSE;
-    }
-    
-    ddrval = lpClipper->SetHWnd( 0, m_hWnd);
-    if( ddrval != DD_OK )
-    {
-		return FALSE;
-    }
-
-    ddrval = lpDDSPrimary->SetClipper( lpClipper );
-    if( ddrval != DD_OK )
-    {
-		return FALSE;
-    }
-
-/*	lpDDSBitmap = DDLoadBitmap(lpDD, MAKEINTRESOURCE(IDB_NODEBUBBLE), 0, 0);
-	if (lpDDSBitmap == NULL)
+	while (CNodeView::m_arrNodeViewsToDraw.GetSize() > 0)
 	{
-		return FALSE;
+		float min_diff = FLT_MAX;
+		int nMinIndex = 0;
+		CNodeView *pMinNodeView;
+
+		// draw the node views
+		int nAtNodeView;
+		for (nAtNodeView = 0; nAtNodeView < CNodeView::m_arrNodeViewsToDraw.GetSize(); nAtNodeView++)
+		{
+			// get the current node view
+			CNodeView *pNodeView = (CNodeView *)CNodeView::m_arrNodeViewsToDraw[nAtNodeView];
+
+			float diff = pNodeView->GetSpringActivation() * pNodeView->GetSpringActivation() * 
+				(pNodeView->GetThresholdedActivation() - pNodeView->GetSpringActivation());
+
+			if (diff < min_diff)
+			{
+				min_diff = diff;
+				nMinIndex = nAtNodeView;
+				pMinNodeView = pNodeView;
+			}
+		} 
+
+		CNodeView::m_arrNodeViewsToDraw.RemoveAt(nMinIndex);
+
+		// draw the node view
+		pMinNodeView->Draw(pDC, &m_skin);
 	}
 
-	ddrval = DDSetColorKey(lpDDSBitmap, RGB(0, 0, 0));
-    if( ddrval != DD_OK )
-    {
-		return FALSE;
-    }
+/*	// draw the node views
+	int nAtNodeView;
+	for (nAtNodeView = GetNodeViewCount()-1; nAtNodeView >= 0; nAtNodeView--)
+	{
+		// get the current node view
+		CNodeView *pNodeView = GetNodeView(nAtNodeView);
+
+		// draw the node view
+		pNodeView->Draw(pDC, &m_skin);
+	} 
 */
-    return TRUE;
+	// draw the clusters
+	int nAtCluster;
+	for (nAtCluster = 0; nAtCluster < GetDocument()->GetClusterCount(); nAtCluster++)
+	{
+		// get the current node view
+		CVector<2> vCenter = GetDocument()->GetClusterAt(nAtCluster)->m_vCenter;
+
+		// draw the node view
+		pDC->Ellipse(vCenter[0] - 10.0, vCenter[1] - 10.0, vCenter[0] + 10.0, vCenter[1] + 10.0);
+	}
 }
 
 
@@ -592,25 +399,70 @@ void CSpaceView::OnInitialUpdate()
 	GetDocument()->Dump(afxDump);
 #endif
 
-	// delete any old node views
-	nodeViews.RemoveAll();
+	// make sure super node count + clusters = STATE_DIM
+	GetDocument()->SetSuperNodeCount(
+		STATE_DIM / 2 - GetDocument()->GetClusterCount());
+
+	// get rid of the node views
+	for (int nAt = 0; nAt < m_arrNodeViews.GetSize(); nAt++)
+		delete m_arrNodeViews[nAt];
+	m_arrNodeViews.RemoveAll();
+
+	// initialize the recent click list
+	for (nAt = 0; nAt < 2; nAt++)
+		m_pRecentClick[nAt] = NULL;
 
 	// create the child node views
 	CRect rect;
 	GetClientRect(&rect);
-	CreateNodeViews(&GetDocument()->rootNode, rect.CenterPoint());
+	CreateNodeViews(GetDocument()->GetRootNode(), rect.CenterPoint());
+
+	// check to make sure all nodes have views
+	ASSERT(CheckNodeViews(GetDocument()->GetRootNode()));
 
 	// now snap the node views to the parameter values
 	int nAtNodeView;
-	for (nAtNodeView = 0; nAtNodeView < nodeViews.GetSize(); nAtNodeView++)
+	for (nAtNodeView = 0; nAtNodeView < GetNodeViewCount(); nAtNodeView++)
 	{
-		CNodeView *pNodeView = (CNodeView *)nodeViews.Get(nAtNodeView);
+		CNodeView *pNodeView = GetNodeView(nAtNodeView);
 		pNodeView->UpdateSprings(0.0);
 	}
 }
 
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnUpdate
+// 
+// called when a CSpace has changed; if a new node has been created,
+//		pass it as the hint object
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint) 
+{
+	if (pHint != NULL)
+	{
+		// cast the hint object to a CNode
+		CNode *pNewNode = (CNode *)pHint;
+		// ASSERT(pNewNode->IsKindOf(RUNTIME_CLASS(CNode)));
+
+		if (pNewNode->GetView() == NULL)
+		{
+			// construct a new node view for this node, and add to the array
+			CNodeView *pNewNodeView = new CNodeView(pNewNode, this);
+			m_arrNodeViews.Add(pNewNodeView);
+
+			// activate the node to propagate the activation
+			ActivateNodeView(pNewNodeView, (float) 1.4);
+
+			// and lay them out
+			LayoutNodeViews();
+		}
+	}
+}
+
+
 /////////////////////////////////////////////////////////////////////////////
 // CSpaceView printing
+
 
 //////////////////////////////////////////////////////////////////////
 // CSpaceView::OnPreparePrinting
@@ -623,6 +475,7 @@ BOOL CSpaceView::OnPreparePrinting(CPrintInfo* pInfo)
 	return DoPreparePrinting(pInfo);
 }
 
+
 //////////////////////////////////////////////////////////////////////
 // CSpaceView::OnBeginPrinting
 // 
@@ -632,6 +485,7 @@ void CSpaceView::OnBeginPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
 {
 	// TODO: add extra initialization before printing
 }
+
 
 //////////////////////////////////////////////////////////////////////
 // CSpaceView::OnEndPrinting
@@ -643,64 +497,6 @@ void CSpaceView::OnEndPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
 	// TODO: add cleanup after printing
 }
 
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::GetStateVector
-// 
-// forms the state vector for the associated CSpaceView
-//////////////////////////////////////////////////////////////////////
-CSpaceView::CStateVector CSpaceView::GetStateVector()
-{
-	// for the state vector
-	CStateVector vState;
-#ifdef USE_NODES3D
-	for (int nAt = 0; nAt < STATE_DIM / 3; nAt++)
-#else
-	for (int nAt = 0; nAt < STATE_DIM / 2; nAt++)
-#endif
-	{
-		if (nAt < nodeViews.GetSize())
-		{
-			CNodeView *pView = nodeViews.Get(nAt);
-#ifdef USE_NODES3D
-			vState[nAt*3] = (STATE_TYPE) pView->GetCenter()[0];
-			vState[nAt*3+1] = (STATE_TYPE) pView->GetCenter()[1];
-			vState[nAt*3+2] = (STATE_TYPE) pView->GetCenter()[2];
-#else
-			vState[nAt*2] = (STATE_TYPE) pView->GetCenter()[0];
-			vState[nAt*2+1] = (STATE_TYPE) pView->GetCenter()[1];
-#endif
-		}
-	}
-
-	// return the formed state vector
-	return vState;
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceViewEnergyFunction::SetStateVector
-// 
-// sets the state vector for the associated CSpaceView
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::SetStateVector(const CSpaceView::CStateVector& vState)
-{
-	// form the number of currently visualized node views
-#ifdef USE_NODES3D
-	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 3);
-#else
-	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
-#endif
-
-	for (int nAt = 0; nAt < nNumVizNodeViews; nAt++)
-	{
-#ifdef USE_NODES3D
-		CVector<3> vNewCenter = CVector<3>(vState[nAt*3], vState[nAt*3+1], vState[nAt*3+2]);
-#else
-		CVector<3> vNewCenter = CVector<3>(vState[nAt*2], vState[nAt*2+1], 0.0);
-#endif
-		CNodeView *pView = nodeViews.Get(nAt);
-		pView->SetCenter(vNewCenter);
-	}
-}
 
 /////////////////////////////////////////////////////////////////////////////
 // CSpaceView diagnostics
@@ -723,25 +519,338 @@ CSpace* CSpaceView::GetDocument() // non-debug version is inline
 }
 #endif //_DEBUG
 
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::CreateNodeViews
+// 
+// creates the node view for the parent, as well as all child node 
+//		views
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt)
+{
+	CRect rectClient;
+	GetClientRect(&rectClient);
+
+	// construct a new node view for this node
+	CNodeView *pNewNodeView = new CNodeView(pParentNode, this);
+	pNewNodeView->GetNode()->SetPosition(CVector<3>(rectClient.CenterPoint()));
+	pParentNode->SetView(pNewNodeView);
+
+	// and add to the array
+	m_arrNodeViews.Add(pNewNodeView);
+
+	// and finally, create the child node views
+	int nAtNode;
+	for (nAtNode = 0; nAtNode < pParentNode->children.GetSize(); nAtNode++)
+	{
+		// construct a new node view for this node
+		CreateNodeViews((CNode *) pParentNode->children.Get(nAtNode), pt);
+	}
+
+	// activate this node view after creating children (to maximize size)
+	ActivateNodeView(pNewNodeView, 0.5);
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::SortNodeViews
+// 
+// sorts the children node views
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::SortNodeViews()
+{
+	BOOL bRearrange;
+	do 
+	{
+		bRearrange = FALSE;
+		for (int nAt = 0; nAt < GetNodeViewCount()-1; nAt++)
+		{
+			CNodeView *pThisNodeView = GetNodeView(nAt);
+			CNodeView *pNextNodeView = GetNodeView(nAt+1);
+
+			if ( pThisNodeView-> // GetSpringActivation() < // 
+					GetNode()->GetActivation() < 
+					pNextNodeView-> // GetSpringActivation()) // 
+					GetNode()->GetActivation())
+			{
+				m_arrNodeViews.SetAt(nAt, pNextNodeView);
+				m_arrNodeViews.SetAt(nAt+1, pThisNodeView);
+
+				bRearrange = TRUE;
+			}
+		}
+	} while (bRearrange);
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+// CSpaceView::CenterNodeViews
+//
+// Centering algorithm 
+//		Compute vector mean for all node view centers 
+//		Offset = mean of centers - center of window 
+//		For all node views, SetWindowCenter to the offset + GetWindowCenter 
+//
+/////////////////////////////////////////////////////////////////////////////
+void CSpaceView::CenterNodeViews()
+{
+	// only center if there are children
+	if (GetNodeViewCount() == 0)
+		return;
+	
+	CVector<3> vMeanCenter;
+
+	// compute the vector sum of all node views' centers
+	int nAt = 0;
+	double totalScaleFactor = 0.0f;
+
+	for (nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
+	{
+		CNodeView *pView = GetNodeView(nAt);
+		double scaleFactor = 10.0 * // sqrt
+			(pView->GetNode()->GetPrimaryActivation());
+
+		if (pView == m_pRecentClick[0])
+			scaleFactor *= 2.0;
+		else if (pView == m_pRecentClick[1])
+			scaleFactor *= 1.5; 
+		vMeanCenter = vMeanCenter 
+			+ pView->GetNode()->GetPosition() * scaleFactor; 
+		totalScaleFactor += scaleFactor;
+	}
+
+	// divide by number of node views
+	vMeanCenter *= 1.0 / totalScaleFactor;
+
+	// compute the vector offset for the node views
+	//		window center
+	CRect rectWnd;
+	GetClientRect(&rectWnd);
+	CVector<3> vOffset = vMeanCenter 
+		- CVector<3>(rectWnd.CenterPoint()); // rectWnd.Width() / 2, rectWnd.Height() / 2);
+
+	// offset each node view by the difference between the mean and the 
+	//		window center
+	for (nAt = 0; nAt < GetNodeViewCount(); nAt++)
+	{
+		CNodeView *pView = GetNodeView(nAt);
+		pView->GetNode()->SetPosition(pView->GetNode()->GetPosition() - vOffset);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::LayoutNodeViews
+// 
+// applies the optimizer to layout the node views
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::LayoutNodeViews()
+{
+	// only layout if there are children
+	if (GetNodeViewCount() == 0)
+		return;
+
+	// do the second optimization
+	CSpaceViewEnergyFunction::CStateVector vCurrent = 
+		m_pEnergyFunc->GetStateVector();
+
+	// now optimize
+	m_pEnergyFunc->LoadSizesLinks();
+	m_pEnergyFunc->m_nEvaluations = 0;
+
+#ifdef TRACE_ITERATIONS_PER_LAYOUT
+	LOG_TRACE("Starting layout...");
+#endif
+
+	// perform the optimization
+	vCurrent = m_pOptimizer->Optimize(vCurrent);
+
+#ifdef TRACE_ITERATIONS_PER_LAYOUT
+	LOG_TRACE("Iterations for layout = %i\n", m_pEnergyFunc->m_nEvaluations);
+#endif
+
+	// set the resulting positions
+	m_pEnergyFunc->SetStateVector(vCurrent);
+
+	// for the subthreshold nodes, set the position to the nearest cluster
+	for (int nAt = GetVisibleNodeCount(); nAt < GetNodeViewCount(); nAt++)
+	{
+		CNodeView *pNodeView = GetNodeView(nAt);
+
+		if (pNodeView->GetNode()->GetMaxActivator() != NULL)
+		{
+			pNodeView->GetNode()->SetPosition(
+				pNodeView->GetNode()->GetMaxActivator()->GetPosition());
+		}
+		else
+		{
+			CNodeCluster *pCluster = GetDocument()->GetClusterAt(0);
+			if (pCluster)
+			{
+				CNodeCluster *pNearestCluster = 
+					pCluster->GetNearestCluster(pNodeView->GetNode());
+
+				// set position to the closest cluster
+				if (pNearestCluster)
+					pNodeView->GetNode()->SetPosition(CVector<3>(pNearestCluster->m_vCenter));
+			}
+		}
+	}
+
+	// center the node views as part of the layout
+	//		TODO: check this, see if it is really necessary
+	CenterNodeViews();
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::InitDDraw
+// 
+// activates and propagates on a particular node view
+//////////////////////////////////////////////////////////////////////
+BOOL CSpaceView::InitDDraw()
+{
+    DDSURFACEDESC	ddsd;
+    HRESULT		ddrval;
+
+    /*
+     * create the main DirectDraw object
+     */
+    ddrval = DirectDrawCreate( NULL, &m_lpDD, NULL );
+    if( ddrval != DD_OK )
+    {
+		return FALSE;
+    }
+    ddrval = m_lpDD->SetCooperativeLevel( m_hWnd, DDSCL_NORMAL );
+
+    // Create the primary surface
+    ddsd.dwSize = sizeof( ddsd );
+    ddsd.dwFlags = DDSD_CAPS;
+    ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
+
+    ddrval = m_lpDD->CreateSurface( &ddsd, &m_lpDDSPrimary, NULL );
+    if( ddrval != DD_OK )
+    {
+		return FALSE;
+    }
+
+    // create a clipper for the primary surface
+    ddrval = m_lpDD->CreateClipper( 0, &m_lpClipper, NULL );
+    if( ddrval != DD_OK )
+    {
+		return FALSE;
+    }
+    
+    ddrval = m_lpClipper->SetHWnd( 0, m_hWnd);
+    if( ddrval != DD_OK )
+    {
+		return FALSE;
+    }
+
+    ddrval = m_lpDDSPrimary->SetClipper( m_lpClipper );
+    if( ddrval != DD_OK )
+    {
+		return FALSE;
+    }
+
+#ifdef USE_SKINS
+	lpDDSBitmap = DDLoadBitmap(lpDD, MAKEINTRESOURCE(IDB_NODEBUBBLE), 0, 0);
+	if (lpDDSBitmap == NULL)
+	{
+		return FALSE;
+	}
+
+	ddrval = DDSetColorKey(lpDDSBitmap, RGB(0, 0, 0));
+    if( ddrval != DD_OK )
+    {
+		return FALSE;
+    }
+#endif
+
+    return TRUE;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::WaveActivate
+// 
+// processes a mouse movement to activate node views
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::WaveActivate(CPoint pt)
+{
+	// determine the closest node to the mouse point, and the distance
+	float minDist = FLT_MAX;
+	CNodeView *pClosestNodeView = NULL;
+	for (int nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
+	{
+		// compute the distance from the cursor position
+		//		to the center of this node view
+		CVector<3> vOffset = 
+			GetNodeView(nAt)->GetNode()->GetPosition() - CVector<3>(pt);
+		float dist = (float) vOffset.GetLength();
+
+		// see if this is closer than any so far
+		if (minDist > dist)
+		{
+			minDist = dist;
+			pClosestNodeView = GetNodeView(nAt);
+		}
+	}
+
+	// if a closest node view was found
+	if (pClosestNodeView != NULL)
+	{
+		// compute "diameter" of closest node view
+		CRect rectOuter = pClosestNodeView->GetOuterRect();
+		float diameter = 
+			(float) (rectOuter.Width() + rectOuter.Height()) 
+				/ 1.0f;
+
+		// compute the proportion of activation, based on
+		//		how close to the center
+		float propActivate = (diameter - minDist) / diameter;
+		// if (propActivate < 0.5f)
+			propActivate *= 0.05f;
+		// else
+		//	propActivate = 0.075f;
+
+		// now compute the length of the previous mouse move
+		// CPoint ptOffset = (m_ptPrev - pt);
+		// float length = 
+		//	(float) sqrt(ptOffset.x * ptOffset.x + ptOffset.y + ptOffset.y);
+
+		// and adjust the activation level based on the length
+		// propActivate *= length / 200.0f;
+
+		// and finally activate
+		if (propActivate > 0.0f)
+			pClosestNodeView->m_pendingActivation += propActivate;
+			// ActivateNodeView(pClosestNodeView, propActivate);
+	}
+
+	// store the point for previous
+	m_ptPrev = pt;
+}
+
+
 /////////////////////////////////////////////////////////////////////////////
 // CSpaceView Message Map
 /////////////////////////////////////////////////////////////////////////////
 
 BEGIN_MESSAGE_MAP(CSpaceView, CView)
 	//{{AFX_MSG_MAP(CSpaceView)
-	ON_COMMAND(ID_VIEW_LAYOUT, OnViewLayout)
-	ON_COMMAND(ID_VIEW_PROPAGATE, OnViewPropagate)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_PROPAGATE, OnUpdateViewPropagate)
-	ON_COMMAND(ID_VIEW_WAVE, OnViewWave)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_WAVE, OnUpdateViewWave)
-	ON_COMMAND(ID_NEW_NODE, OnNewNode)
-	ON_WM_MOUSEMOVE()
-	ON_WM_LBUTTONDOWN()
-	ON_WM_RBUTTONDOWN()
-	ON_WM_TIMER()
+	ON_WM_CREATE()
 	ON_WM_SIZE()
 	ON_WM_PAINT()
-	ON_WM_CREATE()
+	ON_WM_MOUSEMOVE()
+	ON_WM_LBUTTONDOWN()
+	ON_WM_LBUTTONDBLCLK()
+	ON_WM_RBUTTONDOWN()
+	ON_WM_TIMER()
+	ON_COMMAND(ID_NEW_NODE, OnNewNode)
+	ON_COMMAND(ID_VIEW_WAVE, OnViewWave)
+	ON_UPDATE_COMMAND_UI(ID_VIEW_WAVE, OnUpdateViewWave)
+	ON_COMMAND(ID_VIEW_LAYOUT, OnViewLayout)
 	//}}AFX_MSG_MAP
 	// Standard printing commands
 	ON_COMMAND(ID_FILE_PRINT, CView::OnFilePrint)
@@ -753,247 +862,30 @@ END_MESSAGE_MAP()
 // CSpaceView message handlers
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::OnViewLayout
+// CSpaceView::OnCreate
 // 
-// menu command to lay out the node views
+// called to create the view
 //////////////////////////////////////////////////////////////////////
-void CSpaceView::OnViewLayout() 
+int CSpaceView::OnCreate(LPCREATESTRUCT lpCreateStruct) 
 {
-	// layout the node views
-	LayoutNodeViews();	
+	if (CView::OnCreate(lpCreateStruct) == -1)
+		return -1;
 
-	// redraw the window
-	RedrawWindow();
+	// initialize the direct-draw routines
+	InitDDraw();
+
+	// create a timer
+ 	m_nTimerID = SetTimer(7, 10, NULL);
+	ASSERT(m_nTimerID != 0);
+
+	return 0;
 }
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::OnViewPropagate
+// CSpaceView::OnSize
 // 
-// changes the propagate mode state
+// on resize, regenerate the direct draw surface
 //////////////////////////////////////////////////////////////////////
-void CSpaceView::OnViewPropagate() 
-{
-	isPropagating.Set(!isPropagating.Get());
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::OnUpdateViewPropagate
-// 
-// sets/unsets the propagate mode toggle button
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnUpdateViewPropagate(CCmdUI* pCmdUI) 
-{
-	pCmdUI->SetCheck(isPropagating.Get() ? 1 : 0);	
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::OnViewWave
-// 
-// changes the wave mode view state
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnViewWave() 
-{
-	isWaveMode.Set(!isWaveMode.Get());	
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::OnUpdateViewWave
-// 
-// sets/unsets the wave mode toggle button
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI) 
-{
-	pCmdUI->SetCheck(isWaveMode.Get() ? 1 : 0);		
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::OnNewNode
-// 
-// launches the new node dialog box
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnNewNode() 
-{
-	CEditNodeDlg newDlg(this);
-
-	if (newDlg.DoModal() == IDOK)
-	{
-		CNode *pNewNode = 
-			new CNode(GetDocument(), newDlg.m_strName, newDlg.m_strDesc);
-		AddNodeToSpace(pNewNode);
-	}
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::OnMouseMove
-// 
-// changes the cursor as the user moves the mouse around
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnMouseMove(UINT nFlags, CPoint point) 
-{
-	// search throught the node views
-	for (int nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-	{
-		// get the current node view
-		CNodeView *pNodeView = nodeViews.Get(nAt);
-
-		// see if the mouse-click was within it
-		if (pNodeView->GetShape().m_hObject != NULL
-			&& pNodeView->GetShape().PtInRegion(point))
-		{
-			// set the hand pointer cursor
-			::SetCursor(::LoadCursor(GetModuleHandle(NULL), 
-				MAKEINTRESOURCE(IDC_HANDPOINT)));
-
-// #define USE_GAUSS_ACT
-			if (isWaveMode.Get())
-			{
-#if !defined(USE_GAUSS_ACT)
-				ActivateNode(pNodeView, 0.05f);
-#endif
-	
-				m_pRecentClick2 = m_pRecentClick1;
-				m_pRecentClick1 = pNodeView;
-			}
-
-#if !defined (USE_GAUSS_ACT)
-			CView::OnMouseMove(nFlags, point);
-
-			return;
-#endif
-		}
-
-#ifdef USE_GAUSS_ACT
-		if (pNodeView->GetThresholdedActivation() > 0.01)
-		{
-			// compute the weight
-			CVector<3> vOffset =  pNodeView->GetCenter() - CVector<3>(point);
-			double dist = vOffset.GetLength();
-			// TRACE1("dist = %lf\n", dist);
-			dist *= dist;
-
-			const double sx = pNodeView->GetOuterRect().Width() / 2.0;
-			const double sy = pNodeView->GetOuterRect().Height() / 2.0;
-			// const double norm = 1.0 / sqrt(2.0 * PI * sigma * sigma);
-			double weight = // Gauss2D<double>(vOffset[0], vOffset[1], sigma, sigma); // 
-				exp(-dist / (2.0 * sx * sy));
-
-			if (weight > 0.1)
-			{
-				TRACE1("Weight = %lf\n", weight);
-				ActivateNode(pNodeView, weight * 0.0001f);
-			}
-		}
-#endif
-	}
-
-	// set the standard cursor
-	::SetCursor(::LoadCursor(NULL, IDC_ARROW));
-
-	if (isWaveMode.Get())
-	{
-		m_pRecentClick2 = m_pRecentClick1;
-		m_pRecentClick1 = NULL;
-	}
-
-	// standard processing of mouse move
-	CView::OnMouseMove(nFlags, point);
-}
-
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::OnLButtonDown
-// 
-// activates a node when the user left-clicks on the node view
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnLButtonDown(UINT nFlags, CPoint point) 
-{
-	CNodeView *pSelectedView = NULL;
-	// search throught the node views
-	for (int nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-	{
-		// get the current node view
-		pSelectedView = nodeViews.Get(nAt);
-
-		// see if the mouse-click was within it
-		if (pSelectedView->GetShape().PtInRegion(point))
-		{
-			// if so, activate it
-			ActivateNode(pSelectedView, 0.333f);
-
-			// LayoutNodeViews();
-			break;
-		}
-	}
-	
-	m_pRecentClick2 = m_pRecentClick1;
-	m_pRecentClick1 = pSelectedView;
-
-	// standard processing of button down
-	CView::OnLButtonDown(nFlags, point);
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::OnRButtonDown
-// 
-// displays the right-click menu on the right-button down
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnRButtonDown(UINT nFlags, CPoint point) 
-{
-	ClientToScreen(&point);
-	CMenu *pMenu = new CMenu();
-	pMenu->LoadMenu(IDR_SPACE_POPUP);
-	pMenu->GetSubMenu(0)->TrackPopupMenu(TPM_LEFTALIGN, point.x, point.y, this);
-
-	delete pMenu;
-
-	CView::OnRButtonDown(nFlags, point);
-}
-
-static DWORD g_dwPrevTickCount = 0;
-static DWORD g_dwSumTickCount = 0;
-static DWORD g_dwNumTickCount = 0;
-
-void CSpaceView::OnTimer(UINT nIDEvent) 
-{
-#define LOG_IDLE_TIME
-#ifdef LOG_IDLE_TIME
-	DWORD dwTickCount = ::GetTickCount();
-	if (g_dwPrevTickCount > 0)
-	{
-		g_dwSumTickCount += (dwTickCount - g_dwPrevTickCount);
-		g_dwNumTickCount++;
-
-		if ((g_dwNumTickCount % 10) == 0)
-			LOG_TRACE("Average time between timer events = %lf\n",
-				(double) g_dwSumTickCount / (double) g_dwNumTickCount);
-	}
-	g_dwPrevTickCount = dwTickCount;
-#endif
-	
-#define TIME_LAYOUT TRUE
-
-	START_TIMER(TIME_LAYOUT)
-
-	LayoutNodeViews();
-
-	STOP_TIMER(TIME_LAYOUT, "Layout")
-
-	// update the privates
-	int nAt;
-	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-		nodeViews.Get(nAt)->UpdateSprings();
-
-#define TIME_REDRAW TRUE
-
-	START_TIMER(TIME_REDRAW)
-
-	RedrawWindow(NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
-
-	STOP_TIMER(TIME_REDRAW, "Redraw")
-
-	CView::OnTimer(nIDEvent);
-}
-
 void CSpaceView::OnSize(UINT nType, int cx, int cy) 
 {
 	CView::OnSize(nType, cx, cy);
@@ -1001,10 +893,10 @@ void CSpaceView::OnSize(UINT nType, int cx, int cy)
 	if (cx == 0 || cy == 0)
 		return;
 
-	if (lpDDSOne != NULL)
+	if (m_lpDDSOne != NULL)
 	{
 		// free the surface
-		lpDDSOne->Release();
+		m_lpDDSOne->Release();
 	}
 
 	// create other surface
@@ -1016,13 +908,21 @@ void CSpaceView::OnSize(UINT nType, int cx, int cy)
     ddsd.dwWidth = cx;
     ddsd.dwHeight = cy;
 
-    HRESULT ddrval = lpDD->CreateSurface(&ddsd, &lpDDSOne, NULL);
+    HRESULT ddrval = m_lpDD->CreateSurface(&ddsd, &m_lpDDSOne, NULL);
 	ASSERT(ddrval == DD_OK);
+
+	// tell the skin the new client area
+	m_skin.SetClientArea(cx, cy);
 }
 
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnPaint
+// 
+// over-ride to draw to the DDraw surface, then blt to the screen
+//////////////////////////////////////////////////////////////////////
 void CSpaceView::OnPaint() 
 {
-	if (lpDDSOne)
+	if (m_lpDDSOne)
 	{
 		CRect rcRect;
 		GetClientRect(&rcRect);
@@ -1038,23 +938,28 @@ void CSpaceView::OnPaint()
 
 		// draw some stuff
 		HDC hdc;
-		HRESULT ddrval = lpDDSOne->GetDC(&hdc);
+		HRESULT ddrval = m_lpDDSOne->GetDC(&hdc);
 		ASSERT(ddrval == DD_OK);
-		
+	
+#ifdef LOG_DRAW_TIME
 		START_TIMER(TIME_DRAW)
+#endif
 		OnDraw(CDC::FromHandle(hdc));
-		STOP_TIMER(TIME_DRAW, "Draw")
 
-		ddrval = lpDDSOne->ReleaseDC(hdc);
+#ifdef LOG_DRAW_TIME
+		STOP_TIMER(TIME_DRAW, "Draw")
+#endif
+
+		ddrval = m_lpDDSOne->ReleaseDC(hdc);
 		ASSERT(ddrval == DD_OK);
 
-		// ddrval = lpDDSOne->BltFast(100, 100, lpDDSBitmap, CRect(0, 0, 233, 176), // DDBLTFAST_NOCOLORKEY); 
-		//	DDBLTFAST_SRCCOLORKEY);
-		// ASSERT(ddrval == DD_OK);
-
-		START_TIMER(TIME_BITBLT)
-		ddrval = lpDDSPrimary->Blt( &destRect, lpDDSOne, &rcRect, 0, NULL );
-		STOP_TIMER(TIME_BITBLT, "Bitblt")
+#ifdef USE_SKINS
+		ddrval = lpDDSOne->BltFast(100, 100, lpDDSBitmap, CRect(0, 0, 233, 176), // DDBLTFAST_NOCOLORKEY); 
+			DDBLTFAST_SRCCOLORKEY);
+		ASSERT(ddrval == DD_OK);
+#endif
+		// now blit the buffer to the screen
+		ddrval = m_lpDDSPrimary->Blt( &destRect, m_lpDDSOne, &rcRect, 0, NULL );
 
 		ASSERT(ddrval == DD_OK);
 	}
@@ -1065,17 +970,317 @@ void CSpaceView::OnPaint()
 	// Do not call CView::OnPaint() for painting messages
 }
 
-int CSpaceView::OnCreate(LPCREATESTRUCT lpCreateStruct) 
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnMouseMove
+// 
+// changes the cursor as the user moves the mouse around
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnMouseMove(UINT nFlags, CPoint point) 
 {
-	if (CView::OnCreate(lpCreateStruct) == -1)
-		return -1;
+	// get the sync object
+	if (!m_sync.Lock())
+	{
+		CView::OnMouseMove(nFlags, point);
+		return;
+	}
 
-	// initialize the direct-draw routines
-	InitDDraw();
+	// find the node view containing the point
+	CNodeView *pSelectedView = FindNodeViewAt(point);
 
-		// create a timer
- 	UINT m_nTimerID = SetTimer(7, 10, NULL);
+	// set the cursor based on whether the point is in a view
+	if (pSelectedView != NULL) 
+	{
+		::SetCursor(::LoadCursor(GetModuleHandle(NULL), 
+			MAKEINTRESOURCE(IDC_HANDPOINT)));
+	}
+	else
+	{
+		::SetCursor(::LoadCursor(NULL, IDC_ARROW));
+	}
+
+	// if we are in wave mode
+	if (m_bWaveMode)
+	{
+// #define USE_PROP_ACT
+#ifdef USE_PROP_ACT
+		WaveActivate(point);
+#else
+		// activate the node view
+		if (pSelectedView != NULL)
+		{
+			pSelectedView->m_pendingActivation += 0.075f;
+			// ActivateNodeView(pSelectedView, 0.05f);
+		}
+#endif
+		// activate the node view
+		if (pSelectedView != NULL)
+		{
+			// learning rule for nodes w/ act > this
+			for (int nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
+			{
+				pSelectedView->GetNode()->LearnFromNode(
+					GetNodeView(nAt)->GetNode());
+			}
+		}
+	}
+
+	// if we are in wave mode, update the recent click list
+	if (m_bWaveMode)
+	{
+		// update the recent click list
+		m_pRecentClick[1] = m_pRecentClick[0];
+		m_pRecentClick[0] = pSelectedView;
+	}
+
+	// standard processing of mouse move
+	CView::OnMouseMove(nFlags, point);
+
+	m_sync.Unlock();
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnLButtonDown
+// 
+// activates a node when the user left-clicks on the node view
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnLButtonDown(UINT nFlags, CPoint point) 
+{
+	// get the sync object
+	if (!m_sync.Lock())
+	{
+		CView::OnLButtonDown(nFlags, point);
+		return;
+	}
+
+	// find the node view containing the point
+	CNodeView *pSelectedView = FindNodeViewAt(point);
+
+	// was a node view found?
+	if (pSelectedView != NULL)
+	{
+		// if so, activate it
+		ActivateNodeView(pSelectedView, 0.45f);
+
+		// and then navigate to its URL, if it has one
+		if (m_pBrowser && pSelectedView->GetNode()->GetUrl() != "")
+		{
+			m_pBrowser->Navigate2(pSelectedView->GetNode()->GetUrl());
+		}
+	}
+
+	// update the recent click list
+	m_pRecentClick[1] = m_pRecentClick[0];
+	m_pRecentClick[0] = pSelectedView;
+
+	// standard processing of button down
+	CView::OnLButtonDown(nFlags, point);
+
+	m_sync.Unlock();
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnLButtonDblClk
+// 
+// Left button double-click calls up the edit box for the node
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnLButtonDblClk(UINT nFlags, CPoint point) 
+{
+	// get the sync object
+	if (!m_sync.Lock())
+	{
+		CView::OnLButtonDblClk(nFlags, point);
+		return;
+	}
+
+	// find the node view containing the point
+	CNodeView *pSelectedView = FindNodeViewAt(point);
+
+	// was a node view found?
+	if (pSelectedView != NULL)
+	{
+		// kill the the timer
+		KillTimer(m_nTimerID);
+
+		// do the edit box
+		CEditNodeDlg editDlg(this);
+		editDlg.m_pNode = pSelectedView->GetNode();
+
+		// now do the modal dialog
+		editDlg.DoModal();
+
+		// restart the timer
+ 		m_nTimerID = SetTimer(7, 10, NULL);
+		ASSERT(m_nTimerID != 0);
+
+		// notify all views of the change
+		GetDocument()->UpdateAllViews(NULL, 0L, editDlg.m_pNode);
+	}
+	
+	// update the recent click list
+	m_pRecentClick[1] = m_pRecentClick[0];
+	m_pRecentClick[0] = pSelectedView;
+
+	// standard processing of button double-click
+	CView::OnLButtonDblClk(nFlags, point);
+
+	m_sync.Unlock();
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnRButtonDown
+// 
+// displays the right-click menu on the right-button down
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnRButtonDown(UINT nFlags, CPoint point) 
+{
+	// get the sync object
+	if (!m_sync.Lock())
+	{
+		CView::OnRButtonDown(nFlags, point);
+		return;
+	}
+
+	ClientToScreen(&point);
+	CMenu *pMenu = new CMenu();
+	pMenu->LoadMenu(IDR_SPACE_POPUP);
+	pMenu->GetSubMenu(0)->TrackPopupMenu(TPM_LEFTALIGN, point.x, point.y, this);
+
+	delete pMenu;
+
+	CView::OnRButtonDown(nFlags, point);
+
+	m_sync.Unlock();
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnTimer
+// 
+// Timer call updates the springs and performs a layout
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnTimer(UINT nIDEvent) 
+{
+	// get the sync object
+	if (!m_sync.Lock())
+	{
+		CView::OnTimer(nIDEvent);
+		return;
+	}
+#ifdef LOG_LAYOUT_TIME
+	START_TIMER(TIME_LAYOUT)
+#endif
+
+	// perform any pending activations
+//	if (rand() < RAND_MAX / 2)
+	{
+		for (int nAt = 0; nAt < this->GetNodeViewCount(); nAt++)
+		{
+			CNodeView *pNodeView = GetNodeView(nAt);
+			if (pNodeView->m_pendingActivation > 0.0f)
+			{
+				ActivateNodeView(pNodeView, pNodeView->m_pendingActivation);
+				pNodeView->m_pendingActivation = 0.0f;
+			}
+		}
+	}
+
+	// perform the layout
+	LayoutNodeViews();
+
+#ifdef LOG_LAYOUT_TIME
+	STOP_TIMER(TIME_LAYOUT, "Layout")
+#endif
+
+	// update the privates
+	int nAt;
+	for (nAt = 0; nAt < GetNodeViewCount(); nAt++)
+		GetNodeView(nAt)->UpdateSprings();
+
+	SortNodeViews();
+
+#ifdef LOG_REDRAW_TIME
+	START_TIMER(TIME_REDRAW)
+#endif
+
+	// redraw the window
+	RedrawWindow(NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
+
+#ifdef LOG_REDRAW_TIME
+	STOP_TIMER(TIME_REDRAW, "Redraw")
+#endif
+
+	CView::OnTimer(nIDEvent);
+
+	m_sync.Unlock();
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnNewNode
+// 
+// launches the new node dialog box
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnNewNode() 
+{
+	// kill the the timer for a modal dialog
+	KillTimer(m_nTimerID);
+
+	// do the edit box
+	CEditNodeDlg newDlg(this);
+	newDlg.m_pNode = new CNode();
+	if (newDlg.DoModal() == IDOK)
+	{
+		// sort the node views, so that the max node view is first
+		SortNodeViews();
+		CNode *pParentNode = GetNodeView(0)->GetNode();
+
+		// add the node to the space, with the given parent
+		GetDocument()->AddNode(newDlg.m_pNode, pParentNode);
+	}
+	else
+	{
+		delete newDlg.m_pNode;
+	}
+
+	// restart the timer
+ 	m_nTimerID = SetTimer(7, 10, NULL);
 	ASSERT(m_nTimerID != 0);
+}
 
-	return 0;
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnViewWave
+// 
+// changes the wave mode view state
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnViewWave() 
+{
+	m_bWaveMode = !m_bWaveMode;	
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnUpdateViewWave
+// 
+// sets/unsets the wave mode toggle button
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI) 
+{
+	pCmdUI->SetCheck(m_bWaveMode ? 1 : 0);		
+}
+
+void CSpaceView::OnViewLayout() 
+{
+// 	GetDocument()->ComputeClusters();	
+
+	CHTMLNode *pTestNode = new CHTMLNode();
+	pTestNode->SetUrl("http://www.microsoft.com");
+
+	// init sets up the connection point
+	HRESULT hr;
+	
+	if (SUCCEEDED(hr = pTestNode->Init()))
+	{
+		if (SUCCEEDED(hr = pTestNode->Run()))
+		{
+			// hr = testNode.Term();
+		}
+	}
 }

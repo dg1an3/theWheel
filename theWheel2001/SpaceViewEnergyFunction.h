@@ -20,13 +20,13 @@ class CSpaceView;
 //////////////////////////////////////////////////////////////////////
 // typedef for the energy function type
 //////////////////////////////////////////////////////////////////////
-typedef float SPV_STATE_TYPE;
+typedef float STATE_TYPE;
 
 //////////////////////////////////////////////////////////////////////
 // declaration for the dimensionality of the energy function state
 //		vector
 //////////////////////////////////////////////////////////////////////
-const int SPV_STATE_DIM = 42;
+const int STATE_DIM = 38;
 
 //////////////////////////////////////////////////////////////////////
 // class CSpaceViewEnergyFunction
@@ -35,24 +35,30 @@ const int SPV_STATE_DIM = 42;
 //		its state vector
 //////////////////////////////////////////////////////////////////////
 class CSpaceViewEnergyFunction 
-		: public CObjectiveFunction<SPV_STATE_DIM, SPV_STATE_TYPE>
+		: public CObjectiveFunction<STATE_DIM, STATE_TYPE>
 {
 public:
 	// construct the energy function, given the CSpaceView to which it
 	//		is associated 
 	CSpaceViewEnergyFunction(CSpaceView *pView);
 
+	// typedef for the actual state vector
+	typedef CVector<STATE_DIM, STATE_TYPE> CStateVector;
+
 	// loads the links and sizes for quick access
 	void LoadSizesLinks();
 
+	// gets and sets the state vector for this CSpaceView
+	CStateVector GetStateVector();
+	void SetStateVector(const CStateVector& vState);
+
 	// evaluates the energy function
-	virtual SPV_STATE_TYPE operator()(
-		const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput);
+	virtual STATE_TYPE operator()(const CStateVector& vInput);
 
 	// evaluates the gradient of the energy function
-	virtual CVector<SPV_STATE_DIM, SPV_STATE_TYPE> Grad(
-		const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput);
+	virtual CStateVector Grad(const CStateVector& vInput);
 
+	// holds the number of evaluations that have been done
 	int m_nEvaluations;
 
 private:
@@ -60,19 +66,20 @@ private:
 	CSpaceView *m_pView;
 
 	// caches previous input vector
-	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> m_vInput;
+	CStateVector m_vInput;
 
 	// caches energy value for the previous input vector
-	SPV_STATE_TYPE m_energy;
+	STATE_TYPE m_energy;
 
 	// caches the gradient for the previous input vector
-	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> m_vGrad;
+	CStateVector m_vGrad;
 
 	// stores the view sizes for quick access
-	SPV_STATE_TYPE m_vSize[SPV_STATE_DIM][2];
+	STATE_TYPE m_vSize[STATE_DIM][2];
+	STATE_TYPE m_act[STATE_DIM];
 
 	// stores the link weights for quick access
-	SPV_STATE_TYPE m_mLinks[SPV_STATE_DIM][SPV_STATE_DIM];
+	STATE_TYPE m_mLinks[STATE_DIM][STATE_DIM];
 };
 
 

@@ -16,6 +16,7 @@
 #include <Vector.h>
 
 #include "Node.h"
+#include "NodeViewSkin.h"
 
 // the parent window class
 class CSpaceView;
@@ -34,17 +35,18 @@ public:
 
 // Attributes
 public:
+
+	static CObArray m_arrNodeViewsToDraw;
+
 	// accessor for the node
-	CAssociation< CNode > forNode;
+	CNode *GetNode();
 
 	// moves the nodeview slowly toward its actual center
-	CVector<3> GetCenter();
 	CVector<3> GetSpringCenter();
-	CVector<3> GetPiggybackCenter();
-	void SetCenter(const CVector<3>& vCenter);
 	
 	// activation value for this window
 	double GetThresholdedActivation();
+	double GetSpringActivation() { return m_springActivation; }
 	void SetThresholdedActivation(double activation);
 
 	// accessors for the node view's rectangles
@@ -52,7 +54,9 @@ public:
 	CRect GetInnerRect();
 
 	// accessor to shape descriptions of the node view
-	CRgn& GetShape();
+	CRgn& GetShape(int nErode = 0);
+
+	float m_pendingActivation;
 
 // Operations
 public:
@@ -60,31 +64,30 @@ public:
 	void UpdateSprings(double springConst = 0.90);
 
 	// draws the node view
-	void Draw(CDC *pDC);
+	void Draw(CDC *pDC, CNodeViewSkin *pSkin);
 
 // Implementation
-protected:
-	// accessors for the left-right and top-bottom ellipse rectangles
-	CRect GetTopBottomEllipseRect();
-	CRect GetLeftRightEllipseRect();
-
 public:
 	// drawing helper functions
-	void DrawElliptangle(CDC *pDC);
+	void DrawLinks(CDC *pDC);
+	void DrawTitle(CDC *pDC, CRect& rectInner);
 	void DrawText(CDC *pDC, CRect& rectInner);
 	void DrawImage(CDC *pDC, CRect& rectInner);
 
 private:
+	// stores the node
+	CNode* m_pNode;
+
+public:
 	// stores the center and spring-connected center of the node view
-	CVector<3> m_vCenter;
 	CVector<3> m_vSpringCenter;
 
 	// stores the thresholded activation and spring-connected activation
 	double m_thresholdedActivation;
 	double m_springActivation;
 
-	// stores the node view's client rectangle
-	CRect m_rectOuter;
+	// pointer to the skin for this node view
+	CNodeViewSkin *m_pSkin;
 
 	// stores the node view's region (shape)
 	CRgn m_shape;
@@ -98,6 +101,9 @@ private:
 
 	// stores the windows parent CSpaceView window
 	CSpaceView *m_pParent;
+
+	// flag to indicate image is to be drawn in background
+	BOOL m_bBackgroundImage;
 };
 
 /////////////////////////////////////////////////////////////////////////////
