@@ -56,6 +56,8 @@ protected:
 		double a, double b, CMolding *pOld = NULL);
 
 	// draws the text and image for the node
+	void DrawText(const CString& strText, CRect rect);
+	// void DrawImage(const CRect& rect);
 
 	// renders the whole node
 	virtual void OnRenderScene();
