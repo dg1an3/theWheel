@@ -34,6 +34,7 @@ CEditNodeDlg::CEditNodeDlg(CWnd* pParent /*=NULL*/)
 	m_strName = _T("");
 	m_strDesc = _T("");
 	m_strImageFilename = _T("");
+	m_strUrl = _T("");
 	//}}AFX_DATA_INIT
 }
 
@@ -45,11 +46,22 @@ CEditNodeDlg::CEditNodeDlg(CWnd* pParent /*=NULL*/)
 void CEditNodeDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
+
+	if (!pDX->m_bSaveAndValidate)
+	{
+		// populate fields from the node
+		m_strName = m_pNode->GetName();
+		m_strDesc = m_pNode->GetDescription();
+		m_strImageFilename = m_pNode->GetImageFilename();
+		m_strUrl = m_pNode->GetUrl();
+	}
+
 	//{{AFX_DATA_MAP(CEditNodeDlg)
 	DDX_Control(pDX, IDC_LINKLIST, m_LinkList);
 	DDX_Text(pDX, IDC_EDITNAME, m_strName);
 	DDX_Text(pDX, IDC_EDITDESC, m_strDesc);
 	DDX_Text(pDX, IDC_EDITIMAGEFILENAME, m_strImageFilename);
+	DDX_Text(pDX, IDC_EDITURL, m_strUrl);
 	//}}AFX_DATA_MAP
 }
 
@@ -66,6 +78,74 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // CEditNodeDlg message handlers
 
+
+BOOL CEditNodeDlg::IsLinkPresent(CNode *pToNode)
+{
+	// check the array to see if this link's target is already present
+	BOOL bPresent = FALSE;
+	for (int nAtNode = 0; nAtNode < m_arrNodes.GetSize(); nAtNode++)
+	{
+		if (pToNode == m_arrNodes[nAtNode])
+		{
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+void CEditNodeDlg::AddLinksFromOtherNode(CNode *pOtherNode, int nLevels)
+{
+	// array containing list of nodes that were just added
+	CArray<CNode *, CNode *> arrNewNodes;
+
+	// now add entries into the list of links
+	for (int nAtLink = 0; nAtLink < pOtherNode->GetLinkCount(); nAtLink++)
+	{
+		CNodeLink *pLink = pOtherNode->GetLinkAt(nAtLink);
+		CNode *pLinkedNode = pLink->GetTarget();
+		if ((pLinkedNode != m_pNode)
+				&& !IsLinkPresent(pLinkedNode))
+		{
+			// set up the item structure
+			LVITEM lvitem; 
+			lvitem.mask = LVIF_TEXT | LVIF_PARAM; 
+			lvitem.iItem = m_nItemCount++; 
+			lvitem.iSubItem = 0;	// for main item
+			lvitem.lParam = (DWORD) pLinkedNode;	// to indicate no link present
+
+			// format a string with the link weight
+			CString strWeight;
+			strWeight.Format("%f", 0.0);
+			lvitem.pszText = strWeight.GetBuffer(100);
+			lvitem.cchTextMax = 100;
+			lvitem.iItem = m_LinkList.InsertItem(&lvitem); 
+
+			// now insert the subitem for the link weight
+			lvitem.mask = LVIF_TEXT; 
+			lvitem.iSubItem = 1;
+			lvitem.pszText = pLinkedNode->name.Get().GetBuffer(100);
+			BOOL bResult = m_LinkList.SetItem(&lvitem); 
+
+			// add to the list of nodes
+			m_arrNodes.Add(pLink->GetTarget());
+
+			// also add to the local list, so that it can be traversed later
+			arrNewNodes.Add(pLink->GetTarget());
+		}
+	}
+
+	// now call recursively
+	if (nLevels > 0)
+	{
+		// now add entries into the list of links
+		for (int nAtNode = 0; nAtNode < arrNewNodes.GetSize(); nAtNode++)
+		{
+			AddLinksFromOtherNode(arrNewNodes[nAtNode], nLevels-1);
+		}
+	}
+}
+
 //////////////////////////////////////////////////////////////////////
 // CEditNodeDlg::OnInitDialog
 // 
@@ -81,21 +161,24 @@ BOOL CEditNodeDlg::OnInitDialog()
     m_LinkList.InsertColumn(0, "Weight", LVCFMT_LEFT, rect.Width() * 1/4, 0); 
     m_LinkList.InsertColumn(1, "ToNode", LVCFMT_LEFT, rect.Width() * 2/3, 1); 
 
+	// initialize the items count
+	m_nItemCount = 0;
+
 	// now add entries into the list of links
-	for (int nAt = 0; nAt < m_pNode->links.GetSize(); nAt++)
+	for (int nAt = 0; nAt < m_pNode->GetLinkCount(); nAt++)
 	{
-		CNodeLink *pLink = m_pNode->links.Get(nAt);
+		CNodeLink *pLink = m_pNode->GetLinkAt(nAt);
 
 		// set up the item structure
 		LVITEM lvitem; 
 		lvitem.mask = LVIF_TEXT | LVIF_PARAM; 
-		lvitem.iItem = nAt; 
+		lvitem.iItem = m_nItemCount++; 
 		lvitem.iSubItem = 0;	// for main item
-		lvitem.lParam = (DWORD) pLink;
+		lvitem.lParam = (DWORD) pLink->GetTarget();
 
 		// format a string with the link weight
 		CString strWeight;
-		strWeight.Format("%f", pLink->weight.Get());
+		strWeight.Format("%f", pLink->GetWeight());
 		lvitem.pszText = strWeight.GetBuffer(100);
 		lvitem.cchTextMax = 100;
 		lvitem.iItem = m_LinkList.InsertItem(&lvitem); 
@@ -103,8 +186,16 @@ BOOL CEditNodeDlg::OnInitDialog()
 		// now insert the subitem for the link weight
 		lvitem.mask = LVIF_TEXT; 
 		lvitem.iSubItem = 1;
-		lvitem.pszText = pLink->forTarget->name.Get().GetBuffer(100);
-		BOOL bResult = m_LinkList.SetItem(&lvitem); 
+		lvitem.pszText = pLink->GetTarget()->name.Get().GetBuffer(100);
+		BOOL bResult = m_LinkList.SetItem(&lvitem);
+
+		m_arrNodes.Add(pLink->GetTarget());
+	}
+
+	// now add entries for links that don't exist
+	for (int nAtNode = 0; nAtNode < m_arrNodes.GetSize(); nAtNode++)
+	{
+		AddLinksFromOtherNode(m_arrNodes[nAtNode]);
 	}
 
 	return TRUE;  // return TRUE unless you set the focus to a control
@@ -128,13 +219,26 @@ void CEditNodeDlg::OnEndLabelEdit(LPNMHDR pnmhdr, LRESULT *pLResult)
 		float weight;
 		sscanf(plvItem->pszText, "%f", &weight);
 
-		// set the link weight
-		CNodeLink *pLink = 
-			(CNodeLink *)m_LinkList.GetItemData(plvItem->iItem);
-		pLink->weight.Set(weight);
+		// get the target
+		CNode *pOtherNode = 
+			(CNode *)m_LinkList.GetItemData(plvItem->iItem);
+
+		// and establish the weight
+		m_pNode->LinkTo(pOtherNode, weight);
 
 	}
 
 	// make sure we maintain the edit
     *pLResult = TRUE;
+}
+
+void CEditNodeDlg::OnOK() 
+{
+	CDialog::OnOK();
+
+	// set the values for the node
+	m_pNode->SetName(m_strName);
+	m_pNode->SetDescription(m_strDesc);
+	m_pNode->SetImageFilename(m_strImageFilename);
+	m_pNode->SetUrl(m_strUrl);
 }

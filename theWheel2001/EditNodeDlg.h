@@ -34,6 +34,7 @@ public:
 	CString	m_strName;
 	CString	m_strDesc;
 	CString	m_strImageFilename;
+	CString	m_strUrl;
 	//}}AFX_DATA
 
 	// a pointer to the node being edited
@@ -49,10 +50,24 @@ public:
 // Implementation
 protected:
 
+	// returns TRUE if a link is already present in the list to this node
+	BOOL IsLinkPresent(CNode *pToNode);
+
+	// helper function to add links from a neighboring node; recursive call
+	//	while levels > 0
+	void AddLinksFromOtherNode(CNode *pOtherNode, int nLevels = 1);
+
+	// count of items in list
+	int m_nItemCount;
+
+	// array of nodes whose links have already been added
+	CArray<CNode *, CNode *> m_arrNodes;
+
 	// Generated message map functions
 	//{{AFX_MSG(CEditNodeDlg)
 	virtual BOOL OnInitDialog();
     afx_msg void OnEndLabelEdit(NMHDR* pNMHDR, LRESULT* pResult);
+	virtual void OnOK();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };
