@@ -70,7 +70,7 @@ CSpaceView::CSpaceView()
 #endif
 
 	// set the tolerance
-	m_pOptimizer->tolerance.Set(TOLERANCE);
+	m_pOptimizer->SetTolerance(TOLERANCE);
 }
 
 //////////////////////////////////////////////////////////////////////
