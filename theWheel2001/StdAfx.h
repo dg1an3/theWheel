@@ -22,8 +22,15 @@
 #include <afxcmn.h>			// MFC support for Windows Common Controls
 #endif // _AFX_NO_AFXCMN_SUPPORT
 
-// #include <gdiplus.h>
-// using namespace Gdiplus;
+#include <afxmt.h>
+#include <afxhtml.h>
+
+#include <wininet.h> 
+#include <urlmon.h> 
+#include <mshtml.h> 
+
+#include <comdef.h>
+
 
 void log_trace(const char *, ...);
 

@@ -17,6 +17,13 @@
 
 #include <afxtempl.h>
 
+#include <wininet.h> 
+#include <urlmon.h> 
+#include <mshtml.h> 
+
+#include <comdef.h>
+
+
 //{{AFX_INSERT_LOCATION}}
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.
 
