@@ -40,14 +40,12 @@ public:
 	virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
 	virtual void OnBeginPrinting(CDC* pDC, CPrintInfo* pInfo);
 	virtual void OnEndPrinting(CDC* pDC, CPrintInfo* pInfo);
-	virtual void OnInitialUpdate(); // called first time after construct
 	virtual void OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint);
 	//}}AFX_VIRTUAL
 
 // Implementation
 public:
-	CObjectExplorer& GetTreeCtrl();
-	void AddNodeItems(CNode *pNode, CObjectTreeItem *pParent);
+//	void AddNodeItems(CNode *pNode, CObjectTreeItem *pParent);
 	virtual ~CSpaceTreeView();
 #ifdef _DEBUG
 	virtual void AssertValid() const;

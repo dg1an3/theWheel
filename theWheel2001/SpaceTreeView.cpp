@@ -44,7 +44,7 @@ CSpaceTreeView::~CSpaceTreeView()
 
 BOOL CSpaceTreeView::PreCreateWindow(CREATESTRUCT& cs)
 {
-	// TODO: Modify the Window class or styles here by modifying
+	// Modify the Window class or styles here by modifying
 	//  the CREATESTRUCT cs
 	cs.style |= TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT;
 
@@ -82,22 +82,6 @@ void CSpaceTreeView::OnEndPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
 	// TODO: add cleanup after printing
 }
 
-void CSpaceTreeView::OnInitialUpdate()
-{
-	CView::OnInitialUpdate();
-
-/*	GetTreeCtrl().DeleteAllItems();
-
-	// set the space for the CView
-	int nAt;
-	for (nAt = 0; nAt < GetDocument()->GetNodeCount(); nAt++)
-	{
-		// insert each node into the tree
-		GetTreeCtrl().InsertItem(GetDocument()->GetNode(nAt)->GetName(), 0, 0);
-	} 
-*/
-}
-
 /////////////////////////////////////////////////////////////////////////////
 // CSpaceTreeView diagnostics
 
@@ -122,44 +106,6 @@ CSpace* CSpaceTreeView::GetDocument() // non-debug version is inline
 /////////////////////////////////////////////////////////////////////////////
 // CSpaceTreeView message handlers
 
-void CSpaceTreeView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint) 
-{
-	if (::IsWindow(GetTreeCtrl().m_hWnd))
-		GetTreeCtrl().DeleteAllItems();
-
-	CSpace *pSpace = (CSpace *)m_pDocument;
-	ASSERT(m_pDocument == (CSpace*)m_pDocument);
-
-	AddNodeItems(&GetDocument()->rootNode, NULL);
-
-/*	// set the space for the CView
-	int nAt;
-	for (nAt = 0; nAt < GetDocument()->GetNodeCount(); nAt++)
-	{
-		// insert each node into the tree
-		GetTreeCtrl().InsertItem(GetDocument()->GetNode(nAt)->GetName(), 0, 0);
-	} */
-}
-
-void CSpaceTreeView::AddNodeItems(CNode *pNode, CObjectTreeItem *pParent)
-{
-	// set the space for the CView
-	int nAt;
-	for (nAt = 0; nAt < pNode->children.GetSize(); nAt++)
-	{
-		CNode *pChildNode = pNode->children.Get(nAt);
-		CObjectTreeItem *pItem = new CObjectTreeItem();
-		pItem->SetObject(pChildNode);
-		pItem->SetParent(pParent);
-
-		pItem->Create(&GetTreeCtrl());
-		// insert each node into the tree
-		// GetTreeCtrl().InsertItem(pItem);
-
-		AddNodeItems(pChildNode, pItem);
-	}
-}
-
 int CSpaceTreeView::OnCreate(LPCREATESTRUCT lpCreateStruct) 
 {
 	if (CView::OnCreate(lpCreateStruct) == -1)
@@ -179,11 +125,6 @@ int CSpaceTreeView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	return 0;
 }
 
-CObjectExplorer& CSpaceTreeView::GetTreeCtrl()
-{
-	return m_ObjectExplorer;
-}
-
 void CSpaceTreeView::OnSize(UINT nType, int cx, int cy) 
 {
 	CView::OnSize(nType, cx, cy);
@@ -194,3 +135,35 @@ void CSpaceTreeView::OnSize(UINT nType, int cx, int cy)
 
 	m_ObjectExplorer.MoveWindow(&rect);
 }
+
+void CSpaceTreeView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint) 
+{
+	// delete any of the items that are present
+	m_ObjectExplorer.DeleteAllItems();
+
+	// get a pointer to the CSpace object
+	CSpace *pSpace = (CSpace *)m_pDocument;
+	ASSERT(m_pDocument == (CSpace*)m_pDocument);
+
+	// get a pointer to the space's root node
+	CNode *pRootNode = &pSpace->rootNode;
+
+	// create the tree view items
+	int nAt;
+	for (nAt = 0; nAt < pRootNode->children.GetSize(); nAt++)
+	{
+		// create a new item object
+		CObjectTreeItem *pItem = new CObjectTreeItem();
+
+		// set the resource IDs for the new item object
+		pItem->imageResourceID.Set(IDB_NODE);
+		pItem->selectedImageResourceID.Set(IDB_NODE);
+
+		// set the object (recursively creates children)
+		pItem->forObject.Set(pRootNode->children.Get(nAt));
+
+		// now create the Windows tree item
+		pItem->Create(&m_ObjectExplorer);
+	}
+}
+
