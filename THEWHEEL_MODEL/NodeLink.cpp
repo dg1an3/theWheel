@@ -96,6 +96,18 @@ REAL CNodeLink::GetGainWeight() const
 
 
 //////////////////////////////////////////////////////////////////////
+// CNodeLink::GetGain
+// 
+// returns the gain for the link weight
+//////////////////////////////////////////////////////////////////////
+REAL CNodeLink::GetGain()
+{
+	return m_gain;
+
+}	// CNodeLink::GetGain
+
+
+//////////////////////////////////////////////////////////////////////
 // CNodeLink::SetGain
 // 
 // sets the gain for the link weight
@@ -106,7 +118,7 @@ void CNodeLink::SetGain(REAL gain)
 	ASSERT(_finite(m_gain));
 
 	// set by filtering with the currrent gain
-	m_gain = 0.75 * m_gain + 0.25 * gain;
+	m_gain = gain;
 
 	// ensure still finite
 	ASSERT(_finite(m_gain));
@@ -219,6 +231,9 @@ void CNodeLink::Serialize(CArchive &ar)
 		{
 			ar >> m_bIsStabilizer;
 		}
+
+		if (m_weight < 0.01)
+			m_weight = 0.0;
 	}
 	else
 	{
