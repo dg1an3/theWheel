@@ -71,8 +71,8 @@ public:
 	// layout for all child views
 	void LayoutNodeViews();
 
-	// normalization
-	void NormalizeNodeViews();
+	// activates a particular node by a particular scale factor
+	void ActivateNode(CNodeView *pNodeView, float scale);
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -104,9 +104,6 @@ public:
 
 	// defines the type for the state vector
 	typedef CVector<STATE_DIM, STATE_TYPE> CStateVector;
-
-	// retrieves the current threshold for this CSpaceView
-	STATE_TYPE GetThreshold();
 
 	// gets and sets the state vector for this CSpaceView
 	CStateVector GetStateVector();

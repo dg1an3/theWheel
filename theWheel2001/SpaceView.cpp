@@ -92,7 +92,7 @@ BOOL CSpaceView::PreCreateWindow(CREATESTRUCT& cs)
 void CSpaceView::AddNodeToSpace(CNode *pNewNode)
 {
 	// compute the total weight (for determining initial link weights)
-	float totalWeight = 0.0f;
+	double totalWeight = 0.0;
 	int nAt;
 	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 	{
@@ -113,15 +113,15 @@ void CSpaceView::AddNodeToSpace(CNode *pNewNode)
 		CNodeView *pView = nodeViews.Get(nAt);
 
 		// determine the appropriate link weight
-		float weight = pView->forNode->activation.Get() / totalWeight;
+		double weight = pView->forNode->activation.Get() / totalWeight;
 
 		// establish the link
-		pNewNode->LinkTo(pView->forNode.Get(), weight);
+		pNewNode->LinkTo(pView->forNode.Get(), (float) weight);
 
 		// is this a potential parent?
 		if (weight > maxWeight)
 		{
-			maxWeight = weight;
+			maxWeight = (float) weight;
 			pParentNode = pView->forNode.Get();
 			ptInit = pView->center.Get();
 		}
@@ -152,9 +152,7 @@ void CSpaceView::AddNodeToSpace(CNode *pNewNode)
 
 	// and add to the array
 	nodeViews.Add(pNewNodeView);
-
-	// normalize all the node views
-	NormalizeNodeViews();
+	ActivateNode(pNewNodeView, (float) 1.6);
 
 	// and lay them out
 	LayoutNodeViews();
@@ -195,28 +193,62 @@ void CSpaceView::LayoutNodeViews()
 	CenterNodeViews();
 }
 
-void CSpaceView::NormalizeNodeViews()
+void CSpaceView::ActivateNode(CNodeView *pNodeView, float scale)
 {
-	// only normalize if there are children
-	if (nodeViews.GetSize() == 0)
-		return;
+	// first, increase the activation of the node up to the max (from OnLMouseButton)
+	double oldActivation = pNodeView->forNode->activation.Get();
+	double newActivation = oldActivation 
+		+ (TOTAL_ACTIVATION - oldActivation) * scale;
+	pNodeView->forNode->activation.Set(newActivation);
 
-	float sum = 0.0;
+	// now, propagate the activation
+	pNodeView->forNode->PropagateActivation(0.8);
+	GetDocument()->rootNode.ResetForPropagation();
 
-	for (int nAt = 0; nAt < nodeViews.GetSize(); nAt++)
+	// normalize the nodes
+	GetDocument()->NormalizeNodes();
+
+	// sort the node views
+	SortNodeViews();
+
+	// compute the activation threshold, and set the thresholded activation on 
+	//		all node views
+
+	// form the number of currently visualized node views
+	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
+	double activationThreshold = 
+		nodeViews.Get(nNumVizNodeViews - 1)->forNode->activation.Get();
+
+	// compute the normalization factor for super-threshold node views
+	double superThresholdSum = 0.0;
+	for (int nAt = 0; nAt < nNumVizNodeViews; nAt++)
 	{
-		CNodeView *pView = nodeViews.Get(nAt);
-
-		// only include super-threshold nodes in the normalization sum
-		if (pView->forNode->activation.Get() >= CNodeView::activationThreshold)
-			sum += pView->forNode->activation.Get();
+		superThresholdSum += nodeViews.Get(nAt)->forNode->activation.Get();
 	}
+	double superThresholdScale = TOTAL_ACTIVATION / superThresholdSum;
 
+	// now set the thresholdedActivation for all node views
 	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 	{
-		CNodeView *pView = nodeViews.Get(nAt);
-		float newActivation = pView->forNode->activation.Get() * (float) TOTAL_ACTIVATION / sum;
-		pView->forNode->activation.Set(newActivation);
+		CNodeView *pNodeView = nodeViews.Get(nAt);
+		double activation = pNodeView->forNode->activation.Get();
+
+		// for super-threshold nodes,
+		if (activation > activationThreshold)
+		{
+			// scale so that super-thresholded activations are (roughly)
+			//		normalized
+			activation *= superThresholdScale;
+
+			// now set the thresholded activation
+			pNodeView->thresholdedActivation.Set( (float)
+				activation * (float) superThresholdScale);
+		}
+		else
+		{
+			// otherwise, the thresholded activation is zero
+			pNodeView->thresholdedActivation.Set(0.0);
+		}
 	}
 }
 
@@ -242,15 +274,6 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt)
 	// and add to the array
 	nodeViews.Add(pNewNodeView);
 
-	// now layout the child node views
-	NormalizeNodeViews();
-
-	// make sure the existing node views are in order
-	SortNodeViews();
-
-	// layout the child node views
-	LayoutNodeViews();
-
 	// and finally, create the child node views
 	int nAtNode;
 	for (nAtNode = 0; nAtNode < pParentNode->children.GetSize(); nAtNode++)
@@ -258,6 +281,9 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt)
 		// construct a new node view for this node
 		CreateNodeViews((CNode *) pParentNode->children.Get(nAtNode), pt);
 	}
+
+	// activate this node view after creating children (to maximize size)
+	ActivateNode(pNewNodeView, 0.5);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -337,6 +363,8 @@ void CSpaceView::OnDraw(CDC* pDC)
 		rgn.OffsetRgn(rect.TopLeft());
 
 		pDC->SelectClipRgn(&rgn, RGN_DIFF);
+
+		rgn.DeleteObject();
 	}
 
 	CBrush brush;
@@ -370,14 +398,13 @@ void CSpaceView::OnInitialUpdate()
 	GetClientRect(&rect);
 	CreateNodeViews(&GetDocument()->rootNode, rect.CenterPoint());
 
-	// now normalize all the newly created node views
-	NormalizeNodeViews();
-
-	// ensure the nodeviews are sorted
-	SortNodeViews();
-
-	// and finally, lay them out
-	LayoutNodeViews();
+	// now snap the node views to the parameter values
+	for (nAtNodeView = 0; nAtNodeView < nodeViews.GetSize(); nAtNodeView++)
+	{
+		CNodeView *pNodeView = (CNodeView *)nodeViews.Get(nAtNodeView);
+		pNodeView->springActivation.Set(pNodeView->thresholdedActivation.Get());
+		pNodeView->springCenter.Set(pNodeView->center.Get());
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -461,6 +488,8 @@ BOOL CSpaceView::OnEraseBkgnd(CDC* pDC)
 		rgn.OffsetRgn(rect.TopLeft());
 
 		pDC->SelectClipRgn(&rgn, RGN_DIFF);
+
+		rgn.DeleteObject();
 	}
 
 	CBrush brush;
@@ -554,9 +583,6 @@ void CSpaceView::SortNodeViews()
 //////////////////////////////////////////////////////////////////////
 CSpaceView::CStateVector CSpaceView::GetStateVector()
 {
-	// compute the threshold
-	GetThreshold();
-
 	// for the state vector
 	CStateVector vState;
 	for (int nAt = 0; nAt < STATE_DIM / 2; nAt++)
@@ -589,21 +615,3 @@ void CSpaceView::SetStateVector(const CSpaceView::CStateVector& vState)
 		pView->center.Set(CVector<2>(vState[nAt*2], vState[nAt*2+1]));
 	}
 }
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceViewEnergyFunction::GetThreshold
-// 
-// gets the threshold value for the associated CSpaceView
-// sets the static threshold value for the CNodeView class
-//////////////////////////////////////////////////////////////////////
-SPV_STATE_TYPE CSpaceView::GetThreshold()
-{
-	// form the number of currently visualized node views
-	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
-
-	CNodeView::activationThreshold = 
-		nodeViews.Get(nNumVizNodeViews - 1)->forNode->activation.Get();
-
-	return CNodeView::activationThreshold;
-}
-
