@@ -211,6 +211,13 @@ CRect CNodeView::GetInnerRect()
 //////////////////////////////////////////////////////////////////////
 CRgn& CNodeView::GetShape()
 {
+	// no shape if the rectangle is too small
+	if (GetOuterRect().Height() < 5)
+	{
+		m_shape.DeleteObject();
+		return m_shape;
+	}
+
 	// re-compute the region, if needed
 	if (m_shape.GetSafeHandle() == NULL)
 	{
@@ -273,6 +280,14 @@ void CNodeView::UpdateSprings(double springConst)
 	m_vSpringCenter = GetCenter() * (1.0 - springConst)
 		+ m_vSpringCenter * (springConst);
 
+#ifdef LOG_CENTERS
+	CVector<2> vParentCenter = rectParent.CenterPoint();
+
+	if ((m_vSpringCenter - vParentCenter).GetLength() > 800.0)
+		LOG_TRACE("Node %s center at %lf, %lf\n",
+			forNode->name.Get(), m_vSpringCenter[0], m_vSpringCenter[1]);
+#endif
+
 	// compute the area interpreting springActivation as the fraction of the 
 	//		parent's total area
 	float area = (float) m_springActivation 
@@ -294,8 +309,10 @@ void CNodeView::UpdateSprings(double springConst)
 	rect.bottom = (long) m_vSpringCenter[1] + nHeight / 2;
 
 	// move the window -- re-computes window region
-	m_shape.DeleteObject();	// trigger re-computing the shape
 	m_rectOuter = rect;
+
+	// trigger re-computing the shape
+	m_shape.DeleteObject();	
 
 	// and invalidate the parent window
 	m_pParent->Invalidate(FALSE);
