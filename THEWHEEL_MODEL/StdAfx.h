@@ -17,11 +17,44 @@
 
 #include <afxtempl.h>
 
+// internet includes for web pages
 #include <wininet.h> 
 #include <urlmon.h> 
 #include <mshtml.h> 
 
+// common definitions
 #include <comdef.h>
+
+// multimedia and sound includes
+#include <mmsystem.h>
+#include <mmreg.h>
+#include <msacm.h>
+#include <dsound.h>
+
+void log_trace(const char *, ...);
+
+#ifdef _DEBUG
+#define LOG_TRACE TRACE
+#else
+#define LOG_TRACE log_trace
+#endif
+
+#define START_TIMER(EVENT_FLAG)			\
+{										\
+	LARGE_INTEGER freq;					\
+	QueryPerformanceFrequency(&freq);	\
+										\
+	LARGE_INTEGER start;				\
+	QueryPerformanceCounter(&start);	\
+
+#define STOP_TIMER(EVENT_FLAG, LABEL)	\
+	LARGE_INTEGER end;					\
+	QueryPerformanceCounter(&end);		\
+										\
+	LOG_TRACE("Time: " LABEL " = %lf\n",	\
+		(double) (end.QuadPart - start.QuadPart)	\
+			/ (double) freq.QuadPart);	\
+}										\
 
 
 //{{AFX_INSERT_LOCATION}}
