@@ -39,7 +39,7 @@ public:
 	virtual ~CSpace();
 
 	// declare dynamic creation
-	DECLARE_DYNCREATE(CSpace)
+	DECLARE_SERIAL(CSpace)
 
 	///////////////////////////////////////////////////////////////////
 	// hierarchy
@@ -56,6 +56,10 @@ public:
 
 	// removes a node from the space
 	void RemoveNode(CNode *pMarkedNode);
+
+	// accessors for current node
+	CNode *GetCurrentNode();
+	void SetCurrentNode(CNode *pNode);
 
 	///////////////////////////////////////////////////////////////////
 	// operations
@@ -74,6 +78,17 @@ public:
 	// accessors for the super node count
 	int GetSuperNodeCount();
 	void SetMaxSuperNodeCount(int nSuperNodeCount);
+
+	// accessors for primary/secondary ratio
+	double GetPrimSecRatio() const;
+	void SetPrimSecRatio(double primSecRatio);
+
+	// accessors for spring constant
+	double GetSpringConst();
+	void SetSpringConst(double springConst);
+
+	// class description accessors
+	CMap<CString, LPCSTR, COLORREF, COLORREF>& GetClassColorMap();
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -132,6 +147,9 @@ private:
 	// the array of nodes
 	CObArray m_arrNodes;
 
+	// the currently selected node
+	CNode *m_pCurrentNode;
+
 	// the direct sound interface
 	LPDIRECTSOUND m_pDS;
 
@@ -140,6 +158,15 @@ private:
 
 	// the center of the node views
 	CVectorD<3> m_vCenter;
+
+	// primary/secondary ratio for the space
+	double m_primSecRatio;
+
+	// spring constant for node views
+	double m_springConst;
+
+	// the mapping from classes to colors
+	CMap<CString, LPCSTR, COLORREF, COLORREF> m_mapClassColors;
 };
 
 /////////////////////////////////////////////////////////////////////////////

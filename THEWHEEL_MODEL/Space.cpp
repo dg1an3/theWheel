@@ -59,10 +59,17 @@ CSpace::CSpace()
 		m_pDS(NULL),
 		m_pLayoutManager(NULL),
 		m_totalPrimaryActivation(0.0),
-		m_totalSecondaryActivation(0.0)
+		m_totalSecondaryActivation(0.0),
+		m_primSecRatio(PRIM_SEC_RATIO),
+		m_springConst(0.95)
 {
 	// create the layout manager
 	m_pLayoutManager = new CSpaceLayoutManager(this);
+
+	// set the spring constant (from the profile)
+	SetSpringConst( 1.0 / 100.0 * 
+		(double) ::AfxGetApp()->GetProfileInt("LAYOUT", "SPRING_CONST", 
+			100.0 * GetSpringConst()));
 
 }	// CSpace::CSpace
 
@@ -86,8 +93,11 @@ CSpace::~CSpace()
 /////////////////////////////////////////////////////////////////////////////
 // implements CSpace's dynamic creation
 /////////////////////////////////////////////////////////////////////////////
-IMPLEMENT_DYNCREATE(CSpace, CDocument)
-
+#define SPACE_SCHEMA 3
+IMPLEMENT_SERIAL(CSpace, CDocument, VERSIONABLE_SCHEMA | SPACE_SCHEMA)
+//	3 - optimization parameters
+//	2 - serialize class color map + root node
+//	1 - serialize root node
 
 //////////////////////////////////////////////////////////////////////
 // CSpace::GetRootNode
@@ -176,12 +186,17 @@ void CSpace::RemoveNode(CNode *pMarkedNode)
 		if (pOtherNode != pMarkedNode)
 		{
 			// then unlink the marked node
-			pOtherNode->Unlink(pMarkedNode);
+			//		don't unlink reciprocal, as we would like this
+			//		node to preserve its weights for graceful exit
+			pOtherNode->Unlink(pMarkedNode, FALSE);
 		}
 	}
 
 	// remove the node from the parent
 	pMarkedNode->SetParent(NULL);
+
+	// de-activate
+	pMarkedNode->SetActivation(0.00001);
 
 	// find and remove the node from the array
 	for (nAt = 0; nAt < GetNodeCount(); nAt++)
@@ -201,6 +216,30 @@ void CSpace::RemoveNode(CNode *pMarkedNode)
 	}
 
 }	// CSpace::RemoveNode
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetCurrentNode
+// 
+// accessors for current node
+//////////////////////////////////////////////////////////////////////
+CNode *CSpace::GetCurrentNode()
+{
+	return m_pCurrentNode;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::SetCurrentNode
+// 
+// sets the space's current node
+//////////////////////////////////////////////////////////////////////
+void CSpace::SetCurrentNode(CNode *pNode)
+{
+	m_pCurrentNode = pNode;
+
+	// update all views for the new current node
+	UpdateAllViews(NULL, 0L, m_pCurrentNode);
+}
 
 
 //////////////////////////////////////////////////////////////////////
@@ -241,11 +280,11 @@ void CSpace::NormalizeNodes(REAL sum)
 {
 	// scale for secondary
 	REAL scale_2 = sum 
-		/ (PRIM_SEC_RATIO * GetTotalPrimaryActivation() 
+		/ (m_primSecRatio * GetTotalPrimaryActivation() 
 			+ GetTotalSecondaryActivation()); 
 
 	// scale for primary
-	REAL scale_1 = scale_2 * PRIM_SEC_RATIO;
+	REAL scale_1 = scale_2 * m_primSecRatio;
 
 	// scale the nodes
 	for (int nAt = 0; nAt < GetNodeCount(); nAt++)
@@ -272,7 +311,7 @@ void CSpace::NormalizeNodes(REAL sum)
 //////////////////////////////////////////////////////////////////////
 int CSpace::GetSuperNodeCount()
 {
-	return __min(GetLayoutManager()->GetStateDim() / 2, // m_nSuperNodeCount, 
+	return __min(GetLayoutManager()->GetStateDim() / 2,
 		GetNodeCount());
 
 }	// CSpace::GetSuperNodeCount
@@ -289,6 +328,67 @@ void CSpace::SetMaxSuperNodeCount(int nSuperNodeCount)
 	GetLayoutManager()->SetStateDim(nSuperNodeCount * 2);
 
 }	// CSpace::SetMaxSuperNodeCount
+
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetPrimSecRatio
+// 
+// returns the primary/secondary ratio
+//////////////////////////////////////////////////////////////////////
+double CSpace::GetPrimSecRatio() const
+{
+	return m_primSecRatio;
+
+}	// CSpace::GetPrimSecRatio
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::SetPrimSecRatio
+// 
+// sets the primary/secondary ratio
+//////////////////////////////////////////////////////////////////////
+void CSpace::SetPrimSecRatio(double primSecRatio)
+{
+	m_primSecRatio = primSecRatio;
+
+}	// CSpace::SetPrimSecRatio
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetSpringConst
+// 
+// gets the spring constant for node position updates
+//////////////////////////////////////////////////////////////////////
+double CSpace::GetSpringConst()
+{
+	return m_springConst;
+
+}	// CSpace::GetSpringConst
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::SetSpringConst
+// 
+// sets the primary/secondary ratio
+//////////////////////////////////////////////////////////////////////
+void CSpace::SetSpringConst(double springConst)
+{
+	m_springConst = springConst;
+
+}	// CSpace::SetSpringConst
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::GetClassColorMap
+// 
+// class description accessors
+//////////////////////////////////////////////////////////////////////
+CMap<CString, LPCSTR, COLORREF, COLORREF>& CSpace::GetClassColorMap()
+{
+	return m_mapClassColors;
+
+}	// CSpace::GetClassColorMap
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -322,16 +422,22 @@ BOOL CSpace::OnNewDocument()
 
 	// create a new root node
 	m_pRootNode = new CNode();
-	m_pRootNode->SetName("root");
-	AddNode(m_pRootNode, NULL);
-	AddNode(new CNode(this, "Child1"), m_pRootNode);
-	AddNode(new CNode(this, "Child2"), m_pRootNode);
-	AddNode(new CNode(this, "Child3"), m_pRootNode);
+	m_pRootNode->SetName("%%hiddenroot%%");
+
+	// create the hidden root
+	CNode *pMainNode = new CNode();
+	pMainNode->SetName("root");
+	pMainNode->SetParent(m_pRootNode);
+	AddNode(pMainNode, NULL);
+
+	AddNode(new CNode(this, "Child1"), pMainNode);
+	AddNode(new CNode(this, "Child2"), pMainNode);
+	AddNode(new CNode(this, "Child3"), pMainNode);
 
 	// initialize the node activations from the root node
-	m_pRootNode->SetActivation((REAL) 0.5);
-	m_pRootNode->ResetForPropagation();
-	m_pRootNode->PropagateActivation((REAL) 0.8);
+	pMainNode->SetActivation((REAL) 0.5);
+	pMainNode->ResetForPropagation();
+	pMainNode->PropagateActivation((REAL) 0.8);
 
 	NormalizeNodes();
 
@@ -387,22 +493,49 @@ void CSpace::AddNodeToArray(CNode *pNode)
 //////////////////////////////////////////////////////////////////////
 void CSpace::Serialize(CArchive& ar)
 {
+	// serialize base class
+	CDocument::Serialize(ar);
+
+	// set up the schema
+	DWORD dwSchema = SPACE_SCHEMA;
+
 	// if we are loading the space...
 	if (ar.IsLoading())
 	{
+		// serialize schema
+		ar >> dwSchema;
+
 		// delete the current root node
 		delete m_pRootNode;
 
 		// read in the root node pointer
 		ar >> m_pRootNode;
 
+		// see if the name is the default (hidden) root name
+		if (m_pRootNode->GetName() != "%%hiddenroot%%")
+		{
+			// create the hidden root
+			CNode *pHiddenRoot = new CNode();
+			pHiddenRoot->SetName("%%hiddenroot%%");
+
+			// set the parent for the default node
+			m_pRootNode->SetParent(pHiddenRoot);
+
+			// now set the root to the hidden root
+			m_pRootNode = pHiddenRoot;
+		}
+
 		// remove existing nodes from the array
 		m_arrNodes.RemoveAll();
 		m_totalPrimaryActivation = 0.0;
 		m_totalSecondaryActivation = 0.0;
 
-		// add the root node to the array of nodes
-		AddNodeToArray(m_pRootNode);
+		// add all of the nodes (except the hidden root)
+		//		to the array of nodes
+		for (int nAt = 0; nAt < m_pRootNode->GetChildCount(); nAt++)
+		{
+			AddNodeToArray(m_pRootNode->GetChildAt(nAt));
+		}
 
 		// sort the nodes
 		SortNodes();
@@ -413,11 +546,71 @@ void CSpace::Serialize(CArchive& ar)
 		// set the total activation
 		GetTotalPrimaryActivation(TRUE);
 		GetTotalSecondaryActivation(TRUE);
+	
+		// clear the class color map
+		m_mapClassColors.RemoveAll();
 	}
 	else
 	{
+		// serialize schema
+		ar << (DWORD) dwSchema;
+
 		// just serialize the root node pointer
 		ar << m_pRootNode;
+	}
+
+	if (dwSchema >= 2)
+	{
+		// serialize color map
+		m_mapClassColors.Serialize(ar);
+	}
+
+	if (dwSchema >= 3)
+	{
+		if (ar.IsLoading())
+		{
+			// spring constant
+			double springConst;
+			ar >> springConst;
+			SetSpringConst(springConst);
+
+			// primary/secondary ratio
+			ar >> m_primSecRatio;
+
+			// super node count
+			int nSuperNodeCount;
+			ar >> nSuperNodeCount;
+			GetLayoutManager()->SetStateDim(nSuperNodeCount * 2);
+
+			// layout manager parameters
+			double tolerance;
+			ar >> tolerance;
+			GetLayoutManager()->SetTolerance(tolerance);
+
+			double k_pos;
+			ar >> k_pos;
+			GetLayoutManager()->SetKPos(k_pos);
+
+			double k_rep;
+			ar >> k_rep;
+			GetLayoutManager()->SetKRep(k_rep);
+		}
+		else
+		{
+			// spring constant
+			ar << GetSpringConst();
+
+			// primary/secondary ratio
+			ar << GetPrimSecRatio();
+
+			// super node count
+			ar << GetLayoutManager()->GetStateDim() / 2;
+
+			// layout manager parameters
+			ar << GetLayoutManager()->GetTolerance();
+			ar << GetLayoutManager()->GetKPos();
+			ar << GetLayoutManager()->GetKRep();
+		}
 	}
 
 }	// CSpace::Serialize
@@ -435,12 +628,14 @@ void CSpace::Serialize(CArchive& ar)
 //////////////////////////////////////////////////////////////////////
 void CSpace::AssertValid() const
 {
-/*	for (int nAt = 0; nAt < GetNodeCount()-1; nAt++)
+#ifdef CHECK_SORTING
+	for (int nAt = 0; nAt < GetNodeCount()-1; nAt++)
 	{
 		ASSERT(GetNodeAt(nAt)->GetActivation() >= 
 			GetNodeAt(nAt+1)->GetActivation());
 	}
-*/
+#endif
+
 	CDocument::AssertValid();
 
 }	// CSpace::AssertValid
