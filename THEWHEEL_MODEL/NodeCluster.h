@@ -15,43 +15,28 @@
 class CNodeCluster : public CNode  
 {
 public:
-	float GetActualTotalActivation();
 	CNodeCluster(CSpace *pSpace = NULL, int nSiblings = 1);
 	virtual ~CNodeCluster();
 
-	// sibling management
-	int GetSiblingCount() const
-	{
-		return m_arrSiblings.GetSize();
-	}
-	CNodeCluster *GetSibling(int nAt)
-	{
-		return (CNodeCluster *) m_arrSiblings[nAt];
-	}
+	// sibling accessors
+	int GetSiblingCount() const;
+	CNodeCluster *GetSibling(int nAt);
 
-	// operations on individual nodes
+	// returns the distance to a particular node
 	float GetNodeDistanceSq(CNode *pNode);
 
-	float GetTotalActivation() { return m_totalActivation; }
-
-	float GetClusterError() 
-	{ 
-		if (m_totalActivation > 0.0f)
-			return m_error / m_totalActivation; 
-		else
-			return 0.0f;
-	}
-
-	void UpdateClusters();
-	CNodeCluster * GetNearestCluster(CNode *pNode, float *dist_sq = NULL);
+	// returns the weight from the cluster to a particular node
 	float GetLinkWeightForNode(CNode *pNode);
 
-	void DumpLinkVector();
+	// retrieves two versions of the cluster's total activation
+	float GetTotalActivation();
+	float GetActualTotalActivation();
 
-	CVector<2> m_vCenter;
+	// returns the total cluster error
+	float GetClusterError();
 
-	void UpdateLinkVector();
-	void InitRandom();
+	// returns the nearest cluster, also returns the distance squared
+	CNodeCluster * GetNearestCluster(CNode *pNode, float *dist_sq = NULL);
 
 protected:
 	friend CSpace;
@@ -59,8 +44,18 @@ protected:
 	// add a node to the cluster
 	void AddNodeToCluster(CNode *pNode, float dist_sq);
 
+	// updates the clusters after a change to the node activations
+	void UpdateClusters();
+
+	// helper to load the normalized link vector into the node links,
+	//		including the average weights to other clusters
+	void LoadLinkWeights();
+
+	// updates the link vector from the link weights
+	void UpdateLinkVector();
+
 	// retrieves the cluster's link vector (only valid after a
-	//	LoadLinkWeights call
+	//	LoadLinkWeights call)
 	float * GetLinkVector();
 
 	// reset the total activation 
@@ -68,25 +63,29 @@ protected:
 	//			but leaves GetLinkVector and the node map intact)
 	void ResetTotalActivation(double scale = 0.5);
 
-	// helper to load the normalized link vector into the node links,
-	//		including the average weights to other clusters
-	void LoadLinkWeights();
-
 	// retrieves the link weight to another cluster
 	float GetLinkWeightToCluster(CNodeCluster *toCluster);
 
+	// helper to dump the link vector
+	void DumpLinkVector();
+
 private:
+	// the space for the clusters
 	CSpace *m_pSpace;
 
+	// the array of siblings
 	CObArray m_arrSiblings;
 
 	// the link vector for this currently forming population
-	float * m_pLinkVectorCurrent;
-	float * m_pLinkVectorFinal;
+	CArray<float, float> m_arrLinkVectorCurrent;
+
+	// the 'final' link vector after the last update
+	CArray<float, float> m_arrLinkVectorFinal;
 
 	// total activation for all nodes added to the cluster
 	float m_totalActivation;
 
+	// error (mean squared error) for the cluster
 	float m_error;
 
 	// contains the nodes (in an easy-to-access format)
