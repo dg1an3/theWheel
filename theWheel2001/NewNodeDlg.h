@@ -7,6 +7,8 @@
 // NewNodeDlg.h : header file
 //
 
+#include <Node.h>
+
 /////////////////////////////////////////////////////////////////////////////
 // CNewNodeDlg dialog
 
@@ -24,7 +26,8 @@ public:
 	CString	m_strDesc;
 	CString	m_strImageFilename;
 	//}}AFX_DATA
-
+	
+	CNode *m_pNode;
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -38,7 +41,8 @@ protected:
 
 	// Generated message map functions
 	//{{AFX_MSG(CNewNodeDlg)
-		// NOTE: the ClassWizard will add member functions here
+	virtual BOOL OnInitDialog();
+    afx_msg void OnEndLabelEdit(NMHDR* pNMHDR, LRESULT* pResult);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };
