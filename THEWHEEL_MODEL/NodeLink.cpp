@@ -19,9 +19,9 @@ static char THIS_FILE[]=__FILE__;
 //////////////////////////////////////////////////////////////////////
 
 CNodeLink::CNodeLink(CNode *pToNode, float weight)
-: m_bPropagated(FALSE),
-	forTarget(pToNode),
-	weight(weight)
+	: forTarget(pToNode),
+		weight(weight),
+		hasPropagated(FALSE)
 {
 
 }
@@ -35,22 +35,9 @@ IMPLEMENT_SERIAL(CNodeLink, CObject, 1)
 
 void CNodeLink::Serialize(CArchive &ar)
 {
+	// serialize the link weight
 	weight.Serialize(ar);
+
+	// serialize the link target
 	forTarget.Serialize(ar);
-
-//	if (ar.IsStoring())
-//	{
-//		ar << m_weight;
-//		ar << m_pToNode; // ar.WriteObject((CObject *)m_pToNode);
-//	}
-//	else
-//	{
-//		ar >> m_weight;
-//		ar >> m_pToNode; // = (CNode *)ar.ReadObject(RUNTIME_CLASS(CNode));
-//	}
 }
-
-//float CNodeLink::GetWeight()
-//{
-//	return myWeight.Get();
-//}

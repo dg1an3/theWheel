@@ -30,11 +30,11 @@ public:
 	// node target
 	CAssociation< CNode > forTarget;
 
+	// flag to indicate that propagation has occurred through the link
+	CValue<BOOL> hasPropagated;
+
 	// serialization of this node link
 	virtual void Serialize(CArchive &ar);
-
-public:
-	BOOL m_bPropagated;
 };
 
 #endif // !defined(AFX_NODELINK_H__0C8AA66C_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
