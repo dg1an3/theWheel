@@ -6,23 +6,14 @@
 #include "stdafx.h"
 
 #include <ScalarFunction.h>
-#include <LookupFunction.h>
 
 #include "SpaceViewEnergyFunction.h"
 #include "SpaceView.h"
-
-SPV_STATE_TYPE SPACER_AMPL = 35.0f;
-SPV_STATE_TYPE ATTRACT_AMPL = 140.0f; 
-
-SPV_STATE_TYPE CENTER_AMPL = 0.03f;
 
 SPV_STATE_TYPE attract_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
 	return Gauss2D<SPV_STATE_TYPE>(x, y , 1.0f, 1.0f);
 }
-
-CLookupFunction<SPV_STATE_TYPE> attractFunc(&attract_func, 
-		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "ATTRFUNC.TMP");
 
 SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
@@ -30,9 +21,6 @@ SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 		+ 4.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 4.0f, 1.0f / 4.0f)
 		+ 8.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 8.0f, 1.0f / 8.0f);
 }
-
-CLookupFunction<SPV_STATE_TYPE> spacerFunc(&spacer_func, 
-		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "SPACERFUNC.TMP");
 
 SPV_STATE_TYPE CenterField(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE width, SPV_STATE_TYPE height, SPV_STATE_TYPE cs)
 {
@@ -61,6 +49,15 @@ SPV_STATE_TYPE CenterField(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE wi
 	SPV_STATE_TYPE distMin = min(distHorz, distVert);
 
 	return energy + 24.0f * Gauss(distMin + cs, cs);
+}
+
+CSpaceViewEnergyFunction::CSpaceViewEnergyFunction()
+	: m_attractFunc(&attract_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
+			"ATTRFUNC.TMP"),
+		m_spacerFunc(&spacer_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
+			"SPACERFUNC.TMP")
+{
+
 }
 
 CVector<SPV_STATE_DIM, SPV_STATE_TYPE> CSpaceViewEnergyFunction::GetStateVector()
@@ -175,18 +172,18 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 				for (int nX = -2; nX <= 2; nX++)
 					for (int nY = -2; nY <= 2; nY++)
 					{
-						m_energy += 1.0 / 22.5							
-							* spacerFunc((x + dx * (SPV_STATE_TYPE) nX) / ssx, 
+						m_energy += 1.0 / 20.0						
+							* m_spacerFunc((x + dx * (SPV_STATE_TYPE) nX) / ssx, 
 								(y + dy * (SPV_STATE_TYPE) nY) / ssy);
 					}
 
 				// add general repulsion
-				m_energy += 0.666
-					* attractFunc(x / (ssx * 1.0), y / (ssy * 1.0));
+				// m_energy += 0.5
+				//	* m_attractFunc(x / (ssx * 1.0), y / (ssy * 1.0));
 
 				// add attraction * weight
-				m_energy -= weight * 65.0
-					* attractFunc(x / (ssx * 6.0), y / (ssy * 6.0));
+				m_energy -= weight * 85.0
+					* m_attractFunc(x / (ssx * 6.0), y / (ssy * 6.0));
 			}
 		}
 
@@ -223,5 +220,4 @@ CVector<SPV_STATE_DIM, SPV_STATE_TYPE>
 
 	return m_vGrad;
 }
-
 
