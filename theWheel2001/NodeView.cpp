@@ -671,6 +671,7 @@ void CNodeView::OnLButtonDblClk(UINT nFlags, CPoint point)
 	newDlg.m_strName = forNode->name.Get();
 	newDlg.m_strDesc = forNode->description.Get();
 	newDlg.m_strImageFilename = forNode->imageFilename.Get();
+	newDlg.m_pNode = forNode.Get();
 
 	if (newDlg.DoModal() == IDOK)
 	{
