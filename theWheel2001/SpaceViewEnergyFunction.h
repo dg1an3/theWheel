@@ -10,7 +10,6 @@
 #ifndef _SPACEVIEWENERGYFUNCTION_H
 #define _SPACEVIEWENERGYFUNCTION_H
 
-#include <LookupFunction.h>
 #include <Optimizer.h>
 
 //////////////////////////////////////////////////////////////////////
@@ -27,7 +26,7 @@ typedef float SPV_STATE_TYPE;
 // declaration for the dimensionality of the energy function state
 //		vector
 //////////////////////////////////////////////////////////////////////
-const int SPV_STATE_DIM = 50;
+const int SPV_STATE_DIM = 42;
 
 //////////////////////////////////////////////////////////////////////
 // class CSpaceViewEnergyFunction
@@ -59,26 +58,6 @@ public:
 private:
 	// pointer to the energy function's spaceview
 	CSpaceView *m_pView;
-
-	// lookup function for the attraction field
-	// CLookupFunction<SPV_STATE_TYPE> m_attractFunc;
-	// CLookupFunction<SPV_STATE_TYPE> m_dSq_attractFunc;
-
-	// lookup function for the attraction field
-//	CLookupFunction<SPV_STATE_TYPE> m_dattractFunc_dx;
-
-	// lookup function for the attraction field
-//	CLookupFunction<SPV_STATE_TYPE> m_dattractFunc_dy;
-
-	// lookup function for the spacer field
-//	CLookupFunction<SPV_STATE_TYPE> m_spacerFunc;
-//	CLookupFunction<SPV_STATE_TYPE> m_dSq_spacerFunc;
-
-	// lookup function for the spacer field
-//	CLookupFunction<SPV_STATE_TYPE> m_dspacerFunc_dx;
-
-	// lookup function for the spacer field
-//	CLookupFunction<SPV_STATE_TYPE> m_dspacerFunc_dy;
 
 	// caches previous input vector
 	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> m_vInput;
