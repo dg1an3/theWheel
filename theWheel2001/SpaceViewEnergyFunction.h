@@ -36,7 +36,7 @@ const int SPV_STATE_DIM = 36;
 //		its state vector
 //////////////////////////////////////////////////////////////////////
 class CSpaceViewEnergyFunction 
-		: public CGradObjectiveFunction<SPV_STATE_DIM, SPV_STATE_TYPE>
+		: public CObjectiveFunction<SPV_STATE_DIM, SPV_STATE_TYPE>
 {
 public:
 	// construct the energy function, given the CSpaceView to which it

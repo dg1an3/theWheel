@@ -43,7 +43,8 @@ SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 //		view
 //////////////////////////////////////////////////////////////////////
 CSpaceViewEnergyFunction::CSpaceViewEnergyFunction(CSpaceView *pView)
-	: m_pView(pView),
+	: CObjectiveFunction<SPV_STATE_DIM, SPV_STATE_TYPE>(FALSE),
+		m_pView(pView),
 
 		m_vInput(CVector<SPV_STATE_DIM, SPV_STATE_TYPE>()),
 		m_energy(0.0),
