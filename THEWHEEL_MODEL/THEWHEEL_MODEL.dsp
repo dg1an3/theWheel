@@ -105,6 +105,10 @@ SOURCE=.\SpaceLayoutManager.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\SpaceStateVector.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\StdAfx.cpp
 # ADD CPP /Yc"stdafx.h"
 # End Source File
@@ -136,6 +140,10 @@ SOURCE=.\include\Space.h
 # Begin Source File
 
 SOURCE=.\include\SpaceLayoutManager.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\include\SpaceStateVector.h
 # End Source File
 # Begin Source File
 

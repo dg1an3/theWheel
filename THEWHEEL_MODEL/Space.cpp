@@ -29,6 +29,23 @@ static char THIS_FILE[] = __FILE__;
 // the scale factor for normalization
 const REAL PRIM_SEC_RATIO = 2.0;		// primary scale / secondary scale
 
+// constants for runaway adjustment
+const REAL MAX_RUNAWAY_RADIUS = 500.0;
+const REAL RUNAWAY_DIVISOR = 3.0;
+
+// constant for sub-threshold decay toward center
+const REAL SUBNODE_DECAY_RATE = 0.9;
+
+// displacement factor for max activator displacement
+const REAL MAX_ACT_DISPLACEMENT = 100.0;
+
+// fraction of old SSV to keep during update
+const REAL UPDATE_SSV_FRAC = 0.75;
+
+// min and max for randomly assigning initial weights
+const REAL MIN_INITIAL_WGT = 0.4;
+const REAL MAX_INITIAL_WGT = 0.7;
+
 
 //////////////////////////////////////////////////////////////////////
 // CompareNodeActivations
@@ -45,6 +62,26 @@ int __cdecl CompareNodeActivations(const void *elem1, const void *elem2)
 }	// CompareNodeActivations
 
 
+//////////////////////////////////////////////////////////////////////
+// GenerateRandom
+// 
+// generates a random number in the specified range
+//////////////////////////////////////////////////////////////////////
+REAL GenerateRandom(REAL min, REAL max)
+{
+	REAL value = min;
+	value += (max - min) * (REAL) rand() / (REAL) RAND_MAX;
+
+	return value;
+
+}	// GenerateRandom
+
+
+//////////////////////////////////////////////////////////////////////
+// Event Firing
+//////////////////////////////////////////////////////////////////////
+#define SPACE_FIRE_CHANGE(TAG, NODE) UpdateAllViews(NULL, TAG, NODE); 
+
 /////////////////////////////////////////////////////////////////////////////
 // CSpace construction/destruction
 /////////////////////////////////////////////////////////////////////////////
@@ -57,18 +94,25 @@ int __cdecl CompareNodeActivations(const void *elem1, const void *elem2)
 CSpace::CSpace()
 	: m_pRootNode(NULL),
 		m_pDS(NULL),
+		m_bNodesSorted(FALSE),
+
+		m_pStateVector(NULL),
 		m_pLayoutManager(NULL),
+		m_nLastPostSuper(0),
+
 		m_totalPrimaryActivation(0.0),
 		m_totalSecondaryActivation(0.0),
 		m_primSecRatio(PRIM_SEC_RATIO),
 		m_springConst(0.95)
 {
+	m_pStateVector = new CSpaceStateVector(this);
+
 	// create the layout manager
 	m_pLayoutManager = new CSpaceLayoutManager(this);
 
 	// set the spring constant (from the profile)
 	SetSpringConst( 1.0 / 100.0 * 
-		(double) ::AfxGetApp()->GetProfileInt("LAYOUT", "SPRING_CONST", 
+		(REAL) ::AfxGetApp()->GetProfileInt("LAYOUT", "SPRING_CONST", 
 			100.0 * GetSpringConst()));
 
 }	// CSpace::CSpace
@@ -81,11 +125,17 @@ CSpace::CSpace()
 //////////////////////////////////////////////////////////////////////
 CSpace::~CSpace()
 {
+	// delete the state vector
+	delete m_pStateVector;
+
 	// delete the layout manager
 	delete m_pLayoutManager;
 
 	// delete the root node (deletes other nodes)
-	delete m_pRootNode;
+	if (m_pRootNode)
+	{
+		delete m_pRootNode;
+	}
 
 }	// CSpace::~CSpace
 
@@ -144,8 +194,7 @@ CNode *CSpace::GetNodeAt(int nAt) const
 void CSpace::AddNode(CNode *pNewNode, CNode *pParentNode)
 {
 	// determine the initial activation
-	REAL actWeight = 
-		0.5f * (1.4f - 0.8f * (REAL) rand() / (REAL) RAND_MAX);
+	REAL actWeight = GenerateRandom(MIN_INITIAL_WGT, MAX_INITIAL_WGT);
 
 	if (pParentNode)
 	{
@@ -161,10 +210,10 @@ void CSpace::AddNode(CNode *pNewNode, CNode *pParentNode)
 
 	// set the activation for the new node, only after adding to
 	//		the array (because it will update the total activation)
-	pNewNode->SetActivation(actWeight * 0.1f);
+	pNewNode->SetActivation(actWeight * 0.1);
 
 	// update all the views, passing the new node as a hint
-	UpdateAllViews(NULL, NULL, pNewNode);	
+	SPACE_FIRE_CHANGE(EVT_NODE_ADDED, pNewNode);
 
 }	// CSpace::AddNode
 
@@ -215,6 +264,9 @@ void CSpace::RemoveNode(CNode *pMarkedNode)
 		}
 	}
 
+	// update all the views, passing the removed node as a hint
+	SPACE_FIRE_CHANGE(EVT_NODE_REMOVED, pMarkedNode);
+
 }	// CSpace::RemoveNode
 
 
@@ -226,7 +278,9 @@ void CSpace::RemoveNode(CNode *pMarkedNode)
 CNode *CSpace::GetCurrentNode()
 {
 	return m_pCurrentNode;
-}
+
+}	// CSpace::GetCurrentNode
+
 
 //////////////////////////////////////////////////////////////////////
 // CSpace::SetCurrentNode
@@ -238,8 +292,9 @@ void CSpace::SetCurrentNode(CNode *pNode)
 	m_pCurrentNode = pNode;
 
 	// update all views for the new current node
-	UpdateAllViews(NULL, 0L, m_pCurrentNode);
-}
+	SPACE_FIRE_CHANGE(EVT_NODE_SELCHANGED, m_pCurrentNode);
+
+}	// CSpace::SetCurrentNode
 
 
 //////////////////////////////////////////////////////////////////////
@@ -265,8 +320,8 @@ void CSpace::ActivateNode(CNode *pNode, REAL scale)
 	// normalize the nodes
 	NormalizeNodes();
 
-	// sort the nodes
-	SortNodes();
+	// flag the nodes as unsorted
+	m_bNodesSorted = FALSE;
 
 }	// CSpace::ActivateNode
 
@@ -327,6 +382,9 @@ void CSpace::SetMaxSuperNodeCount(int nSuperNodeCount)
 	// m_nSuperNodeCount = nSuperNodeCount;
 	GetLayoutManager()->SetStateDim(nSuperNodeCount * 2);
 
+	// update all the views
+	SPACE_FIRE_CHANGE(EVT_SUPERNODECOUNT_CHANGED, NULL);
+
 }	// CSpace::SetMaxSuperNodeCount
 
 
@@ -336,7 +394,7 @@ void CSpace::SetMaxSuperNodeCount(int nSuperNodeCount)
 // 
 // returns the primary/secondary ratio
 //////////////////////////////////////////////////////////////////////
-double CSpace::GetPrimSecRatio() const
+REAL CSpace::GetPrimSecRatio() const
 {
 	return m_primSecRatio;
 
@@ -348,9 +406,12 @@ double CSpace::GetPrimSecRatio() const
 // 
 // sets the primary/secondary ratio
 //////////////////////////////////////////////////////////////////////
-void CSpace::SetPrimSecRatio(double primSecRatio)
+void CSpace::SetPrimSecRatio(REAL primSecRatio)
 {
 	m_primSecRatio = primSecRatio;
+
+	// update all the views
+	SPACE_FIRE_CHANGE(EVT_LAYOUTPARAMS_CHANGED, NULL);
 
 }	// CSpace::SetPrimSecRatio
 
@@ -360,7 +421,7 @@ void CSpace::SetPrimSecRatio(double primSecRatio)
 // 
 // gets the spring constant for node position updates
 //////////////////////////////////////////////////////////////////////
-double CSpace::GetSpringConst()
+REAL CSpace::GetSpringConst()
 {
 	return m_springConst;
 
@@ -372,9 +433,12 @@ double CSpace::GetSpringConst()
 // 
 // sets the primary/secondary ratio
 //////////////////////////////////////////////////////////////////////
-void CSpace::SetSpringConst(double springConst)
+void CSpace::SetSpringConst(REAL springConst)
 {
 	m_springConst = springConst;
+
+	// update all the views
+	SPACE_FIRE_CHANGE(EVT_LAYOUTPARAMS_CHANGED, NULL);
 
 }	// CSpace::SetSpringConst
 
@@ -410,13 +474,11 @@ END_MESSAGE_MAP()
 BOOL CSpace::OnNewDocument()
 {
 	if (!CDocument::OnNewDocument())
+	{
 		return FALSE;
-
-	// remove all nodes
-	delete m_pRootNode;
+	}
 
 	// clear the array
-	m_arrNodes.RemoveAll();
 	m_totalPrimaryActivation = 0.0;
 	m_totalSecondaryActivation = 0.0;
 
@@ -439,6 +501,7 @@ BOOL CSpace::OnNewDocument()
 	pMainNode->ResetForPropagation();
 	pMainNode->PropagateActivation((REAL) 0.8);
 
+	SortNodes();
 	NormalizeNodes();
 
 	// everything OK, return TRUE
@@ -454,10 +517,210 @@ BOOL CSpace::OnNewDocument()
 //////////////////////////////////////////////////////////////////////
 void CSpace::SortNodes()
 {
-	qsort(m_arrNodes.GetData(), m_arrNodes.GetSize(), sizeof(CNode*),
-		CompareNodeActivations);
+	// if nodes are sorted, leave alone
+	if (!m_bNodesSorted)
+	{	
+		// sort them
+		qsort(m_arrNodes.GetData(), m_arrNodes.GetSize(), sizeof(CNode*),
+			CompareNodeActivations);
+
+/*		// arrange new super nodes
+		int nAtLastNotNewSuper = GetSuperNodeCount()-1;
+		for (int nAt = GetSuperNodeCount()-1; nAt >= 0; nAt--)
+		{
+			CNode *pNode = GetNodeAt(nAt);
+			if (!pNode->IsSubThreshold())
+			{
+				nAtLastNotNewSuper = nAt;
+			}
+			else if (pNode->IsSubThreshold() && nAtLastNotNewSuper > nAt)
+			{
+				m_arrNodes[nAt] = m_arrNodes[nAtLastNotNewSuper];
+				m_arrNodes[nAtLastNotNewSuper] = pNode;
+				nAtLastNotNewSuper = nAt;
+			}
+		}
+*/
+		// arrange post-super nodes
+		m_nLastPostSuper = GetSuperNodeCount();
+		for (int nAt = GetSuperNodeCount(); nAt < GetNodeCount(); nAt++)
+		{
+			CNode *pNode = GetNodeAt(nAt);
+			if (pNode->IsPostSuper())
+			{
+				m_arrNodes[nAt] = m_arrNodes[m_nLastPostSuper];
+				m_arrNodes[m_nLastPostSuper] = pNode;
+				m_nLastPostSuper++;
+			}
+		}
+
+		// flag as sorted
+		m_bNodesSorted = TRUE;
+	}
 
 }	// CSpace::SortNodes
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::PositionNewSuperNodes
+// 
+// positions the new super-nodes
+//////////////////////////////////////////////////////////////////////
+void CSpace::PositionNewSuperNodes()
+{
+	// stores the highest new supernode
+	int nHighestNewSuper = GetSuperNodeCount();
+
+	// check super-nodes for distance from center
+	for (int nAt = GetSuperNodeCount()-1; nAt >= 0; nAt--)
+	{
+		// get the node
+		CNode *pNode = GetNodeAt(nAt);
+
+		if (pNode->IsSubThreshold())
+		{
+			// we have a new highest
+			nHighestNewSuper = nAt;
+
+			// set its position based on max activator, if it has one
+			CNode *pMaxAct = pNode->GetMaxActivator();
+			if (pMaxAct != NULL)
+			{
+				// the new position -- initially at the max act position
+				CVectorD<3> vNewPosition = pMaxAct->GetPosition();
+
+				// find direction by default from center
+				CVectorD<3> vCenter = m_vCenter;
+
+				// see if IT has a max activator
+				if (pMaxAct->GetMaxActivator() != NULL)
+				{
+					// find direction based on both max activators
+			 		vCenter = pMaxAct->GetMaxActivator()->GetPosition();
+				}
+
+				// form the direction
+				CVectorD<3> vDirection = vNewPosition - vCenter;
+				vDirection.Normalize();
+
+				// get the size of the max activator
+				CVectorD<3> vSize = pMaxAct->GetSize(
+					pMaxAct->GetActivation());
+
+				// adjust the direction
+				vDirection *= vSize.GetLength() * MAX_ACT_DISPLACEMENT;
+
+				// set position to it's position
+				vNewPosition += vDirection;
+
+				// set the new position
+				pNode->SetPosition(vNewPosition);
+			}
+		}
+	}
+
+	// now layout the new supernodes
+	m_pLayoutManager->LayoutNodes(m_pStateVector, nHighestNewSuper);
+
+	// finish processing by moving the new super-nodes to
+	//		their updated position
+	for (nAt = 0; nAt < GetSuperNodeCount(); nAt++)
+	{
+		// get the node
+		CNode *pNode = GetNodeAt(nAt);
+
+		// adjust the sub-threshold nodes
+		if (pNode->IsSubThreshold())
+		{
+			// and flag as no longer sub threshold
+			pNode->SetSubThreshold(FALSE);
+			pNode->SetPostSuper(FALSE);
+
+			// set the new position, triggering a change event
+			pNode->SetPosition(pNode->GetPosition(), TRUE);
+		}
+	}
+
+}	// CSpace::PositionNewSuperNodes
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::AdjustRunawayNodes
+// 
+// adjusts for run-away nodes
+//////////////////////////////////////////////////////////////////////
+void CSpace::AdjustRunawayNodes()
+{
+	// check super-nodes for distance from center
+	for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
+	{
+		// get the node
+		CNode *pNode = GetNodeAt(nAt);
+
+		// compute the position, offset from the current center point
+		CVectorD<3> vOffset = pNode->GetPosition() - m_vCenter;
+
+		// are we too far away?
+		if (vOffset.GetLength() > MAX_RUNAWAY_RADIUS)
+		{
+			REAL overflow = vOffset.GetLength() - MAX_RUNAWAY_RADIUS;
+			vOffset.Normalize();
+			vOffset *= MAX_RUNAWAY_RADIUS + overflow / RUNAWAY_DIVISOR;
+		}
+
+		// set newly calculated position
+		pNode->SetPosition(m_vCenter + vOffset);
+
+		// ensure we are not subthreshold, for good measure
+		pNode->SetSubThreshold(FALSE);
+	}
+
+}	// CSpace::AdjustRunawayNodes
+
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::PositionSubNodes
+// 
+// adjusts the positions of sub-threshold nodes
+//////////////////////////////////////////////////////////////////////
+void CSpace::PositionSubNodes()
+{
+	// store the old state dimension
+	int nSuperNodes = GetSuperNodeCount();
+	int nOldStateDim = m_pLayoutManager->GetStateDim();
+
+	// store super node count, because SetStateDim will change
+	m_pLayoutManager->SetStateDim(m_nLastPostSuper * 2);
+
+	// now layout the nodes
+	m_pLayoutManager->LayoutNodes(m_pStateVector, nSuperNodes);
+
+	// restore layout manager values
+	m_pLayoutManager->SetStateDim(nOldStateDim);
+
+	// position sub-threshold nodes
+	for (int nAt = m_nLastPostSuper; nAt < GetNodeCount(); nAt++)
+	{
+		// get the node
+		CNode *pNode = GetNodeAt(nAt);
+
+		// mark node as sub-threshold
+		pNode->m_bSubThreshold = TRUE;
+
+		// compute the new position
+		CVectorD<3> vNewPosition = 
+			pNode->GetMaxActivator()->GetPosition() - m_vCenter;
+
+		// decay towards center
+		vNewPosition *= SUBNODE_DECAY_RATE;
+		vNewPosition += m_vCenter;
+
+		// and set the new position
+		pNode->SetPosition(vNewPosition); 
+	}
+
+}	// CSpace::PositionSubNodes
 
 
 //////////////////////////////////////////////////////////////////////
@@ -483,6 +746,9 @@ void CSpace::AddNodeToArray(CNode *pNode)
 		AddNodeToArray(pNode->CNode::GetChildAt(nAt));
 	}
 
+	// flag that the nodes need to be sorted
+	m_bNodesSorted = FALSE;
+
 }	// CSpace::AddNodeToArray
 
 
@@ -502,11 +768,11 @@ void CSpace::Serialize(CArchive& ar)
 	// if we are loading the space...
 	if (ar.IsLoading())
 	{
+		// clear all content
+		DeleteContents();
+
 		// serialize schema
 		ar >> dwSchema;
-
-		// delete the current root node
-		delete m_pRootNode;
 
 		// read in the root node pointer
 		ar >> m_pRootNode;
@@ -526,7 +792,6 @@ void CSpace::Serialize(CArchive& ar)
 		}
 
 		// remove existing nodes from the array
-		m_arrNodes.RemoveAll();
 		m_totalPrimaryActivation = 0.0;
 		m_totalSecondaryActivation = 0.0;
 
@@ -543,12 +808,15 @@ void CSpace::Serialize(CArchive& ar)
 		// normalize the nodes
 		NormalizeNodes();
 
+		// mark super-threshold nodes
+		for (nAt = 0; nAt < GetSuperNodeCount(); nAt++)
+		{
+			GetNodeAt(nAt)->SetSubThreshold(FALSE);
+		}
+
 		// set the total activation
 		GetTotalPrimaryActivation(TRUE);
 		GetTotalSecondaryActivation(TRUE);
-	
-		// clear the class color map
-		m_mapClassColors.RemoveAll();
 	}
 	else
 	{
@@ -570,7 +838,7 @@ void CSpace::Serialize(CArchive& ar)
 		if (ar.IsLoading())
 		{
 			// spring constant
-			double springConst;
+			REAL springConst;
 			ar >> springConst;
 			SetSpringConst(springConst);
 
@@ -580,18 +848,18 @@ void CSpace::Serialize(CArchive& ar)
 			// super node count
 			int nSuperNodeCount;
 			ar >> nSuperNodeCount;
-			GetLayoutManager()->SetStateDim(nSuperNodeCount * 2);
+			SetMaxSuperNodeCount(nSuperNodeCount);
 
 			// layout manager parameters
-			double tolerance;
+			REAL tolerance;
 			ar >> tolerance;
 			GetLayoutManager()->SetTolerance(tolerance);
 
-			double k_pos;
+			REAL k_pos;
 			ar >> k_pos;
 			GetLayoutManager()->SetKPos(k_pos);
 
-			double k_rep;
+			REAL k_rep;
 			ar >> k_rep;
 			GetLayoutManager()->SetKRep(k_rep);
 		}
@@ -614,6 +882,26 @@ void CSpace::Serialize(CArchive& ar)
 	}
 
 }	// CSpace::Serialize
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::DeleteContents
+// 
+// removes all nodes
+//////////////////////////////////////////////////////////////////////
+void CSpace::DeleteContents()
+{
+	// delete the current root node
+	delete m_pRootNode;
+	m_pRootNode = NULL;
+
+	// remove existing nodes from the array
+	m_arrNodes.RemoveAll();
+
+	// clear the class color map
+	m_mapClassColors.RemoveAll();
+
+}	// CSpace::DeleteContents
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -737,6 +1025,12 @@ REAL CSpace::GetTotalSecondaryActivation(BOOL bCompute) const
 }	// CSpace::GetTotalSecondaryActivation
 
 
+// returns a pointer to the state vector
+CSpaceStateVector *CSpace::GetStateVector()
+{
+	return m_pStateVector;
+}
+
 //////////////////////////////////////////////////////////////////////
 // CSpace::GetLayoutManager
 // 
@@ -756,59 +1050,20 @@ CSpaceLayoutManager *CSpace::GetLayoutManager()
 //////////////////////////////////////////////////////////////////////
 void CSpace::LayoutNodes()
 {
+	// ensure nodes are sorted
+	SortNodes();
+
+	// position any new super-threshold nodes
+	PositionNewSuperNodes();
+
 	// layout the nodes
-	m_pLayoutManager->LayoutNodes();
+	m_pLayoutManager->LayoutNodes(m_pStateVector, 0);
 
-	// check super-nodes for distance from center
-	for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
-	{
-		// get the node
-		CNode *pNode = GetNodeAt(nAt);
-		CVectorD<3> vOffset = pNode->GetPosition() - m_vCenter;
-		
-		if (vOffset.GetLength() > 500.0)
-		{
-			REAL overflow = vOffset.GetLength() - 500.0;
-			vOffset.Normalize();
-			vOffset *= (500.0 + overflow / 2.0);
-		}
+	// adjust any runaway nodes
+	AdjustRunawayNodes();
 
-		pNode->SetPosition(m_vCenter + vOffset);
-	}
-
-	// position sub-threshold nodes
-	for (nAt = GetSuperNodeCount(); nAt < GetNodeCount(); nAt++)
-	{
-		// get the node
-		CNode *pNode = GetNodeAt(nAt);
-		CVectorD<3> vNewPosition = m_vCenter;
-
-		// see if there is a max activator
-		if (pNode->GetMaxActivator() != NULL)
-		{
-			// the the new position
-			vNewPosition = pNode->GetMaxActivator()->GetPosition();
-			CVectorD<3> vCenter = m_vCenter;
-
-			if (pNode->GetMaxActivator()->GetMaxActivator() != NULL)
-			{
-				vCenter = pNode->GetMaxActivator()->GetMaxActivator()->GetPosition();
-			}
-			CVectorD<3> vDirection = vNewPosition - vCenter;
-			vDirection.Normalize();
-
-			CVectorD<3> vSize = pNode->GetMaxActivator()->GetSize(
-				pNode->GetMaxActivator()->GetActivation());
-
-			vDirection *= vSize.GetLength() * 30.0;
-
-			// set position to it's position
-			vNewPosition += vDirection;
-		}
-
-		// set the new position
-		pNode->SetPosition(vNewPosition);
-	}
+	// finally, position the sub-threshold nodes
+	PositionSubNodes();
 
 }	// CSpace::LayoutNodes
 
@@ -818,7 +1073,7 @@ void CSpace::LayoutNodes()
 // 
 // lays out the nodes in the array
 //////////////////////////////////////////////////////////////////////
-void CSpace::SetCenter(double x, double y)
+void CSpace::SetCenter(REAL x, REAL y)
 {
 	m_vCenter[0] = x;
 	m_vCenter[1] = y;
@@ -844,3 +1099,4 @@ LPDIRECTSOUND CSpace::GetDirectSound()
 	return m_pDS;
 
 }	// CSpace::GetDirectSound
+

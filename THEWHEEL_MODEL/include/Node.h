@@ -27,6 +27,21 @@
 // forward declaration of the space class
 class CSpace;
 
+// forward declaration of state vector
+class CSpaceStateVector;
+
+//////////////////////////////////////////////////////////////////////
+// Event Tags
+//////////////////////////////////////////////////////////////////////
+const LPARAM EVT_NODE_REPARENTED =		2001;
+const LPARAM EVT_NODE_NAMED_CHANGED =	2002;
+const LPARAM EVT_NODE_DESC_CHANGED =	2003;
+const LPARAM EVT_NODE_CLASS_CHANGED =	2004;
+const LPARAM EVT_NODE_IMAGE_CHANGED =	2005;
+const LPARAM EVT_NODE_LINKWGT_CHANGED =	2006;
+const LPARAM EVT_NODE_POSITION_CHANGED =2007;
+
+
 //////////////////////////////////////////////////////////////////////
 // class CNode
 // 
@@ -96,7 +111,7 @@ public:
 
 	// the node's position
 	const CVectorD<3>& GetPosition() const;
-	void SetPosition(const CVectorD<3>& vPos);
+	void SetPosition(const CVectorD<3>& vPos, BOOL bFireChange = FALSE);
 	CVectorD<3> GetSize(REAL activation) const;
 
 	//////////////////////////////////////////////////////////////////
@@ -142,6 +157,17 @@ public:
 	// returns the current maximum activator
 	CNode *GetMaxActivator();
 
+	// flag for sub-threshold nodes
+	BOOL IsSubThreshold();
+	void SetSubThreshold(BOOL bIs = TRUE);
+
+	// flag for post-super threshold
+	BOOL IsPostSuper();
+	void SetPostSuper(BOOL bIs = TRUE);
+
+	// optimal state vector (for interpolated layout)
+	CSpaceStateVector *GetOptimalStateVector();
+
 	//////////////////////////////////////////////////////////////////
 	// view object
 
@@ -159,6 +185,7 @@ protected:
 
 	// declares CSpace as a friend class, to access the helper functions
 	friend CSpace;
+	friend CSpaceStateVector;
 
 	//////////////////////////////////////////////////////////////////
 	// activation helper functions
@@ -229,6 +256,15 @@ private:
 	// flag to indicate that a max activator was found during
 	//		the previous propagation
 	BOOL m_bFoundMaxActivator;
+
+	// flag to indicate that the node is sub-threshold
+	BOOL m_bSubThreshold;
+
+	// flag to indicate that the node is post-super
+	BOOL m_bPostSuper;
+
+	// optimal SSV
+	CSpaceStateVector *m_pOptSSV;
 
 	// convenience pointer to a view object
 	CObject *m_pView;

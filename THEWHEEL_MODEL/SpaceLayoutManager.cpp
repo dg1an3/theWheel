@@ -43,6 +43,13 @@ const REAL DIST_SCALE_MIN = 1.0;
 const REAL DIST_SCALE_MAX = 1.35;
 const REAL ACTIVATION_MIDPOINT = 0.25;
 
+// compute the optimal normalized distance
+const REAL MIDWEIGHT = 0.5;
+const REAL OPT_DIST = DIST_SCALE_MIN
+	+ (DIST_SCALE_MAX - DIST_SCALE_MIN) 
+		* (1.0 - MIDWEIGHT / (MIDWEIGHT + ACTIVATION_MIDPOINT));
+
+
 // constant for weighting the position energy
 const REAL K_POS = 600.0;
 
@@ -68,6 +75,7 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 
 		m_vInput(CVectorN<>()),
 		m_energy(0.0),
+		m_energyConst(0.0),
 
 		m_pPowellOptimizer(NULL)
 {
@@ -218,103 +226,66 @@ void CSpaceLayoutManager::SetTolerance(double tolerance)
 //////////////////////////////////////////////////////////////////////
 void CSpaceLayoutManager::LoadSizesLinks()
 {
+	// stores the computed sizes for the nodes, based on current act
+	int nNodeCount = __min(GetStateDim() / 2, m_pSpace->GetNodeCount());
+
 	// iterate over all current visualized node views
 	int nAtNode;
-	for (nAtNode = 0; nAtNode < m_pSpace->GetSuperNodeCount(); nAtNode++)
+	for (nAtNode = 0; nAtNode < nNodeCount; nAtNode++)
 	{
 		// get convenience pointers for the current node view and node
 		CNode *pAtNode = m_pSpace->GetNodeAt(nAtNode);
 
-		// compute the x- and y-scales for the fields (from the linked rectangle)
-		CVectorD<3> vSize = pAtNode->GetSize(pAtNode->GetActivation());
-
-		// store the size -- add 10 to ensure non-zero sizes
-		m_vSize[nAtNode][0] = SIZE_SCALE * vSize[0] + 10.0;
-		m_vSize[nAtNode][1] = SIZE_SCALE * vSize[1] + 10.0;
-
 		// store the activations
 		m_act[nAtNode] = pAtNode->GetActivation();
 
+		// compute the x- and y-scales for the fields (from the linked rectangle)
+		const CVectorD<3> vSize = pAtNode->GetSize(m_act[nAtNode]);
+		const REAL size_scale = SIZE_SCALE;
+			// * (0.35 * log(0.5 * pAtNode->GetChildCount() + 1.5) + 0.5);
+
+		// store the size -- add 10 to ensure non-zero sizes
+		m_vSize[nAtNode][0] = size_scale * vSize[0] + 10.0;
+		m_vSize[nAtNode][1] = size_scale * vSize[1] + 10.0;
+
+	}
+
+	// iterate over all current visualized node views
+	for (nAtNode = 0; nAtNode < nNodeCount; nAtNode++)
+	{
+		// get convenience pointers for the current node view and node
+		CNode *pAtNode = m_pSpace->GetNodeAt(nAtNode);
+
 		// iterate over the potential linked views
 		int nAtLinkedNode;
-		for (nAtLinkedNode = 0; nAtLinkedNode < m_pSpace->GetSuperNodeCount(); nAtLinkedNode++)
+		for (nAtLinkedNode = nAtNode+1; nAtLinkedNode < nNodeCount; nAtLinkedNode++)
 		{
-			// only process the linked view if it is in the vector
-			if (nAtLinkedNode != nAtNode) 
-			{
-				// get convenience pointers for the linked node view and node
-				CNode *pAtLinkedNode = m_pSpace->GetNodeAt(nAtLinkedNode);
+			// get convenience pointers for the linked node view and node
+			CNode *pAtLinkedNode = m_pSpace->GetNodeAt(nAtLinkedNode);
 
-				// retrieve the link weight for layout
-				REAL weight = 0.5 *
-					(pAtNode->GetLinkWeight(pAtLinkedNode)
-						+ pAtLinkedNode->GetLinkWeight(pAtNode));
+			m_mSSX[nAtNode][nAtLinkedNode] = 
+				m_mSSX[nAtLinkedNode][nAtNode] = 
+					(m_vSize[nAtNode][0] 
+					+ m_vSize[nAtLinkedNode][0]) / 2.0; 
 
-				// add some weight to make it non-zero
-				weight += 0.0001f;
+			m_mSSY[nAtNode][nAtLinkedNode] = 
+				m_mSSY[nAtLinkedNode][nAtNode] = 
+					(m_vSize[nAtNode][1] 
+					+ m_vSize[nAtLinkedNode][1]) / 2.0; 
 
-				// store the link weight
-				m_mLinks[nAtNode][nAtLinkedNode] = weight;
-			}
+			// retrieve the link weight for layout
+			const REAL weight = 0.5 *
+				(pAtNode->GetLinkWeight(pAtLinkedNode)
+					+ pAtLinkedNode->GetLinkWeight(pAtNode)) + 0.0001;
+
+			// store the link weight
+			m_mLinks[nAtNode][nAtLinkedNode] =
+				m_mLinks[nAtLinkedNode][nAtNode] =
+					weight;
 		}
 	}
 
 }	// CSpaceLayoutManager::LoadSizesLinks()
-
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::Pos2StateVector
-// 
-// forms the state vector from the node positions
-//////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::Pos2StateVector()
-{
-	// for the state vector
-	m_vState.SetDim(m_nStateDim);
-
-	// iterate for non-cluster nodes
-	for (int nAt = 0; nAt < m_nStateDim / 2; nAt++)
-	{
-		if (nAt < m_pSpace->GetNodeCount())
-		{
-			// get the node
-			CNode *pNode = m_pSpace->GetNodeAt(nAt);
-
-			// store the nodes position, plus some random seeding
-			m_vState[nAt*2] = pNode->GetPosition()[0]
-				+ 0.0 * ( 1.0 - 2.0 * rand() / RAND_MAX);
-			m_vState[nAt*2+1] = pNode->GetPosition()[1]
-				+ 0.0 * ( 1.0 - 2.0 * rand() / RAND_MAX);
-		}
-	}
-
-}	// CSpaceView::Pos2StateVector
-
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceLayoutManager::StateVector2Pos
-// 
-// loads the node positions from the state vector
-//////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::StateVector2Pos()
-{
-	// test for dimensionality
-	ASSERT(m_vState.GetDim() == m_nStateDim);
-
-	// form the number of currently visualized node views
-	for (int nAt = 0; nAt < m_pSpace->GetSuperNodeCount(); nAt++)
-	{
-		// get the node
-		CNode *pNode = m_pSpace->GetNodeAt(nAt);
-
-		// form the node view's position
-		CVectorD<3> vPosition(m_vState[nAt*2], m_vState[nAt*2+1]);
-
-		// set the node's position
-		pNode->SetPosition(vPosition);
-	}
-
-}	// CSpaceLayoutManager::StateVector2Pos
 
 
 //////////////////////////////////////////////////////////////////////
@@ -325,141 +296,144 @@ void CSpaceLayoutManager::StateVector2Pos()
 REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 									 CVectorN<> *pGrad)
 {
-	// check dimensionality
-	ASSERT(vInput.GetDim() == m_nStateDim);
-
 	// reset the energy
-	m_energy = 0.0f;
+	m_energy = m_energyConst; // 0.0;
 
 	if (NULL != pGrad)
 	{
 		// initialize the gradient vector to zeros
-		m_vGrad.SetDim(vInput.GetDim());
+		m_vGrad.SetDim(GetStateDim());
 		m_vGrad.SetZero();
 	}
 
-	// store this input
-	m_vInput = vInput;
-
-	// form the number of currently visualized node views
-	int nRealNodeCount = m_pSpace->GetSuperNodeCount(); 
+	// prepare the input vector for the full positional information
+	ASSERT(m_vConstPositions.GetDim() + vInput.GetDim() == GetStateDim());
+	m_vInput.SetDim(GetStateDim());
+	m_vInput.CopyElements(m_vConstPositions, 0, 
+		m_vConstPositions.GetDim());
+	m_vInput.CopyElements(vInput, 0, vInput.GetDim(),
+		m_vConstPositions.GetDim());
 
 	// and the total number of nodes plus clusters
-	int nVizNodeCount = m_pSpace->GetSuperNodeCount();
+	int nNodeCount = __min(GetStateDim() / 2, m_pSpace->GetNodeCount());
 
 	// iterate over all current visualized node views
-	int nAtNodeView;
-	for (nAtNodeView = 0; nAtNodeView < nVizNodeCount; nAtNodeView++)
+	int nAtNode;
+	for (nAtNode = nNodeCount-1; nAtNode >= m_vConstPositions.GetDim() / 2;
+		nAtNode--)
 	{
 		// iterate over the potential linked views
-		int nAtLinkedView;
-		for (nAtLinkedView = 0; nAtLinkedView < nVizNodeCount; nAtLinkedView++)
+		int nAtLinked;
+		for (nAtLinked = nAtNode-1; nAtLinked >= 0; nAtLinked--)
 		{
-			// only processs the linked view if it is in the vector
-			if (nAtLinkedView != nAtNodeView) 
+			if (nAtLinked != nAtNode)
 			{
-				//////////////////////////////////////////////////////////////
-				// set up some common values
 
-				// compute the x- and y-offset between the views
-				REAL x = vInput[nAtNodeView*2 + 0] - vInput[nAtLinkedView*2 + 0];
-				REAL y = vInput[nAtNodeView*2 + 1] - vInput[nAtLinkedView*2 + 1];
+			//////////////////////////////////////////////////////////////
+			// set up some common values
 
-				// compute the x- and y-scales for the fields -- average of
-				//		two rectangles
-				REAL ssx = (m_vSize[nAtNodeView][0] 
-					+ m_vSize[nAtLinkedView][0]) / 2.0; 
-				REAL ssy = (m_vSize[nAtNodeView][1] 
-					+ m_vSize[nAtLinkedView][1]) / 2.0; ;
+			// compute the x- and y-offset between the views
+			const REAL x = m_vInput[nAtNode*2 + 0] - m_vInput[nAtLinked*2 + 0];
+			const REAL y = m_vInput[nAtNode*2 + 1] - m_vInput[nAtLinked*2 + 1];
 
-				//////////////////////////////////////////////////////////////
-				// compute the attraction field
+			// compute the x- and y-scales for the fields -- average of
+			//		two rectangles
+			const REAL ssx = m_mSSX[nAtNode][nAtLinked];
+			const REAL ssy = m_mSSY[nAtNode][nAtLinked];
 
-				// store the weight, for convenience
-				REAL weight = m_mLinks[nAtNodeView][nAtLinkedView];
+			// check the correctness of the cached values
+			ASSERT(ssx == (m_vSize[nAtNode][0] 
+					+ m_vSize[nAtLinked][0]) / 2.0); 
+			ASSERT(ssy == (m_vSize[nAtNode][1] 
+					+ m_vSize[nAtLinked][1]) / 2.0);
+			ASSERT(m_mSSY[nAtNode][nAtLinked] == m_mSSY[nAtLinked][nAtNode]);
 
-				// compute the relative actual distance
-				REAL act_dist = (REAL) sqrt(x * x / (ssx * ssx)
-					+ y * y / (ssy * ssy)) + 0.001;
+			//////////////////////////////////////////////////////////////
+			// compute the attraction field
 
-				// compute the optimal distance
-				const REAL MIDWEIGHT = 0.5;
-				REAL opt_dist = DIST_SCALE_MIN
-					+ (DIST_SCALE_MAX - DIST_SCALE_MIN) 
-						* (1.0 - MIDWEIGHT / (MIDWEIGHT + ACTIVATION_MIDPOINT));
+			// store the weight, for convenience
+			const REAL weight = m_mLinks[nAtNode][nAtLinked];
 
-				// compute the distance error
-				REAL dist_error = act_dist - opt_dist;
+			// check the cached value
+			ASSERT(m_mLinks[nAtNode][nAtLinked] == m_mLinks[nAtLinked][nAtNode]);
 
-				// compute the factor controlling the importance of the
-				//		attraction term
-				REAL factor = m_k_pos * weight * m_act[nAtNodeView];
+			// compute the relative actual distance
+			const REAL act_dist = (REAL) sqrt(x * x / (ssx * ssx)
+				+ y * y / (ssy * ssy)) + 0.001;
 
-				// and add the attraction term to the energy
-				m_energy += factor * dist_error * dist_error;
+			// compute the distance error
+			const REAL dist_error = act_dist - OPT_DIST;
 
-				if (NULL != pGrad)
-				{
-					// compute d_energy
-					REAL dact_dist_dx = x / (ssx * ssx) / act_dist;
-					REAL dact_dist_dy = y / (ssy * ssy) / act_dist;
+			// compute the factor controlling the importance of the
+			//		attraction term
+			const REAL factor = m_k_pos * weight 
+				* (m_act[nAtNode] + m_act[nAtLinked]);
 
-					// compute the gradient terms
-					REAL denergy_dx = factor * 2.0 * dist_error * dact_dist_dx;
-					REAL denergy_dy = factor * 2.0 * dist_error * dact_dist_dy;
+			// and add the attraction term to the energy
+			m_energy += factor * dist_error * dist_error;
 
-					// add to the gradient vector
-					m_vGrad[nAtNodeView*2   + 0] += denergy_dx;
-					m_vGrad[nAtNodeView*2   + 1] += denergy_dy;
-					m_vGrad[nAtLinkedView*2 + 0] -= denergy_dx;
-					m_vGrad[nAtLinkedView*2 + 1] -= denergy_dy;
-				}
+			if (NULL != pGrad)
+			{
+				// compute d_energy
+				const REAL dact_dist_dx = x / (ssx * ssx) / act_dist;
+				const REAL dact_dist_dy = y / (ssy * ssy) / act_dist;
 
-				//////////////////////////////////////////////////////////////
-				// compute the repulsion field
+				// compute the gradient terms
+				const REAL denergy_dx = factor * 2.0 * dist_error * dact_dist_dx;
+				const REAL denergy_dy = factor * 2.0 * dist_error * dact_dist_dy;
 
-				// add the repulsion field only for real nodes
-				if (nAtLinkedView < nRealNodeCount)
-				{
-					// compute the energy due to this interation
-					REAL dx_ratio = x / (ssx * ssx);
-					REAL x_ratio = x * dx_ratio; // = (x * x) / (ssx * ssx);
-					REAL dy_ratio = y / (ssy * ssy);
-					REAL y_ratio = y * dy_ratio; // = (y * y) / (ssy * ssy);
+				// add to the gradient vector
+				m_vGrad[nAtNode*2   + 0] += denergy_dx;
+				m_vGrad[nAtNode*2   + 1] += denergy_dy;
+				m_vGrad[nAtLinked*2 + 0] -= denergy_dx;
+				m_vGrad[nAtLinked*2 + 1] -= denergy_dy;
+			}
 
-					// compute the energy term
-					REAL inv_sq = 1.0 / (x_ratio + y_ratio + 0.1);
-					REAL factor = m_k_rep * m_act[nAtNodeView];
+			//////////////////////////////////////////////////////////////
+			// compute the repulsion field
 
-					// add to total energy
-					m_energy += factor * inv_sq;
+			// compute the energy due to this interation
+			const REAL dx_ratio = x / (ssx * ssx);
+			const REAL x_ratio = x * dx_ratio; // = (x * x) / (ssx * ssx);
+			const REAL dy_ratio = y / (ssy * ssy);
+			const REAL y_ratio = y * dy_ratio; // = (y * y) / (ssy * ssy);
 
-					if (NULL != pGrad)
-					{
-						// compute gradient terms
-						REAL inv_sq_sq = inv_sq * inv_sq;
-						REAL dRepulsion_dx = -2.0 * factor * dx_ratio * inv_sq_sq;
-						REAL dRepulsion_dy = -2.0 * factor * dy_ratio * inv_sq_sq;
+			// compute the energy term
+			const REAL inv_sq = 1.0 / (x_ratio + y_ratio + 3.0);
+			const REAL factor_rep = m_k_rep 
+				* (m_act[nAtNode] + m_act[nAtLinked]);
 
-						// add to the gradient vectors
-						m_vGrad[nAtNodeView*2   + 0] += dRepulsion_dx;
-						m_vGrad[nAtNodeView*2   + 1] += dRepulsion_dy;
-						m_vGrad[nAtLinkedView*2 + 0] -= dRepulsion_dx;
-						m_vGrad[nAtLinkedView*2 + 1] -= dRepulsion_dy;
-					}
-				}
+			// add to total energy
+			m_energy += factor_rep * inv_sq;
+
+			if (NULL != pGrad)
+			{
+				// compute gradient terms
+				const REAL inv_sq_sq = inv_sq * inv_sq;
+				const REAL dRepulsion_dx = -2.0 * factor_rep * dx_ratio * inv_sq_sq;
+				const REAL dRepulsion_dy = -2.0 * factor_rep * dy_ratio * inv_sq_sq;
+
+				// add to the gradient vectors
+				m_vGrad[nAtNode*2   + 0] += dRepulsion_dx;
+				m_vGrad[nAtNode*2   + 1] += dRepulsion_dy;
+				m_vGrad[nAtLinked*2 + 0] -= dRepulsion_dx;
+				m_vGrad[nAtLinked*2 + 1] -= dRepulsion_dy;
+			}
 			}
 		}
 	}
+
+	// m_energy *= 1.0 / (REAL) nVizNodeCount;
+	// m_vGrad *= 1.0 / (REAL) nVizNodeCount;
 
 	// store the gradient vector if one was passed
 	if (NULL != pGrad)
 	{
 		// set correct dimensionality
-		pGrad->SetDim(m_vGrad.GetDim());
+		pGrad->SetDim(vInput.GetDim());
 
 		// and assign
-		(*pGrad) = m_vGrad;
+		pGrad->CopyElements(m_vGrad, m_vConstPositions.GetDim(), vInput.GetDim());
 	}
 
 	// increment evaluation count
@@ -476,10 +450,58 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 // 
 // calls the optimizer to lay out the nodes
 //////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::LayoutNodes()
+void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV, 
+									  int nConstNodes)
 {
-	// set up the state vector
-	Pos2StateVector();
+	nConstNodes = __min(nConstNodes, MAX_STATE_DIM / 2);
+
+	// if all nodes are constant
+	if (nConstNodes * 2 >= GetStateDim())
+	{
+		// do nothing
+		return;
+	}
+
+	REAL tol = 1e-12 * (m_pOptimizer->GetFinalValue() + 1.0);
+	m_pOptimizer->SetTolerance(tol); // 
+		// GetTolerance());
+
+	// if we have constant nodes,
+	if (nConstNodes > 0)
+	{
+		// cache the old state dimension
+		int nOldStateDim = GetStateDim();
+
+		// set new state dimension to only constant nodes
+		SetStateDim(nConstNodes * 2);
+		m_vState.SetDim(nConstNodes * 2);
+
+		// get the positions vector
+		pSSV->GetPositionsVector(m_vState);
+
+		// make sure no constant nodes
+		m_vConstPositions.SetDim(0);
+
+		// get the constant energy term
+		LoadSizesLinks();
+		m_energyConst = (*this)(m_vState);
+
+		// restore old state dimension
+		SetStateDim(nOldStateDim);
+	}
+	else
+	{
+		// no constant nodes, no constant energy term
+		m_energyConst = 0.0;
+	}
+
+	// form the state vector
+	m_vState.SetDim(GetStateDim());
+	pSSV->GetPositionsVector(m_vState);
+
+	// store the constant positions
+	m_vConstPositions.SetDim(nConstNodes * 2);
+	m_vConstPositions.CopyElements(m_vState, 0, nConstNodes * 2);
 
 	// now optimize
 	LoadSizesLinks();
@@ -487,122 +509,25 @@ void CSpaceLayoutManager::LayoutNodes()
 	// reset evaluation count
 	m_nEvaluations = 0;
 
-	// form the state vector
-	CVectorN<> vNewState;
-	vNewState.SetDim(m_nStateDim);
+	// form the new state vector
+	static CVectorN<> vNewState;
+	vNewState.SetDim(GetStateDim() - nConstNodes * 2);
+	vNewState.CopyElements(m_vState, nConstNodes * 2, 
+		GetStateDim() - nConstNodes * 2);
 
 	// perform the optimization
-	m_pOptimizer->SetTolerance(GetTolerance());
-	vNewState = m_pOptimizer->Optimize(m_vState);
+	vNewState = m_pOptimizer->Optimize(vNewState);
 
-	// now determine a rotation/translation that minimizes the squared
-	//		difference between previous and current state
-	RotateTranslateStateVector(m_vState, vNewState);
+	// copy the optimized elements
+	m_vState.CopyElements(vNewState, 0, 
+		GetStateDim() - nConstNodes * 2, nConstNodes * 2);
+	
+	// set the resulting positions, rotate-translating in the process
+	pSSV->RotateTranslateTo(m_vState);
 
-	// assign the new state vector
-	m_vState = vNewState;
-
-	// set the resulting positions
-	StateVector2Pos();
-
-	for (int nAt = m_pSpace->GetSuperNodeCount(); 
-			nAt < m_pSpace->GetNodeCount(); nAt++)
-	{
-		// get the node
-		CNode *pNode = m_pSpace->GetNodeAt(nAt);
-
-		// see if there is a max activator
-		if (pNode->GetMaxActivator() != NULL)
-		{
-			// if so, set position to it
-			pNode->SetPosition(pNode->GetMaxActivator()->GetPosition());
-		}
-	}
+	// retrieve the final state
+	pSSV->GetPositionsVector(m_vState);
 
 }	// CSpaceLayoutManager::LayoutNodes
-
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceLayoutManager::RotateTranslateStateVector
-// 
-// called to minimize rotate/translate error between old state
-//		and new
-//////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::RotateTranslateStateVector(const CVectorN<>& vOldState,
-													 CVectorN<>& vNewState)
-{
-	// form the Nx3 matrix of pre-coordinates (homogeneous)
-	CMatrixNxM<> mOld(m_pSpace->GetSuperNodeCount(), 3);
-	for (int nAt = 0; nAt < mOld.GetCols(); nAt++)
-	{
-		mOld[nAt][0] = vOldState[nAt * 2];
-		mOld[nAt][1] = vOldState[nAt * 2 + 1];
-		mOld[nAt][2] = 1.0;
-	}
-
-	// form the Nx3 matrix of post-coordinates (homogeneous)
-	CMatrixNxM<> mNew(m_pSpace->GetSuperNodeCount(), 3);
-	for (nAt = 0; nAt < mNew.GetCols(); nAt++)
-	{
-		mNew[nAt][0] = vNewState[nAt * 2];
-		mNew[nAt][1] = vNewState[nAt * 2 + 1];
-		mNew[nAt][2] = 1.0;
-	}
-
-	// work with the transpose of the problem, so that columns < rows
-	mOld.Transpose();
-	mNew.Transpose();
-
-	// form the pseudo-inverse of the a coordinates
-	CMatrixNxM<> mNew_ps = mNew;
-	if (mNew_ps.Pseudoinvert())
-	{
-		// form the transform matrix
-		CMatrixNxM<> mTransform = mNew_ps * mOld;
-
-		// un-transpose the matrices
-		mNew.Transpose();
-		mOld.Transpose();
-		mTransform.Transpose();
-
-		// store the offset part
-		CVectorN<> offset = mTransform[2];
-
-		// reshape to isolate upper 2x2
-		mTransform.Reshape(2, 2);
-
-		// now turn the transform matrix upper 2x2
-		//		into an orthogonal matrix
-		CVectorN<> w(2);
-		CMatrixNxM<> v(2, 2);
-		if (mTransform.SVD(w, v))
-		{
-			// form the orthogonal matrix
-			v.Transpose();
-			mTransform *= v;
-
-			// restore the translation part
-			mTransform.Reshape(3, 3);
-			mTransform[2][0] = offset[0];
-			mTransform[2][1] = offset[1];
-			mTransform[2][2] = 1.0;
-
-			// transform the points
-			mNew = mTransform * mNew;
-
-			// now repopulate
-			for (nAt = 0; nAt < mNew.GetCols(); nAt++)
-			{
-				vNewState[nAt * 2] = mNew[nAt][0];
-				vNewState[nAt * 2 + 1] = mNew[nAt][1];
-			}
-		}
-	}
-	else
-	{
-		TRACE("CSpaceLayoutManager::RotateTranslateStateVector: No pseudoinverse\n");
-	}
-
-}	// CSpaceLayoutManager::RotateTranslateStateVector
 
 

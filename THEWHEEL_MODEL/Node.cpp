@@ -52,6 +52,12 @@ int __cdecl CompareLinkWeights(const void *elem1, const void *elem2)
 
 
 //////////////////////////////////////////////////////////////////////
+// Event Firing
+//////////////////////////////////////////////////////////////////////
+#define NODE_FIRE_CHANGE(TAG) \
+	if (m_pSpace) m_pSpace->UpdateAllViews(NULL, TAG, this); 
+
+//////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
@@ -77,6 +83,9 @@ CNode::CNode(CSpace *pSpace,
 		m_pMaxActivator(NULL),
 		m_maxDeltaActivation((REAL) 0.0),
 		m_bFoundMaxActivator(FALSE),
+		m_bSubThreshold(TRUE),
+
+		m_pOptSSV(NULL),
 
 		m_pView(NULL)
 {
@@ -92,24 +101,37 @@ CNode::~CNode()
 {
 	// delete the links
 	for (int nAt = 0; nAt < m_arrChildren.GetSize(); nAt++)
+	{
 		delete m_arrChildren[nAt];
+	}
 	m_arrChildren.RemoveAll();
 
 	// delete the links
 	for (nAt = 0; nAt < m_arrLinks.GetSize(); nAt++)
+	{
 		delete m_arrLinks[nAt];
+	}
 	m_arrLinks.RemoveAll();
 
 	// delete the DIB, if present
-	delete m_pDib;
+	if (m_pDib)
+	{
+		delete m_pDib;
+	}
 
+	// delete the optSSV, if present
+	if (m_pOptSSV)
+	{
+		delete m_pOptSSV;
+	}
 }	// CNode::~CNode
 
 
 //////////////////////////////////////////////////////////////////////
 // implements CNode's dynamic serialization
 //////////////////////////////////////////////////////////////////////
-IMPLEMENT_SERIAL(CNode, CObject, VERSIONABLE_SCHEMA|7);
+IMPLEMENT_SERIAL(CNode, CObject, VERSIONABLE_SCHEMA|8);
+//		8 -- added optimal SSV
 //		7 -- added activation and position
 //		6 -- added class description
 //		5 -- added URL
@@ -271,6 +293,9 @@ void CNode::SetName(const CString& strName)
 {
 	m_strName = strName;
 
+	// fire change
+	NODE_FIRE_CHANGE(EVT_NODE_NAMED_CHANGED);
+
 }	// CNode::SetName
 
 
@@ -295,6 +320,9 @@ void CNode::SetDescription(const CString& strDesc)
 {
 	m_strDescription = strDesc;
 
+	// fire change
+	NODE_FIRE_CHANGE(EVT_NODE_DESC_CHANGED);
+
 }	// CNode::SetDescription
 
 
@@ -318,6 +346,9 @@ const CString& CNode::GetClass() const
 void CNode::SetClass(const CString& strClass)
 {
 	m_strClass = strClass;
+
+	// fire change
+	NODE_FIRE_CHANGE(EVT_NODE_CLASS_CHANGED);
 
 }	// CNode::SetClass
 
@@ -349,6 +380,9 @@ void CNode::SetImageFilename(const CString& strImageFilename)
 		delete m_pDib;
 		m_pDib = NULL;
 	}
+
+	// fire change
+	NODE_FIRE_CHANGE(EVT_NODE_IMAGE_CHANGED);
 
 }	// CNode::SetImageFilename
 
@@ -529,9 +563,14 @@ const CVectorD<3>& CNode::GetPosition() const
 // 
 // sets the position of the node
 //////////////////////////////////////////////////////////////////////
-void CNode::SetPosition(const CVectorD<3>& vPos)
+void CNode::SetPosition(const CVectorD<3>& vPos, BOOL bFireChange)
 {
 	m_vPosition = vPos;
+
+	if (bFireChange)
+	{
+		NODE_FIRE_CHANGE(EVT_NODE_POSITION_CHANGED);
+	}
 
 }	// CNode::SetPosition
 
@@ -741,6 +780,9 @@ void CNode::LinkTo(CNode *pToNode, REAL weight, BOOL bReciprocalLink)
 	// sort the links
 	SortLinks();
 
+	// fire change
+	NODE_FIRE_CHANGE(EVT_NODE_LINKWGT_CHANGED);
+
 }	// CNode::LinkTo
 
 
@@ -778,6 +820,9 @@ void CNode::Unlink(CNode *pNode, BOOL bReciprocalLink)
 		// then unlink in the other direction
 		pNode->Unlink(this, FALSE);
 	}
+
+	// fire change
+	NODE_FIRE_CHANGE(EVT_NODE_LINKWGT_CHANGED);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -793,6 +838,9 @@ void CNode::RemoveAllLinks()
 	}
 	m_arrLinks.RemoveAll();
 	m_mapLinks.RemoveAll();
+
+	// fire change
+	NODE_FIRE_CHANGE(EVT_NODE_LINKWGT_CHANGED);
 
 }	// CNode::RemoveAllLinks
 
@@ -878,6 +926,66 @@ CNode *CNode::GetMaxActivator()
 
 
 //////////////////////////////////////////////////////////////////////
+// CNode::IsSubThreshold
+// 
+// return sub-threshold flag
+//////////////////////////////////////////////////////////////////////
+BOOL CNode::IsSubThreshold()
+{
+	return m_bSubThreshold;
+
+}	// CNode::IsSubThreshold
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::SetSubThreshold
+// 
+// stes flag indicating that this is a sub-threshold node
+//////////////////////////////////////////////////////////////////////
+void CNode::SetSubThreshold(BOOL bIs)
+{	
+	m_bSubThreshold = bIs;
+
+}	// CNode::SetSubThreshold
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::IsPostSuper
+// 
+// return post-super-threshold flag
+//////////////////////////////////////////////////////////////////////
+BOOL CNode::IsPostSuper()
+{
+	return m_bPostSuper;
+
+}	// CNode::IsPostSuper
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::SetPostSuper
+// 
+// stes flag indicating that this is a post-super-threshold node
+//////////////////////////////////////////////////////////////////////
+void CNode::SetPostSuper(BOOL bIs)
+{	
+	m_bPostSuper = bIs;
+
+}	// CNode::SetPostSuper
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetOptimalStateVector
+// 
+// optimal state vector (for interpolated layout)
+//////////////////////////////////////////////////////////////////////
+CSpaceStateVector *CNode::GetOptimalStateVector()
+{
+	return m_pOptSSV;
+
+}	// CNode::GetMaxActivator
+
+
+//////////////////////////////////////////////////////////////////////
 // CNode::GetView
 // 
 // returns the view object for this node
@@ -935,6 +1043,16 @@ void CNode::Serialize(CArchive &ar)
 			ar >> m_pMaxActivator;
 			ar >> m_maxDeltaActivation;
 		}
+
+		if (nSchema >= 8)
+		{
+			if (m_pOptSSV)
+			{
+				delete m_pOptSSV;
+			}
+
+			ar >> m_pOptSSV;
+		}
 	}
 	else
 	{
@@ -954,6 +1072,11 @@ void CNode::Serialize(CArchive &ar)
 		ar << m_vPosition;
 		ar << m_pMaxActivator;
 		ar << m_maxDeltaActivation;
+
+		if (nSchema >= 8)
+		{
+			ar << m_pOptSSV;
+		}
 	}
 
 	// serialize children
@@ -1177,5 +1300,4 @@ void CNode::ResetForPropagation()
 	}
 
 }	// CNode::ResetForPropagation
-
 

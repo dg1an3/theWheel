@@ -17,12 +17,21 @@
 
 #include "Node.h"
 #include "SpaceLayoutManager.h"
+#include "SpaceStateVector.h"
 
 //////////////////////////////////////////////////////////////////////
 // constant for total allowed activation of nodes
 //////////////////////////////////////////////////////////////////////
 const REAL TOTAL_ACTIVATION = (REAL) 0.50;
 
+//////////////////////////////////////////////////////////////////////
+// Event Tags
+//////////////////////////////////////////////////////////////////////
+const LPARAM EVT_NODE_ADDED				= 1001;
+const LPARAM EVT_NODE_REMOVED			= 1002;
+const LPARAM EVT_NODE_SELCHANGED		= 1003;
+const LPARAM EVT_SUPERNODECOUNT_CHANGED	= 1004;
+const LPARAM EVT_LAYOUTPARAMS_CHANGED	= 1005;
 
 //////////////////////////////////////////////////////////////////////
 // class CSpace
@@ -80,12 +89,12 @@ public:
 	void SetMaxSuperNodeCount(int nSuperNodeCount);
 
 	// accessors for primary/secondary ratio
-	double GetPrimSecRatio() const;
-	void SetPrimSecRatio(double primSecRatio);
+	REAL GetPrimSecRatio() const;
+	void SetPrimSecRatio(REAL primSecRatio);
 
 	// accessors for spring constant
-	double GetSpringConst();
-	void SetSpringConst(double springConst);
+	REAL GetSpringConst();
+	void SetSpringConst(REAL springConst);
 
 	// class description accessors
 	CMap<CString, LPCSTR, COLORREF, COLORREF>& GetClassColorMap();
@@ -100,6 +109,12 @@ public:
 
 // Implementation
 public:
+	// deletes all content
+	virtual void DeleteContents();
+
+	// returns a pointer to the state vector
+	CSpaceStateVector *GetStateVector();
+
 	// returns a pointer to the layout manager
 	CSpaceLayoutManager *GetLayoutManager();
 
@@ -107,7 +122,7 @@ public:
 	void LayoutNodes();
 
 	// sets the center of the node views
-	void SetCenter(double x, double y);
+	void SetCenter(REAL x, REAL y);
 
 	// get the master DirectSound object
 	LPDIRECTSOUND GetDirectSound();
@@ -125,6 +140,11 @@ protected:
 	// helper function to sort the nodes by activation
 	void SortNodes();
 
+	// helper functions for positioning nodes
+	void PositionSubNodes();
+	void AdjustRunawayNodes();
+	void PositionNewSuperNodes();
+	
 // Generated message map functions
 protected:
 	//{{AFX_MSG(CSpace)
@@ -135,6 +155,7 @@ protected:
 
 	// allow CNode access to the total activation
 	friend CNode;
+	friend CSpaceStateVector;
 
 	// holds the computed total activation
 	mutable REAL m_totalPrimaryActivation;
@@ -147,11 +168,20 @@ private:
 	// the array of nodes
 	CObArray m_arrNodes;
 
+public:
+	int m_nLastPostSuper;
+
+	// flag to indicate sorting
+	BOOL m_bNodesSorted;
+
 	// the currently selected node
 	CNode *m_pCurrentNode;
 
 	// the direct sound interface
 	LPDIRECTSOUND m_pDS;
+
+	// the state vector for the space 
+	CSpaceStateVector *m_pStateVector;
 
 	// the manager for laying out the nodes
 	CSpaceLayoutManager *m_pLayoutManager;
@@ -160,10 +190,10 @@ private:
 	CVectorD<3> m_vCenter;
 
 	// primary/secondary ratio for the space
-	double m_primSecRatio;
+	REAL m_primSecRatio;
 
 	// spring constant for node views
-	double m_springConst;
+	REAL m_springConst;
 
 	// the mapping from classes to colors
 	CMap<CString, LPCSTR, COLORREF, COLORREF> m_mapClassColors;

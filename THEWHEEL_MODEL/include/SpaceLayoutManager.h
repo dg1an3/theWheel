@@ -13,7 +13,7 @@
 #include <Optimizer.h>
 
 //////////////////////////////////////////////////////////////////////
-// forward declaration of the SpaceView class
+// forward declaration of the CSpace class
 //////////////////////////////////////////////////////////////////////
 class CSpace;
 
@@ -59,26 +59,27 @@ public:
 	// loads the links and sizes for quick access
 	void LoadSizesLinks();
 
-	// gets and sets the state vector for this CSpaceView
-	void Pos2StateVector();
-	void StateVector2Pos();
-
 	// evaluates the energy function
 	virtual REAL operator()(const CVectorN<>& vInput, 
 		CVectorN<> *pGrad = NULL);
 
+	//virtual REAL testLong(const CVectorN<>& vInput, 
+	//	CVectorN<> *pGrad = NULL);
+
 	// performs the layout
-	void LayoutNodes();
+	void LayoutNodes(CSpaceStateVector *pSSV, int nConstNodes);
 
-	// member function to rotate and translate the state vector
-	//		to minimize the diff. w/ the previous state vector
-	void RotateTranslateStateVector(const CVectorN<>& vOldState, 
-		CVectorN<>& vNewState);
-
-private:
+protected:
 	// pointer to the energy function's spaceview
 	CSpace *m_pSpace;
 
+	// current state dimension
+	int m_nStateDim;
+
+	// vector holding the const positions
+	CVectorN<> m_vConstPositions;
+
+private:
 	// the optimizer for the layout
 	COptimizer *m_pPowellOptimizer;
 	COptimizer *m_pConjGradOptimizer;
@@ -87,19 +88,18 @@ private:
 	// pointer to the optimizer to be used
 	COptimizer *m_pOptimizer;
 
-	// current state dimension
-	int m_nStateDim;
-
 	// stores the objective function parameters
 	REAL m_k_pos;
 	REAL m_k_rep;
 	REAL m_tolerance;
 
+protected:
 	// caches previous input vector
 	CVectorN<> m_vInput;
 
 	// caches energy value for the previous input vector
 	REAL m_energy;
+	REAL m_energyConst;
 
 	// holds the current state
 	CVectorN<> m_vState;
@@ -109,6 +109,10 @@ private:
 
 	// stores the view sizes for quick access
 	REAL m_vSize[MAX_STATE_DIM][2];
+	REAL m_mSSX[MAX_STATE_DIM][MAX_STATE_DIM];
+	REAL m_mSSY[MAX_STATE_DIM][MAX_STATE_DIM];
+
+	// stores view activations for quick access
 	REAL m_act[MAX_STATE_DIM];
 
 	// stores the link weights for quick access
@@ -116,7 +120,8 @@ private:
 
 	// holds the number of evaluations that have been done
 	int m_nEvaluations;
-};
+
+};	// class CSpaceLayoutManager
 
 
 #endif // ndef _SPACELAYOUTMANAGER_H
