@@ -85,16 +85,17 @@ REAL CTestLayoutManager<BASE>::Evaluate(const CVectorN<>& vInput)
 
 	// and the total number of nodes plus clusters
 	int nNodeCount = __min(GetStateDim() / 2, m_pSpace->GetNodeCount());
+	nNodeCount = __min(nNodeCount, vInput.GetDim() / 2 + m_nConstNodes); // m_vConstPositions.GetDim()) / 2);
 
 	// compute the weighted center of the nodes, for the center repulsion
 	REAL vCenter[2];
 	REAL totalAct = 0.0;
-	for (int nAt = 0; nAt < nNodeCount; // TRIAL: Removed m_vInput.GetDim() / 2; 
-		nAt++)
+	for (int nAt = 0; nAt < nNodeCount; nAt++)
 	{
-		vCenter[0] = m_act[nAt] * m_vInput[nAt * 2];
-		vCenter[1] = m_act[nAt] * m_vInput[nAt * 2 + 1];
-		totalAct += m_act[nAt];
+		REAL act = m_pSpace->GetNodeAt(nAt)->GetActivation();
+		vCenter[0] = act * m_vState[nAt * 2];
+		vCenter[1] = act * m_vState[nAt * 2 + 1];
+		totalAct += act;
 	}
 
 	// scale weighted center by total weight
@@ -220,22 +221,10 @@ REAL CTestLayoutManager<BASE>::operator()(const CVectorN<>& vInput,
 	REAL energy = BASE::operator()(vInput, pGrad);
 
 	// prepare the input vector for the full positional information
-	ASSERT(m_vConstPositions.GetDim() + vInput.GetDim() == m_nStateDim);
-
-	// compute full vector (in case there is a constant component)
-	CVectorN<> vAll;
-	vAll.SetDim(m_nStateDim);
-	vAll.CopyElements(m_vConstPositions, 0, 
-		m_vConstPositions.GetDim());
-	vAll.CopyElements(vInput, 0, vInput.GetDim(),
-		m_vConstPositions.GetDim());
-
-	// make sure the synthetic full vector is equal to the one
-	//		calculated by the base class
-	ASSERT(vAll == m_vInput);
+	ASSERT(m_nConstNodes * 2 + vInput.GetDim() <= m_nStateDim);
 
 	// now evaluate for this
-	REAL testEnergy = Evaluate(vAll);
+	REAL testEnergy = Evaluate(m_vState);
 
 	// compute the epsilon for comparison
 	REAL epsilon = ComputeEpsilon(testEnergy);
@@ -255,30 +244,37 @@ REAL CTestLayoutManager<BASE>::operator()(const CVectorN<>& vInput,
 			epsilon;
 
 		// numerically evaluate the gradient
-		CVectorN<> vTestGrad = EvaluateGrad(vAll, delta);
+		CVectorN<> vTestGrad = EvaluateGrad(m_vState, delta);
 
 		// extract the partial gradient (for comparison to pGrad)
 		CVectorN<> vPartGrad;
 		vPartGrad.SetDim(pGrad->GetDim());
-		vPartGrad.CopyElements(vTestGrad, m_vConstPositions.GetDim(),
-			vPartGrad.GetDim());
+		vPartGrad.CopyElements(vTestGrad, m_nConstNodes * 2, vPartGrad.GetDim());
 
-		// compute the error distance between the two gradient vectors
-		// REAL errDist = (vPartGrad - (*pGrad)).GetLength();
 
 		// compute the average length of the gradient, for the epsilon
 		REAL avgGradLength = (vPartGrad.GetLength() 
 			+ pGrad->GetLength()) / 2.0;
 
-		// compute the epsilon for gradient comparison
-		REAL epsGrad = ComputeEpsilon(avgGradLength, 1e-1);
-		
-		// test for gradient approximate equality
-		if (!pGrad->IsApproxEqual(vPartGrad, epsGrad))
+		if (abs(vPartGrad.GetLength() - pGrad->GetLength()) > avgGradLength * 0.01)
 		{
-			cout << " **** Error in gradient" << endl;
-			cout << "vPartGrad " << vPartGrad << endl;
-			cout << "pGrad " << (*pGrad) << endl;
+			cout << " **** Error in gradient length " << endl;
+			cout << "vPartGrad Length " << vPartGrad.GetLength() << endl;
+			cout << "pGrad Length" << pGrad->GetLength() << endl;
+		}
+		
+		vPartGrad.Normalize();
+
+		CVectorN<> vGradNorm = (*pGrad);
+		vGradNorm.Normalize();
+
+		REAL scalar = vGradNorm * vPartGrad;
+		REAL angle = acos(scalar) * 180.0 / PI;
+
+		if (angle > 1.0)
+		{
+			cout << " **** Error in gradient direction" << endl;
+			cout << "  Angle diff = " << angle << endl;
 		}
 	}
 
@@ -405,7 +401,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 		pTestLayoutManager->SetKPos(pSpace->GetLayoutManager()->GetKPos());
 		pTestLayoutManager->SetKRep(pSpace->GetLayoutManager()->GetKRep());
 
-		// pTestLayoutManager->LayoutNodes(pSpace->GetStateVector(), 0);
+		pTestLayoutManager->LayoutNodes(pSpace->GetStateVector(), 0);
 
 		// output node w/ positions
 		cout << "**** Final node positions ****" << endl;
@@ -416,7 +412,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 		// output node w/ positions
 		cout << "**** Final node positions -- second layout ****" << endl;
 
-		// pTestLayoutManager->LayoutNodes(pSpace->GetStateVector(), 0);
+		pTestLayoutManager->LayoutNodes(pSpace->GetStateVector(), 0);
 
 		// output node w/ positions
 		PrintInfo(pSpace, TRUE);

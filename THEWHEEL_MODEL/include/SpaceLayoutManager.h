@@ -57,7 +57,7 @@ public:
 	void SetStateDim(int nStateDim);
 
 	// loads the links and sizes for quick access
-	virtual void LoadSizesLinks();
+	virtual void LoadSizesLinks(int nConstNodes, int nNodeCount);
 
 	// evaluates the energy function
 	virtual REAL operator()(const CVectorN<>& vInput, 
@@ -89,7 +89,8 @@ protected:
 	int m_nStateDim;
 
 	// vector holding the const positions
-	CVectorN<> m_vConstPositions;
+	// CVectorN<> m_vConstPositions;
+	int m_nConstNodes;
 
 	// the optimizer for the layout
 	COptimizer *m_pPowellOptimizer;
@@ -103,9 +104,6 @@ protected:
 	REAL m_k_pos;
 	REAL m_k_rep;
 	REAL m_tolerance;
-
-	// caches previous input vector
-	CVectorN<> m_vInput;
 
 	// caches energy value for the previous input vector
 	REAL m_energy;
@@ -121,16 +119,12 @@ protected:
 	CVectorN<> m_vGrad;
 
 	// stores the view sizes for quick access
-	_declspec(align(16)) REAL m_vSize[MAX_STATE_DIM][2];
-	_declspec(align(16)) REAL m_mSSX[MAX_STATE_DIM][MAX_STATE_DIM];
-	_declspec(align(16)) REAL m_mSSY[MAX_STATE_DIM][MAX_STATE_DIM];
-
-	// stores view activations for quick access
-	_declspec(align(16)) REAL m_act[MAX_STATE_DIM];
+	REAL (*m_mSSX)[MAX_STATE_DIM];
+	REAL (*m_mSSY)[MAX_STATE_DIM];
 
 	// stores the link weights for quick access
-	_declspec(align(16)) REAL m_mLinks[MAX_STATE_DIM][MAX_STATE_DIM];
-	_declspec(align(16)) REAL m_mAvgAct[MAX_STATE_DIM][MAX_STATE_DIM];
+	REAL (*m_mLinks)[MAX_STATE_DIM];
+	REAL (*m_mAvgAct)[MAX_STATE_DIM];
 
 	// holds the number of evaluations that have been done
 	int m_nEvaluations;
