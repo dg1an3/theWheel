@@ -29,5 +29,14 @@ Other notes:
 AppWizard uses "TODO:" to indicate parts of the source code you
 should add to or customize.
 
+1) Rename CImagePropDlg -> CNodeMiscPropDlg
+	a) Add color to CNodeMiscPropDlg
+	b) Add "Browse Image File..." button
+
+2) Rename CLinkPropDlg -> CNodeLinkPropDlg
+
+3) Rename COptionDlg -> CSpacePropDlg
+	a) Add node classes and colors to CSpacePropDlg
+	b) Add "Initial State" button to CSpacePropDlg
 
 /////////////////////////////////////////////////////////////////////////////
