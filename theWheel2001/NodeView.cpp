@@ -9,17 +9,14 @@
 // pre-compiled headers
 #include "stdafx.h"
 
-// resource includes
-#include "resource.h"
-
 // the class definition
 #include "NodeView.h"
 
 // parent class
 #include "SpaceView.h"
 
-// node dialog
-#include "NewNodeDlg.h"
+// the displayed model object
+#include <Node.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -48,23 +45,19 @@ COLORREF LOWER_DARK_COLOR = RGB(128, 128, 128);
 // 
 // constructs a new CNodeView object for the passed CNode
 //////////////////////////////////////////////////////////////////////
-CNodeView::CNodeView(CNode *pNode)
+CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 : forNode(pNode),
-	center(CVector<2>(0.0, 0.0)),
-	springCenter(CVector<2>(0.0, 0.0)),
-	springActivation((float) pNode->activation.Get()),
+	m_vCenter(CVector<2>(0.0, 0.0)),
+	m_vSpringCenter(m_vCenter),
+	m_thresholdedActivation(pNode->GetActivation()),
+	m_springActivation(m_thresholdedActivation),
 	m_ptMouseDown(-1, -1),
 	m_bDragging(FALSE),
 	m_bDragged(FALSE),
-	isWaveMode(FALSE),
-	m_pPiggyBack(NULL)
+	m_pParent(pParent)
 {
-	rectWindow.AddObserver(this, 
-		(ChangeFunction) OnRectChanged);
-	springCenter.AddObserver(this, 
-		(ChangeFunction) OnSpringCenterChanged);
-	springActivation.AddObserver(this, 
-		(ChangeFunction) OnSpringActivationChanged);
+	// set the view pointer for the node
+	forNode->SetView(this);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -77,71 +70,43 @@ CNodeView::~CNodeView()
 }
 
 //////////////////////////////////////////////////////////////////////
-// CNodeView::UpdateSprings
+// CNodeView::GetCenter
 // 
-// updates the spring-dynamic variables -- should be called on a 
-//		regular basis
+// returns the center point of the node view
 //////////////////////////////////////////////////////////////////////
-void CNodeView::UpdateSprings()
+CVector<2> CNodeView::GetCenter()
 {
-	CSpaceView *pSpaceView = (CSpaceView *)GetParent();
-
-	CRect rect;
-	pSpaceView->GetClientRect(&rect);
-	CVector<2> vNewCenter(rect.CenterPoint());
-
-	float newActivation;
-	newActivation = thresholdedActivation.Get() * 0.125f
-		+ springActivation.Get() * 0.875f;
-
-	if (thresholdedActivation.Get() > 0.0f)
-	{
-		vNewCenter = center.Get() * 0.125 + springCenter.Get() * 0.875;
-	}
-	else 
-	{
-		if (m_pPiggyBack == NULL)
-		{
-			CNodeLink *pMaxLink = forNode->links.Get(0);
-			if (pMaxLink != NULL)
-			{
-				m_pPiggyBack = pSpaceView->
-					GetViewForNode(pMaxLink->forTarget.Get());
-				ASSERT(m_pPiggyBack->forNode.Get() == pMaxLink->forTarget.Get());
-			}
-		}
-		if (m_pPiggyBack != NULL)
-		{
-			vNewCenter = center.Get() * 0.9375 
-				+ m_pPiggyBack->center.Get() * 0.0625;
-			center.Set(vNewCenter);
-		}
-	}
-	springCenter.Set(vNewCenter);
-
-	springActivation.Set(newActivation);
+	return m_vCenter;
 }
 
 //////////////////////////////////////////////////////////////////////
-// CNodeView::PreCreateWindow
+// CNodeView::SetCenter
 // 
-// sets the window class attributes
+// sets the center point of the node view
 //////////////////////////////////////////////////////////////////////
-BOOL CNodeView::PreCreateWindow(CREATESTRUCT& cs) 
+void CNodeView::SetCenter(const CVector<2>& vCenter)
 {
-#ifdef NO_NODEVIEWS
-	LONG mask = ~WS_VISIBLE;
-	cs.style &= mask;
-#endif
+	m_vCenter = vCenter;
+}
 
-	if (!CWnd::PreCreateWindow(cs))
-		return FALSE;
+//////////////////////////////////////////////////////////////////////
+// CNodeView::GetThresholdedActivation
+// 
+// returns the thresholded activation value for the node view
+//////////////////////////////////////////////////////////////////////
+double CNodeView::GetThresholdedActivation()
+{
+	return m_thresholdedActivation;
+}
 
-	cs.lpszClass = AfxRegisterWndClass(CS_HREDRAW|CS_VREDRAW|CS_DBLCLKS, 
-		::LoadCursor(AfxGetInstanceHandle(), MAKEINTRESOURCE(IDC_HANDPOINT)),
-		CreateSolidBrush(BACKGROUND_COLOR), NULL);
-
-	return TRUE;
+//////////////////////////////////////////////////////////////////////
+// CNodeView::SetThresholdedActivation
+// 
+// sets the thresholded activation value for the node view
+//////////////////////////////////////////////////////////////////////
+void CNodeView::SetThresholdedActivation(double activation)
+{
+	m_thresholdedActivation = activation;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -151,11 +116,7 @@ BOOL CNodeView::PreCreateWindow(CREATESTRUCT& cs)
 /////////////////////////////////////////////////////////////////////////////
 CRect CNodeView::GetOuterRect()
 {
-	// outer rectangle = client rectangle
-	CRect rectOuter;
-	GetClientRect(&rectOuter);
-
-	return rectOuter;
+	return m_rectOuter;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -169,7 +130,7 @@ CRect CNodeView::GetInnerRect()
 
 	// compute the r, which represents the amount of "elliptical-ness"
 	float r = 1.0f - (1.0f - 1.0f / (float) sqrt(2.0f))
-		* (float) exp(-8.0f * springActivation.Get());
+		* (float) exp(-8.0f * m_springActivation);
 
 	CRect rectInner = rectOuter;
 	rectInner.top = (long) ((float) (rectOuter.top + rectOuter.Height() / 2) 
@@ -182,6 +143,143 @@ CRect CNodeView::GetInnerRect()
 		+ r * (float) rectOuter.Width() / 2.0f);
 
 	return rectInner;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::GetShape
+// 
+// returns and computes (if needed) the node view's region (shape)
+//////////////////////////////////////////////////////////////////////
+CRgn& CNodeView::GetShape()
+{
+	// re-compute the region, if needed
+	if (m_shape.GetSafeHandle() == NULL)
+	{
+		// form the ellipse for top/bottom clipping
+		CRect rectTopBottomEllipse = GetTopBottomEllipseRect();
+		CRgn ellipseTopBottom;
+		ellipseTopBottom.CreateEllipticRgnIndirect(&rectTopBottomEllipse);
+
+		// form the ellipse for left/right clipping
+		CRect rectLeftRightEllipse = GetLeftRightEllipseRect();
+		CRgn ellipseLeftRight;
+		ellipseLeftRight.CreateEllipticRgnIndirect(&rectLeftRightEllipse);
+
+		// form the intersection of the two
+		m_shape.CreateRectRgnIndirect(GetInnerRect());
+		m_shape.CombineRgn(&ellipseTopBottom, &ellipseLeftRight, RGN_AND);
+
+		// delete the formant regions
+		ellipseTopBottom.DeleteObject();
+		ellipseLeftRight.DeleteObject();
+	}
+
+	// return the computed region
+	return m_shape;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::UpdateSprings
+// 
+// updates the spring-dynamic variables -- should be called on a 
+//		regular basis
+//////////////////////////////////////////////////////////////////////
+void CNodeView::UpdateSprings(double springConst)
+{
+	// get the parent window
+	CSpaceView *pSpaceView = (CSpaceView *)m_pParent;
+
+	// get the parent rectangle
+	CRect rectParent;
+	ASSERT(::IsWindow(m_pParent->m_hWnd));
+	m_pParent->GetClientRect(&rectParent);
+
+	// update spring activation
+	m_springActivation = GetThresholdedActivation() * (1.0 - springConst)
+		+ m_springActivation * springConst;
+
+	// if we are sub-threshold, set our center to the max activator's
+	//		center
+	if (GetThresholdedActivation() == 0.0)
+	{
+		// initialize the new center to the center of the parent window
+		CVector<2> vNewCenter = rectParent.CenterPoint();
+
+		// find the max activator node
+		CNode *pMaxActNode = forNode->GetMaxActivator();
+		if (pMaxActNode != NULL)
+		{
+			// find the view for the max activator node
+			CNodeView *pMaxActView = 
+				pSpaceView->GetViewForNode(pMaxActNode);
+
+			// if there is a view,
+			if (pMaxActView != NULL) 
+			{
+				// set the new center to it
+				vNewCenter = pMaxActView->GetCenter();
+			}
+		} 
+
+		// set the new center point
+		SetCenter(vNewCenter * (1.0 - springConst)
+			+ GetCenter() * springConst);
+	}
+
+	// update spring center
+	m_vSpringCenter = GetCenter() * (1.0 - springConst)
+		+ m_vSpringCenter * springConst;
+
+	// compute the area interpreting springActivation as the fraction of the 
+	//		parent's total area
+	float area = (float) m_springActivation 
+		* (rectParent.Width() * rectParent.Height());
+
+	// compute the desired aspect ratio (maintain the current aspect ratio)
+	float aspectRatio = 0.75f - 0.375f * (float) exp(-8.0f * m_springActivation);
+
+	// compute the new width and height from the desired area and the desired
+	//		aspect ratio
+	int nWidth = (int) sqrt(area / aspectRatio);
+	int nHeight = (int) sqrt(area * aspectRatio);
+
+	// set the width and height of the window, keeping the center constant
+	CRect rect;
+	rect.left = (long) m_vSpringCenter[0] - nWidth / 2;
+	rect.right = (long) m_vSpringCenter[0] + nWidth / 2;
+	rect.top = (long) m_vSpringCenter[1] - nHeight / 2;
+	rect.bottom = (long) m_vSpringCenter[1] + nHeight / 2;
+
+	// move the window -- re-computes window region
+	m_shape.DeleteObject();	// trigger re-computing the shape
+	m_rectOuter = rect;
+
+	// and invalidate the parent window
+	m_pParent->Invalidate(FALSE);
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::Draw
+// 
+// draws the entire node view
+//////////////////////////////////////////////////////////////////////
+void CNodeView::Draw(CDC *pDC)
+{
+	// get the inner rectangle for drawing the text
+	CRect rectInner = GetInnerRect();
+
+	// only draw if it has a substantial area
+	if (rectInner.Height() > 1)
+	{
+		// draw the elliptangle
+		DrawElliptangle(pDC);
+
+		// draw the image (if any)
+		DrawImage(pDC, rectInner);
+
+		// draw the text
+		DrawText(pDC, rectInner);
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -236,208 +334,83 @@ CRect CNodeView::GetTopBottomEllipseRect()
 }
 
 //////////////////////////////////////////////////////////////////////
-// CNodeView::OnRectChanged
+// CNodeView::DrawElliptangle
 // 
-// handles a change in the window rectangle
+// draws the elliptangle for the node
 //////////////////////////////////////////////////////////////////////
-void CNodeView::OnRectChanged(CObservableObject *pSource, void *pOldValue)
+void CNodeView::DrawElliptangle(CDC *pDC)
 {
-	CRect rectWnd;
-	GetWindowRect(&rectWnd);	// get the old window rectangle
+	// reset the inner rectangle
+	CRect rectInner = GetInnerRect();
 
-	// get the parent window and transform to its coordinates
-	GetParent()->ScreenToClient(&rectWnd);
-
-	// invalidate the old region
-	CRgn rgn;
-	rgn.CreateRectRgn(0, 0, 1, 1);
-	GetWindowRgn(rgn);
-	rgn.OffsetRgn(rectWnd.TopLeft());
-	GetParent()->InvalidateRgn(&rgn, FALSE);
-
-	// move the window
-	MoveWindow(rectWindow.Get(), FALSE);
-
-	// set the springCenter point
-	springCenter.Set(rectWindow.Get().CenterPoint());
-
-	// and invalidate
-	Invalidate(FALSE);
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNodeView::OnSpringCenterChanged
-// 
-// handles a change in the node view center
-//////////////////////////////////////////////////////////////////////
-void CNodeView::OnSpringCenterChanged(CObservableObject *pSource, void *pOldValue)
-{
-	// compute the offset
-	CPoint ptOffset = rectWindow.Get().CenterPoint() - springCenter.Get();
-	rectWindow.Set(rectWindow.Get() - ptOffset);
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNodeView::OnSpringActivationChanged
-// 
-// handles a change in the activation
-//////////////////////////////////////////////////////////////////////
-void CNodeView::OnSpringActivationChanged(CObservableObject *pSource, void *pOldValue)
-{
-	// get the parent rectangle
-	CRect rectParent;
-	GetParent()->GetWindowRect(&rectParent);
-
-	// compute the area interpreting springActivation as the fraction of the 
-	//		parent's total area
-	float area = springActivation.Get() * (rectParent.Width() * rectParent.Height());
-
-	// compute the desired aspect ratio (maintain the current aspect ratio)
-	float aspectRatio = 0.75f - 0.375f * (float) exp(-8.0f * springActivation.Get());
-
-	// compute the new width and height from the desired area and the desired
-	//		aspect ratio
-	int nWidth = (int) sqrt(area / aspectRatio);
-	int nHeight = (int) sqrt(area * aspectRatio);
-
-	// set the width and height of the window, keeping the center constant
-	CRect rect;
-	rect.left = (long) springCenter.Get()[0] - nWidth / 2;
-	rect.right = (long) springCenter.Get()[0] + nWidth / 2;
-	rect.top = (long) springCenter.Get()[1] - nHeight / 2;
-	rect.bottom = (long) springCenter.Get()[1] + nHeight / 2;
-
-	// now set the window rectangle
-	rectWindow.Set(rect);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-// CNodeView Message Map
-/////////////////////////////////////////////////////////////////////////////
-
-BEGIN_MESSAGE_MAP(CNodeView, CWnd)
-	//{{AFX_MSG_MAP(CNodeView)
-	ON_WM_PAINT()
-	ON_WM_SIZE()
-	ON_WM_ERASEBKGND()
-	ON_WM_LBUTTONDOWN()
-	ON_WM_LBUTTONUP()
-	ON_WM_MOUSEMOVE()
-	ON_WM_LBUTTONDBLCLK()
-	//}}AFX_MSG_MAP
-END_MESSAGE_MAP()
-
-
-/////////////////////////////////////////////////////////////////////////////
-// CNodeView message handlers
-
-//////////////////////////////////////////////////////////////////////
-// CNodeView::OnSize
-// 
-// changes the node view's rectangle and region in response to
-//		a re-sizing event
-//////////////////////////////////////////////////////////////////////
-void CNodeView::OnSize(UINT nType, int cx, int cy) 
-{
-	// form the ellipse for top/bottom clipping
-	CRect rectTopBottomEllipse = GetTopBottomEllipseRect();
-	CRgn ellipseTopBottom;
-	ellipseTopBottom.CreateEllipticRgnIndirect(&rectTopBottomEllipse);
-
-	// form the ellipse for left/right clipping
+	// get the guide rectangles
 	CRect rectLeftRightEllipse = GetLeftRightEllipseRect();
-	CRgn ellipseLeftRight;
-	ellipseLeftRight.CreateEllipticRgnIndirect(&rectLeftRightEllipse);
+	CRect rectTopBottomEllipse = GetTopBottomEllipseRect();
 
-	// form the intersection of the two
-	CRect rectInner = GetInnerRect();
-	CRgn rgnWindow;
-	rgnWindow.CreateRectRgnIndirect(rectInner);
-#ifndef NO_CURVE
-	rgnWindow.CombineRgn(&ellipseTopBottom, &ellipseLeftRight, RGN_AND);
-#endif
+	// store the old pen and brush
+	CPen *pOldPen = NULL;
+	CBrush *pOldBrush = NULL;
 
-	// set the window's region to the intersection
-	SetWindowRgn(rgnWindow, FALSE);	
+	// select attributes for background
+	CBrush backBrush(BACKGROUND_COLOR);
+	pOldBrush = pDC->SelectObject(&backBrush);
+	pOldPen = (CPen *)pDC->SelectStockObject(NULL_PEN);
 
-	CWnd::OnSize(nType, cx, cy);
+	// now draw the background
+	pDC->FillSolidRect(rectInner, BACKGROUND_COLOR);
+	pDC->Chord(&rectLeftRightEllipse, rectInner.TopLeft(), 
+		CPoint(rectInner.left, rectInner.bottom));
+	pDC->Chord(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
+		rectInner.TopLeft());
+	pDC->Chord(&rectLeftRightEllipse, rectInner.BottomRight(), 
+		CPoint(rectInner.right, rectInner.top));
+	pDC->Chord(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
+		rectInner.BottomRight());
 
-	// retrieve the new window rectangle
-	CRect rectWnd;
-	GetWindowRect(&rectWnd);
+	// draw the upper-left half of the outline
+	CPen penUpperLeftThick(PS_SOLID, 4, UPPER_DARK_COLOR);
+	// pOldPen = (CPen *)
+		pDC->SelectObject(&penUpperLeftThick);
+	pDC->Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
+		CPoint(rectInner.left, rectInner.bottom));
+	pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
+		rectInner.TopLeft());
 
-	// get the parent window and transform to its coordinates
-	GetParent()->ScreenToClient(&rectWnd);
+	CPen penUpperLeftThin(PS_SOLID, 2, UPPER_LIGHT_COLOR);
+	pDC->SelectObject(&penUpperLeftThin);
+	pDC->Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
+		CPoint(rectInner.left, rectInner.bottom));
+	pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
+		rectInner.TopLeft());
 
-	// set the window rect value
-	rectWindow.Set(rectWnd);
+	// draw the lower-right half of the outline
+	CPen penLowerRightThick(PS_SOLID, 4, LOWER_LIGHT_COLOR);
+	pDC->SelectObject(&penLowerRightThick);
+	pDC->Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
+		CPoint(rectInner.right, rectInner.top));
+	pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
+		rectInner.BottomRight());
+
+	CPen penLowerRightThin(PS_SOLID, 2, LOWER_DARK_COLOR);
+	pDC->SelectObject(&penLowerRightThin);
+	pDC->Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
+		CPoint(rectInner.right, rectInner.top));
+	pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
+		rectInner.BottomRight());
+
+	// restore the old pen 
+	pDC->SelectObject(pOldPen);
+	pDC->SelectObject(pOldBrush);
 }
 
 //////////////////////////////////////////////////////////////////////
-// CNodeView::OnEraseBkgnd
+// CNodeView::DrawText
 // 
-// over-rides the erase background call
+// draws the node's text in the given rectangle
 //////////////////////////////////////////////////////////////////////
-BOOL CNodeView::OnEraseBkgnd(CDC* pDC) 
+void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 {
-	return TRUE; // CWnd::OnEraseBkgnd(pDC);
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNodeView::OnPaint
-// 
-// paints the node view
-//////////////////////////////////////////////////////////////////////
-void CNodeView::OnPaint() 
-{
-	// device context for painting
-	CPaintDC dc(this); 
-	
-	// create a memory device context
-	CDC dcMem;
-	dcMem.CreateCompatibleDC(&dc);
-
-	// get the inner rectangle for drawing the text
-	CRect rectClient;
-	GetClientRect(&rectClient);
-
-	// Draw the image to the back-buffer
-	CBitmap bitmapBuffer;
-	bitmapBuffer.CreateBitmap(rectClient.Width(), rectClient.Height(), 1, 32, NULL); 
-	dcMem.SelectObject(&bitmapBuffer);
-
-	CBrush brush;
-	brush.CreateSolidBrush(BACKGROUND_COLOR);
-	dcMem.FillRect(&rectClient, &brush);
-
-	// get the inner rectangle for drawing the text
-	CRect rectInner = GetInnerRect();
-
-	if (forNode->GetDib() != NULL && springActivation.Get() < 0.05)
-	{
-		// calculate the bitmap size 
-		float bitmapSize = rectInner.Height() * 0.03f / springActivation.Get();
-		bitmapSize = min(bitmapSize, rectInner.Height());
-		float margin = rectInner.Height() - bitmapSize;
-
-		CRect rectImage = rectInner;
-		rectImage.top += (int) margin / 2;
-		rectImage.right = rectImage.left + (int) bitmapSize;
-		rectImage.bottom -= (int) margin / 2;
-
-		rectImage.DeflateRect(5, 5, 5, 5);
-
-		// draw the bitmap next to the title
-		forNode->GetDib()->Draw(dcMem, &rectImage);
-
-		// dcMem.Ellipse(rectImage);
-
-		// adjust the rectangle to account for the bitmap
-		rectInner.left += (int) bitmapSize;
-	}
-
-	// draw the text
-	dcMem.SetBkMode(TRANSPARENT);
+	pDC->SetBkMode(TRANSPARENT);
 
 	int nDesiredHeight = min(rectInner.Height() / 3, 20);
 	int nDesiredWidth = rectInner.Width() / 80;
@@ -454,26 +427,21 @@ void CNodeView::OnPaint()
 		"Arial");
 	ASSERT(bResult);
 
-	CFont *pOldFont = dcMem.SelectObject(&font);
+	CFont *pOldFont = pDC->SelectObject(&font);
 
 	CRect rectText(rectInner);
 	rectText.DeflateRect(5, 5, 5, -5);
-	dcMem.DrawText(forNode->name.Get(), rectText, 
+	pDC->DrawText(forNode->name.Get(), rectText, 
 		DT_CENTER | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	// now calculate the height of the drawn text
 	rectText = rectInner;
 	rectText.DeflateRect(5, 5, 5, 5);
-	int nHeight = dcMem.DrawText(forNode->name.Get(), rectText, 
+	int nHeight = pDC->DrawText(forNode->name.Get(), rectText, 
 		DT_CALCRECT | DT_CENTER | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
-	// stores the old pen that was selected into the context
-	CPen *pOldPen;
-
 	// now draw the description body
-//	CPen penTemp(PS_SOLID, 1, RGB(0, 0, 0));
-//	pOldPen = dcMem.SelectObject(&penTemp);
-	if (springActivation.Get() >= 0.05)
+	if (m_springActivation >= 0.05)
 	{
 		rectText = rectInner;
 		rectText.DeflateRect(5, 5, 5, 5);
@@ -486,22 +454,15 @@ void CNodeView::OnPaint()
 			// rectImage.left += rectImage.Height();
 
 			rectImage.DeflateRect(5, 5, 5, 5);
-			forNode->GetDib()->Draw(dcMem, &rectImage);
+			forNode->GetDib()->Draw(*pDC, &rectImage);
 
 			// draw the bitmap next to the title
-			// dcMem.Ellipse(rectImage);
+			// pDC->Ellipse(rectImage);
 
 			// adjust the rectangle to account for the bitmap
 			rectText.left += rectText.Height();
 		}
-//	}
 
-//	dcMem.Rectangle( rectText );
-
-//	dcMem.SelectObject(pOldPen);
-
-//	if (nDesiredHeight > 12)
-//	{
 		nDesiredHeight = max(nDesiredHeight / 2, 12);
 		CFont smallFont;
 		bResult = smallFont.CreateFont(nDesiredHeight, 0, //nDesiredWidth,
@@ -515,214 +476,46 @@ void CNodeView::OnPaint()
 			"Arial");
 		ASSERT(bResult);
 
-		dcMem.SelectObject(&smallFont);
-		dcMem.DrawText(forNode->description.Get(), rectText, 
+		pDC->SelectObject(&smallFont);
+		pDC->DrawText(forNode->description.Get(), rectText, 
 			DT_LEFT | DT_END_ELLIPSIS | DT_WORDBREAK);
 
-		dcMem.SelectObject(pOldFont);
+		pDC->SelectObject(pOldFont);
 		smallFont.DeleteObject();
 	}
 	else
-		dcMem.SelectObject(pOldFont);
+		pDC->SelectObject(pOldFont);
 
 	font.DeleteObject();
-
-	// reset the inner rectangle
-	rectInner = GetInnerRect();
-
-	// get the guide rectangles
-	CRect rectLeftRightEllipse = GetLeftRightEllipseRect();
-	CRect rectTopBottomEllipse = GetTopBottomEllipseRect();
-
-	// draw the upper-left half of the outline
-	CPen penUpperLeftThick(PS_SOLID, 6, UPPER_DARK_COLOR);
-	pOldPen = dcMem.SelectObject(&penUpperLeftThick);
-#ifdef NO_CURVE
-	dcMem.MoveTo(rectInner.left, rectInner.bottom);
-	dcMem.LineTo(rectInner.TopLeft());
-	dcMem.LineTo(rectInner.right, rectInner.top);
-#else
-	dcMem.Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
-		CPoint(rectInner.left, rectInner.bottom));
-	dcMem.Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
-		rectInner.TopLeft());
-#endif
-
-	CPen penUpperLeftThin(PS_SOLID, 3, UPPER_LIGHT_COLOR);
-	dcMem.SelectObject(&penUpperLeftThin);
-#ifdef NO_CURVE
-	dcMem.MoveTo(rectInner.left, rectInner.bottom);
-	dcMem.LineTo(rectInner.TopLeft());
-	dcMem.LineTo(rectInner.right, rectInner.top);
-#else
-	dcMem.Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
-		CPoint(rectInner.left, rectInner.bottom));
-	dcMem.Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
-		rectInner.TopLeft());
-#endif
-
-	// draw the lower-right half of the outline
-	CPen penLowerRightThick(PS_SOLID, 6, LOWER_LIGHT_COLOR);
-	dcMem.SelectObject(&penLowerRightThick);
-#ifdef NO_CURVE
-	dcMem.MoveTo(rectInner.right, rectInner.top);
-	dcMem.LineTo(rectInner.BottomRight());
-	dcMem.LineTo(rectInner.left, rectInner.bottom);
-#else
-	dcMem.Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
-		CPoint(rectInner.right, rectInner.top));
-	dcMem.Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
-		rectInner.BottomRight());
-#endif
-
-	CPen penLowerRightThin(PS_SOLID, 3, LOWER_DARK_COLOR);
-	dcMem.SelectObject(&penLowerRightThin);
-#ifdef NO_CURVE
-	dcMem.MoveTo(rectInner.right, rectInner.top);
-	dcMem.LineTo(rectInner.BottomRight());
-	dcMem.LineTo(rectInner.left, rectInner.bottom);
-#else
-	dcMem.Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
-		CPoint(rectInner.right, rectInner.top));
-	dcMem.Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
-		rectInner.BottomRight());
-#endif
-
-	// restore the old pen 
-	dcMem.SelectObject(pOldPen);
-
-	// Now blit the backbuffer to the screen
-	dc.BitBlt(0, 0, rectClient.Width(), rectClient.Height(), &dcMem, 0, 0, SRCCOPY);
-
-	// clean up
-	dcMem.DeleteDC();
-	bitmapBuffer.DeleteObject();
-
-	// Do not call CWnd::OnPaint() for painting messages
 }
 
 //////////////////////////////////////////////////////////////////////
-// CNodeView::OnLButtonDown
+// CNodeView::DrawImage
 // 
-// handles a left mouse button down event
+// draws the image in the given rectangle, updating the rectangle
+//		to reflect the actual image size
 //////////////////////////////////////////////////////////////////////
-void CNodeView::OnLButtonDown(UINT nFlags, CPoint point) 
+void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
 {
-	if (!m_bDragging)
+	if (forNode->GetDib() != NULL && m_springActivation < 0.05)
 	{
-		m_bDragging = TRUE;
-		m_ptMouseDown = point;
-	
-		m_bDragged = FALSE;
+		// calculate the bitmap size 
+		float bitmapSize = 
+			rectInner.Height() * 0.03f / (float) m_springActivation;
+		bitmapSize = min(bitmapSize, rectInner.Height());
+		float margin = rectInner.Height() - bitmapSize;
 
-		CSpaceView *pParent = (CSpaceView *)GetParent();
-		
-		// propagate activation
-		pParent->ActivateNode(this, 0.25);
+		CRect rectImage = rectInner;
+		rectImage.top += (int) margin / 2;
+		rectImage.right = rectImage.left + (int) bitmapSize;
+		rectImage.bottom -= (int) margin / 2;
+
+		rectImage.DeflateRect(5, 5, 5, 5);
+
+		// draw the bitmap next to the title
+		forNode->GetDib()->Draw(*pDC, &rectImage);
+
+		// adjust the rectangle to account for the bitmap
+		rectInner.left += (int) bitmapSize;
 	}
-
-	SetCapture();
-
-	CWnd::OnLButtonDown(nFlags, point);
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNodeView::OnLButtonUp
-// 
-// handles a left mouse button up event
-//////////////////////////////////////////////////////////////////////
-void CNodeView::OnLButtonUp(UINT nFlags, CPoint point) 
-{
-	m_bDragging = FALSE;
-
-	::ReleaseCapture();
-
-	// redraw the parent
-	RedrawWindow(NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
-	
-	CWnd::OnLButtonUp(nFlags, point);
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNodeView::OnMouseMove
-// 
-// handles a mouse move event
-//////////////////////////////////////////////////////////////////////
-void CNodeView::OnMouseMove(UINT nFlags, CPoint point) 
-{
-	if (m_bDragging)
-	{
-		CPoint ptOffset = (point - m_ptMouseDown);
-
-		if ((ptOffset.x * ptOffset.x + ptOffset.y * ptOffset.y) > 10)
-		{
-			m_bDragged = TRUE;
-		}
-
-		springCenter.Set(springCenter.Get() + CVector<2>(ptOffset));
-		center.Set(springCenter.Get());
-
-		CSpaceView *pParent = (CSpaceView *)GetParent();
-
-		RedrawWindow(NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
-	}
-	else if (isWaveMode.Get())
-	{
-		CPoint ptOffset = (point - m_ptMouseDown);
-		float lengthSq = (float) sqrt(ptOffset.x * ptOffset.x + ptOffset.y * ptOffset.y);
-
-		if (lengthSq > 10.0f)
-		{
-			// compute the new activation
-			CSpaceView *pParent = (CSpaceView *)GetParent();
-			pParent->ActivateNode(this, 0.15f);
-
-			// do some idle time processing
-			CSpaceView *pSpaceView = (CSpaceView *)GetParent();
-			pSpaceView->LayoutNodeViews();
-
-			// update the privates
-			int nAt;
-			for (nAt = 0; nAt < pSpaceView->nodeViews.GetSize(); nAt++)
-			{
-				pSpaceView->nodeViews.Get(nAt)->UpdateSprings();
-			}
-
-			pSpaceView->RedrawWindow();
-			for (nAt = 0; nAt < pSpaceView->nodeViews.GetSize(); nAt++)
-			{
-				pSpaceView->nodeViews.Get(nAt)->RedrawWindow();
-			}
-
-			m_ptMouseDown = point;
-		}
-	}
-
-	CWnd::OnMouseMove(nFlags, point);
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNodeView::OnLButtonDblClk
-// 
-// handles a double-click event
-//////////////////////////////////////////////////////////////////////
-void CNodeView::OnLButtonDblClk(UINT nFlags, CPoint point) 
-{
-	CNewNodeDlg newDlg(GetParent());
-
-	newDlg.m_strName = forNode->name.Get();
-	newDlg.m_strDesc = forNode->description.Get();
-	newDlg.m_strImageFilename = forNode->imageFilename.Get();
-	newDlg.m_pNode = forNode.Get();
-
-	if (newDlg.DoModal() == IDOK)
-	{
-		forNode->name.Set(newDlg.m_strName);
-		forNode->description.Set(newDlg.m_strDesc);
-		forNode->imageFilename.Set(newDlg.m_strImageFilename);
-		
-		Invalidate();
-	}
-	
-	CWnd::OnLButtonDblClk(nFlags, point);
 }
