@@ -1,0 +1,118 @@
+// NodePropDlg.cpp : implementation file
+//
+
+#include "stdafx.h"
+
+// resource includes
+#include "THEWHEEL_VIEW_resource.h"
+
+#include "NodePropDlg.h"
+
+#include <Space.h>
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#undef THIS_FILE
+static char THIS_FILE[] = __FILE__;
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+// CNodePropDlg dialog
+
+
+CNodePropDlg::CNodePropDlg(CWnd* pParent /*=NULL*/)
+	: CDialog(CNodePropDlg::IDD, pParent)
+{
+	//{{AFX_DATA_INIT(CNodePropDlg)
+	m_strName = _T("");
+	m_strDesc = _T("");
+	//}}AFX_DATA_INIT
+}
+
+void CNodePropDlg::SetCurNode(CNode *pNode)
+{
+	m_pCurNode = pNode;
+
+	// set the member variables
+	m_strName = pNode->GetName();
+	m_strDesc = pNode->GetDescription();
+
+	// load the fields
+	UpdateData(FALSE);
+}
+
+void CNodePropDlg::DoDataExchange(CDataExchange* pDX)
+{
+	CDialog::DoDataExchange(pDX);
+	//{{AFX_DATA_MAP(CNodePropDlg)
+	DDX_Text(pDX, IDC_EDITNAME, m_strName);
+	DDX_Text(pDX, IDC_EDITDESC, m_strDesc);
+	//}}AFX_DATA_MAP
+}
+
+
+BEGIN_MESSAGE_MAP(CNodePropDlg, CDialog)
+	//{{AFX_MSG_MAP(CNodePropDlg)
+	ON_WM_SIZE()
+	ON_EN_CHANGE(IDC_EDITNAME, OnChangeEditname)
+	ON_EN_CHANGE(IDC_EDITDESC, OnChangeEditdesc)
+	//}}AFX_MSG_MAP
+END_MESSAGE_MAP()
+
+/////////////////////////////////////////////////////////////////////////////
+// CNodePropDlg message handlers
+
+
+void CNodePropDlg::OnSize(UINT nType, int cx, int cy) 
+{
+	CDialog::OnSize(nType, cx, cy);
+	
+	// holds the rectangles for the controls
+	CRect rectCtrl;
+
+	CWnd *pEditName = GetDlgItem(IDC_EDITNAME);
+	if (pEditName)
+	{
+		pEditName->GetWindowRect(&rectCtrl);
+		ScreenToClient(&rectCtrl);
+		rectCtrl.right = cx - 5;
+		pEditName->MoveWindow(&rectCtrl);
+	}
+
+	CWnd *pEditDesc = GetDlgItem(IDC_EDITDESC);
+	if (pEditDesc)
+	{
+		pEditDesc->GetWindowRect(&rectCtrl);
+		ScreenToClient(&rectCtrl);
+		rectCtrl.right = cx - 5;
+		pEditDesc->MoveWindow(&rectCtrl);
+	}
+}
+
+void CNodePropDlg::OnChangeEditname() 
+{
+	// TODO: If this is a RICHEDIT control, the control will not
+	// send this notification unless you override the CDialog::OnInitDialog()
+	// function and call CRichEditCtrl().SetEventMask()
+	// with the ENM_CHANGE flag ORed into the mask.
+	
+	UpdateData(TRUE);
+	
+	m_pCurNode->SetName(m_strName);
+	if (m_pCurNode->m_pSpace != NULL)
+	{
+		m_pCurNode->m_pSpace->UpdateAllViews(NULL, 0L, m_pCurNode);
+	}
+}
+
+void CNodePropDlg::OnChangeEditdesc() 
+{
+	// TODO: If this is a RICHEDIT control, the control will not
+	// send this notification unless you override the CDialog::OnInitDialog()
+	// function and call CRichEditCtrl().SetEventMask()
+	// with the ENM_CHANGE flag ORed into the mask.
+	
+	UpdateData(TRUE);
+	
+	m_pCurNode->SetDescription(m_strDesc);
+}
