@@ -34,6 +34,8 @@ class CSpaceView : public CView
 {
 protected: // create from serialization only
 	CSpaceView();
+	virtual ~CSpaceView();
+
 	DECLARE_DYNCREATE(CSpaceView)
 
 // Attributes
@@ -88,13 +90,6 @@ public:
 
 // Implementation
 public:
-	virtual ~CSpaceView();
-#ifdef _DEBUG
-	virtual void AssertValid() const;
-	virtual void Dump(CDumpContext& dc) const;
-#endif
-
-public:
 	// the type for the state vector
 	typedef SPV_STATE_TYPE STATE_TYPE;
 
@@ -108,20 +103,24 @@ public:
 	CStateVector GetStateVector();
 	void SetStateVector(const CStateVector& vState);
 
+#ifdef _DEBUG
+	virtual void AssertValid() const;
+	virtual void Dump(CDumpContext& dc) const;
+#endif
+
 // Generated message map functions
 protected:
 	//{{AFX_MSG(CSpaceView)
-	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
-	afx_msg void OnNewNode();
 	afx_msg void OnViewLayout();
 	afx_msg void OnViewPropagate();
 	afx_msg void OnUpdateViewPropagate(CCmdUI* pCmdUI);
 	afx_msg void OnViewWave();
 	afx_msg void OnUpdateViewWave(CCmdUI* pCmdUI);
+	afx_msg void OnNewNode();
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 	//}}AFX_MSG
-	afx_msg void OnStyleChanged(int nStyleType, LPSTYLESTRUCT lpStyleStruct);
 	DECLARE_MESSAGE_MAP()
 
 private:

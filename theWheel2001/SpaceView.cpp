@@ -44,7 +44,7 @@ const SPV_STATE_TYPE TOLERANCE =
 
 // constant for the total activation
 const SPV_STATE_TYPE TOTAL_ACTIVATION = 
-	(SPV_STATE_TYPE) 0.45f;
+	(SPV_STATE_TYPE) 0.55f;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -94,9 +94,20 @@ CSpaceView::~CSpaceView()
 IMPLEMENT_DYNCREATE(CSpaceView, CView)
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
+// CSpaceView::GetViewForNode
 // 
-// constructs a new CSpaceView object 
+// locates and returns the node view for the given node
+//////////////////////////////////////////////////////////////////////
+CNodeView *CSpaceView::GetViewForNode(CNode *pNode)
+{
+	return (CNodeView *)pNode->GetView();
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::AddNodeToSpace
+// 
+// adds a new node to the space, setting the link weights based on
+//		the current node activations
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::AddNodeToSpace(CNode *pNewNode)
 {
@@ -161,19 +172,114 @@ void CSpaceView::AddNodeToSpace(CNode *pNewNode)
 }
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
+// CSpaceView::CreateNodeViews
 // 
-// constructs a new CSpaceView object 
+// creates the node view for the parent, as well as all child node 
+//		views
 //////////////////////////////////////////////////////////////////////
-CNodeView *CSpaceView::GetViewForNode(CNode *pNode)
+void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt)
 {
-	return (CNodeView *)pNode->GetView();
+	// construct a new node view for this node
+	CNodeView *pNewNodeView = new CNodeView(pParentNode, this);
+
+	// and add to the array
+	nodeViews.Add(pNewNodeView);
+
+	// TODO: should we lay out the node views here and use the new
+	//		position on the children?
+
+	// and finally, create the child node views
+	int nAtNode;
+	for (nAtNode = 0; nAtNode < pParentNode->children.GetSize(); nAtNode++)
+	{
+		// construct a new node view for this node
+		CreateNodeViews((CNode *) pParentNode->children.Get(nAtNode), pt);
+	}
+
+	// activate this node view after creating children (to maximize size)
+	ActivateNode(pNewNodeView, 0.5);
 }
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
+// CSpaceView::SortNodeViews
 // 
-// constructs a new CSpaceView object 
+// sorts the children node views
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::SortNodeViews()
+{
+	BOOL bRearrange;
+	do 
+	{
+		bRearrange = FALSE;
+		for (int nAt = 0; nAt < nodeViews.GetSize()-1; nAt++)
+		{
+			CNodeView *pThisNodeView = nodeViews.Get(nAt);
+			CNodeView *pNextNodeView = nodeViews.Get(nAt+1);
+
+			if (pThisNodeView->forNode->GetActivation() < 
+					pNextNodeView->forNode->GetActivation())
+			{
+				nodeViews.Set(nAt, pNextNodeView);
+				nodeViews.Set(nAt+1, pThisNodeView);
+				bRearrange = TRUE;
+			}
+		}
+	} while (bRearrange);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// CSpaceView::CenterNodeViews
+//
+// Centering algorithm 
+//		Compute vector mean for all node view centers 
+//		Offset = mean of centers - center of window 
+//		For all node views, SetWindowCenter to the offset + GetWindowCenter 
+//
+/////////////////////////////////////////////////////////////////////////////
+void CSpaceView::CenterNodeViews()
+{
+	// only center if there are children
+	if (nodeViews.GetSize() == 0)
+		return;
+	
+	CVector<2> vMeanCenter;
+
+	// compute the vector sum of all node views' centers
+	int nAt = 0;
+	double totalScaleFactor = 0.0f;
+	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
+	for (nAt = 0; nAt < nNumVizNodeViews; nAt++)
+	{
+		CNodeView *pView = nodeViews.Get(nAt);
+		double scaleFactor = 10000.0 * pView->forNode->GetActivation();
+		vMeanCenter = vMeanCenter 
+			+ pView->GetCenter() * scaleFactor; 
+		totalScaleFactor += scaleFactor;
+	}
+
+	// divide by number of node views
+	vMeanCenter *= 1.0 / totalScaleFactor;
+
+	// compute the vector offset for the node views
+	//		window center
+	CRect rectWnd;
+	GetClientRect(&rectWnd);
+	CVector<2> vOffset = vMeanCenter 
+		- CVector<2>(rectWnd.CenterPoint()); // rectWnd.Width() / 2, rectWnd.Height() / 2);
+
+	// offset each node view by the difference between the mean and the 
+	//		window center
+	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
+	{
+		CNodeView *pView = nodeViews.Get(nAt);
+		pView->SetCenter(pView->GetCenter() - vOffset);
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::LayoutNodeViews
+// 
+// applies the optimizer to layout the node views
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::LayoutNodeViews()
 {
@@ -190,13 +296,15 @@ void CSpaceView::LayoutNodeViews()
 	// now perform the optimization
 	SetStateVector(vCurrent);
 
+	// center the node views as part of the layout
+	//		TODO: check this, see if it is really necessary
 	CenterNodeViews();
 }
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
+// CSpaceView::ActivateNode
 // 
-// constructs a new CSpaceView object 
+// activates and propagates on a particular node view
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::ActivateNode(CNodeView *pNodeView, float scale)
 {
@@ -257,114 +365,13 @@ void CSpaceView::ActivateNode(CNodeView *pNodeView, float scale)
 	}
 }
 
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
-// 
-// constructs a new CSpaceView object 
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt)
-{
-	// construct a new node view for this node
-	CNodeView *pNewNodeView = new CNodeView(pParentNode, this);
-
-	// and add to the array
-	nodeViews.Add(pNewNodeView);
-
-	// and finally, create the child node views
-	int nAtNode;
-	for (nAtNode = 0; nAtNode < pParentNode->children.GetSize(); nAtNode++)
-	{
-		// construct a new node view for this node
-		CreateNodeViews((CNode *) pParentNode->children.Get(nAtNode), pt);
-	}
-
-	// activate this node view after creating children (to maximize size)
-	ActivateNode(pNewNodeView, 0.5);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-// CSpaceView::CenterNodeViews
-//
-// Centering algorithm 
-//		Compute vector mean for all node view centers 
-//		Offset = mean of centers - center of window 
-//		For all node views, SetWindowCenter to the offset + GetWindowCenter 
-//
-/////////////////////////////////////////////////////////////////////////////
-void CSpaceView::CenterNodeViews()
-{
-	// only center if there are children
-	if (nodeViews.GetSize() == 0)
-		return;
-	
-	CVector<2> vMeanCenter;
-
-	// compute the vector sum of all node views' centers
-	int nAt = 0;
-	double totalScaleFactor = 0.0f;
-	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
-	for (nAt = 0; nAt < nNumVizNodeViews; nAt++)
-	{
-		CNodeView *pView = nodeViews.Get(nAt);
-		double scaleFactor = 10000.0 * pView->forNode->GetActivation();
-		vMeanCenter = vMeanCenter 
-			+ pView->GetCenter() * scaleFactor; 
-		totalScaleFactor += scaleFactor;
-	}
-
-	// divide by number of node views
-	vMeanCenter *= 1.0 / totalScaleFactor;
-
-	// compute the vector offset for the node views
-	//		window center
-	CRect rectWnd;
-	GetClientRect(&rectWnd);
-	CVector<2> vOffset = vMeanCenter 
-		- CVector<2>(rectWnd.CenterPoint()); // rectWnd.Width() / 2, rectWnd.Height() / 2);
-
-	// offset each node view by the difference between the mean and the 
-	//		window center
-	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-	{
-		CNodeView *pView = nodeViews.Get(nAt);
-		pView->SetCenter(pView->GetCenter() - vOffset);
-	}
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::SortNodeViews
-// 
-// sorts the children node views
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::SortNodeViews()
-{
-	BOOL bRearrange;
-	do 
-	{
-		bRearrange = FALSE;
-		for (int nAt = 0; nAt < nodeViews.GetSize()-1; nAt++)
-		{
-			CNodeView *pThisNodeView = nodeViews.Get(nAt);
-			CNodeView *pNextNodeView = nodeViews.Get(nAt+1);
-
-			if (pThisNodeView->forNode->GetActivation() < 
-					pNextNodeView->forNode->GetActivation())
-			{
-				nodeViews.Set(nAt, pNextNodeView);
-				nodeViews.Set(nAt+1, pThisNodeView);
-				bRearrange = TRUE;
-			}
-		}
-	} while (bRearrange);
-}
-
 /////////////////////////////////////////////////////////////////////////////
 // CSpaceView drawing
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
+// CSpaceView::OnDraw
 // 
-// constructs a new CSpaceView object 
+// draws the individual node views, using a back-buffer
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnDraw(CDC* pDC)
 {
@@ -390,6 +397,27 @@ void CSpaceView::OnDraw(CDC* pDC)
 	for (nAtNodeView = nodeViews.GetSize()-1; nAtNodeView >= 0; nAtNodeView--)
 	{
 		CNodeView *pNodeView = (CNodeView *)nodeViews.Get(nAtNodeView);
+
+		if (pNodeView->GetThresholdedActivation() > 0.0)
+		{
+			for (int nAtLink = 0; nAtLink < pNodeView->forNode->links.GetSize(); nAtLink++)
+			{
+				CNodeLink *pLink = pNodeView->forNode->links.Get(nAtLink);
+				CNodeView *pLinkedView = GetViewForNode(pLink->forTarget.Get());
+				if (pLinkedView->GetThresholdedActivation() > 0.0)
+				{
+					// draw the link
+					dcMem.MoveTo(pNodeView->GetSpringCenter());
+					dcMem.LineTo(pLinkedView->GetSpringCenter());
+				}
+			}
+		}
+	} 
+
+	// create new node views
+	for (nAtNodeView = nodeViews.GetSize()-1; nAtNodeView >= 0; nAtNodeView--)
+	{
+		CNodeView *pNodeView = (CNodeView *)nodeViews.Get(nAtNodeView);
 		pNodeView->Draw(&dcMem);
 	} 
 
@@ -402,9 +430,9 @@ void CSpaceView::OnDraw(CDC* pDC)
 }
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
+// CSpaceView::OnInitialUpdate
 // 
-// constructs a new CSpaceView object 
+// called when a CSpace is first loaded
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnInitialUpdate()
 {
@@ -439,9 +467,9 @@ void CSpaceView::OnInitialUpdate()
 // CSpaceView printing
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
+// CSpaceView::OnPreparePrinting
 // 
-// constructs a new CSpaceView object 
+// prepares for printing the CSpaceView
 //////////////////////////////////////////////////////////////////////
 BOOL CSpaceView::OnPreparePrinting(CPrintInfo* pInfo)
 {
@@ -450,9 +478,9 @@ BOOL CSpaceView::OnPreparePrinting(CPrintInfo* pInfo)
 }
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
+// CSpaceView::OnBeginPrinting
 // 
-// constructs a new CSpaceView object 
+// begins printing the CSpaceView
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnBeginPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
 {
@@ -460,135 +488,13 @@ void CSpaceView::OnBeginPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
 }
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
+// CSpaceView::OnEndPrinting
 // 
-// constructs a new CSpaceView object 
+// finishes printing the CSpaceView
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnEndPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
 {
 	// TODO: add cleanup after printing
-}
-
-/////////////////////////////////////////////////////////////////////////////
-// CSpaceView diagnostics
-
-#ifdef _DEBUG
-void CSpaceView::AssertValid() const
-{
-	CView::AssertValid();
-}
-
-void CSpaceView::Dump(CDumpContext& dc) const
-{
-	CView::Dump(dc);
-}
-
-CSpace* CSpaceView::GetDocument() // non-debug version is inline
-{
-	ASSERT(m_pDocument->IsKindOf(RUNTIME_CLASS(CSpace)));
-	return (CSpace*)m_pDocument;
-}
-#endif //_DEBUG
-
-/////////////////////////////////////////////////////////////////////////////
-// CSpaceView message handlers
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
-// 
-// constructs a new CSpaceView object 
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnStyleChanged(int nStyleType, LPSTYLESTRUCT lpStyleStruct)
-{
-	//TODO: add code to react to the user changing the view style of your window
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
-// 
-// constructs a new CSpaceView object 
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnViewLayout() 
-{
-	// layout the node views
-	LayoutNodeViews();	
-
-	// redraw the window
-	RedrawWindow();
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
-// 
-// constructs a new CSpaceView object 
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnViewPropagate() 
-{
-	isPropagating.Set(!isPropagating.Get());
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
-// 
-// constructs a new CSpaceView object 
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnUpdateViewPropagate(CCmdUI* pCmdUI) 
-{
-	pCmdUI->SetCheck(isPropagating.Get() ? 1 : 0);	
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
-// 
-// constructs a new CSpaceView object 
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnRButtonDown(UINT nFlags, CPoint point) 
-{
-	ClientToScreen(&point);
-	CMenu *pMenu = new CMenu();
-	pMenu->LoadMenu(IDR_SPACE_POPUP);
-	pMenu->GetSubMenu(0)->TrackPopupMenu(TPM_LEFTALIGN, point.x, point.y, this);
-
-	delete pMenu;
-
-	CView::OnRButtonDown(nFlags, point);
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
-// 
-// constructs a new CSpaceView object 
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnNewNode() 
-{
-	CNewNodeDlg newDlg(this);
-
-	if (newDlg.DoModal() == IDOK)
-	{
-		CNode *pNewNode = 
-			new CNode(newDlg.m_strName, newDlg.m_strDesc);
-		AddNodeToSpace(pNewNode);
-	}
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
-// 
-// constructs a new CSpaceView object 
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnViewWave() 
-{
-	isWaveMode.Set(!isWaveMode.Get());	
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceView::CSpaceView
-// 
-// constructs a new CSpaceView object 
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI) 
-{
-	pCmdUI->SetCheck(isWaveMode.Get() ? 1 : 0);		
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -632,17 +538,38 @@ void CSpaceView::SetStateVector(const CSpaceView::CStateVector& vState)
 }
 
 /////////////////////////////////////////////////////////////////////////////
+// CSpaceView diagnostics
+
+#ifdef _DEBUG
+void CSpaceView::AssertValid() const
+{
+	CView::AssertValid();
+}
+
+void CSpaceView::Dump(CDumpContext& dc) const
+{
+	CView::Dump(dc);
+}
+
+CSpace* CSpaceView::GetDocument() // non-debug version is inline
+{
+	ASSERT(m_pDocument->IsKindOf(RUNTIME_CLASS(CSpace)));
+	return (CSpace*)m_pDocument;
+}
+#endif //_DEBUG
+
+/////////////////////////////////////////////////////////////////////////////
 // CSpaceView Message Map
 /////////////////////////////////////////////////////////////////////////////
 
 BEGIN_MESSAGE_MAP(CSpaceView, CView)
 	//{{AFX_MSG_MAP(CSpaceView)
-	ON_COMMAND(ID_NEW_NODE, OnNewNode)
 	ON_COMMAND(ID_VIEW_LAYOUT, OnViewLayout)
 	ON_COMMAND(ID_VIEW_PROPAGATE, OnViewPropagate)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_PROPAGATE, OnUpdateViewPropagate)
 	ON_COMMAND(ID_VIEW_WAVE, OnViewWave)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_WAVE, OnUpdateViewWave)
+	ON_COMMAND(ID_NEW_NODE, OnNewNode)
 	ON_WM_MOUSEMOVE()
 	ON_WM_LBUTTONDOWN()
 	ON_WM_RBUTTONDOWN()
@@ -654,17 +581,94 @@ BEGIN_MESSAGE_MAP(CSpaceView, CView)
 	ON_COMMAND(ID_FILE_PRINT_PREVIEW, CView::OnFilePrintPreview)
 END_MESSAGE_MAP()
 
+/////////////////////////////////////////////////////////////////////////////
+// CSpaceView message handlers
+
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::SortNodeViews
+// CSpaceView::OnViewLayout
 // 
-// sorts the children node views
+// menu command to lay out the node views
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnViewLayout() 
+{
+	// layout the node views
+	LayoutNodeViews();	
+
+	// redraw the window
+	RedrawWindow();
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnViewPropagate
+// 
+// changes the propagate mode state
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnViewPropagate() 
+{
+	isPropagating.Set(!isPropagating.Get());
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnUpdateViewPropagate
+// 
+// sets/unsets the propagate mode toggle button
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnUpdateViewPropagate(CCmdUI* pCmdUI) 
+{
+	pCmdUI->SetCheck(isPropagating.Get() ? 1 : 0);	
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnViewWave
+// 
+// changes the wave mode view state
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnViewWave() 
+{
+	isWaveMode.Set(!isWaveMode.Get());	
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnUpdateViewWave
+// 
+// sets/unsets the wave mode toggle button
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI) 
+{
+	pCmdUI->SetCheck(isWaveMode.Get() ? 1 : 0);		
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnNewNode
+// 
+// launches the new node dialog box
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnNewNode() 
+{
+	CNewNodeDlg newDlg(this);
+
+	if (newDlg.DoModal() == IDOK)
+	{
+		CNode *pNewNode = 
+			new CNode(newDlg.m_strName, newDlg.m_strDesc);
+		AddNodeToSpace(pNewNode);
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnMouseMove
+// 
+// changes the cursor as the user moves the mouse around
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnMouseMove(UINT nFlags, CPoint point) 
 {
+	// search throught the node views
 	for (int nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 	{
+		// get the current node view
 		CNodeView *pNodeView = nodeViews.Get(nAt);
 
+		// see if the mouse-click was within it
 		if (pNodeView->GetShape().PtInRegion(point))
 		{
 			// set the hand pointer cursor
@@ -684,19 +688,24 @@ void CSpaceView::OnMouseMove(UINT nFlags, CPoint point)
 	CView::OnMouseMove(nFlags, point);
 }
 
+
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::SortNodeViews
+// CSpaceView::OnLButtonDown
 // 
-// sorts the children node views
+// activates a node when the user left-clicks on the node view
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnLButtonDown(UINT nFlags, CPoint point) 
 {
+	// search throught the node views
 	for (int nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 	{
+		// get the current node view
 		CNodeView *pNodeView = nodeViews.Get(nAt);
 
+		// see if the mouse-click was within it
 		if (pNodeView->GetShape().PtInRegion(point))
 		{
+			// if so, activate it
 			ActivateNode(pNodeView, 0.25);
 			break;
 		}
@@ -704,5 +713,22 @@ void CSpaceView::OnLButtonDown(UINT nFlags, CPoint point)
 	
 	// standard processing of button down
 	CView::OnLButtonDown(nFlags, point);
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnRButtonDown
+// 
+// displays the right-click menu on the right-button down
+//////////////////////////////////////////////////////////////////////
+void CSpaceView::OnRButtonDown(UINT nFlags, CPoint point) 
+{
+	ClientToScreen(&point);
+	CMenu *pMenu = new CMenu();
+	pMenu->LoadMenu(IDR_SPACE_POPUP);
+	pMenu->GetSubMenu(0)->TrackPopupMenu(TPM_LEFTALIGN, point.x, point.y, this);
+
+	delete pMenu;
+
+	CView::OnRButtonDown(nFlags, point);
 }
 
