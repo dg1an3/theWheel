@@ -366,6 +366,10 @@ void CSpaceView::CenterNodeViews()
 
 void CSpaceView::OnDraw(CDC* pDC)
 {
+#ifdef NO_NODEVIEWS
+	return;
+#endif
+
 	CSpace* pDoc = GetDocument();
 	ASSERT_VALID(pDoc);
 
@@ -484,6 +488,10 @@ void CSpaceView::OnDestroy()
 
 BOOL CSpaceView::OnEraseBkgnd(CDC* pDC) 
 {
+#ifdef NO_NODEVIEWS
+	return CView::OnEraseBkgnd(pDC);
+#endif
+
 	// create new node views
 	int nAtNodeView;
 	for (nAtNodeView = 0; nAtNodeView < nodeViews.GetSize(); nAtNodeView++)

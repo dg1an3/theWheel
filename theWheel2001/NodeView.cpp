@@ -35,7 +35,7 @@ CNodeView::~CNodeView()
 {
 }
 
-void CNodeView::OnChange(CObservableObject *pSource)
+void CNodeView::OnChange(CObservableObject *pSource, void *pOldValue)
 {
 	if ((pSource == &rectWindow) && ::IsWindow(m_hWnd))
 	{
@@ -366,6 +366,11 @@ void CNodeView::OnSize(UINT nType, int cx, int cy)
 
 BOOL CNodeView::PreCreateWindow(CREATESTRUCT& cs) 
 {
+#ifdef NO_NODEVIEWS
+	LONG mask = ~WS_VISIBLE;
+	cs.style &= mask;
+#endif
+
 	if (!CWnd::PreCreateWindow(cs))
 		return FALSE;
 
@@ -469,21 +474,26 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 		CPoint ptOffset = (point - m_ptMouseDown);
 		float lengthSq = (float) sqrt(ptOffset.x * ptOffset.x + ptOffset.y * ptOffset.y);
 
-		// compute the new activation
-		float factor = 1.0f + lengthSq * 1e-6f;
-		float oldActivation = activation.Get();
-		float newActivation = ActivationCurve(oldActivation * factor, 0.2f);
+		if (lengthSq > 50.0f)
+		{
+			// compute the new activation
+			float factor = 1.0f; //   + lengthSq * 1e-2f;
+			float oldActivation = activation.Get();
+			float newActivation = ActivationCurve(oldActivation * factor, 0.1f);
 
-		activation.Set(newActivation);
+			activation.Set(newActivation);
 
-		CSpaceView *pParent = (CSpaceView *)GetParent();
+			CSpaceView *pParent = (CSpaceView *)GetParent();
 
-		// propagate activation
-		pParent->PropagateActivation(this, newActivation, factor);
-		pParent->ResetForPropagation();
+			// propagate activation
+			pParent->PropagateActivation(this, newActivation, factor);
+			pParent->ResetForPropagation();
 
-		// now normalize all children
-		pParent->NormalizeNodeViews();
+			// now normalize all children
+			pParent->NormalizeNodeViews();
+
+			m_ptMouseDown = point;
+		}
 	}
 
 	CWnd::OnMouseMove(nFlags, point);

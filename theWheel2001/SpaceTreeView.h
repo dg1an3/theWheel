@@ -45,7 +45,6 @@ public:
 
 // Implementation
 public:
-//	void AddNodeItems(CNode *pNode, CObjectTreeItem *pParent);
 	virtual ~CSpaceTreeView();
 #ifdef _DEBUG
 	virtual void AssertValid() const;

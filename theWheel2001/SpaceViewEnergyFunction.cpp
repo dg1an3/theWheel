@@ -33,7 +33,7 @@ SPV_STATE_TYPE attract_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 }
 
 CLookupFunction<SPV_STATE_TYPE> attractFunc(&attract_func, 
-		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024);
+		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "ATTRFUNC.TMP");
 
 SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
@@ -43,7 +43,7 @@ SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 }
 
 CLookupFunction<SPV_STATE_TYPE> spacerFunc(&spacer_func, 
-		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024);
+		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "SPACERFUNC.TMP");
 
 SPV_STATE_TYPE MinSize(SPV_STATE_TYPE x, SPV_STATE_TYPE xmin)
 {
