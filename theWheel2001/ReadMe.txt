@@ -119,29 +119,16 @@ TODO
 	NewNodeDlg.cpp
 	NodeRenderer.h
 	NodeRenderer.cpp
-	NodeView.h
-	NodeView.cpp
 	SpaceTreeView.h
 	SpaceTreeView.cpp
-	SpaceView.h
-	SpaceView.cpp
-	SpaceViewEnergyFunction.h
-	SpaceViewEnergyFunction.cpp
-	theWheel2001.h
-	theWheel2001.cpp
 
-2) Clean project resources
+2) Update Application Icon / Document Icon
 
-4) Make CNodeView into a non-CWnd object
-		Move mouse operations to CSpaceView
-		Remove dependence on Windows instantiation/resizing/etc.
-
-3) Fix piggyback logic in CNodeView -- tie to the propagate in CNode
-		see item under THEWHEEL_MODEL\Readme.txt
+3) Fix the node adding routine
 
 4) Re-arrange text drawing code in CNodeView
 
-6) Make CSpaceView : public COpenGLView
+5) Make CSpaceView : public COpenGLView
 
-7) Instantiate CNodeRenderers instead of CNodeViews
+6) Instantiate CNodeRenderers instead of CNodeViews
 

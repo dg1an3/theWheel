@@ -33,10 +33,4 @@ should add to or customize.
 /////////////////////////////////////////////////////////////////////////////
 TODO
 
-1) Move piggyback into the propagation code (piggyback for a node is the node
-		which delivers the most activation to it)
-
-2) Add a pointer to the CNodeView (cast to a CObject, so CNode does not
-		need knowledge of CNodeView)
-
-3) Skeleton of learning algorithm
+1) Skeleton of learning algorithm
