@@ -63,7 +63,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	m_pNodeRenderer = new CNodeRenderer(&m_wndView);
 	m_wndView.renderers.Add(m_pNodeRenderer);
 
-	m_wndView.camera.direction.Set(CVector<3>(0.0, 0.0, -1.0));
+	// m_wndView.camera.direction.Set(CVector<3>(0.0, 0.0, -1.0));
 	m_wndView.camera.distance.Set(700.0);
 	m_wndView.camera.nearPlane.Set(650.0);
 	m_wndView.camera.farPlane.Set(750.0);
@@ -71,8 +71,9 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 	m_wndView.backgroundColor.Set(RGB(48, 0, 64));
 
+	m_wndView.lights.RemoveAll();
 	COpenGLLight *pLight = new COpenGLLight();
-	pLight->position.Set(CVector<3>(500.0, -500.0, 500.0));
+	pLight->position.Set(CVector<3>(-500.0, 500.0, 500.0));
 	m_wndView.lights.Add(pLight);
 
 	CRotateTracker *pRotateTracker = new CRotateTracker(&m_wndView);
