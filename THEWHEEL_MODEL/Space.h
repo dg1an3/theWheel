@@ -68,7 +68,7 @@ public:
 
 	// accessors for the super node count
 	int GetSuperNodeCount();
-	void SetSuperNodeCount(int nSuperNodeCount);
+	void SetMaxSuperNodeCount(int nSuperNodeCount);
 
 // Overrides
 	// ClassWizard generated virtual function overrides

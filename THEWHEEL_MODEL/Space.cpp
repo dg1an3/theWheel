@@ -100,6 +100,9 @@ void CSpace::AddNode(CNode *pNewNode, CNode *pParentNode)
 	// add the node to the array
 	AddNodeToArray(pNewNode);
 
+	// update the clusters
+	SetClusterCount(GetClusterCount());
+
 	// update all the views, passing the new node as a hint
 	UpdateAllViews(NULL, NULL, pNewNode);	
 }
@@ -187,10 +190,10 @@ CNodeCluster *CSpace::GetClusterAt(int nAt)
 // accessors for the super node count
 int CSpace::GetSuperNodeCount()
 {
-	return m_nSuperNodeCount;
+	return min(m_nSuperNodeCount, GetNodeCount());
 }
 
-void CSpace::SetSuperNodeCount(int nSuperNodeCount)
+void CSpace::SetMaxSuperNodeCount(int nSuperNodeCount)
 {
 	m_nSuperNodeCount = nSuperNodeCount;
 
@@ -462,6 +465,9 @@ void CSpace::Serialize(CArchive& ar)
 		// add the nodes to the array
 		m_arrNodes.RemoveAll();
 		AddNodeToArray(m_pRootNode);
+
+		// set the cluster count (re-initializes clusters)
+		SetClusterCount(GetClusterCount());
 
 		// and do some activation
 		ActivateNode(m_pRootNode, 0.5);
