@@ -31,10 +31,10 @@ const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01;
 
 // TODO: get these from the layout function
 // constants for the distance scale vs. activation curve
-const REAL SIZE_SCALE = 100.0;
-const REAL DIST_SCALE_MIN = 1.0;
-const REAL DIST_SCALE_MAX = 1.35;
-const REAL ACTIVATION_MIDPOINT = 0.25;
+// const REAL SIZE_SCALE = 100.0;
+// const REAL DIST_SCALE_MIN = 1.0;
+// const REAL DIST_SCALE_MAX = 1.35;
+// const REAL ACTIVATION_MIDPOINT = 0.25;
 
 //////////////////////////////////////////////////////////////////////
 // CompareLinkWeights
@@ -74,6 +74,7 @@ CNode::CNode(CSpace *pSpace,
 		m_strName(strName),
 		m_strDescription(strDesc),
 		m_pDib(NULL),
+		m_hIcon(NULL), 
 		m_pSoundBuffer(NULL),
 		m_vPosition(CVectorD<3>(0.0, 0.0, 0.0)),
 
@@ -1198,19 +1199,21 @@ void CNode::PropagateActivation(REAL scale)
 			// get the link target
 			CNode *pTarget = pLink->GetTarget();
 
-			// compute the distance function
-			REAL distance = (pTarget->GetPosition() - GetPosition()).GetLength();
-			REAL norm_distance = distance 
-				/ (SIZE_SCALE * GetSize(GetActivation()).GetLength());
+/*			// compute the distance function
+			const REAL size = GetSize(GetActivation()).GetLength();
+			const REAL size_pair_scale = 0.5 * (size + 
+				pTarget->GetSize(pTarget->GetActivation()).GetLength());
+			const REAL distance = (pTarget->GetPosition() - GetPosition()).GetLength();
+			const REAL norm_distance = distance / (SIZE_SCALE * size_pair_scale);
 
 			// compute the optimal distance
 			const REAL MIDWEIGHT = 0.5;
-			REAL opt_dist = DIST_SCALE_MIN
+			const REAL opt_dist = DIST_SCALE_MIN
 				+ (DIST_SCALE_MAX - DIST_SCALE_MIN) 
 					* (1.0 - MIDWEIGHT / (MIDWEIGHT + ACTIVATION_MIDPOINT));
 
 			// compute the exponential of the distance
-			REAL exp_dist = exp(1.0 * (norm_distance - opt_dist) - 2.0);
+			const REAL exp_dist = exp(64.0 * (norm_distance - opt_dist) - 1.0);
 			if (_finite(exp_dist))
 			{
 				// compute the gain and set it
@@ -1221,7 +1224,7 @@ void CNode::PropagateActivation(REAL scale)
 			{
 				// getting too far away, need more power
 				pLink->SetGain(1.0);
-			}
+			} */
 
 			// compute the desired new activation = this activation * weight
 			REAL targetActivation = GetActivation() 
@@ -1301,3 +1304,19 @@ void CNode::ResetForPropagation()
 
 }	// CNode::ResetForPropagation
 
+
+HICON CNode::GetIcon()
+{
+	if (m_hIcon == NULL && m_strUrl != "")
+	{
+		SHFILEINFO info;
+		ZeroMemory(&info, sizeof(info));
+
+		::SHGetFileInfo(m_strUrl, 0, &info, sizeof(info), 
+			SHGFI_ICON | SHGFI_LARGEICON);
+
+		m_hIcon = info.hIcon;
+	}
+
+	return m_hIcon;
+}
