@@ -151,7 +151,7 @@ SOURCE=.\include\SpaceStateVector.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\SSELayoutManager.h
+SOURCE=.\include\SSELayoutManager.h
 # End Source File
 # Begin Source File
 
