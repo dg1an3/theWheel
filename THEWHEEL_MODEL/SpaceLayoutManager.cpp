@@ -56,6 +56,8 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 	: CObjectiveFunction(TRUE),
 		m_pSpace(pSpace),
 
+		m_nStateDim(MAX_STATE_DIM / 2),
+
 		m_vInput(CVectorN<>()),
 		m_energy(0.0),
 
@@ -213,13 +215,13 @@ void CSpaceLayoutManager::LoadSizesLinks()
 void CSpaceLayoutManager::Pos2StateVector()
 {
 	// for the state vector
-	m_vState.SetDim(STATE_DIM);
+	m_vState.SetDim(m_nStateDim);
 
 	// store the number of clusters
 	int nClusters = m_pSpace->GetClusterCount();
 
 	// iterate for non-cluster nodes
-	for (int nAt = 0; nAt < STATE_DIM / 2 - nClusters; nAt++)
+	for (int nAt = 0; nAt < m_nStateDim / 2 - nClusters; nAt++)
 	{
 		if (nAt < m_pSpace->GetNodeCount())
 		{
@@ -241,9 +243,9 @@ void CSpaceLayoutManager::Pos2StateVector()
 		CNodeCluster *pCluster = m_pSpace->GetClusterAt(nAtCluster);
 
 		// store the cluster's position
-		m_vState[(STATE_DIM / 2 - nClusters + nAtCluster)*2] = 
+		m_vState[(m_nStateDim / 2 - nClusters + nAtCluster)*2] = 
 			pCluster->GetPosition()[0];
-		m_vState[(STATE_DIM / 2 - nClusters + nAtCluster)*2+1] = 
+		m_vState[(m_nStateDim / 2 - nClusters + nAtCluster)*2+1] = 
 			pCluster->GetPosition()[1];
 	}
 }
@@ -257,7 +259,7 @@ void CSpaceLayoutManager::Pos2StateVector()
 void CSpaceLayoutManager::StateVector2Pos()
 {
 	// test for dimensionality
-	ASSERT(m_vState.GetDim() == STATE_DIM);
+	ASSERT(m_vState.GetDim() == m_nStateDim);
 
 	// form the number of currently visualized node views
 	for (int nAt = 0; nAt < m_pSpace->GetSuperNodeCount(); nAt++)
@@ -283,8 +285,8 @@ void CSpaceLayoutManager::StateVector2Pos()
 
 		// form the cluster's position
 		CVector<3> vPosition(
-			m_vState[(STATE_DIM / 2 - nClusters + nAtCluster)*2],
-			m_vState[(STATE_DIM / 2 - nClusters + nAtCluster)*2+1]);
+			m_vState[(m_nStateDim / 2 - nClusters + nAtCluster)*2],
+			m_vState[(m_nStateDim / 2 - nClusters + nAtCluster)*2+1]);
 
 		// and set the cluster's position
 		pCluster->SetPosition(vPosition);
@@ -301,14 +303,17 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 									 CVectorN<> *pGrad)
 {
 	// check dimensionality
-	ASSERT(vInput.GetDim() == STATE_DIM);
+	ASSERT(vInput.GetDim() == m_nStateDim);
 
 	// reset the energy
 	m_energy = 0.0f;
 
-	// initialize the gradient vector to zeros
-	m_vGrad.SetDim(vInput.GetDim());
-	m_vGrad.SetZero();
+	if (NULL != pGrad)
+	{
+		// initialize the gradient vector to zeros
+		m_vGrad.SetDim(vInput.GetDim());
+		m_vGrad.SetZero();
+	}
 
 	// store this input
 	m_vInput = vInput;
@@ -370,19 +375,22 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 				// and add the attraction term to the energy
 				m_energy += factor * dist_error * dist_error;
 
-				// compute d_energy
-				REAL dact_dist_dx = x / (ssx * ssx) / act_dist;
-				REAL dact_dist_dy = y / (ssy * ssy) / act_dist;
+				if (NULL != pGrad)
+				{
+					// compute d_energy
+					REAL dact_dist_dx = x / (ssx * ssx) / act_dist;
+					REAL dact_dist_dy = y / (ssy * ssy) / act_dist;
 
-				// compute the gradient terms
-				REAL denergy_dx = factor * 2.0 * dist_error * dact_dist_dx;
-				REAL denergy_dy = factor * 2.0 * dist_error * dact_dist_dy;
+					// compute the gradient terms
+					REAL denergy_dx = factor * 2.0 * dist_error * dact_dist_dx;
+					REAL denergy_dy = factor * 2.0 * dist_error * dact_dist_dy;
 
-				// add to the gradient vector
-				m_vGrad[nAtNodeView*2   + 0] += denergy_dx;
-				m_vGrad[nAtNodeView*2   + 1] += denergy_dy;
-				m_vGrad[nAtLinkedView*2 + 0] -= denergy_dx;
-				m_vGrad[nAtLinkedView*2 + 1] -= denergy_dy;
+					// add to the gradient vector
+					m_vGrad[nAtNodeView*2   + 0] += denergy_dx;
+					m_vGrad[nAtNodeView*2   + 1] += denergy_dy;
+					m_vGrad[nAtLinkedView*2 + 0] -= denergy_dx;
+					m_vGrad[nAtLinkedView*2 + 1] -= denergy_dy;
+				}
 
 				//////////////////////////////////////////////////////////////
 				// compute the repulsion field
@@ -403,16 +411,19 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 					// add to total energy
 					m_energy += factor * inv_sq;
 
-					// compute gradient terms
-					REAL inv_sq_sq = inv_sq * inv_sq;
-					REAL dRepulsion_dx = -2.0 * factor * dx_ratio * inv_sq_sq;
-					REAL dRepulsion_dy = -2.0 * factor * dy_ratio * inv_sq_sq;
+					if (NULL != pGrad)
+					{
+						// compute gradient terms
+						REAL inv_sq_sq = inv_sq * inv_sq;
+						REAL dRepulsion_dx = -2.0 * factor * dx_ratio * inv_sq_sq;
+						REAL dRepulsion_dy = -2.0 * factor * dy_ratio * inv_sq_sq;
 
-					// add to the gradient vectors
-					m_vGrad[nAtNodeView*2   + 0] += dRepulsion_dx;
-					m_vGrad[nAtNodeView*2   + 1] += dRepulsion_dy;
-					m_vGrad[nAtLinkedView*2 + 0] -= dRepulsion_dx;
-					m_vGrad[nAtLinkedView*2 + 1] -= dRepulsion_dy;
+						// add to the gradient vectors
+						m_vGrad[nAtNodeView*2   + 0] += dRepulsion_dx;
+						m_vGrad[nAtNodeView*2   + 1] += dRepulsion_dy;
+						m_vGrad[nAtLinkedView*2 + 0] -= dRepulsion_dx;
+						m_vGrad[nAtLinkedView*2 + 1] -= dRepulsion_dy;
+					}
 				}
 			}
 		}
@@ -464,7 +475,7 @@ void CSpaceLayoutManager::LayoutNodes()
 
 	// form the state vector
 	CStateVector vNewState;
-	vNewState.SetDim(STATE_DIM);
+	vNewState.SetDim(m_nStateDim);
 
 	// perform the optimization
 	vNewState = m_pOptimizer->Optimize(m_vState);
@@ -659,9 +670,10 @@ void CSpaceLayoutManager::RotateTranslateStateVector(CStateVector *pState,
 {
 	// objective function
 	CLeastSquaresFit2D fitFunction(*pState, vOldState);
-
+	
 	// optimizer for the fitness function
 	CPowellOptimizer optimizer(&fitFunction);
+	optimizer.SetTolerance(0.001);
 
 	// optimize and return the transform
 	CVector<3> xform = CVector<3>(optimizer.Optimize(
@@ -681,4 +693,41 @@ void CSpaceLayoutManager::RotateTranslateStateVector(CStateVector *pState,
 
 	// and return
 	(*pState) = vXformState;
+}
+
+int CSpaceLayoutManager::GetStateDim() const
+{
+	return m_nStateDim;
+}
+
+void CSpaceLayoutManager::SetStateDim(int nStateDim)
+{
+	m_nStateDim = nStateDim;
+}
+
+double CSpaceLayoutManager::GetKPos()
+{
+	return K_POS;
+}
+
+void CSpaceLayoutManager::SetKPos(double k_pos)
+{
+}
+
+double CSpaceLayoutManager::GetKRep()
+{
+	return K_REP;
+}
+
+void CSpaceLayoutManager::SetKRep(double k_rep)
+{
+}
+
+double CSpaceLayoutManager::GetTolerance()
+{
+	return TOLERANCE;
+}
+
+void CSpaceLayoutManager::SetTolerance(double tolerance)
+{
 }
