@@ -103,6 +103,11 @@ public:
 	CStateVector GetStateVector();
 	void SetStateVector(const CStateVector& vState);
 
+	// pointers to recently selected node views
+	CNodeView *m_pRecentClick1;
+	CNodeView *m_pRecentClick2;
+
+
 #ifdef _DEBUG
 	virtual void AssertValid() const;
 	virtual void Dump(CDumpContext& dc) const;

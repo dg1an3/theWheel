@@ -57,7 +57,9 @@ const SPV_STATE_TYPE TOTAL_ACTIVATION =
 //////////////////////////////////////////////////////////////////////
 CSpaceView::CSpaceView()
 : isPropagating(TRUE),
-	isWaveMode(FALSE)
+	isWaveMode(FALSE),
+	m_pRecentClick1(NULL),
+	m_pRecentClick2(NULL)
 {
 	// create the energy function
 	m_pEnergyFunc = new CSpaceViewEnergyFunction(this);
@@ -252,6 +254,11 @@ void CSpaceView::CenterNodeViews()
 	{
 		CNodeView *pView = nodeViews.Get(nAt);
 		double scaleFactor = 10000.0 * pView->forNode->GetActivation();
+
+		if (pView == m_pRecentClick1)
+			scaleFactor *= 4.0;
+		else if (pView == m_pRecentClick2)
+			scaleFactor *= 2.0;
 		vMeanCenter = vMeanCenter 
 			+ pView->GetCenter() * scaleFactor; 
 		totalScaleFactor += scaleFactor;
@@ -556,8 +563,9 @@ void CSpaceView::SetStateVector(const CSpaceView::CStateVector& vState)
 
 	for (int nAt = 0; nAt < nNumVizNodeViews; nAt++)
 	{
+		CVector<2> vNewCenter = CVector<2>(vState[nAt*2], vState[nAt*2+1]);
 		CNodeView *pView = nodeViews.Get(nAt);
-		pView->SetCenter(CVector<2>(vState[nAt*2], vState[nAt*2+1]));
+		pView->SetCenter(vNewCenter);
 	}
 }
 
@@ -699,6 +707,14 @@ void CSpaceView::OnMouseMove(UINT nFlags, CPoint point)
 			::SetCursor(::LoadCursor(GetModuleHandle(NULL), 
 				MAKEINTRESOURCE(IDC_HANDPOINT)));
 
+			if (isWaveMode.Get())
+			{
+				ActivateNode(pNodeView, 0.10f);
+	
+				m_pRecentClick2 = m_pRecentClick1;
+				m_pRecentClick1 = pNodeView;
+			}
+
 			CView::OnMouseMove(nFlags, point);
 
 			return;
@@ -707,6 +723,12 @@ void CSpaceView::OnMouseMove(UINT nFlags, CPoint point)
 
 	// set the standard cursor
 	::SetCursor(::LoadCursor(NULL, IDC_ARROW));
+
+	if (isWaveMode.Get())
+	{
+		m_pRecentClick2 = m_pRecentClick1;
+		m_pRecentClick1 = NULL;
+	}
 
 	// standard processing of mouse move
 	CView::OnMouseMove(nFlags, point);
@@ -720,21 +742,25 @@ void CSpaceView::OnMouseMove(UINT nFlags, CPoint point)
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnLButtonDown(UINT nFlags, CPoint point) 
 {
+	CNodeView *pSelectedView = NULL;
 	// search throught the node views
 	for (int nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 	{
 		// get the current node view
-		CNodeView *pNodeView = nodeViews.Get(nAt);
+		pSelectedView = nodeViews.Get(nAt);
 
 		// see if the mouse-click was within it
-		if (pNodeView->GetShape().PtInRegion(point))
+		if (pSelectedView->GetShape().PtInRegion(point))
 		{
 			// if so, activate it
-			ActivateNode(pNodeView, 0.333f);
+			ActivateNode(pSelectedView, 0.333f);
 			break;
 		}
 	}
 	
+	m_pRecentClick2 = m_pRecentClick1;
+	m_pRecentClick1 = pSelectedView;
+
 	// standard processing of button down
 	CView::OnLButtonDown(nFlags, point);
 }
