@@ -1,12 +1,19 @@
-////////////////////////////////////
-// Copyright (C) 1996-2000 DG Lane
+//////////////////////////////////////////////////////////////////////
+// SpaceViewEnergyFunction.cpp: implementation of the 
+//		CSpaceViewEnergyFunction objective function.
+//
+// Copyright (C) 1996-2001
+// $Id$
 // U.S. Patent Pending
-////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 
+// pre-compiled headers
 #include "stdafx.h"
 
+// defines the gaussian function
 #include <ScalarFunction.h>
 
+// header files for the class
 #include "SpaceViewEnergyFunction.h"
 #include "SpaceView.h"
 
