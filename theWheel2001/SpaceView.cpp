@@ -412,26 +412,36 @@ void CSpaceView::OnDraw(CDC* pDC)
 	CRect rectClient;
 	GetClientRect(&rectClient);
 
+	// erase the drawing area
 	CBrush brush(RGB(192, 192, 192));
 	pDC->FillRect(&rectClient, &brush);
 
-	// create new node views
+	// grey brush for drawing links
+	CBrush greyBrush(RGB(160, 160, 160));
+
+	// draw the node views
 	int nAtNodeView;
 	for (nAtNodeView = nodeViews.GetSize()-1; nAtNodeView >= 0; nAtNodeView--)
 	{
 		CNodeView *pNodeView = (CNodeView *)nodeViews.Get(nAtNodeView);
 
-		CBrush greyBrush(RGB(160, 160, 160));
-		CBrush *pOldBrush = pDC->SelectObject(&greyBrush);
-		CPen *pOldPen = (CPen *) pDC->SelectStockObject(NULL_PEN);
+		// get the inner rectangle for drawing the text
+		CRect rectInner = pNodeView->GetInnerRect();
 
-		if (pNodeView->GetThresholdedActivation() > 0.0)
+		// only draw if it has a substantial area
+		if (rectInner.Height() > 1)
 		{
+			// select the brush for drawing the links
+			CBrush *pOldBrush = pDC->SelectObject(&greyBrush);
+	
+			// draw the links
 			for (int nAtLink = 0; nAtLink < pNodeView->forNode->links.GetSize(); nAtLink++)
 			{
 				CNodeLink *pLink = pNodeView->forNode->links.Get(nAtLink);
 				CNodeView *pLinkedView = GetViewForNode(pLink->forTarget.Get());
-				if (pLinkedView->GetThresholdedActivation() > 0.0)
+
+				// only draw the link to node view's with activations greater than the current
+				if (pLinkedView->GetThresholdedActivation() > pNodeView->GetThresholdedActivation())
 				{
 					// draw the link
 					CVector<2> vFrom = pNodeView->GetSpringCenter();
@@ -454,50 +464,17 @@ void CSpaceView::OnDraw(CDC* pDC)
 					pDC->Polygon(ptPoly, 6);
 				}
 			}
-		}
 
-		pDC->SelectObject(pOldPen);
-		pDC->SelectObject(pOldBrush);
-		greyBrush.DeleteObject();
+			// unselect the brsuh and pen for drawing the links
+			pDC->SelectObject(pOldBrush);
+
+			// draw the node view
+			pNodeView->Draw(pDC);
+		}
 	} 
 
-	HRESULT ddrval = lpDDSOne->ReleaseDC(pDC->m_hDC);
-	ASSERT(ddrval == DD_OK);
-
-
-	// create new node views
-	for (nAtNodeView = nodeViews.GetSize()-1; nAtNodeView >= 0; nAtNodeView--)
-	{
-		CNodeView *pNodeView = (CNodeView *)nodeViews.Get(nAtNodeView);
-
-		// get the inner rectangle for drawing the text
-		CRect rectInner = pNodeView->GetInnerRect();
-
-		// only draw if it has a substantial area
-		if (rectInner.Height() > 1)
-		{
-			// draw the elliptangle
-			// DrawElliptangle(pDC);
-			int x = (int)(pNodeView->GetSpringCenter()[0] - 233.0/2.0);
-			int y = (int)(pNodeView->GetSpringCenter()[1] - 176.0/2.0);
-			// ddrval = lpDDSOne->BltFast(x, y, lpDDSBitmap, CRect(0, 0, 233, 176), // DDBLTFAST_NOCOLORKEY); 
-			//	DDBLTFAST_SRCCOLORKEY);
-			ASSERT(ddrval == DD_OK);
-
-			// draw some stuff
-			HDC hdc;
-			HRESULT ddrval = lpDDSOne->GetDC(&hdc);
-			ASSERT(ddrval == DD_OK);
-
-			// draw the text
-			pNodeView->DrawText(CDC::FromHandle(hdc), rectInner);
-
-			ddrval = lpDDSOne->ReleaseDC(hdc);
-			ASSERT(ddrval == DD_OK);
-		}
-
-		// pNodeView->Draw(pDC);
-	} 
+	// delete the link brush
+	greyBrush.DeleteObject();
 }
 
 BOOL CSpaceView::InitDDraw()
@@ -928,71 +905,6 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 	STOP_TIMER(TIME_REDRAW, "Redraw")
 
 	CView::OnTimer(nIDEvent);
-}
-
-/**********************************************************
-
-GetOptimalDIBFormat
-
-  Purpose:
-   Retrieves the optimal DIB format for a display 
-   device. The optimal DIB format is the format that 
-   exactly matches the format of the target device. 
-   Obtaining this is very important when dealing with 
-   16bpp modes because you need to know what bitfields 
-   value to use (555 or 565 for example).
-
-   You normally use this function to get the best
-   format to pass to CreateDIBSection() in order to
-   maximize blt'ing performance.
-
-  Input:
-   hdc - Device to get the optimal format for.
-   pbi - Pointer to a BITMAPINFO + color table
-         (room for 256 colors is assumed).
-
-  Output:
-   pbi - Contains the optimal DIB format. In the 
-         <= 8bpp case, the color table will contain the 
-         system palette. In the >=16bpp case, the "color 
-         table" will contain the correct bit fields (see 
-         BI_BITFIELDS in the Platform SDK documentation 
-         for more information).
-
-  Notes:
-   If you are going to use this function on a 8bpp device
-   you should make sure the color table contains a identity
-   palette for optimal blt'ing.
-
-**********************************************************/ 
-BOOL GetOptimalDIBFormat(HDC hdc, BITMAPINFOHEADER *pbi)
-{
-    HBITMAP hbm;
-    BOOL bRet = TRUE;
-    
-    // Create a memory bitmap that is compatible with the
-    // format of the target device.
-    hbm = CreateCompatibleBitmap(hdc, 1, 1);
-    if (!hbm)
-        return FALSE;
-    
-    // Initialize the header.
-    ZeroMemory(pbi, sizeof(BITMAPINFOHEADER));
-    pbi->biSize = sizeof(BITMAPINFOHEADER);
-
-    // First call to GetDIBits will fill in the optimal biBitCount.
-    bRet = GetDIBits(hdc, hbm, 0, 1, NULL, (BITMAPINFO*)pbi, DIB_RGB_COLORS);
-    
-    // Second call to GetDIBits will get the optimal color table, o
-    // or the optimal bitfields values.
-    if (bRet)
-        bRet = GetDIBits(hdc, hbm, 0, 1, NULL, (BITMAPINFO*)pbi, DIB_RGB_COLORS);
-    ASSERT(pbi->biCompression == BI_BITFIELDS);
-
-    // Clean up.
-    DeleteObject(hbm);
-
-    return bRet;
 }
 
 void CSpaceView::OnSize(UINT nType, int cx, int cy) 
