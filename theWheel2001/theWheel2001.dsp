@@ -181,6 +181,10 @@ SOURCE=.\res\H_point.cur
 # End Source File
 # Begin Source File
 
+SOURCE=.\Res\node.bmp
+# End Source File
+# Begin Source File
+
 SOURCE=.\res\Space.ico
 # End Source File
 # Begin Source File

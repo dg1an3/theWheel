@@ -277,8 +277,6 @@ void CNodeView::OnPaint()
 	int nHeight = dc.DrawText(forNode->name.Get(), rectText, 
 		DT_CALCRECT | DT_CENTER | DT_PATH_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
-	dc.SelectObject(pOldFont);
-
 	// stores the old pen that was selected into the context
 	CPen *pOldPen;
 
@@ -310,7 +308,14 @@ void CNodeView::OnPaint()
 		dc.SelectObject(&smallFont);
 		dc.DrawText(forNode->description.Get(), rectText, 
 			DT_LEFT | DT_END_ELLIPSIS | DT_WORDBREAK);
+
+		dc.SelectObject(pOldFont);
+		smallFont.DeleteObject();
 	}
+	else
+		dc.SelectObject(pOldFont);
+
+	font.DeleteObject();
 
 	// get the guide rectangles
 	CRect rectLeftRightEllipse = GetLeftRightEllipseRect();

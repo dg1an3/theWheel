@@ -104,6 +104,7 @@ protected:
 	afx_msg void OnUpdateViewPropagate(CCmdUI* pCmdUI);
 	afx_msg void OnViewWave();
 	afx_msg void OnUpdateViewWave(CCmdUI* pCmdUI);
+	afx_msg void OnTimer(UINT nIDEvent);
 	//}}AFX_MSG
 	afx_msg void OnStyleChanged(int nStyleType, LPSTYLESTRUCT lpStyleStruct);
 	DECLARE_MESSAGE_MAP()

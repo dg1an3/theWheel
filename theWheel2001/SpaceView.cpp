@@ -43,6 +43,7 @@ BEGIN_MESSAGE_MAP(CSpaceView, CView)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_PROPAGATE, OnUpdateViewPropagate)
 	ON_COMMAND(ID_VIEW_WAVE, OnViewWave)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_WAVE, OnUpdateViewWave)
+	ON_WM_TIMER()
 	//}}AFX_MSG_MAP
 	// Standard printing commands
 	ON_COMMAND(ID_FILE_PRINT, CView::OnFilePrint)
@@ -298,7 +299,8 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt,
 		arrNodeViews.Add(pNewNodeView);
 
 		// compute the initial rectangle for the node view
-		CRect rect(pt.x - 100, pt.y - 75, pt.x + 100, pt.y + 75);
+//		CRect rect(pt.x - 100, pt.y - 75, pt.x + 100, pt.y + 75);
+		CRect rect(pt.x - 10, pt.y - 5, pt.x + 10, pt.y + 5);
 
 		// set the style for the node view
 		DWORD dwStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS; 
@@ -320,6 +322,9 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt,
 
 		// set the activation for the new node
 		pNewNodeView->activation.Set(initActivation * weight);
+
+		pNewNodeView->UpdatePrivates();
+		pNewNodeView->UpdatePrivates();
 	}
 
 	// now layout the child node views
@@ -339,6 +344,9 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt,
 
 		CreateNodeViews(pNode, ptCenter, 
 			arrNodeViews[nAtNode]->activation.Get() / 1.0f);
+
+		arrNodeViews[nAtNode]->UpdatePrivates();
+		arrNodeViews[nAtNode]->UpdatePrivates();
 	}
 }
 
@@ -436,6 +444,10 @@ void CSpaceView::OnInitialUpdate()
 #if defined(_DEBUG)
 	GetDocument()->Dump(afxDump);
 #endif
+
+	// create a timer
+	UINT m_nTimerID = SetTimer(7, 10, NULL);
+	ASSERT(m_nTimerID != 0);
 
 	// delete any old node views
 	int nAtNodeView;
@@ -638,4 +650,18 @@ void CSpaceView::LearnForNode(CNodeView *pNodeView)
 			}
 		}
 	}
+}
+
+void CSpaceView::OnTimer(UINT nIDEvent) 
+{
+	// do a layout
+	LayoutNodeViews();
+
+	// update the privates
+	int nAt;
+	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
+		nodeViews.Get(nAt)->UpdatePrivates();
+
+	
+	CView::OnTimer(nIDEvent);
 }
