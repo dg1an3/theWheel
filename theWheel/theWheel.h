@@ -13,6 +13,7 @@
 #endif
 
 #include "resource.h"       // main symbols
+#include "THEWHEEL_VIEW_resource.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // theWheelApp:

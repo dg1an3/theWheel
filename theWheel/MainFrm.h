@@ -38,6 +38,8 @@ public:
 
 // Implementation
 public:
+	void SetRuntime(BOOL bRuntime = TRUE);
+	BOOL m_bRuntime;
 	virtual ~CMainFrame();
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -57,6 +59,8 @@ protected:
 	//{{AFX_MSG(CMainFrame)
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnHelpFinder();
+	afx_msg void OnRuntime();
+	afx_msg void OnUpdateRuntime(CCmdUI* pCmdUI);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

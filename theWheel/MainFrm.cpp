@@ -6,6 +6,8 @@
 
 #include <SpaceTreeView.h>
 #include <SpaceView.h>
+#include <DesigntimeTracker.h>
+#include <RuntimeTracker.h>
 
 #include "MainFrm.h"
 
@@ -24,6 +26,8 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	//{{AFX_MSG_MAP(CMainFrame)
 	ON_WM_CREATE()
 	ON_COMMAND(ID_HELP_FINDER, OnHelpFinder)
+	ON_COMMAND(ID_RUNTIME, OnRuntime)
+	ON_UPDATE_COMMAND_UI(ID_RUNTIME, OnUpdateRuntime)
 	//}}AFX_MSG_MAP
 	// Global help commands
 	// ON_COMMAND(ID_HELP_FINDER, CFrameWnd::OnHelpFinder)
@@ -44,9 +48,8 @@ static UINT indicators[] =
 // CMainFrame construction/destruction
 
 CMainFrame::CMainFrame()
+: m_bRuntime(FALSE)
 {
-	// TODO: add member initialization code here
-	
 }
 
 CMainFrame::~CMainFrame()
@@ -129,6 +132,9 @@ BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 		return FALSE;
 	}
 
+	// initialize the spaceview tracker
+	SetRuntime(m_bRuntime);
+
 	return TRUE;
 	
 	// return CFrameWnd::OnCreateClient(lpcs, pContext);
@@ -154,4 +160,46 @@ void CMainFrame::OnHelpFinder()
 {
 	HINSTANCE hInst = ::ShellExecute(GetSafeHwnd(), "open", 
 		".\\htmlhlp\\main.htm", "", "", SW_SHOW);
+}
+
+void CMainFrame::OnRuntime() 
+{
+	SetRuntime(!m_bRuntime);
+}
+
+void CMainFrame::OnUpdateRuntime(CCmdUI* pCmdUI) 
+{
+	pCmdUI->SetCheck(m_bRuntime ? 1 : 0);	
+}
+
+void CMainFrame::SetRuntime(BOOL bRuntime)
+{
+	m_bRuntime = bRuntime;
+
+	CSpaceTreeView *pSpaceTreeView = (CSpaceTreeView *) m_wndSplitter.GetPane(0, 0);
+	ASSERT(pSpaceTreeView->IsKindOf(RUNTIME_CLASS(CSpaceTreeView)));
+	pSpaceTreeView->EnablePropertyPage(!m_bRuntime);
+
+	CSpaceView *pSpaceView = (CSpaceView *) m_wndSplitter.GetPane(0, 1);
+	ASSERT(pSpaceView->IsKindOf(RUNTIME_CLASS(CSpaceView)));
+
+	if (m_bRuntime)
+	{
+		// create a run time tracker
+		CRuntimeTracker *pTracker = new CRuntimeTracker(pSpaceView);
+
+		// install the tracker on the space view
+		pSpaceView->SetTracker(pTracker);
+	}
+	else
+	{
+		// create a design time tracker
+		CDesigntimeTracker *pTracker = new CDesigntimeTracker(pSpaceView);
+
+		// install the tracker on the space view
+		pSpaceView->SetTracker(pTracker);
+
+		// set up the pointer to the tree view, for selection behavior
+		pTracker->SetSpaceTreeView(pSpaceTreeView);
+	}
 }
