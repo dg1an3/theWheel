@@ -41,6 +41,7 @@ public:
 	void LinkTo(CNode *toNode, float weight);
 	CNodeLink *GetLink(CNode * toNode);
 	float GetLinkWeight(CNode * toNode);
+	void NormalizeLinks(float temp);
 	
 	// serialization of this node
 	virtual void Serialize(CArchive &ar);

@@ -109,6 +109,8 @@ void CSpace::Serialize(CArchive& ar)
 	{
 		rootNode. // children.
 			Serialize(ar);
+		rootNode.NormalizeLinks(0.04f);
+
 //		arrNodes.Serialize(ar);
 //		for (int nAt = 0; nAt < arrNodes.GetSize(); nAt++)
 //			myNodes.Add((CNode *)arrNodes.GetAt(nAt));
