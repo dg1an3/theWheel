@@ -40,17 +40,17 @@ public:
 	virtual ~CSpaceLayoutManager();
 
 	// accessors for optimization parameters
-	double GetKPos();
-	void SetKPos(double k_pos);
+	REAL GetKPos();
+	void SetKPos(REAL k_pos);
 
-	double GetKRep();
-	void SetKRep(double k_rep);
+	REAL GetKRep();
+	void SetKRep(REAL k_rep);
 
-	double GetTolerance();
-	void SetTolerance(double tolerance);
+	REAL GetTolerance();
+	void SetTolerance(REAL tolerance);
 
 	// total energy
-	double GetEnergy();
+	REAL GetEnergy();
 
 	// dimension of the state vector
 	int GetStateDim() const;
@@ -63,8 +63,7 @@ public:
 	virtual REAL operator()(const CVectorN<>& vInput, 
 		CVectorN<> *pGrad = NULL);
 
-	//virtual REAL testLong(const CVectorN<>& vInput, 
-	//	CVectorN<> *pGrad = NULL);
+	// returns the distance error between two nodes
 	REAL GetDistError(CNode *pFrom, CNode *pTo);
 
 	// performs the layout
@@ -109,15 +108,15 @@ protected:
 	CVectorN<> m_vGrad;
 
 	// stores the view sizes for quick access
-	REAL m_vSize[MAX_STATE_DIM][2];
-	REAL m_mSSX[MAX_STATE_DIM][MAX_STATE_DIM];
-	REAL m_mSSY[MAX_STATE_DIM][MAX_STATE_DIM];
+	_declspec(align(16)) REAL m_vSize[MAX_STATE_DIM][2];
+	_declspec(align(16)) REAL m_mSSX[MAX_STATE_DIM][MAX_STATE_DIM];
+	_declspec(align(16)) REAL m_mSSY[MAX_STATE_DIM][MAX_STATE_DIM];
 
 	// stores view activations for quick access
-	REAL m_act[MAX_STATE_DIM];
+	_declspec(align(16)) REAL m_act[MAX_STATE_DIM];
 
 	// stores the link weights for quick access
-	REAL m_mLinks[MAX_STATE_DIM][MAX_STATE_DIM];
+	_declspec(align(16)) REAL m_mLinks[MAX_STATE_DIM][MAX_STATE_DIM];
 
 	// holds the number of evaluations that have been done
 	int m_nEvaluations;
