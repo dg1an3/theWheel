@@ -29,11 +29,14 @@ float CNodeView::activationThreshold = 0.000001f;
 
 CNodeView::CNodeView(CNode *pNode)
 : forNode(pNode),
-	privActivation(0.01f),
+	center(CPoint(0, 0)),
+	privCenter(CPoint(0, 0)),
+	privActivation(pNode->activation.Get()),
 	m_ptMouseDown(-1, -1),
 	m_bDragging(FALSE),
 	m_bDragged(FALSE),
-	isWaveMode(FALSE)
+	isWaveMode(FALSE),
+	m_pPiggyBack(NULL)
 {
 	rectWindow.AddObserver(this, (ChangeFunction) OnChange);
 	privCenter.AddObserver(this, (ChangeFunction) OnChange);
@@ -512,8 +515,6 @@ void CNodeView::OnLButtonDown(UINT nFlags, CPoint point)
 	
 		m_bDragged = FALSE;
 
-#define PROPAGATE_ON_DOWN
-#ifdef PROPAGATE_ON_DOWN
 		// compute the new activation
 		float oldActivation = forNode->activation.Get();
 		float newActivation = ActivationCurve(oldActivation * 1.6f,
@@ -523,8 +524,8 @@ void CNodeView::OnLButtonDown(UINT nFlags, CPoint point)
 		CSpaceView *pParent = (CSpaceView *)GetParent();
 
 		// propagate activation
-		pParent->PropagateActivation(this, newActivation, 1.6f);
-		pParent->ResetForPropagation();
+		forNode->PropagateActivation(0.8);
+		pParent->GetDocument()->rootNode.ResetForPropagation();
 
 		// now normalize all children
 		pParent->NormalizeNodeViews();
@@ -534,7 +535,6 @@ void CNodeView::OnLButtonDown(UINT nFlags, CPoint point)
 
 		// apply the delta learning rule
 		// pParent->LearnForNode(this);
-#endif
 	}
 
 	SetCapture();
@@ -547,32 +547,6 @@ void CNodeView::OnLButtonUp(UINT nFlags, CPoint point)
 	m_bDragging = FALSE;
 
 	::ReleaseCapture();
-
-#ifndef PROPAGATE_ON_DOWN
-	if (!m_bDragged)
-	{
-		// compute the new activation
-		float oldActivation = activation.Get();
-		float newActivation = ActivationCurve(oldActivation * 1.5f,
-			0.2f);
-		activation.Set(newActivation);
-
-		CSpaceView *pParent = (CSpaceView *)GetParent();
-
-		// propagate activation
-		pParent->PropagateActivation(this, newActivation);
-		pParent->ResetForPropagation();
-
-		// now normalize all children
-		pParent->NormalizeNodeViews();
-
-		// ensure the nodeviews are sorted
-		pParent->SortNodeViews();
-
-		// apply the delta learning rule
-		// pParent->LearnForNode(this);
-	}
-#endif
 
 	// redraw the parent
 	RedrawWindow(NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
@@ -606,17 +580,15 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 		if (lengthSq > 50.0f)
 		{
 			// compute the new activation
-			float factor = 1.0f; //   + lengthSq * 1e-2f;
 			float oldActivation = forNode->activation.Get();
-			float newActivation = ActivationCurve(oldActivation * factor, 0.3f);
-
+			float newActivation = ActivationCurve(oldActivation * 1.2, 0.3f);
 			forNode->activation.Set(newActivation);
 
 			CSpaceView *pParent = (CSpaceView *)GetParent();
 
 			// propagate activation
-			pParent->PropagateActivation(this, newActivation, factor);
-			pParent->ResetForPropagation();
+			forNode->PropagateActivation(0.8);
+			pParent->GetDocument()->rootNode.ResetForPropagation();
 
 			// now normalize all children
 			pParent->NormalizeNodeViews();
@@ -634,7 +606,6 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 void CNodeView::UpdatePrivates()
 {
 	CSpaceView *pSpaceView = (CSpaceView *)GetParent();
-	// CNodeView *pParentView = pSpaceView->GetViewForNode(forNode->parent.Get());
 
 	CRect rect;
 	pSpaceView->GetClientRect(&rect);
@@ -650,12 +621,22 @@ void CNodeView::UpdatePrivates()
 	{
 		vNewCenter = center.Get() * 0.125 + privCenter.Get() * 0.875;
 	}
-	else // if (pParentView != NULL)
+	else 
 	{
-		CNodeView *pMaxLinked = pSpaceView->GetMaxLinked(this);
-		if (pMaxLinked != NULL)
+		if (m_pPiggyBack == NULL)
 		{
-			vNewCenter = center.Get() * 0.9375 + pMaxLinked->center.Get() * 0.0625;
+			CNodeLink *pMaxLink = forNode->links.Get(0);
+			if (pMaxLink != NULL)
+			{
+				m_pPiggyBack = pSpaceView->
+					GetViewForNode(pMaxLink->forTarget.Get());
+				ASSERT(m_pPiggyBack->forNode.Get() == pMaxLink->forTarget.Get());
+			}
+		}
+		if (m_pPiggyBack != NULL)
+		{
+			vNewCenter = center.Get() * 0.9375 
+				+ m_pPiggyBack->center.Get() * 0.0625;
 			center.Set(vNewCenter);
 		}
 	}

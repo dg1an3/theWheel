@@ -98,6 +98,8 @@ private:
 	BOOL m_bDragging;
 	BOOL m_bDragged;
 	CPoint m_ptMouseDown;
+
+	CNodeView *m_pPiggyBack;
 };
 
 /////////////////////////////////////////////////////////////////////////////
