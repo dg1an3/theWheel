@@ -53,7 +53,8 @@ BEGIN
     "#include ""afxres.rc""         // Standard components\r\n"
     "#include ""afxprint.rc""       // printing/print preview resources\r\n"
     "#endif\r\n"
-    "\0"
+    "\r\n"
+    "#include ""GUI_BASE.rc""\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -448,6 +449,7 @@ LANGUAGE 9, 1
 #include "afxprint.rc"       // printing/print preview resources
 #endif
 
+#include "GUI_BASE.rc"
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 

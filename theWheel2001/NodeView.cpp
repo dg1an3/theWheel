@@ -35,7 +35,7 @@ CNodeView::~CNodeView()
 {
 }
 
-void CNodeView::OnChange(CObservable *pSource)
+void CNodeView::OnChange(CObservableObject *pSource)
 {
 	if ((pSource == &rectWindow) && ::IsWindow(m_hWnd))
 	{

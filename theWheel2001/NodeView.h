@@ -48,7 +48,7 @@ public:
 
 // Operations
 public:
-	virtual void OnChange(CObservable *pSource);
+	virtual void OnChange(CObservableObject *pSource);
 
 // Overrides
 	// ClassWizard generated virtual function overrides

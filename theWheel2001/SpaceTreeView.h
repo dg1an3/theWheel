@@ -11,11 +11,13 @@
 
 #include <Collection.h>
 
+#include <ObjectExplorer.h>
+
 #include "Node.h"
 
 class CSpace;
 
-class CSpaceTreeView : public CTreeView
+class CSpaceTreeView : public CView
 {
 protected: // create from serialization only
 	CSpaceTreeView();
@@ -44,8 +46,8 @@ public:
 
 // Implementation
 public:
-	void AddNodeItems(CCollection<CNode>& arrNodes, // CObArray& arrNodes, 
-		HTREEITEM hParent);
+	CObjectExplorer& GetTreeCtrl();
+	void AddNodeItems(CNode *pNode, CObjectTreeItem *pParent);
 	virtual ~CSpaceTreeView();
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -58,8 +60,11 @@ protected:
 protected:
 	//{{AFX_MSG(CSpaceTreeView)
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+	afx_msg void OnSize(UINT nType, int cx, int cy);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
+private:
+	CObjectExplorer m_ObjectExplorer;
 };
 
 #ifndef _DEBUG  // debug version in SpaceTreeView.cpp

@@ -16,16 +16,17 @@ static char THIS_FILE[] = __FILE__;
 /////////////////////////////////////////////////////////////////////////////
 // CSpaceTreeView
 
-IMPLEMENT_DYNCREATE(CSpaceTreeView, CTreeView)
+IMPLEMENT_DYNCREATE(CSpaceTreeView, CView)
 
-BEGIN_MESSAGE_MAP(CSpaceTreeView, CTreeView)
+BEGIN_MESSAGE_MAP(CSpaceTreeView, CView)
 	//{{AFX_MSG_MAP(CSpaceTreeView)
 	ON_WM_CREATE()
+	ON_WM_SIZE()
 	//}}AFX_MSG_MAP
 	// Standard printing commands
-	ON_COMMAND(ID_FILE_PRINT, CTreeView::OnFilePrint)
-	ON_COMMAND(ID_FILE_PRINT_DIRECT, CTreeView::OnFilePrint)
-	ON_COMMAND(ID_FILE_PRINT_PREVIEW, CTreeView::OnFilePrintPreview)
+	ON_COMMAND(ID_FILE_PRINT, CView::OnFilePrint)
+	ON_COMMAND(ID_FILE_PRINT_DIRECT, CView::OnFilePrint)
+	ON_COMMAND(ID_FILE_PRINT_PREVIEW, CView::OnFilePrintPreview)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -47,7 +48,7 @@ BOOL CSpaceTreeView::PreCreateWindow(CREATESTRUCT& cs)
 	//  the CREATESTRUCT cs
 	cs.style |= TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT;
 
-	return CTreeView::PreCreateWindow(cs);
+	return CView::PreCreateWindow(cs);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -83,11 +84,11 @@ void CSpaceTreeView::OnEndPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
 
 void CSpaceTreeView::OnInitialUpdate()
 {
-	CTreeView::OnInitialUpdate();
+	CView::OnInitialUpdate();
 
 /*	GetTreeCtrl().DeleteAllItems();
 
-	// set the space for the CTreeVIew
+	// set the space for the CView
 	int nAt;
 	for (nAt = 0; nAt < GetDocument()->GetNodeCount(); nAt++)
 	{
@@ -103,12 +104,12 @@ void CSpaceTreeView::OnInitialUpdate()
 #ifdef _DEBUG
 void CSpaceTreeView::AssertValid() const
 {
-	CTreeView::AssertValid();
+	CView::AssertValid();
 }
 
 void CSpaceTreeView::Dump(CDumpContext& dc) const
 {
-	CTreeView::Dump(dc);
+	CView::Dump(dc);
 }
 
 CSpace* CSpaceTreeView::GetDocument() // non-debug version is inline
@@ -123,14 +124,15 @@ CSpace* CSpaceTreeView::GetDocument() // non-debug version is inline
 
 void CSpaceTreeView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint) 
 {
-	GetTreeCtrl().DeleteAllItems();
+	if (::IsWindow(GetTreeCtrl().m_hWnd))
+		GetTreeCtrl().DeleteAllItems();
 
 	CSpace *pSpace = (CSpace *)m_pDocument;
 	ASSERT(m_pDocument == (CSpace*)m_pDocument);
 
-	AddNodeItems(GetDocument()->rootNode.children, TVI_ROOT);
+	AddNodeItems(&GetDocument()->rootNode, NULL);
 
-/*	// set the space for the CTreeVIew
+/*	// set the space for the CView
 	int nAt;
 	for (nAt = 0; nAt < GetDocument()->GetNodeCount(); nAt++)
 	{
@@ -139,28 +141,56 @@ void CSpaceTreeView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 	} */
 }
 
-void CSpaceTreeView::AddNodeItems(CCollection<CNode>& arrNodes, HTREEITEM hParent)
+void CSpaceTreeView::AddNodeItems(CNode *pNode, CObjectTreeItem *pParent)
 {
-	// set the space for the CTreeVIew
+	// set the space for the CView
 	int nAt;
-	for (nAt = 0; nAt < arrNodes.GetSize(); nAt++)
+	for (nAt = 0; nAt < pNode->children.GetSize(); nAt++)
 	{
-		CNode *pNode = arrNodes.Get(nAt); // (CNode *)arrNodes[nAt];
+		CNode *pChildNode = pNode->children.Get(nAt);
+		CObjectTreeItem *pItem = new CObjectTreeItem();
+		pItem->SetObject(pChildNode);
+		pItem->SetParent(pParent);
 
+		pItem->Create(&GetTreeCtrl());
 		// insert each node into the tree
-		HTREEITEM hItem = 
-			GetTreeCtrl().InsertItem(pNode->name.Get(), hParent, TVI_LAST);
+		// GetTreeCtrl().InsertItem(pItem);
 
-		AddNodeItems(pNode->children, hItem);
+		AddNodeItems(pChildNode, pItem);
 	}
 }
 
 int CSpaceTreeView::OnCreate(LPCREATESTRUCT lpCreateStruct) 
 {
-	if (CTreeView::OnCreate(lpCreateStruct) == -1)
+	if (CView::OnCreate(lpCreateStruct) == -1)
 		return -1;
 	
-	// TODO: Add your specialized creation code here
+	CRect rect;
+	GetWindowRect(&rect);
+	ScreenToClient(&rect);
+
+	if (!m_ObjectExplorer.Create(WS_VISIBLE | WS_CHILD 
+		| TVS_HASLINES | TVS_LINESATROOT 
+		| TVS_HASBUTTONS // | TVS_CHECKBOXES 
+			| TVS_EDITLABELS, 
+		rect, this, 105))
+		return FALSE;
 	
 	return 0;
+}
+
+CObjectExplorer& CSpaceTreeView::GetTreeCtrl()
+{
+	return m_ObjectExplorer;
+}
+
+void CSpaceTreeView::OnSize(UINT nType, int cx, int cy) 
+{
+	CView::OnSize(nType, cx, cy);
+	
+	CRect rect;
+	GetWindowRect(&rect);
+	ScreenToClient(&rect);
+
+	m_ObjectExplorer.MoveWindow(&rect);
 }
