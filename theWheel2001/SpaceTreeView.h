@@ -9,15 +9,11 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include <Collection.h>
-
-#include <ObjectExplorer.h>
-
-#include "Node.h"
+#include <Node.h>
 
 class CSpace;
 
-class CSpaceTreeView : public CView
+class CSpaceTreeView : public CTreeView
 {
 protected: // create from serialization only
 	CSpaceTreeView();
@@ -25,6 +21,7 @@ protected: // create from serialization only
 
 // Attributes
 public:
+	// returns the CSpace with is being displayed
 	CSpace* GetDocument();
 
 // Operations
@@ -45,6 +42,7 @@ public:
 
 // Implementation
 public:
+
 	virtual ~CSpaceTreeView();
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -53,15 +51,52 @@ public:
 
 protected:
 
+	// adds a node item to the tree control
+	void AddNodeItem(CNode *pNode, HTREEITEM hParentItem = NULL);
+
+	// removes the node's item from the tree control, 
+	//		including all children
+	void RemoveNodeItem(CNode *pNode);
+
 // Generated message map functions
 protected:
 	//{{AFX_MSG(CSpaceTreeView)
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
-	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg void OnEndLabelEdit(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnBeginDrag(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
+	afx_msg void OnTimer(UINT nIDEvent);
+	afx_msg void OnSelChanged(NMHDR* pNMHDR, LRESULT* pResult);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
+
 private:
-	CObjectExplorer m_ObjectExplorer;
+    // the map of handles to CNode objects
+    CMap<CNode *, CNode *, HTREEITEM, HTREEITEM> m_mapItemHandles;
+
+	// the image list for tree icons
+	CImageList m_imageList;
+
+	// holds the index of the node image
+	int m_nNodeImageIndex;
+
+	// dragging state flag
+	BOOL m_bDragging;
+
+	// drag image list
+    CImageList * m_pDragImageList;
+
+	// pointers for the dragging node and the dropped node
+	CNode *m_pNodeDrag;
+	CNode *m_pNodeDrop;
+
+    // handles for the drop cursor and the no-drop cursor
+    HCURSOR m_hDropCursor;
+    HCURSOR m_hNoDropCursor;
+
+    // handles auto-scrolling when the user drags off the end of the control
+    UINT m_nScrollTimerID;
 };
 
 #ifndef _DEBUG  // debug version in SpaceTreeView.cpp
