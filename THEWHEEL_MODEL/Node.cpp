@@ -21,7 +21,8 @@ static char THIS_FILE[]=__FILE__;
 CNode::CNode(const CString& strName, const CString& strDesc)
 	: parent(NULL),
 		description(strDesc),
-		m_currTemperature(0.0f)
+		m_currTemperature(0.0f),
+		m_pDib(NULL)
 {
 	name.Set(strName);
 }
@@ -31,6 +32,22 @@ CNode::~CNode()
 }
 
 IMPLEMENT_SERIAL(CNode, CModelObject, 4);
+
+CDib *CNode::GetDib()
+{
+	// imageFilename.Set("FakeImage.bmp");
+	if (m_pDib == NULL && imageFilename.Get() != "")
+	{
+		m_pDib = new CDib();
+		if (!m_pDib->Load("./images/" + imageFilename.Get()))
+		{
+			delete m_pDib;
+			m_pDib = NULL;
+		}
+	}
+
+	return m_pDib;
+}
 
 void CNode::LinkTo(CNode *pToNode, float weight)
 {
@@ -69,7 +86,7 @@ float CNode::GetLinkWeightBoltz(CNode * pToNode, float temperature)
 	float boltzWeight = 
 		(float) exp(GetLinkWeight(pToNode) / m_currTemperature) / m_currSum;
 
-	return boltzWeight * 1.225 - 0.025;
+	return boltzWeight * 1.025 - 0.025;
 }
 
 void CNode::Serialize(CArchive &ar)

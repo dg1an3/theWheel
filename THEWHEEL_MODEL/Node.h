@@ -13,6 +13,8 @@
 #include <Collection.h>
 #include <ModelObject.h>
 
+#include <Dib.h>
+
 #include "NodeLink.h"
 
 class CNode : public CModelObject  
@@ -30,6 +32,12 @@ public:
 
 	// the node description
 	CValue< CString > description;
+
+	// an image filename, if present
+	CValue< CString > imageFilename;
+
+	// loads the image file, if necessary
+	CDib *GetDib();
 
 	// the child nodes
 //	CCollection< CNode > children;
@@ -51,6 +59,8 @@ protected:
 	// temporary storage for cached Boltzmann weights
 	float m_currTemperature;
 	float m_currSum;
+
+	CDib *m_pDib;
 };
 
 #endif // !defined(AFX_NODE_H__0C8AA66B_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
