@@ -278,6 +278,9 @@ void CSpaceView::PropagateActivation(CNodeView *pSource, float percent, float fa
 				if ((pLink != NULL) && (!pLink->m_bPropagated) 
 						&& (pLink->weight.Get() > maxWeight))
 				{
+					// maxWeight = pSource->forNode->GetLinkWeightBoltz(pDest->forNode.Get(), 
+					//	sqrt(pSource->activation.Get())); 
+
 					maxWeight = pLink->weight.Get();
 					pMaxDest = pDest;
 					pMaxLink = pLink;

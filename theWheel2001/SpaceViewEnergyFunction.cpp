@@ -59,9 +59,10 @@ CLookupFunction<SPV_STATE_TYPE> dAttractFuncDy(&attract_func,
 SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
 	return 0.5 * Gauss2D(x, y, 2.0f, 2.0f)
-		+ Gauss2D(x, y, 1.0f, 1.0f)
+		+        Gauss2D(x, y, 1.0f, 1.0f)
 		+ 2.0f * Gauss2D(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
-		+ 4.0f * Gauss2D(x, y, 1.0f / 4.0f, 1.0f / 4.0f);
+		+ 4.0f * Gauss2D(x, y, 1.0f / 4.0f, 1.0f / 4.0f)
+		+ 8.0f * Gauss2D(x, y, 1.0f / 8.0f, 1.0f / 8.0f);
 }
 
 CLookupFunction<SPV_STATE_TYPE> spacerFunc(&spacer_func, 
@@ -311,17 +312,24 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 					pAtLinkedView->GetWindowRect(&rectLinked);
 
 					// get the weight of the link
-					CNodeLink *pLink = pAtLinkedNode->GetLink(pAtNode);
+//					CNodeLink *pLink = pAtLinkedNode->GetLink(pAtNode);
 
 					// retrieve the link weight
-					SPV_STATE_TYPE weight1 = 0.0;
-					if (pLink != NULL)
-						weight1 = pLink->weight.Get();
+					SPV_STATE_TYPE weight1 = pAtLinkedNode->GetLinkWeightBoltz(pAtNode, 
+						sqrt(pAtLinkedView->activation.Get())); 
+						// pAtLinkedNode->GetLinkWeight(pAtNode); 
+						// 0.0;
+//					if (pLink != NULL)
+//						weight1 = pLink->weight.Get();
 
-					pLink = pAtNode->GetLink(pAtLinkedNode);
-					SPV_STATE_TYPE weight2 = 0.0;
-					if (pLink != NULL)
-						weight2 = pLink->weight.Get();
+//					pLink = pAtNode->GetLink(pAtLinkedNode);
+					SPV_STATE_TYPE weight2 = pAtNode->GetLinkWeightBoltz(pAtLinkedNode,
+						sqrt(pAtNodeView->activation.Get()));
+						// pAtNode->GetLinkWeight(pAtLinkedNode);
+						// 0.0;
+
+//					if (pLink != NULL)
+//						weight2 = pLink->weight.Get();
 
 					SPV_STATE_TYPE weight = (weight1 + weight2) / 2.0f;
 
@@ -356,17 +364,19 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 #endif
 						}
 
-					m_energy -= weight * 10.0
-						* attractFunc(x / (ssx * 4.0), y / (ssy * 4.0));
+					m_energy += 0.25 * (1.0 - weight)
+						* attractFunc(x / (ssx * 2.0), y / (ssy * 2.0));
+					m_energy -= weight * 30.0
+						* attractFunc(x / (ssx * 6.0), y / (ssy * 6.0));
 
 #ifdef USE_GRAD
-					dEnergyDx -= weight * 10.0
-						* dAttractFuncDx(x / (ssx * 2.0), y / (ssy * 2.0))
-							/ (ssx * 2.0);
+					dEnergyDx -= weight * 20.0
+						* dAttractFuncDx(x / (ssx * 4.0), y / (ssy * 4.0))
+							/ (ssx * 4.0);
 
-					dEnergyDy -= weight * 10.0
-						* dAttractFuncDy(x / (ssx * 2.0), y / (ssy * 2.0))
-							/ (ssy * 2.0);
+					dEnergyDy -= weight * 20.0
+						* dAttractFuncDy(x / (ssx * 4.0), y / (ssy * 4.0))
+							/ (ssy * 4.0);
 #endif
 				}
 			}

@@ -452,14 +452,14 @@ void CNodeView::OnLButtonDown(UINT nFlags, CPoint point)
 #ifdef PROPAGATE_ON_DOWN
 		// compute the new activation
 		float oldActivation = activation.Get();
-		float newActivation = ActivationCurve(oldActivation * 1.3f,
+		float newActivation = ActivationCurve(oldActivation * 1.5f,
 			0.2f);
 		activation.Set(newActivation);
 
 		CSpaceView *pParent = (CSpaceView *)GetParent();
 
 		// propagate activation
-		pParent->PropagateActivation(this, newActivation, 1.3f);
+		pParent->PropagateActivation(this, newActivation, 1.5f);
 		pParent->ResetForPropagation();
 
 		// now normalize all children
@@ -486,7 +486,7 @@ void CNodeView::OnLButtonUp(UINT nFlags, CPoint point)
 	{
 		// compute the new activation
 		float oldActivation = activation.Get();
-		float newActivation = ActivationCurve(oldActivation * 1.3f,
+		float newActivation = ActivationCurve(oldActivation * 1.5f,
 			0.2f);
 		activation.Set(newActivation);
 
