@@ -44,6 +44,10 @@ SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 //////////////////////////////////////////////////////////////////////
 CSpaceViewEnergyFunction::CSpaceViewEnergyFunction(CSpaceView *pView)
 	: m_pView(pView),
+
+		m_vInput(CVector<SPV_STATE_DIM, SPV_STATE_TYPE>()),
+		m_energy(0.0),
+
 		m_attractFunc(&attract_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
 			"ATTRFUNC.TMP"),
 		m_spacerFunc(&spacer_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
