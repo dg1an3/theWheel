@@ -50,8 +50,14 @@ CtheWheelApp theApp;
 // 
 // constructs a new instance of the application object 
 //////////////////////////////////////////////////////////////////////
+//   GdiplusStartupInput gdiplusStartupInput;
+//   ULONG_PTR           gdiplusToken;
+
 BOOL CtheWheelApp::InitInstance()
 {
+	CString strLogFilename;
+	::GetTempPath(_MAX_PATH, strLogFilename.GetBuffer(_MAX_PATH));
+
 	AfxEnableControlContainer();
 
 	// Standard initialization
@@ -71,6 +77,9 @@ BOOL CtheWheelApp::InitInstance()
 	SetRegistryKey(_T("Local AppWizard-Generated Applications"));
 
 	LoadStdProfileSettings();  // Load standard INI file options (including MRU)
+
+	   // Initialize GDI+.
+	// GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
 	// Register the application's document templates.  Document templates
 	//  serve as the connection between documents, frame windows and views.
@@ -204,3 +213,10 @@ void CtheWheelApp::OnAppAbout()
 	aboutDlg.DoModal();
 }
 
+
+int CtheWheelApp::ExitInstance() 
+{
+	// GdiplusShutdown(gdiplusToken);
+	
+	return CWinApp::ExitInstance();
+}

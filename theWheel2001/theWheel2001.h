@@ -35,6 +35,7 @@ public:
 	//{{AFX_VIRTUAL(CtheWheelApp)
 	public:
 	virtual BOOL InitInstance();
+	virtual int ExitInstance();
 	//}}AFX_VIRTUAL
 
 // Implementation
