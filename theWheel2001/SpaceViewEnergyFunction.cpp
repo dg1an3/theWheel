@@ -132,8 +132,8 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
 				// add attraction * weight
 				m_energy -= weight * (SPV_STATE_TYPE) 275.0
 					* m_attractFunc(
-						x / (ssx * (SPV_STATE_TYPE) 3.0), 
-						y / (ssy * (SPV_STATE_TYPE) 3.0));
+						x / (ssx * (SPV_STATE_TYPE) 4.0), 
+						y / (ssy * (SPV_STATE_TYPE) 4.0));
 			}
 		}
 	}
