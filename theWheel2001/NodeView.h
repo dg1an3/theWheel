@@ -39,8 +39,12 @@ public:
 
 	// moves the nodeview slowly toward its actual center
 	CVector<2> GetCenter();
+	CVector<2> GetSpringCenter()
+	{
+		return m_vSpringCenter;
+	}
 	void SetCenter(const CVector<2>& vCenter);
-
+	
 	// activation value for this window
 	double GetThresholdedActivation();
 	void SetThresholdedActivation(double activation);
