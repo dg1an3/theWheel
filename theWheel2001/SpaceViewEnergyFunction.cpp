@@ -80,7 +80,7 @@ SPV_STATE_TYPE center_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y,
 //////////////////////////////////////////////////////////////////////
 CSpaceViewEnergyFunction::CSpaceViewEnergyFunction(CSpaceView *pView)
 	: m_pView(pView),
-		m_attractFunc(&attract_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
+		m_attractFunc(&attract_func, -2.0f, 2.0f, 1024, -2.0f, 2.0f, 1024, 
 			"ATTRFUNC.TMP"),
 		m_spacerFunc(&spacer_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
 			"SPACERFUNC.TMP")
@@ -169,14 +169,14 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
 				//	* m_attractFunc(x / (ssx * 1.0), y / (ssy * 1.0));
 
 				// add attraction * weight
-				m_energy -= weight * (SPV_STATE_TYPE) 125.0
+				m_energy -= weight * (SPV_STATE_TYPE) 135.0
 					* m_attractFunc(
 						x / (ssx * (SPV_STATE_TYPE) 7.0), 
 						y / (ssy * (SPV_STATE_TYPE) 7.0));
 			}
 		}
 
-		SPV_STATE_TYPE width = (SPV_STATE_TYPE) rectSpaceView.Width();
+/*		SPV_STATE_TYPE width = (SPV_STATE_TYPE) rectSpaceView.Width();
 		SPV_STATE_TYPE height = (SPV_STATE_TYPE) rectSpaceView.Height();
 		SPV_STATE_TYPE sigma = width + height / (SPV_STATE_TYPE) 32.0;
 
@@ -199,6 +199,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
 //			m_energy += center_func(x, y,                        width, height, sigma);
 		m_energy += center_func(x, y + nodeViewHeight / (SPV_STATE_TYPE) 2.0, 
 			width, height, sigma);
+*/
 	}
 
 	return m_energy;
