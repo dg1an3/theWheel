@@ -296,8 +296,8 @@ void CSpaceView::PropagateActivation(CNodeView *pSource, float percent, float fa
 			float oldActivation = pMaxDest->activation.Get();
 			if (oldActivation < percent * maxWeight)
 			{
-				float newActivation = CNodeView::ActivationCurve(oldActivation * factor * 1.3,
-					percent * maxWeight * 1.5);
+				float newActivation = CNodeView::ActivationCurve(oldActivation * factor * 1.3f,
+					percent * maxWeight * 1.5f);
 				pMaxDest->activation.Set(newActivation);
 				PropagateActivation(pMaxDest, newActivation);
 			}
@@ -692,11 +692,12 @@ void CSpaceView::LearnForNode(CNodeView *pNodeView)
 					(SPV_STATE_TYPE) rectNodeView.Height() / 8.0f);
 
 				// now compute the delta for the link weight
-				float dWeight = LEARNING_EPSILON 
+				float dWeight = (float) LEARNING_EPSILON 
 					* pNodeView->activation.Get() 
 					* pOtherNodeView->activation.Get()
 					* pLink->weight.Get()
-					* attractFunc(vOffset[0] / (ssx * 3.0), vOffset[1] / (ssy * 3.0));
+					* (float) attractFunc(vOffset[0] / (ssx * 3.0), 
+						vOffset[1] / (ssy * 3.0));
 
 				if (dWeight > 0.001)
 				{

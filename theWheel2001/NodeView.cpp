@@ -260,14 +260,14 @@ void CNodeView::OnPaint()
 	if (forNode->GetDib() != NULL && privActivation.Get() < 0.05)
 	{
 		// calculate the bitmap size 
-		float bitmapSize = rectInner.Height() * 0.03 / privActivation.Get();
+		float bitmapSize = rectInner.Height() * 0.03f / privActivation.Get();
 		bitmapSize = min(bitmapSize, rectInner.Height());
 		float margin = rectInner.Height() - bitmapSize;
 
 		CRect rectImage = rectInner;
-		rectImage.top += margin/2;
-		rectImage.right = rectImage.left + bitmapSize;
-		rectImage.bottom -= margin/2;
+		rectImage.top += (int) margin / 2;
+		rectImage.right = rectImage.left + (int) bitmapSize;
+		rectImage.bottom -= (int) margin / 2;
 
 		rectImage.DeflateRect(5, 5, 5, 5);
 
@@ -277,7 +277,7 @@ void CNodeView::OnPaint()
 		// dcMem.Ellipse(rectImage);
 
 		// adjust the rectangle to account for the bitmap
-		rectInner.left += bitmapSize;
+		rectInner.left += (int) bitmapSize;
 	}
 
 	// draw the text
