@@ -414,3 +414,31 @@ void CNode::Serialize(CArchive &ar)
 	}
 }
 
+
+
+CNode * CNode::GetRandomDescendant()
+{
+	int nDescendant = rand() * GetDescendantCount() / RAND_MAX;
+
+	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	{
+		CNode *pChild = ((CNode *)children.Get(nAt));
+		if (pChild->GetDescendantCount() > nDescendant)
+			return pChild->GetRandomDescendant();
+		nDescendant -= pChild->GetDescendantCount();
+	}
+
+	return (CNode *) children.Get(nDescendant);
+}
+
+int CNode::GetDescendantCount()
+{
+	int nCount = 0;
+	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	{
+		CNode *pChild = ((CNode *)children.Get(nAt));
+		nCount += pChild->GetDescendantCount() + 1;		// 1 for the child itself
+	}
+
+	return nCount;
+}

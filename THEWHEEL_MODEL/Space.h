@@ -59,6 +59,10 @@ protected:
 	void AddChildren(CNode *pParent, int nLevels, 
 				 int nCount = 3, float weight = 0.50f);
 
+	// helper function to randomly cross-link nodes
+	void CrossLinkNodes(int nCount, float weight = 0.50f);
+
+
 // Generated message map functions
 protected:
 	//{{AFX_MSG(CSpace)

@@ -75,6 +75,12 @@ public:
 	//		the scale amount
 	void ScaleDescendantActivation(double scale);
 
+	// returns the number of descendants of this node
+	int GetDescendantCount();
+
+	// returns a random descendant
+	CNode * GetRandomDescendant();
+
 	// propagation management
 	void ResetForPropagation();
 	void PropagateActivation(double scale);

@@ -86,9 +86,16 @@ BOOL CSpace::OnNewDocument()
 
 	// set the name of the root node
 	rootNode.name.Set("root");
+	rootNode.description.Set("This is the root node of the space.  "
+		"All other nodes are descendants of it.  "
+		"Thou shalt have no other node before it.");
+
+	for (int nAt = 0; nAt < 133; nAt++)
+		rand();
 
 	// add random children to the root node
 	AddChildren(&rootNode, 3, 3);
+	CrossLinkNodes(rootNode.GetDescendantCount() / 10);
 
 	// initialize the node activations from the root node
 	rootNode.SetActivation(0.5);
@@ -115,6 +122,9 @@ void CSpace::AddChildren(CNode *pParent, int nLevels,
 			pParent->name.Get(), "->", nAt+1);
 		CNode *pChild = new CNode(strChildName);
 
+		pChild->description.Set("I am a child node.  "
+			"I exist for the good of my parent node.  "
+			"I only have meaning in the context of my siblings.");
 		pParent->children.Add(pChild);
 		pChild->parent.Set(pParent);
 
@@ -128,6 +138,37 @@ void CSpace::AddChildren(CNode *pParent, int nLevels,
 
 	// now sort the links
 	pParent->SortLinks();	
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::CrossLinkNodes
+// 
+// randomly cross-links some nodes
+//////////////////////////////////////////////////////////////////////
+void CSpace::CrossLinkNodes(int nCount, float weight)
+{
+	// cross-link
+	for (int nAt = 0; nAt < nCount; nAt++)
+	{
+		// select the first random child
+		CNode *pChild1 = rootNode.GetRandomDescendant();
+
+		// select the second random child
+		CNode *pChild2 = rootNode.GetRandomDescendant();
+
+		if (pChild1 != pChild2)
+		{
+			float actWeight = weight * (1.4f - 0.8f * (float) rand() / (float) RAND_MAX);
+
+			TRACE("Linking child %s to child %s with weight %lf\n",
+				pChild1->name.Get(),
+				pChild2->name.Get(), 
+				actWeight);
+
+			pChild1->LinkTo(pChild2, weight);
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////
