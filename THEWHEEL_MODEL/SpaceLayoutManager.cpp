@@ -13,6 +13,9 @@
 // defines the gaussian function
 #include <MathUtil.h>
 
+// intel float math
+#include <mathf.h>
+
 // for least-squares
 #include <MatrixNxM.h>
 #include <MatrixBase.inl>
@@ -56,6 +59,10 @@ const REAL K_POS = 600.0;
 // constant for weighting the repulsion energy
 const REAL K_REP = 3200.0;
 
+// constants for center repulsion
+const REAL CENTER_REP_MAX_ACT = 0.15;
+const REAL CENTER_REP_SCALE = SIZE_SCALE / 8.0;
+const REAL CENTER_REP_WEIGHT = 9.0;
 
 //////////////////////////////////////////////////////////////////////
 // CSpaceLayoutManager::CSpaceLayoutManager
@@ -107,6 +114,7 @@ CSpaceLayoutManager::~CSpaceLayoutManager()
 	// delete the optimizers
 	delete m_pPowellOptimizer;
 	delete m_pConjGradOptimizer;
+	delete m_pGradDescOptimizer;
 
 }	// CSpaceLayoutManager::~CSpaceLayoutManager
 
@@ -140,7 +148,7 @@ void CSpaceLayoutManager::SetStateDim(int nStateDim)
 // 
 // returns the energy from the most recent optimization
 //////////////////////////////////////////////////////////////////////
-double CSpaceLayoutManager::GetEnergy()
+REAL CSpaceLayoutManager::GetEnergy()
 {
 	return m_energy;
 
@@ -152,7 +160,7 @@ double CSpaceLayoutManager::GetEnergy()
 // 
 // returns the k_pos (positional) parameter
 //////////////////////////////////////////////////////////////////////
-double CSpaceLayoutManager::GetKPos()
+REAL CSpaceLayoutManager::GetKPos()
 {
 	return m_k_pos;
 
@@ -164,7 +172,7 @@ double CSpaceLayoutManager::GetKPos()
 // 
 // sets the positional paramater
 //////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::SetKPos(double k_pos)
+void CSpaceLayoutManager::SetKPos(REAL k_pos)
 {
 	m_k_pos = k_pos;
 
@@ -176,7 +184,7 @@ void CSpaceLayoutManager::SetKPos(double k_pos)
 // 
 // returns the repulsion parameter
 //////////////////////////////////////////////////////////////////////
-double CSpaceLayoutManager::GetKRep()
+REAL CSpaceLayoutManager::GetKRep()
 {
 	return m_k_rep;
 
@@ -188,7 +196,7 @@ double CSpaceLayoutManager::GetKRep()
 // 
 // sets the repulsion parameter
 //////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::SetKRep(double k_rep)
+void CSpaceLayoutManager::SetKRep(REAL k_rep)
 {
 	m_k_rep = k_rep;
 
@@ -200,7 +208,7 @@ void CSpaceLayoutManager::SetKRep(double k_rep)
 // 
 // returns the tolerance parameter
 //////////////////////////////////////////////////////////////////////
-double CSpaceLayoutManager::GetTolerance()
+REAL CSpaceLayoutManager::GetTolerance()
 {
 	return m_tolerance;
 
@@ -212,7 +220,7 @@ double CSpaceLayoutManager::GetTolerance()
 // 
 // sets the tolerance parameter
 //////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::SetTolerance(double tolerance)
+void CSpaceLayoutManager::SetTolerance(REAL tolerance)
 {
 	m_tolerance = tolerance;
 
@@ -244,8 +252,8 @@ void CSpaceLayoutManager::LoadSizesLinks()
 		const REAL size_scale = SIZE_SCALE;
 
 		// store the size -- add 10 to ensure non-zero sizes
-		m_vSize[nAtNode][0] = size_scale * vSize[0] + 10.0;
-		m_vSize[nAtNode][1] = size_scale * vSize[1] + 10.0;
+		m_vSize[nAtNode][0] = size_scale * vSize[0] + (REAL) 10.0;
+		m_vSize[nAtNode][1] = size_scale * vSize[1] + (REAL) 10.0;
 
 	}
 
@@ -262,20 +270,20 @@ void CSpaceLayoutManager::LoadSizesLinks()
 			// get convenience pointers for the linked node view and node
 			CNode *pAtLinkedNode = m_pSpace->GetNodeAt(nAtLinkedNode);
 
+			const REAL ssx = (m_vSize[nAtNode][0] 
+					+ m_vSize[nAtLinkedNode][0]) / (REAL) 2.0;
 			m_mSSX[nAtNode][nAtLinkedNode] = 
-				m_mSSX[nAtLinkedNode][nAtNode] = 
-					(m_vSize[nAtNode][0] 
-					+ m_vSize[nAtLinkedNode][0]) / 2.0; 
+				m_mSSX[nAtLinkedNode][nAtNode] = (ssx * ssx); 
 
+			const REAL ssy = (m_vSize[nAtNode][1] 
+					+ m_vSize[nAtLinkedNode][1]) / (REAL) 2.0;
 			m_mSSY[nAtNode][nAtLinkedNode] = 
-				m_mSSY[nAtLinkedNode][nAtNode] = 
-					(m_vSize[nAtNode][1] 
-					+ m_vSize[nAtLinkedNode][1]) / 2.0; 
+				m_mSSY[nAtLinkedNode][nAtNode] = (ssy * ssy); 
 
 			// retrieve the link weight for layout
-			const REAL weight = 0.5 *
+			REAL weight = (REAL) 0.5 *
 				(pAtNode->GetLinkWeight(pAtLinkedNode)
-					+ pAtLinkedNode->GetLinkWeight(pAtNode)) + 0.0001;
+					+ pAtLinkedNode->GetLinkWeight(pAtNode)) + (REAL) 1e-6;
 
 			// store the link weight
 			m_mLinks[nAtNode][nAtLinkedNode] =
@@ -296,7 +304,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 									 CVectorN<> *pGrad)
 {
 	// reset the energy
-	m_energy = m_energyConst; // 0.0;
+	m_energy = m_energyConst;
 
 	if (NULL != pGrad)
 	{
@@ -316,6 +324,20 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 	// and the total number of nodes plus clusters
 	int nNodeCount = __min(GetStateDim() / 2, m_pSpace->GetNodeCount());
 
+	// compute the weighted center of the nodes, for the center repulsion
+	REAL vCenter[2];
+	REAL totalAct = 0.0;
+	for (int nAt = 0; nAt < m_vInput.GetDim() / 2; nAt++)
+	{
+		vCenter[0] = m_act[nAt] * m_vInput[nAt * 2];
+		vCenter[1] = m_act[nAt] * m_vInput[nAt * 2 + 1];
+		totalAct += m_act[nAt];
+	}
+
+	// scale weighted center by total weight
+	vCenter[0] /= totalAct;
+	vCenter[1] /= totalAct;
+
 	// iterate over all current visualized node views
 	int nAtNode;
 	for (nAtNode = nNodeCount-1; nAtNode >= m_vConstPositions.GetDim() / 2;
@@ -325,8 +347,10 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 		int nAtLinked;
 		for (nAtLinked = nAtNode-1; nAtLinked >= 0; nAtLinked--)
 		{
-			if (nAtLinked != nAtNode)
+			if (nAtLinked == nAtNode)
 			{
+				continue;
+			}
 
 			//////////////////////////////////////////////////////////////
 			// set up some common values
@@ -337,28 +361,23 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 			// compute the x- and y-scales for the fields -- average of
 			//		two rectangles
-			const REAL ssx = m_mSSX[nAtNode][nAtLinked];
-			const REAL ssy = m_mSSY[nAtNode][nAtLinked];
-
-			// check the correctness of the cached values
-			ASSERT(ssx == (m_vSize[nAtNode][0] 
-					+ m_vSize[nAtLinked][0]) / 2.0); 
-			ASSERT(ssy == (m_vSize[nAtNode][1] 
-					+ m_vSize[nAtLinked][1]) / 2.0);
-			ASSERT(m_mSSY[nAtNode][nAtLinked] == m_mSSY[nAtLinked][nAtNode]);
+			const REAL& ssx_sq = m_mSSX[nAtNode][nAtLinked];
+			const REAL& ssy_sq = m_mSSY[nAtNode][nAtLinked];
 
 			//////////////////////////////////////////////////////////////
 			// compute the attraction field
 
 			// store the weight, for convenience
-			const REAL weight = m_mLinks[nAtNode][nAtLinked];
+			const REAL& weight = m_mLinks[nAtNode][nAtLinked];
 
-			// check the cached value
-			ASSERT(m_mLinks[nAtNode][nAtLinked] == m_mLinks[nAtLinked][nAtNode]);
+			// compute the energy due to this interation
+			const REAL dx_ratio = x / ssx_sq;
+			const REAL x_ratio = x * dx_ratio;
+			const REAL dy_ratio = y / ssy_sq;
+			const REAL y_ratio = y * dy_ratio;
 
 			// compute the relative actual distance
-			const REAL act_dist = (REAL) sqrt(x * x / (ssx * ssx)
-				+ y * y / (ssy * ssy)) + 0.001;
+			const REAL act_dist = (REAL) sqrt(x_ratio + y_ratio + ((REAL) 0.001));
 
 			// compute the distance error
 			const REAL dist_error = act_dist - OPT_DIST;
@@ -374,12 +393,12 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 			if (NULL != pGrad)
 			{
 				// compute d_energy
-				const REAL dact_dist_dx = x / (ssx * ssx) / act_dist;
-				const REAL dact_dist_dy = y / (ssy * ssy) / act_dist;
+				const REAL dact_dist_dx = dx_ratio / act_dist;
+				const REAL dact_dist_dy = dy_ratio / act_dist;
 
 				// compute the gradient terms
-				const REAL denergy_dx = factor * 2.0 * dist_error * dact_dist_dx;
-				const REAL denergy_dy = factor * 2.0 * dist_error * dact_dist_dy;
+				const REAL denergy_dx = factor * ((REAL) 2.0) * dist_error * dact_dist_dx;
+				const REAL denergy_dy = factor * ((REAL) 2.0) * dist_error * dact_dist_dy;
 
 				// add to the gradient vector
 				m_vGrad[nAtNode*2   + 0] += denergy_dx;
@@ -391,14 +410,8 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 			//////////////////////////////////////////////////////////////
 			// compute the repulsion field
 
-			// compute the energy due to this interation
-			const REAL dx_ratio = x / (ssx * ssx);
-			const REAL x_ratio = x * dx_ratio; // = (x * x) / (ssx * ssx);
-			const REAL dy_ratio = y / (ssy * ssy);
-			const REAL y_ratio = y * dy_ratio; // = (y * y) / (ssy * ssy);
-
 			// compute the energy term
-			const REAL inv_sq = 1.0 / (x_ratio + y_ratio + 3.0);
+			const REAL inv_sq = ((REAL) 1.0) / (x_ratio + y_ratio + ((REAL) 3.0));
 			const REAL factor_rep = m_k_rep 
 				* (m_act[nAtNode] + m_act[nAtLinked]);
 
@@ -409,8 +422,8 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 			{
 				// compute gradient terms
 				const REAL inv_sq_sq = inv_sq * inv_sq;
-				const REAL dRepulsion_dx = -2.0 * factor_rep * dx_ratio * inv_sq_sq;
-				const REAL dRepulsion_dy = -2.0 * factor_rep * dy_ratio * inv_sq_sq;
+				const REAL dRepulsion_dx = ((REAL) -2.0) * factor_rep * dx_ratio * inv_sq_sq;
+				const REAL dRepulsion_dy = ((REAL) -2.0) * factor_rep * dy_ratio * inv_sq_sq;
 
 				// add to the gradient vectors
 				m_vGrad[nAtNode*2   + 0] += dRepulsion_dx;
@@ -418,12 +431,53 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 				m_vGrad[nAtLinked*2 + 0] -= dRepulsion_dx;
 				m_vGrad[nAtLinked*2 + 1] -= dRepulsion_dy;
 			}
-			}
 		}
-	}
 
-	// m_energy *= 1.0 / (REAL) nVizNodeCount;
-	// m_vGrad *= 1.0 / (REAL) nVizNodeCount;
+		//////////////////////////////////////////////////////////////
+		// compute the centering repulsion field
+
+		if (m_act[nAtNode] <= CENTER_REP_MAX_ACT)
+		{
+			// compute the x- and y-offset between the views
+			const REAL x = m_vInput[nAtNode*2 + 0] - vCenter[0];
+			const REAL y = m_vInput[nAtNode*2 + 1] - vCenter[1];
+
+			// compute the x- and y-scales for the fields -- average of
+			//		two rectangles
+			const REAL aspect_sq = (13.0 / 16.0) * (13.0 / 16.0);
+			const REAL ssx_sq =
+				(CENTER_REP_SCALE * CENTER_REP_SCALE / aspect_sq );
+			const REAL ssy_sq = 
+				(CENTER_REP_SCALE * CENTER_REP_SCALE * aspect_sq );
+
+			// compute the energy due to this interation
+			const REAL dx_ratio = x / ssx_sq; 
+			const REAL x_ratio = x * dx_ratio; 
+			const REAL dy_ratio = y / ssy_sq;
+			const REAL y_ratio = y * dy_ratio;
+
+			// compute the energy term
+			const REAL inv_sq = ((REAL) 1.0) / (x_ratio + y_ratio + ((REAL) 3.0));
+			const REAL factor_rep = m_k_rep * CENTER_REP_WEIGHT
+				* (CENTER_REP_MAX_ACT - abs(m_act[nAtNode])) 
+				* (CENTER_REP_MAX_ACT - abs(m_act[nAtNode]));
+
+			// add to total energy
+			m_energy += factor_rep * inv_sq;
+
+			if (NULL != pGrad)
+			{
+				// compute gradient terms
+				const REAL inv_sq_sq = inv_sq * inv_sq;
+				const REAL dRepulsion_dx = ((REAL) -2.0) * factor_rep * dx_ratio * inv_sq_sq;
+				const REAL dRepulsion_dy = ((REAL) -2.0) * factor_rep * dy_ratio * inv_sq_sq;
+
+				// add to the gradient vectors
+				m_vGrad[nAtNode*2   + 0] += dRepulsion_dx;
+				m_vGrad[nAtNode*2   + 1] += dRepulsion_dy;
+			}
+		} 
+	}
 
 	// store the gradient vector if one was passed
 	if (NULL != pGrad)
@@ -445,6 +499,40 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 
 //////////////////////////////////////////////////////////////////////
+// CSpaceLayoutManager::GetDistError
+// 
+// returns the distance error between two nodes
+//////////////////////////////////////////////////////////////////////
+REAL CSpaceLayoutManager::GetDistError(CNode *pFrom, CNode *pTo)
+{
+	// store the size -- add 10 to ensure non-zero sizes
+	CVectorD<3> vSizeFrom = pFrom->GetSize(pFrom->GetActivation());
+	vSizeFrom *= SIZE_SCALE;
+	vSizeFrom += CVectorD<3>(10.0, 10.0, 0.0);
+
+	CVectorD<3> vSizeTo = pTo->GetSize(pTo->GetActivation());
+	vSizeTo *= SIZE_SCALE;
+	vSizeTo += CVectorD<3>(10.0, 10.0, 0.0);
+
+	CVectorD<3> vSizeAvg = (REAL) 0.5 * (vSizeFrom + vSizeTo);
+
+	CVectorD<3> vOffset = pFrom->GetPosition() - pTo->GetPosition();
+
+	// compute the relative actual distance
+	const REAL act_dist = (REAL) sqrt(vOffset[0] * vOffset[0] 
+											/ (vSizeAvg[0] * vSizeAvg[0])
+		+ vOffset[1] * vOffset[1] 
+				/ (vSizeAvg[1] * vSizeAvg[1])) + 0.001;
+
+	// compute the distance error
+	const REAL dist_error = act_dist - OPT_DIST;
+
+	return dist_error;
+
+}	// CSpaceLayoutManager::GetDistError
+
+
+//////////////////////////////////////////////////////////////////////
 // CSpaceLayoutManager::LayoutNodes
 // 
 // calls the optimizer to lay out the nodes
@@ -461,9 +549,8 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 		return;
 	}
 
-	REAL tol = 1e-12 * (m_pOptimizer->GetFinalValue() + 1.0);
-	m_pOptimizer->SetTolerance(tol); // 
-		// GetTolerance());
+	REAL tol = 1e-12  * (m_pOptimizer->GetFinalValue() + 1.0);
+	m_pOptimizer->SetTolerance(tol);
 
 	// if we have constant nodes,
 	if (nConstNodes > 0)
@@ -496,7 +583,7 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 
 	// form the state vector
 	m_vState.SetDim(GetStateDim());
-	pSSV->GetPositionsVector(m_vState);
+	pSSV->GetPositionsVector(m_vState, TRUE);
 
 	// store the constant positions
 	m_vConstPositions.SetDim(nConstNodes * 2);
@@ -530,30 +617,3 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 }	// CSpaceLayoutManager::LayoutNodes
 
 
-
-REAL CSpaceLayoutManager::GetDistError(CNode *pFrom, CNode *pTo)
-{
-	// store the size -- add 10 to ensure non-zero sizes
-	CVectorD<3> vSizeFrom = pFrom->GetSize(pFrom->GetActivation());
-	vSizeFrom *= SIZE_SCALE;
-	vSizeFrom += CVectorD<3>(10.0, 10.0, 0.0);
-
-	CVectorD<3> vSizeTo = pTo->GetSize(pTo->GetActivation());
-	vSizeTo *= SIZE_SCALE;
-	vSizeTo += CVectorD<3>(10.0, 10.0, 0.0);
-
-	CVectorD<3> vSizeAvg = 0.5 * (vSizeFrom + vSizeTo);
-
-	CVectorD<3> vOffset = pFrom->GetPosition() - pTo->GetPosition();
-
-	// compute the relative actual distance
-	const REAL act_dist = (REAL) sqrt(vOffset[0] * vOffset[0] 
-											/ (vSizeAvg[0] * vSizeAvg[0])
-		+ vOffset[1] * vOffset[1] 
-				/ (vSizeAvg[1] * vSizeAvg[1])) + 0.001;
-
-	// compute the distance error
-	const REAL dist_error = act_dist - OPT_DIST;
-
-	return dist_error;
-}
