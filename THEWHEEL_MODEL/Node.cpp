@@ -312,19 +312,22 @@ void CNode::PropagateActivation(double scale)
 			targetActivation *= 
 				(1.0005f - 0.001f * (float) rand() / (float) RAND_MAX);
 
+			// the new activation defaults to the original activation
+			double newActivation = pTarget->GetActivation();
+
 			// now change it if the current target activation is less than the target
 			if (pTarget->GetActivation() < targetActivation)
 			{
 				// compute the new actual activation
-				double newActivation = pTarget->GetActivation() + 
+				newActivation = pTarget->GetActivation() + 
 					(targetActivation - pTarget->GetActivation()) * scale;
-
-				// set the new actual activation
-				pTarget->SetActivation(newActivation, this);
-
-				// and propagate to linked nodes
-				pTarget->PropagateActivation(scale);
 			}
+
+			// set the new actual activation
+			pTarget->SetActivation(newActivation, this);
+
+			// and propagate to linked nodes
+			pTarget->PropagateActivation(scale);
 		}
 	}
 }
