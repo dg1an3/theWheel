@@ -45,6 +45,30 @@ BOOL CSpace::OnNewDocument()
 	// remove all nodes
 	rootNode.children.RemoveAll();
 
+#define VSIM
+#ifdef VSIM
+	// now populate with some dummy data
+	CNode *pVSIMNode = new CNode("VSIM");
+	rootNode.children.Add(pVSIMNode);
+	pVSIMNode->parent.Set(NULL);
+
+	CNode *pContouringNode = new CNode("Contouring");
+	pVSIMNode->children.Add(pContouringNode); 
+	pContouringNode->parent.Set(pVSIMNode);
+	pContouringNode->LinkTo(pVSIMNode, 0.3f);
+
+	CNode *pIsocenterNode = new CNode("Isocenter Mgmt");
+	pVSIMNode->children.Add(pIsocenterNode); 
+	pIsocenterNode->parent.Set(pVSIMNode);
+	pIsocenterNode->LinkTo(pVSIMNode, 0.3f);
+
+	CNode *pBeamNode = new CNode("Beam Design");
+	pVSIMNode->children.Add(pBeamNode); 
+	pBeamNode->parent.Set(pVSIMNode);
+	pBeamNode->LinkTo(pVSIMNode, 0.3f);
+#endif
+
+#ifdef RECREATION
 	// now populate with some dummy data
 	CNode *pSongsNode = new CNode("Songs");
 	rootNode.children.Add(pSongsNode);
@@ -59,6 +83,7 @@ BOOL CSpace::OnNewDocument()
 
 	pFoodNode->LinkTo(pSongsNode, 0.2f);
 	pFoodNode->LinkTo(pBandsNode, 0.2f);
+#endif
 
 	return TRUE;
 }
