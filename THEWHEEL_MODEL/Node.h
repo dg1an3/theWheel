@@ -11,10 +11,11 @@
 
 #include <Value.h>
 #include <Collection.h>
+#include <ModelObject.h>
 
 #include "NodeLink.h"
 
-class CNode : public CObject  
+class CNode : public CModelObject  
 {
 public:
 	// constructors/destructors
@@ -25,7 +26,7 @@ public:
 	DECLARE_SERIAL(CNode)
 
 	// the node name
-	CValue< CString > name;
+//	CValue< CString > name;
 
 	// the node description
 	CValue< CString > description;

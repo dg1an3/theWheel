@@ -17,16 +17,17 @@ static char THIS_FILE[]=__FILE__;
 //////////////////////////////////////////////////////////////////////
 
 CNode::CNode(const CString& strName, const CString& strDesc)
-	: name(strName),
+	: // name(strName),
 		description(strDesc)
 {
+	name.Set(strName);
 }
 
 CNode::~CNode()
 {
 }
 
-IMPLEMENT_SERIAL(CNode, CObject, 4);
+IMPLEMENT_SERIAL(CNode, CModelObject, 4);
 
 void CNode::LinkTo(CNode *pToNode, float weight)
 {
