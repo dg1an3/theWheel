@@ -47,7 +47,7 @@ COLORREF LOWER_DARK_COLOR = RGB(128, 128, 128);
 //////////////////////////////////////////////////////////////////////
 CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 : forNode(pNode),
-	m_vCenter(CVector<2>(0.0, 0.0)),
+	m_vCenter(CVector<3>(0.0, 0.0, 0.0)),
 	m_vSpringCenter(m_vCenter),
 	m_thresholdedActivation(pNode->GetActivation()),
 	m_springActivation(m_thresholdedActivation),
@@ -74,7 +74,7 @@ CNodeView::~CNodeView()
 // 
 // returns the center point of the node view
 //////////////////////////////////////////////////////////////////////
-CVector<2> CNodeView::GetCenter()
+CVector<3> CNodeView::GetCenter()
 {
 	return m_vCenter;
 }
@@ -84,7 +84,7 @@ CVector<2> CNodeView::GetCenter()
 // 
 // returns the spring-loaded center point of the node view
 //////////////////////////////////////////////////////////////////////
-CVector<2> CNodeView::GetSpringCenter()
+CVector<3> CNodeView::GetSpringCenter()
 {
 	return m_vSpringCenter;
 }
@@ -94,7 +94,7 @@ CVector<2> CNodeView::GetSpringCenter()
 // 
 // returns the piggy-backed center (for sub-threshold node views)
 //////////////////////////////////////////////////////////////////////
-CVector<2> CNodeView::GetPiggybackCenter()
+CVector<3> CNodeView::GetPiggybackCenter()
 {
 	CSpaceView *pSpaceView = (CSpaceView *)m_pParent;
 
@@ -104,7 +104,8 @@ CVector<2> CNodeView::GetPiggybackCenter()
 	m_pParent->GetClientRect(&rectParent);
 
 	// initialize the new center to the center of the parent window
-	CVector<2> vNewCenter = rectParent.CenterPoint();
+	CVector<3> vNewCenter = rectParent.CenterPoint();
+	vNewCenter[2] = 400.0;
 
 	// find the max activator node that is super-threshold
 	CNode *pMaxActNode = forNode.Get();
@@ -143,7 +144,7 @@ CVector<2> CNodeView::GetPiggybackCenter()
 // 
 // sets the center point of the node view
 //////////////////////////////////////////////////////////////////////
-void CNodeView::SetCenter(const CVector<2>& vCenter)
+void CNodeView::SetCenter(const CVector<3>& vCenter)
 {
 	m_vCenter = vCenter;
 }
@@ -268,7 +269,7 @@ void CNodeView::UpdateSprings(double springConst)
 	//		center
 	if (GetThresholdedActivation() == 0.0)
 	{
-		CVector<2> vNewCenter = GetPiggybackCenter();
+		CVector<3> vNewCenter = GetPiggybackCenter();
 
 		// set the new center point
 		SetCenter(vNewCenter * (1.0 - springConst)
@@ -281,7 +282,7 @@ void CNodeView::UpdateSprings(double springConst)
 		+ m_vSpringCenter * (springConst);
 
 #ifdef LOG_CENTERS
-	CVector<2> vParentCenter = rectParent.CenterPoint();
+	CVector<3> vParentCenter = rectParent.CenterPoint();
 
 	if ((m_vSpringCenter - vParentCenter).GetLength() > 800.0)
 		LOG_TRACE("Node %s center at %lf, %lf\n",

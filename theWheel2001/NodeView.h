@@ -38,10 +38,10 @@ public:
 	CAssociation< CNode > forNode;
 
 	// moves the nodeview slowly toward its actual center
-	CVector<2> GetCenter();
-	CVector<2> GetSpringCenter();
-	CVector<2> GetPiggybackCenter();
-	void SetCenter(const CVector<2>& vCenter);
+	CVector<3> GetCenter();
+	CVector<3> GetSpringCenter();
+	CVector<3> GetPiggybackCenter();
+	void SetCenter(const CVector<3>& vCenter);
 	
 	// activation value for this window
 	double GetThresholdedActivation();
@@ -76,8 +76,8 @@ public:
 
 private:
 	// stores the center and spring-connected center of the node view
-	CVector<2> m_vCenter;
-	CVector<2> m_vSpringCenter;
+	CVector<3> m_vCenter;
+	CVector<3> m_vSpringCenter;
 
 	// stores the thresholded activation and spring-connected activation
 	double m_thresholdedActivation;
