@@ -181,7 +181,10 @@ void CSpaceView::NormalizeNodeViews()
 	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 	{
 		CNodeView *pView = nodeViews.Get(nAt);
-		sum += pView->activation.Get();
+
+		// only include super-threshold nodes in the normalization sum
+		if (pView->activation.Get() > ACTIVATION_THRESHOLD)
+			sum += pView->activation.Get();
 	}
 
 	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)

@@ -84,21 +84,30 @@ SPV_STATE_TYPE CenterField(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE wi
 CVector<SPV_STATE_DIM, SPV_STATE_TYPE> CSpaceViewEnergyFunction::GetStateVector()
 {
 	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> vState;
+	int nAtVectorElement = 0;
 	for (int nAt = 0; nAt < min(SPV_STATE_DIM / 2, m_pView->nodeViews.GetSize()); nAt++)
 	{
 		CNodeView *pView = m_pView->nodeViews.Get(nAt);
-		vState[nAt * 2] = (SPV_STATE_TYPE) pView->center.Get()[0];
-		vState[nAt * 2 + 1] = (SPV_STATE_TYPE) pView->center.Get()[1];
+		if (pView->activation.Get() > ACTIVATION_THRESHOLD)
+		{
+			vState[nAtVectorElement++] = (SPV_STATE_TYPE) pView->center.Get()[0];
+			vState[nAtVectorElement++] = (SPV_STATE_TYPE) pView->center.Get()[1];
+		}
 	}
 	return vState;
 }
 
 void CSpaceViewEnergyFunction::SetStateVector(const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vState)
 {
+	int nAtVectorElement = 0;
 	for (int nAt = 0; nAt < min(SPV_STATE_DIM / 2, m_pView->nodeViews.GetSize()); nAt++)
 	{
 		CNodeView *pView = m_pView->nodeViews.Get(nAt);
-		pView->center.Set(CVector<2>(vState[nAt * 2], vState[nAt * 2 + 1]));
+		if (pView->activation.Get() > ACTIVATION_THRESHOLD)
+		{
+			pView->center.Set(CVector<2>(vState[nAtVectorElement++], 
+				vState[nAtVectorElement++]));
+		}
 	}
 }
 

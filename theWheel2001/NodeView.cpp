@@ -504,6 +504,11 @@ void CNodeView::UpdatePrivates()
 	CVector<2> vNewCenter = center.Get() * 0.125 + privCenter.Get() * 0.875;
 	privCenter.Set(vNewCenter);
 
-	float newActivation = activation.Get() * 0.25f + privActivation.Get() * 0.75f;
+	float newActivation;
+	if (activation.Get() > ACTIVATION_THRESHOLD)
+		newActivation = activation.Get() * 0.25f + privActivation.Get() * 0.75f;
+	else
+		newActivation = privActivation.Get() * 0.75f;
+
 	privActivation.Set(newActivation);
 }
