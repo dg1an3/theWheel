@@ -60,6 +60,13 @@ BOOL CtheWheelApp::InitInstance()
 
 	AfxEnableControlContainer();
 
+	// initialize the COM support application
+	HRESULT hr;
+	if (FAILED(hr = CoInitialize(NULL))) 
+	{ 
+		return -1; 
+	}  
+
 	// Standard initialization
 	// If you are not using these features and wish to reduce the size
 	//  of your final executable, you should remove from the following
@@ -216,7 +223,8 @@ void CtheWheelApp::OnAppAbout()
 
 int CtheWheelApp::ExitInstance() 
 {
-	// GdiplusShutdown(gdiplusToken);
+	// shut down COM support
+	CoUninitialize(); 
 	
 	return CWinApp::ExitInstance();
 }
