@@ -115,6 +115,19 @@ IMPLEMENT_SERIAL(CNode, CObject, VERSIONABLE_SCHEMA|7);
 //		5 -- added URL
 
 //////////////////////////////////////////////////////////////////////
+// CNode::GetSpace
+// 
+// returns a pointer to the space containing the node
+//////////////////////////////////////////////////////////////////////
+CSpace *CNode::GetSpace()
+{
+	return m_pSpace;
+
+}	// CNode::GetSpace
+
+
+
+//////////////////////////////////////////////////////////////////////
 // CNode::GetParent
 // 
 // returns a pointer to the node's parent
@@ -329,6 +342,13 @@ const CString& CNode::GetImageFilename() const
 void CNode::SetImageFilename(const CString& strImageFilename)
 {
 	m_strImageFilename = strImageFilename;
+
+	// trigger re-loading of image filename
+	if (m_pDib != NULL)
+	{
+		delete m_pDib;
+		m_pDib = NULL;
+	}
 
 }	// CNode::SetImageFilename
 
