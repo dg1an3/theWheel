@@ -73,14 +73,15 @@ int CSpaceAndBrowserView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	CCreateContext *pContext = (CCreateContext*) lpCreateStruct->lpCreateParams;
 	CSize size(0,0);
 	m_wndSplitter.CreateView(0,0, RUNTIME_CLASS(CSpaceView), size, pContext);
-	m_wndSplitter.CreateView(1,0, RUNTIME_CLASS(CSpaceBrowser), size, pContext);	
+	m_wndSplitter.CreateView(1,0, RUNTIME_CLASS(CWnd), // CSpaceBrowser), 
+		size, pContext);	
 	
 	CSpaceView *pSpaceView = (CSpaceView *) m_wndSplitter.GetPane(0, 0);
-	CSpaceBrowser *pSpaceBrowser= (CSpaceBrowser *) m_wndSplitter.GetPane(1, 0);
+	// CSpaceBrowser *pSpaceBrowser= (CSpaceBrowser *) m_wndSplitter.GetPane(1, 0);
 
 	// cross link the space view and the browser
-	pSpaceView->m_pBrowser = pSpaceBrowser;
-	pSpaceBrowser->m_pSpaceView = pSpaceView;
+	// pSpaceView->m_pBrowser = pSpaceBrowser;
+	// pSpaceBrowser->m_pSpaceView = pSpaceView;
 
 	return 0;
 }
@@ -101,10 +102,10 @@ void CSpaceAndBrowserView::OnInitialUpdate()
 {
 	CView::OnInitialUpdate();
 	
-	CHtmlView *pHtmlView = (CHtmlView *)m_wndSplitter.GetPane(1, 0);
-	CSpaceView *pSpaceView = (CSpaceView *) m_wndSplitter.GetPane(0, 0);
-	CSpace *pSpace = pSpaceView->GetDocument();
-	CNode *pRootNode = pSpace->GetRootNode();
-	if (pRootNode->GetUrl())
-		pHtmlView->Navigate2(pRootNode->GetUrl());
+	// CHtmlView *pHtmlView = (CHtmlView *)m_wndSplitter.GetPane(1, 0);
+	// CSpaceView *pSpaceView = (CSpaceView *) m_wndSplitter.GetPane(0, 0);
+	// CSpace *pSpace = pSpaceView->GetDocument();
+	// CNode *pRootNode = pSpace->GetRootNode();
+	// if (pRootNode->GetUrl())
+	//	pHtmlView->Navigate2(pRootNode->GetUrl());
 }

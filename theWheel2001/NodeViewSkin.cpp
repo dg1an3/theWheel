@@ -62,7 +62,7 @@ CRect CNodeViewSkin::CalcOuterRect(CNodeView *pNodeView)
 {
 	// compute the new width and height from the desired area and the desired
 	//		aspect ratio
-	double scale = sqrt(m_nWidth * m_nHeight);
+	REAL scale = (REAL) sqrt(m_nWidth * m_nHeight);
 
 	// get the size for the node view, given the spring activation
 	CVector<3> vSize = 
@@ -90,19 +90,19 @@ CRect CNodeViewSkin::CalcOuterRect(CNodeView *pNodeView)
 CRect CNodeViewSkin::CalcInnerRect(CNodeView *pNodeView)
 {
 	// compute the r, which represents the amount of "elliptical-ness"
-	float r = 1.0f - (1.0f - 1.0f / (float) sqrt(2.0f))
-		* (float) exp(-8.0f * pNodeView->GetSpringActivation());
+	REAL r = 1.0f - (1.0f - 1.0f / (REAL) sqrt(2.0f))
+		* (REAL) exp(-8.0f * pNodeView->GetSpringActivation());
 
 	CRect rectOuter = CalcOuterRect(pNodeView);
 	CRect rectInner;
-	rectInner.top = (long) ((float) (rectOuter.top + rectOuter.Height() / 2) 
-		- r * (float) rectOuter.Height() / 2.0f);
-	rectInner.bottom = (long) ((float) (rectOuter.top + rectOuter.Height() / 2) 
-		+ r * (float) rectOuter.Height() / 2.0f);
-	rectInner.left = (long) ((float) (rectOuter.left + rectOuter.Width() / 2) 
-		- r * (float) rectOuter.Width() / 2.0f);
-	rectInner.right = (long) ((float) (rectOuter.left + rectOuter.Width() / 2) 
-		+ r * (float) rectOuter.Width() / 2.0f);
+	rectInner.top = (long) ((REAL) (rectOuter.top + rectOuter.Height() / 2) 
+		- r * (REAL) rectOuter.Height() / 2.0f);
+	rectInner.bottom = (long) ((REAL) (rectOuter.top + rectOuter.Height() / 2) 
+		+ r * (REAL) rectOuter.Height() / 2.0f);
+	rectInner.left = (long) ((REAL) (rectOuter.left + rectOuter.Width() / 2) 
+		- r * (REAL) rectOuter.Width() / 2.0f);
+	rectInner.right = (long) ((REAL) (rectOuter.left + rectOuter.Width() / 2) 
+		+ r * (REAL) rectOuter.Width() / 2.0f);
 
 	return rectInner;
 }
@@ -150,9 +150,9 @@ CRect CNodeViewSkin::CalcLeftRightEllipseRect(CNodeView *pNodeView)
 	CRect rectInner = CalcInnerRect(pNodeView);
 
 	// compute the ellipse's b
-	float rx = ((float) rectInner.Width())
-			/ ((float) rectOuter.Width()); 
-	float bx = (float) sqrt((float) (rectInner.Height() 
+	REAL rx = ((REAL) rectInner.Width())
+			/ ((REAL) rectOuter.Width()); 
+	REAL bx = (REAL) sqrt((REAL) (rectInner.Height() 
 		* rectInner.Height()) * 0.25f
 			/ (1.0f - rx * rx));
 
@@ -176,9 +176,9 @@ CRect CNodeViewSkin::CalcTopBottomEllipseRect(CNodeView *pNodeView)
 	CRect rectInner = CalcInnerRect(pNodeView);
 
 	// compute the ellipse's b
-	float ry = ((float) rectInner.Height())
-			/ ((float) rectOuter.Height()); 
-	float by = (float) sqrt((float) (rectInner.Width() * rectInner.Width()) * 0.25f
+	REAL ry = ((REAL) rectInner.Height())
+			/ ((REAL) rectOuter.Height()); 
+	REAL by = (REAL) sqrt((REAL) (rectInner.Width() * rectInner.Width()) * 0.25f
 			/ (1.0f - ry * ry));
 
 	// now compute the ellipse's rectangle
@@ -260,18 +260,9 @@ void CNodeViewSkin::DrawSkin(CDC *pDC, CNodeView *pNodeView)
 }
 
 // draw a link
-void CNodeViewSkin::DrawLink(CDC *pDC, CVector<3>& vFrom, float actFrom,
-			  CVector<3>& vTo, float actTo)
+void CNodeViewSkin::DrawLink(CDC *pDC, CVector<3>& vFrom, REAL actFrom,
+			  CVector<3>& vTo, REAL actTo)
 {
-	// clip if outside the client area
-	if (vFrom[0] < 0.0 || vFrom[0] > m_nWidth 
-		|| vFrom[1] < 0.0 || vFrom[1] > m_nHeight
-		|| vTo[0]   < 0.0 || vTo[0]   > m_nWidth 
-		|| vTo[1]   < 0.0 || vTo[1]   > m_nHeight)
-	{
-		return;
-	}
-
 	// grey brush for drawing links
 	static CBrush greyBrushDark(RGB(160, 160, 160));
 	static CBrush greyBrushMid(RGB(172, 172, 172));
@@ -290,21 +281,21 @@ void CNodeViewSkin::DrawLink(CDC *pDC, CVector<3>& vFrom, float actFrom,
 	CVector<3> vNormal(vOffset[1], -vOffset[0]);
 	vNormal.Normalize();
 
-	double fromSize = sqrt(actFrom);
-	double toSize = sqrt(actTo);
-	double midSize = 0.5 * (fromSize + toSize);
+	REAL fromSize = (REAL) sqrt(actFrom);
+	REAL toSize = (REAL) sqrt(actTo);
+	REAL midSize = 0.5f * (fromSize + toSize);
 
-	vOffset *= 0.1;
+	vOffset *= (REAL) 0.1;
 
 	CPoint ptPoly[8];
 	ptPoly[0] = vFrom;
-	ptPoly[1] = vFrom +       vOffset + fromSize * 60.0 * vNormal;
-	ptPoly[2] = vFrom + 5.0 * vOffset + midSize * 15.0 * vNormal;
-	ptPoly[3] = vFrom + 9.0 * vOffset + toSize * 60.0 * vNormal;
+	ptPoly[1] = vFrom +				 vOffset + fromSize * 60.0f * vNormal;
+	ptPoly[2] = vFrom + (REAL) 5.0 * vOffset +  midSize * 15.0f * vNormal;
+	ptPoly[3] = vFrom + (REAL) 9.0 * vOffset +   toSize * 60.0f * vNormal;
 	ptPoly[4] = vTo;
-	ptPoly[5] = vFrom + 9.0 * vOffset - toSize * 60.0 * vNormal;
-	ptPoly[6] = vFrom + 5.0 * vOffset - midSize * 15.0 * vNormal;
-	ptPoly[7] = vFrom +       vOffset - fromSize * 60.0 * vNormal;
+	ptPoly[5] = vFrom + (REAL) 9.0 * vOffset -   toSize * 60.0f * vNormal;
+	ptPoly[6] = vFrom + (REAL) 5.0 * vOffset -  midSize * 15.0f * vNormal;
+	ptPoly[7] = vFrom +				 vOffset - fromSize * 60.0f * vNormal;
 
 	// now draw the polygon
 	pDC->Polygon(ptPoly, 8);

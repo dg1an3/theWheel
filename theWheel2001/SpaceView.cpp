@@ -18,16 +18,11 @@
 // include for some constants
 #include <float.h>
 
-// the optimizers
-#include <ConjGradOptimizer.h>
-#include <PowellOptimizer.h>
-
 // the displayed model object
 #include <Space.h>
 
 // child node views
 #include "NodeView.h"
-#include "NodeViewEnergyFunction.h"
 
 // the new node dialog
 #include "EditNodeDlg.h"
@@ -40,16 +35,6 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-/////////////////////////////////////////////////////////////////////////////
-// Constants for the CSpaceView
-/////////////////////////////////////////////////////////////////////////////
-
-// holds the current node ID
-int g_nNodeID = 1100;
-
-// constant for the tolerance of the optimization
-const STATE_TYPE TOLERANCE = (STATE_TYPE) 0.5;
-
 //////////////////////////////////////////////////////////////////////
 // CheckNodeViews
 // 
@@ -60,8 +45,8 @@ BOOL CheckNodeViews(CNode *pNode)
 {
 	CNodeView *pView = (CNodeView *)pNode->GetView();
 	BOOL bOK = (pView != NULL); // pView->IsKindOf(RUNTIME_CLASS(CNodeView));
-	for (int nAt = 0; nAt < pNode->children.GetSize(); nAt++)
-		bOK = bOK && CheckNodeViews((CNode *)(pNode->children.Get(nAt)));
+	for (int nAt = 0; nAt < pNode->GetChildCount(); nAt++)
+		bOK = bOK && CheckNodeViews(pNode->GetChildAt(nAt));
 	return bOK;
 }
 
@@ -83,19 +68,6 @@ CSpaceView::CSpaceView()
 	m_lpDDSBitmap(NULL),	// Offscreen surface 1
 	m_lpClipper(NULL)		// clipper for primary
 {
-	// create the energy function
-	m_pEnergyFunc = new CSpaceViewEnergyFunction(this);
-
-	// create the optimizer
-#ifdef USE_GRADIENT
-	m_pOptimizer = new CConjGradOptimizer<STATE_DIM, STATE_TYPE>(m_pEnergyFunc);
-#else
-	m_pOptimizer = new CPowellOptimizer<STATE_DIM, STATE_TYPE>(m_pEnergyFunc);
-#endif
-
-	// set the tolerance
-	m_pOptimizer->SetTolerance(TOLERANCE);
-
 	// initialize the recent click list
 	for (int nAt = 0; nAt < 2; nAt++)
 		m_pRecentClick[nAt] = NULL;
@@ -112,10 +84,6 @@ CSpaceView::~CSpaceView()
 	for (int nAt = 0; nAt < m_arrNodeViews.GetSize(); nAt++)
 		delete m_arrNodeViews[nAt];
 	m_arrNodeViews.RemoveAll();
-
-	// delete the optimizer and energy function
-	delete m_pEnergyFunc;
-	delete m_pOptimizer;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -153,11 +121,8 @@ CNodeView *CSpaceView::GetNodeView(int nAt)
 //////////////////////////////////////////////////////////////////////
 int CSpaceView::GetVisibleNodeCount()
 {
-#ifdef USE_NODES3D
-	int nNumVizNodeViews = min(m_arrNodeViews.GetSize(), STATE_DIM / 3);
-#else
-	int nNumVizNodeViews = min(m_arrNodeViews.GetSize(), STATE_DIM / 2 - GetDocument()->GetClusterCount());
-#endif
+	int nNumVizNodeViews = __min(m_arrNodeViews.GetSize(), 
+		STATE_DIM / 2 - GetDocument()->GetClusterCount());
 
 	return nNumVizNodeViews;
 }
@@ -167,99 +132,13 @@ int CSpaceView::GetVisibleNodeCount()
 // 
 // activates and propagates on a particular node view
 //////////////////////////////////////////////////////////////////////
-void CSpaceView::ActivateNodeView(CNodeView *pNodeView, float scale)
+void CSpaceView::ActivateNodeView(CNodeView *pNodeView, REAL scale)
 {
 	// first activate the node
 	GetDocument()->ActivateNode(pNodeView->GetNode(), scale);
 
-	CObArray arrVizNode;
-	arrVizNode.Copy(m_arrNodeViews);
-	arrVizNode.RemoveAt(GetVisibleNodeCount(),
-		GetNodeViewCount() - GetVisibleNodeCount());
-
 	// now sort the node views
 	SortNodeViews();
-
-	// compute the activation threshold, and set the thresholded activation on 
-	//		all node views
-
-	// form the number of currently visualized node views
-	double activationThreshold = 
-		GetNodeView(GetVisibleNodeCount() - 1)->GetNode()->GetActivation();
-
-	// compute the normalization factor for super-threshold node views
-	double superThresholdSum = 0.0;
-	for (int nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
-	{
-		superThresholdSum += GetNodeView(nAt)->GetNode()->GetActivation();
-	}
-	double superThresholdScale = TOTAL_ACTIVATION * 1.2f
-		/ GetDocument()->GetRootNode()->GetDescendantActivation();
-
-	// now set the thresholdedActivation for all node views
-	for (nAt = 0; nAt < GetNodeViewCount(); nAt++)
-	{
-		CNodeView *pNodeView = GetNodeView(nAt);
-		double activation = pNodeView->GetNode()->GetActivation();
-
-		// for super-threshold nodes,
-		if (activation >= activationThreshold)
-		{
-			// scale so that super-thresholded activations are (roughly)
-			//		normalized
-			activation *= superThresholdScale;
-
-			// now set the thresholded activation
-			pNodeView->SetThresholdedActivation( (float)
-				activation * (float) superThresholdScale);
-		}
-		else
-		{
-			// otherwise, the thresholded activation is zero
-			pNodeView->SetThresholdedActivation(0.0);
-		}
-	}
-
-//	LayoutNodeViews();
-
-	// find all newly visible nodes
-/*	for (nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
-	{
-		CNodeView *pNodeView = GetNodeView(nAt);
-		BOOL bFound = FALSE;
-		for (int nO = 0; nO < arrVizNode.GetSize(); nO++)
-		{
-			if (pNodeView == (CNodeView *) arrVizNode.GetAt(nO))
-				bFound = TRUE;
-		}
-
-		if (!bFound)
-		{
-			// create the energy function
-			CNodeViewEnergyFunction *pFunc = new CNodeViewEnergyFunction(this);
-			pFunc->m_pNodeView = pNodeView;
-			pFunc->LoadSizesLinks();
-
-			CPowellOptimizer<2, STATE_TYPE> *pOpt = 
-				new CPowellOptimizer<2, STATE_TYPE>(pFunc);
-
-			pOpt->SetTolerance(1.0f);
-
-			CVector<3> vPiggybackCenter = pNodeView->GetNode()->GetPosition(); // GetPiggybackCenter();
-			CVector<2, float> vInput;
-			vInput[0] = vPiggybackCenter[0];
-			vInput[1] = vPiggybackCenter[1];
-
-			CVector<2, STATE_TYPE> vOutput = pOpt->Optimize(vInput);
-
-			delete pFunc;
-			delete pOpt;
-
-			// promote spring position
-			pNodeView->m_vSpringCenter = CVector<3>(vOutput);			
-			pNodeView->GetNode()->SetPosition(CVector<3>(vOutput));
-		}
-	} */
 }
 
 
@@ -329,23 +208,34 @@ void CSpaceView::OnDraw(CDC* pDC)
 	}
 	bFirst = FALSE;
 
-	CNodeView::m_arrNodeViewsToDraw.RemoveAll();
-	CNodeView::m_arrNodeViewsToDraw.Copy(m_arrNodeViews);
-
-	while (CNodeView::m_arrNodeViewsToDraw.GetSize() > 0)
+/*	// draw the node views
+	int nAtNodeView;
+	for (nAtNodeView = 0; nAtNodeView < GetNodeViewCount(); nAtNodeView++)
 	{
-		float min_diff = FLT_MAX;
+		// get the current node view
+		CNodeView *pNodeView = GetNodeView(nAtNodeView);
+
+		// draw the node view
+		pNodeView->Draw(pDC, &m_skin);
+	} 
+*/
+	CObArray arrNodeViewsToDraw;
+	arrNodeViewsToDraw.Copy(m_arrNodeViews);
+
+	while (arrNodeViewsToDraw.GetSize() > 0)
+	{
+		REAL min_diff = FLT_MAX;
 		int nMinIndex = 0;
 		CNodeView *pMinNodeView;
 
 		// draw the node views
 		int nAtNodeView;
-		for (nAtNodeView = 0; nAtNodeView < CNodeView::m_arrNodeViewsToDraw.GetSize(); nAtNodeView++)
+		for (nAtNodeView = 0; nAtNodeView < arrNodeViewsToDraw.GetSize(); nAtNodeView++)
 		{
 			// get the current node view
-			CNodeView *pNodeView = (CNodeView *)CNodeView::m_arrNodeViewsToDraw[nAtNodeView];
+			CNodeView *pNodeView = (CNodeView *)arrNodeViewsToDraw[nAtNodeView];
 
-			float diff = pNodeView->GetSpringActivation() * pNodeView->GetSpringActivation() * 
+			REAL diff = pNodeView->GetSpringActivation() * pNodeView->GetSpringActivation() * 
 				(pNodeView->GetThresholdedActivation() - pNodeView->GetSpringActivation());
 
 			if (diff < min_diff)
@@ -356,23 +246,27 @@ void CSpaceView::OnDraw(CDC* pDC)
 			}
 		} 
 
-		CNodeView::m_arrNodeViewsToDraw.RemoveAt(nMinIndex);
+		arrNodeViewsToDraw.RemoveAt(nMinIndex);
 
 		// draw the node view
 		pMinNodeView->Draw(pDC, &m_skin);
 	}
 
-/*	// draw the node views
-	int nAtNodeView;
-	for (nAtNodeView = GetNodeViewCount()-1; nAtNodeView >= 0; nAtNodeView--)
-	{
-		// get the current node view
-		CNodeView *pNodeView = GetNodeView(nAtNodeView);
+#ifdef USE_EIGENVECTOR_DOT
+	// draw the central moment and principle eigenvector
+	CVector<3> vCenter = GetDocument()->GetCentralMoment();
+	CVector<2> vPrinEigenvector;
+	REAL prinEigenvalue = Eigen(GetDocument()->GetInertiaTensor(), 1, &vPrinEigenvector);
 
-		// draw the node view
-		pNodeView->Draw(pDC, &m_skin);
-	} 
-*/
+	// draw the node view
+	pDC->Ellipse((int) vCenter[0] - 10, (int) vCenter[1] - 10, 
+		(int) vCenter[0] + 10, (int) vCenter[1] + 10);
+	pDC->MoveTo(vCenter[0], vCenter[1]);
+	pDC->LineTo(vCenter[0] + vPrinEigenvector[0] * prinEigenvalue, 
+		vCenter[1] + vPrinEigenvector[1] * prinEigenvalue);
+#endif
+
+#ifdef USE_CLUSTER_DOT
 	// draw the clusters
 	int nAtCluster;
 	for (nAtCluster = 0; nAtCluster < GetDocument()->GetClusterCount(); nAtCluster++)
@@ -381,8 +275,10 @@ void CSpaceView::OnDraw(CDC* pDC)
 		CVector<3> vCenter = GetDocument()->GetClusterAt(nAtCluster)->GetPosition();
 
 		// draw the node view
-		pDC->Ellipse(vCenter[0] - 10.0, vCenter[1] - 10.0, vCenter[0] + 10.0, vCenter[1] + 10.0);
+		pDC->Ellipse((int) vCenter[0] - 10, (int) vCenter[1] - 10, 
+			(int) vCenter[0] + 10, (int) vCenter[1] + 10);
 	}
+#endif
 }
 
 
@@ -453,8 +349,9 @@ void CSpaceView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 			// activate the node to propagate the activation
 			ActivateNodeView(pNewNodeView, (float) 1.4);
 
-			// and lay them out
-			LayoutNodeViews();
+			// and lay them out and center them
+			GetDocument()->LayoutNodes();
+			CenterNodeViews();
 		}
 	}
 }
@@ -541,10 +438,10 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt)
 
 	// and finally, create the child node views
 	int nAtNode;
-	for (nAtNode = 0; nAtNode < pParentNode->children.GetSize(); nAtNode++)
+	for (nAtNode = 0; nAtNode < pParentNode->GetChildCount(); nAtNode++)
 	{
 		// construct a new node view for this node
-		CreateNodeViews((CNode *) pParentNode->children.Get(nAtNode), pt);
+		CreateNodeViews(pParentNode->GetChildAt(nAtNode), pt);
 	}
 
 	// activate this node view after creating children (to maximize size)
@@ -568,10 +465,8 @@ void CSpaceView::SortNodeViews()
 			CNodeView *pThisNodeView = GetNodeView(nAt);
 			CNodeView *pNextNodeView = GetNodeView(nAt+1);
 
-			if ( pThisNodeView-> // GetSpringActivation() < // 
-					GetNode()->GetActivation() < 
-					pNextNodeView-> // GetSpringActivation()) // 
-					GetNode()->GetActivation())
+			if (pNextNodeView->GetNode()->GetActivation() >
+				pThisNodeView->GetNode()->GetActivation())
 			{
 				m_arrNodeViews.SetAt(nAt, pNextNodeView);
 				m_arrNodeViews.SetAt(nAt+1, pThisNodeView);
@@ -602,12 +497,12 @@ void CSpaceView::CenterNodeViews()
 
 	// compute the vector sum of all node views' centers
 	int nAt = 0;
-	double totalScaleFactor = 0.0f;
+	REAL totalScaleFactor = 0.0f;
 
 	for (nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
 	{
 		CNodeView *pView = GetNodeView(nAt);
-		double scaleFactor = 10.0 * // sqrt
+		REAL scaleFactor = 10.0f * // sqrt
 			(pView->GetNode()->GetPrimaryActivation());
 
 		if (pView == m_pRecentClick[0])
@@ -620,7 +515,7 @@ void CSpaceView::CenterNodeViews()
 	}
 
 	// divide by number of node views
-	vMeanCenter *= 1.0 / totalScaleFactor;
+	vMeanCenter *= 1.0f / totalScaleFactor;
 
 	// compute the vector offset for the node views
 	//		window center
@@ -640,70 +535,6 @@ void CSpaceView::CenterNodeViews()
 
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceView::LayoutNodeViews
-// 
-// applies the optimizer to layout the node views
-//////////////////////////////////////////////////////////////////////
-void CSpaceView::LayoutNodeViews()
-{
-	// only layout if there are children
-	if (GetNodeViewCount() == 0)
-		return;
-
-	// do the second optimization
-	CSpaceViewEnergyFunction::CStateVector vCurrent = 
-		m_pEnergyFunc->GetStateVector();
-
-	// now optimize
-	m_pEnergyFunc->LoadSizesLinks();
-	m_pEnergyFunc->m_nEvaluations = 0;
-
-#ifdef TRACE_ITERATIONS_PER_LAYOUT
-	LOG_TRACE("Starting layout...");
-#endif
-
-	// perform the optimization
-	vCurrent = m_pOptimizer->Optimize(vCurrent);
-
-#ifdef TRACE_ITERATIONS_PER_LAYOUT
-	LOG_TRACE("Iterations for layout = %i\n", m_pEnergyFunc->m_nEvaluations);
-#endif
-
-	// set the resulting positions
-	m_pEnergyFunc->SetStateVector(vCurrent);
-
-	// for the subthreshold nodes, set the position to the nearest cluster
-	for (int nAt = GetVisibleNodeCount(); nAt < GetNodeViewCount(); nAt++)
-	{
-		CNodeView *pNodeView = GetNodeView(nAt);
-
-		if (pNodeView->GetNode()->GetMaxActivator() != NULL)
-		{
-			pNodeView->GetNode()->SetPosition(
-				pNodeView->GetNode()->GetMaxActivator()->GetPosition());
-		}
-		else
-		{
-			CNodeCluster *pCluster = GetDocument()->GetClusterAt(0);
-			if (pCluster)
-			{
-				CNodeCluster *pNearestCluster = 
-					pCluster->GetNearestCluster(pNodeView->GetNode());
-
-				// set position to the closest cluster
-				if (pNearestCluster)
-					pNodeView->GetNode()->SetPosition(pNearestCluster->GetPosition());
-			}
-		}
-	}
-
-	// center the node views as part of the layout
-	//		TODO: check this, see if it is really necessary
-	CenterNodeViews();
-}
-
-
-//////////////////////////////////////////////////////////////////////
 // CSpaceView::InitDDraw
 // 
 // activates and propagates on a particular node view
@@ -713,9 +544,7 @@ BOOL CSpaceView::InitDDraw()
     DDSURFACEDESC	ddsd;
     HRESULT		ddrval;
 
-    /*
-     * create the main DirectDraw object
-     */
+    // create the main DirectDraw object
     ddrval = DirectDrawCreate( NULL, &m_lpDD, NULL );
     if( ddrval != DD_OK )
     {
@@ -1166,37 +995,105 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 		CView::OnTimer(nIDEvent);
 		return;
 	}
+
+	///////////////////////////////////////////////////////////////////
+	// Saccade Processing
+
+	// compute the current cursor position
+	CPoint point;
+	::GetCursorPos(&point);
+	ScreenToClient(&point);
+	
+	// retrieve the client rectangle
+	CRect rect;
+	GetClientRect(&rect);
+
+	// test if the point is in the client rectangle
+	if (rect.PtInRect(point))
+	{
+		// add the mouse point to the array
+		m_arrPoints.Add(point);
+
+		// add the time stamp to the array
+		m_arrTimeStamps.Add(::GetTickCount());
+
+		// determine if its a saccade only if enough points have been stored
+		int nSize = m_arrPoints.GetSize();
+		if (nSize > 2)
+		{
+			// now compute the adjusted deceleration
+			double saccadeFactor = GetSaccadeFactor(nSize-3);
+			int nSaccadeFactor = (int) saccadeFactor;
+
+			// and put an ellipse at the point
+			CPoint ptAt = (m_arrPoints[nSize-3]);
+			GetDC()->Ellipse(ptAt.x - nSaccadeFactor, ptAt.y - nSaccadeFactor, 
+				ptAt.x + nSaccadeFactor, ptAt.y + nSaccadeFactor);	
+
+			// find the node view containing the point
+			CNodeView *pSelectedView = FindNodeViewAt(ptAt);
+			if (NULL != pSelectedView)
+			{
+				pSelectedView->m_pendingActivation += 0.0; // saccadeFactor;
+			}
+		}
+	}
+	else
+	{
+		// not in window, so clear points
+		m_arrPoints.RemoveAll();
+		m_arrTimeStamps.RemoveAll();
+	}
+
+	//////////////////////////////////////////////////////////////////////
+	// Layout
+
 #ifdef LOG_LAYOUT_TIME
 	START_TIMER(TIME_LAYOUT)
 #endif
 
 	// perform any pending activations
-//	if (rand() < RAND_MAX / 2)
+	for (int nAt = 0; nAt < this->GetNodeViewCount(); nAt++)
 	{
-		for (int nAt = 0; nAt < this->GetNodeViewCount(); nAt++)
+		CNodeView *pNodeView = GetNodeView(nAt);
+		if (pNodeView->m_pendingActivation > 0.0f)
 		{
-			CNodeView *pNodeView = GetNodeView(nAt);
-			if (pNodeView->m_pendingActivation > 0.0f)
-			{
-				ActivateNodeView(pNodeView, pNodeView->m_pendingActivation);
-				pNodeView->m_pendingActivation = 0.0f;
-			}
+			ActivateNodeView(pNodeView, pNodeView->m_pendingActivation);
+			pNodeView->m_pendingActivation = 0.0f;
 		}
 	}
 
-	// perform the layout
-	LayoutNodeViews();
+	// layout the nodes and center them
+	GetDocument()->LayoutNodes();
+	CenterNodeViews();
 
 #ifdef LOG_LAYOUT_TIME
 	STOP_TIMER(TIME_LAYOUT, "Layout")
 #endif
 
 	// update the privates
-	int nAt;
 	for (nAt = 0; nAt < GetNodeViewCount(); nAt++)
+	{
 		GetNodeView(nAt)->UpdateSprings();
+	}
+
+	// update the clusters
+	int nAtCluster;
+	for (nAtCluster = 0; nAtCluster < GetDocument()->GetClusterCount(); nAtCluster++)
+	{
+		GetDocument()->GetClusterAt(nAtCluster)->UpdateSpring();
+	}
+
+#define LOG_SORTNODEVIEW_TIME
+#ifdef LOG_SORTNODEVIEW_TIME
+	START_TIMER(TIME_SORTNODEVIEW)
+#endif
 
 	SortNodeViews();
+
+#ifdef LOG_SORTNODEVIEW_TIME
+	STOP_TIMER(TIME_SORTNODEVIEW, "Sort Node Views")
+#endif
 
 #ifdef LOG_REDRAW_TIME
 	START_TIMER(TIME_REDRAW)
@@ -1209,8 +1106,10 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 	STOP_TIMER(TIME_REDRAW, "Redraw")
 #endif
 
+	// standard processing
 	CView::OnTimer(nIDEvent);
 
+	// unlock the timer
 	m_sync.Unlock();
 }
 
@@ -1283,4 +1182,71 @@ void CSpaceView::OnViewLayout()
 			// hr = testNode.Term();
 		}
 	}
+}
+
+CVector<2> CSpaceView::GetVelocity(int nIndex)
+{
+	int nSize = m_arrPoints.GetSize();
+	if (nIndex > 1 && nIndex < nSize-1)
+	{
+		CVector<2> vm1(m_arrPoints[nIndex-1]);
+		CVector<2> vp1(m_arrPoints[nIndex+1]);
+
+		return 0.5 * (vp1 - vm1);
+	}
+
+	return CVector<2>(0, 0);
+}
+
+CVector<2> CSpaceView::GetAvgVelocity(int nIndex)
+{
+	return 0.25 * GetVelocity(nIndex+1) 
+		+  0.5  * GetVelocity(nIndex) 
+		+  0.25 * GetVelocity(nIndex-1);
+}
+
+CVector<2> CSpaceView::GetAccel(int nIndex)
+{
+	int nSize = m_arrPoints.GetSize();
+	if (nIndex > 1 && nIndex < nSize-1)
+	{
+		CVector<2> vm1(m_arrPoints[nIndex-1]);
+		CVector<2> v0(m_arrPoints[nIndex]);
+		CVector<2> vp1(m_arrPoints[nIndex+1]);
+
+		return (vm1 + vp1) - 2.0 * v0;
+	}
+
+	return CVector<2>(0, 0);
+}
+
+CVector<2> CSpaceView::GetAvgAccel(int nIndex)
+{
+	return 0.25 * GetAccel(nIndex+1) 
+		+  0.5  * GetAccel(nIndex) 
+		+  0.25 * GetAccel(nIndex-1);
+}
+
+double CSpaceView::GetSaccadeFactor(int nIndex)
+{
+	// compute the velocity
+	CVector<2> vVelocity = GetAvgVelocity(nIndex);
+
+	// compute the velocity scale factor
+	double velocityScale = 500.0 
+		/ (vVelocity.GetLength() * vVelocity.GetLength() + 0.002);
+
+	// compute the acceleration
+	CVector<2> vAccel = GetAvgAccel(nIndex);
+
+	// compute the signed acceleration
+	double signedAccel = velocityScale * vVelocity * vAccel;
+
+	// pass through the inverse sigmoidal function
+	const double A = log(3) / 1000.0;		// determines the half-point of the sigmoidal
+	double saccadeFactor = (exp(-A * signedAccel) - exp(A * signedAccel)) 
+		/ (exp(-A * signedAccel) + exp(A * signedAccel));
+
+	// now compute the adjusted deceleration
+	return (saccadeFactor > 0.0) ? saccadeFactor : 0.0;
 }

@@ -25,12 +25,18 @@
 #include <afxmt.h>
 #include <afxhtml.h>
 
+// internet includes for web pages
 #include <wininet.h> 
 #include <urlmon.h> 
 #include <mshtml.h> 
 
 #include <comdef.h>
 
+// multimedia and sound includes
+#include <mmsystem.h>
+#include <mmreg.h>
+#include <msacm.h>
+#include <dsound.h>
 
 void log_trace(const char *, ...);
 

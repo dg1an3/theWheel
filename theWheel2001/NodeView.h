@@ -36,8 +36,6 @@ public:
 // Attributes
 public:
 
-	static CObArray m_arrNodeViewsToDraw;
-
 	// accessor for the node
 	CNode *GetNode();
 
@@ -45,9 +43,8 @@ public:
 	CVector<3> GetSpringCenter();
 	
 	// activation value for this window
-	double GetThresholdedActivation();
-	double GetSpringActivation() { return m_springActivation; }
-	void SetThresholdedActivation(double activation);
+	REAL GetThresholdedActivation();
+	REAL GetSpringActivation() { return m_springActivation; }
 
 	// accessors for the node view's rectangles
 	CRect GetOuterRect();
@@ -61,7 +58,7 @@ public:
 // Operations
 public:
 	// smooth updating of spring state variables
-	void UpdateSprings(double springConst = 0.90);
+	void UpdateSprings(REAL springConst = 0.95);
 
 	// draws the node view
 	void Draw(CDC *pDC, CNodeViewSkin *pSkin);
@@ -83,8 +80,8 @@ public:
 	CVector<3> m_vSpringCenter;
 
 	// stores the thresholded activation and spring-connected activation
-	double m_thresholdedActivation;
-	double m_springActivation;
+	// REAL m_thresholdedActivation;
+	REAL m_springActivation;
 
 	// pointer to the skin for this node view
 	CNodeViewSkin *m_pSkin;

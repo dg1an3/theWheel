@@ -191,9 +191,9 @@ void CSpaceTreeView::AddNodeItem(CNode *pNode, HTREEITEM hParentItem)
     m_mapItemHandles.SetAt(pNode, hTreeItem);
 
 	// add the children to the tree
-	for (int nAt = pNode->children.GetSize()-1; nAt >= 0 ; nAt--)
+	for (int nAt = pNode->GetChildCount()-1; nAt >= 0 ; nAt--)
 	{
-		CNode *pChild = (CNode *)pNode->children.Get(nAt);
+		CNode *pChild = (CNode *)pNode->GetChildAt(nAt);
 		AddNodeItem(pChild, hTreeItem);
 	}
 
@@ -210,9 +210,9 @@ void CSpaceTreeView::RemoveNodeItem(CNode *pNode)
 	if (bResult)
 	{
 		// remove the child nodes
-		for (int nAt = 0; nAt < pNode->children.GetSize(); nAt++)
+		for (int nAt = 0; nAt < pNode->GetChildCount(); nAt++)
 		{
-			CNode *pChild = (CNode *)pNode->children.Get(nAt);
+			CNode *pChild = (CNode *)pNode->GetChildAt(nAt);
 			RemoveNodeItem(pChild);
 		}
 

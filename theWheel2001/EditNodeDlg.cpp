@@ -121,10 +121,13 @@ void CEditNodeDlg::AddLinksFromOtherNode(CNode *pOtherNode, int nLevels)
 			lvitem.cchTextMax = 100;
 			lvitem.iItem = m_LinkList.InsertItem(&lvitem); 
 
-			// now insert the subitem for the link weight
+			// format a string with the link name
 			lvitem.mask = LVIF_TEXT; 
 			lvitem.iSubItem = 1;
-			lvitem.pszText = pLinkedNode->name.Get().GetBuffer(100);
+			CString strName(pLinkedNode->GetName());
+			lvitem.pszText = strName.GetBuffer(100);
+
+			// now insert the subitem for the link weight
 			BOOL bResult = m_LinkList.SetItem(&lvitem); 
 
 			// add to the list of nodes
@@ -183,10 +186,13 @@ BOOL CEditNodeDlg::OnInitDialog()
 		lvitem.cchTextMax = 100;
 		lvitem.iItem = m_LinkList.InsertItem(&lvitem); 
 
-		// now insert the subitem for the link weight
+		// format a string with the target name
 		lvitem.mask = LVIF_TEXT; 
 		lvitem.iSubItem = 1;
-		lvitem.pszText = pLink->GetTarget()->name.Get().GetBuffer(100);
+		CString strTargetName(pLink->GetTarget()->GetName());
+		lvitem.pszText = strTargetName.GetBuffer(100);
+
+		// now insert the subitem for the link weight
 		BOOL bResult = m_LinkList.SetItem(&lvitem);
 
 		m_arrNodes.Add(pLink->GetTarget());

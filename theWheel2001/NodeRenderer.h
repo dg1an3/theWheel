@@ -9,8 +9,8 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include <Value.h>
-#include <Association.h>
+// #include <Value.h>
+// #include <Association.h>
 
 #include <Dib.h>
 
@@ -25,29 +25,13 @@ public:
 	CNodeRenderer(COpenGLView *pView);
 	virtual ~CNodeRenderer();
 
-	// stores the current position of the node's center
-	CValue< CVector<2> > position;
-
-	// stores the node's current activation value
-	CValue< double > activation;
-
-	// stores the node's aspect ratio
-	CValue< double > aspectRatio;
-
-	// stores the radius of the border
-	CValue< double > borderRadius;
-
 	// association to the node to be rendered
-	// CAssociation< CNode > forNode;
 	CDib m_Image;
 
+	// handler for activation change
+	void SetActivation(double);
+
 protected:
-	// computes the node's x-size (ellipse a)
-	CValue< double > width;
-
-	// computes the node's rectangularity (from sqrt(2.0e) to 1.0))
-	CValue< double > rectangularity;
-
 	// evaluates the elliptangle at a point
 	CVector<3> EvalEllipseMolding(double theta, double a, double b);
 
@@ -62,8 +46,24 @@ protected:
 	// renders the whole node
 	virtual void OnRenderScene();
 
-	// handler for activation change
-	void OnActivationChanged(CObservableObject *pSource, void *pOldValue);
+private:
+	// stores the current position of the node's center
+	CVector<2> m_position;
+
+	// stores the node's current activation value
+	double m_activation;
+
+	// stores the node's aspect ratio
+	double m_aspectRatio;
+
+	// stores the radius of the border
+	double m_borderRadius;
+
+	// computes the node's x-size (ellipse a)
+	double m_width;
+
+	// computes the node's rectangularity (from sqrt(2.0e) to 1.0))
+	double m_rectangularity;
 };
 
 #endif // !defined(AFX_NODERENDERER_H__35348172_09C8_401B_A1D6_955CE7CE536D__INCLUDED_)

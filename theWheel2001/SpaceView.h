@@ -13,15 +13,13 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
+#include <ddraw.h>
+#include "ddutil.h"
+
 #include "Space.h"
 #include "NodeView.h"
 #include "NodeViewSkin.h"
-#include "SpaceViewEnergyFunction.h"
 
-#include <Optimizer.h>
-
-#include <ddraw.h>
-#include "ddutil.h"
 
 //////////////////////////////////////////////////////////////////////
 // class CSpaceView
@@ -58,7 +56,7 @@ public:
 // Operations
 public:
 	// activates a particular node by a particular scale factor
-	void ActivateNodeView(CNodeView *pNodeView, float scale);
+	void ActivateNodeView(CNodeView *pNodeView, REAL scale);
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -84,14 +82,17 @@ public:
 	// centering all child views based on center-of-gravity
 	void CenterNodeViews();
 
-	// layout for all child views
-	void LayoutNodeViews();
-
 	// initializes the direct draw surfaces
 	BOOL InitDDraw();
 
 	// processes a mouse wave activation
 	void WaveActivate(CPoint pt);
+
+	double GetSaccadeFactor(int nIndex);
+	CVector<2> GetVelocity(int nIndex);
+	CVector<2> GetAvgVelocity(int nIndex);
+	CVector<2> GetAccel(int nIndex);
+	CVector<2> GetAvgAccel(int nIndex);
 
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -123,12 +124,6 @@ private:
 	// the skin for the node views
 	CNodeViewSkin m_skin;
 
-	// the optimizer used to lay out the child views
-	COptimizer<STATE_DIM, STATE_TYPE> *m_pOptimizer;
-
-	// the energy function that the optimizer uses as an objective function
-	CSpaceViewEnergyFunction *m_pEnergyFunc;
-
 	// back buffer for drawing
 	LPDIRECTDRAW		m_lpDD;			// DirectDraw object
 	LPDIRECTDRAWSURFACE	m_lpDDSPrimary;	// DirectDraw primary surface
@@ -150,6 +145,10 @@ private:
 
 	// array of previous mouse movement points
 	CPoint m_ptPrev;
+
+	// arrays for saccade processing
+	CArray<DWORD, DWORD> m_arrTimeStamps;
+	CArray<CPoint, CPoint&> m_arrPoints;
 };
 
 #ifndef _DEBUG  // debug version in SpaceView.cpp

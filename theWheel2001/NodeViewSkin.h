@@ -36,8 +36,8 @@ public:
 	void DrawSkin(CDC *pDC, CNodeView *pNodeView);
 
 	// draw a link
-	void DrawLink(CDC *pDC, CVector<3>& vFrom, float actFrom,
-		CVector<3>& vTo, float actTo);
+	void DrawLink(CDC *pDC, CVector<3>& vFrom, REAL actFrom,
+		CVector<3>& vTo, REAL actTo);
 
 // Implementation
 protected:

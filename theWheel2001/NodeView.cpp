@@ -17,7 +17,7 @@
 // parent class
 #include "SpaceView.h"
 
-#include "NodeViewEnergyFunction.h"
+// #include "NodeViewEnergyFunction.h"
 #include <PowellOptimizer.h>
 
 // the displayed model object
@@ -31,8 +31,6 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-CObArray CNodeView::m_arrNodeViewsToDraw;
-
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -45,9 +43,7 @@ CObArray CNodeView::m_arrNodeViewsToDraw;
 CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 : m_pNode(pNode),
 	m_pSkin(NULL),
-	m_vSpringCenter(m_pNode->GetPosition()),
-	m_thresholdedActivation(pNode->GetActivation()),
-	m_springActivation(m_thresholdedActivation),
+	m_springActivation(pNode->GetActivation()),
 	m_ptMouseDown(-1, -1),
 	m_bDragging(FALSE),
 	m_bDragged(FALSE),
@@ -57,6 +53,12 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 {
 	// set the view pointer for the node
 	GetNode()->SetView(this);
+
+	CRect rectParent;
+	pParent->GetClientRect(&rectParent);
+
+	m_vSpringCenter = CVector<3>(rectParent.Width() / 2, 
+		rectParent.Height() / 2);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -94,19 +96,36 @@ CVector<3> CNodeView::GetSpringCenter()
 // 
 // returns the thresholded activation value for the node view
 //////////////////////////////////////////////////////////////////////
-double CNodeView::GetThresholdedActivation()
+REAL CNodeView::GetThresholdedActivation()
 {
-	return m_thresholdedActivation;
-}
+	// compute the threshold
+	int nSuperNodeCount = 
+		m_pParent->GetDocument()->GetSuperNodeCount();
+	
+	if (nSuperNodeCount > 0)
+	{
+		CNode *pLastSuperNode = 
+			m_pParent->GetDocument()->GetNodeAt(nSuperNodeCount-1);
+		REAL activationThreshold = pLastSuperNode->GetActivation();
 
-//////////////////////////////////////////////////////////////////////
-// CNodeView::SetThresholdedActivation
-// 
-// sets the thresholded activation value for the node view
-//////////////////////////////////////////////////////////////////////
-void CNodeView::SetThresholdedActivation(double activation)
-{
-	m_thresholdedActivation = activation;
+		// compute the normalization factor for super-threshold node views
+		REAL superThresholdScale = TOTAL_ACTIVATION * 1.2f
+			/ m_pParent->GetDocument()->GetTotalActivation();
+
+		// get this node's activation
+		REAL activation = GetNode()->GetActivation();
+
+		// for super-threshold nodes,
+		if (activation >= activationThreshold)
+		{
+			// return the scaled, thresholded activation
+			return activation * superThresholdScale * superThresholdScale;
+
+		}
+	}
+
+	// otherwise, the thresholded activation is 0.0
+	return 0.0f;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -119,7 +138,7 @@ CRect CNodeView::GetOuterRect()
 	CRect rectOuter;
 	if (m_pSkin)
 		rectOuter = m_pSkin->CalcOuterRect(this);
-	rectOuter.OffsetRect(GetSpringCenter()[0], GetSpringCenter()[1]);
+	rectOuter.OffsetRect((int) GetSpringCenter()[0], (int) GetSpringCenter()[1]);
 
 	return rectOuter;
 }
@@ -134,7 +153,7 @@ CRect CNodeView::GetInnerRect()
 	CRect rectInner;
 	if (m_pSkin)
 		rectInner = m_pSkin->CalcInnerRect(this);
-	rectInner.OffsetRect(GetSpringCenter()[0], GetSpringCenter()[1]);
+	rectInner.OffsetRect((int) GetSpringCenter()[0], (int) GetSpringCenter()[1]);
 
 	return rectInner;
 }
@@ -157,7 +176,7 @@ CRgn& CNodeView::GetShape(int nErode)
 	if (m_shape.GetSafeHandle() == NULL && m_pSkin != NULL)
 	{
 		m_pSkin->CalcShape(this, &m_shape, nErode);
-		m_shape.OffsetRgn(GetSpringCenter()[0], GetSpringCenter()[1]);
+		m_shape.OffsetRgn((int) GetSpringCenter()[0], (int) GetSpringCenter()[1]);
 	}
 
 	return m_shape;
@@ -169,25 +188,46 @@ CRgn& CNodeView::GetShape(int nErode)
 // updates the spring-dynamic variables -- should be called on a 
 //		regular basis
 //////////////////////////////////////////////////////////////////////
-void CNodeView::UpdateSprings(double springConst)
+void CNodeView::UpdateSprings(REAL springConst)
 {
-	// get the parent window
-	CSpaceView *pSpaceView = (CSpaceView *)m_pParent;
-
-	// get the parent rectangle
-	CRect rectParent;
-	ASSERT(::IsWindow(m_pParent->m_hWnd));
-	m_pParent->GetClientRect(&rectParent);
+	// update node's spring activation
+	GetNode()->UpdateSpring(springConst);
 
 	// update spring activation
-	m_springActivation = GetThresholdedActivation() * (1.0 - springConst)
-		+ m_springActivation * springConst;
+ 	m_springActivation 
+		= GetThresholdedActivation() * (1.0f - springConst * 0.90)
+			+ m_springActivation * springConst * 0.90;
 
 	// update spring center
-	springConst = 0.925;
-	springConst *= 1.02;
-	m_vSpringCenter = GetNode()->GetPosition() * (1.0 - springConst)
-		+ m_vSpringCenter * (springConst);
+	// springConst *= (REAL) 1.02f;
+
+	// compute the scale
+	CRect rectParent;
+	m_pParent->GetClientRect(&rectParent);
+	REAL scale 
+		= (REAL) sqrt(rectParent.Width() * rectParent.Height()) 
+			/ 250.0f;
+
+	// compute the center
+	CVector<3> vCenter(
+		(REAL) rectParent.Width() / 2, 
+		(REAL) rectParent.Height() / 2,
+		0.0f);
+
+	// compute the scaled position
+	CVector<3> vScaledPos 
+		= scale * (GetNode()->GetPosition() - vCenter) + vCenter;
+
+	// update the center spring
+	CVector<3> vNewSpringCenter 
+		= vScaledPos * (1.0f - springConst)
+			+ m_vSpringCenter * (springConst);
+	CVector<3> vCenterDiff = vNewSpringCenter - m_vSpringCenter;
+	if (vCenterDiff.GetLength() > 500.0)
+	{
+		vCenterDiff *= 500.0 / vCenterDiff.GetLength();
+	}
+	m_vSpringCenter += vCenterDiff;
 
 	// trigger re-computing the shape
 	m_shape.DeleteObject();	
@@ -216,9 +256,11 @@ void CNodeView::Draw(CDC *pDC, CNodeViewSkin *pSkin)
 		// DrawLinks(pDC);
 
 		// draw the skin
-		pDC->OffsetWindowOrg(-GetSpringCenter()[0], -GetSpringCenter()[1]);
+		pDC->OffsetWindowOrg((int) -GetSpringCenter()[0], 
+			(int) -GetSpringCenter()[1]);
 		pSkin->DrawSkin(pDC, this);
-		pDC->OffsetWindowOrg(GetSpringCenter()[0], GetSpringCenter()[1]);
+		pDC->OffsetWindowOrg((int) GetSpringCenter()[0], 
+			(int) GetSpringCenter()[1]);
 
 		rectInner.DeflateRect(5, 5, 5, 5);
 
@@ -266,15 +308,15 @@ void CNodeView::DrawLinks(CDC *pDC)
 			// only draw the link to node view's with activations greater than the current
 			if (pLink->GetWeight() > 0.1
 				&& pLinkedView != NULL
-				&& pLinkedView->GetThresholdedActivation() > 0.0
+				// && pLinkedView->GetThresholdedActivation() > 0.0
 				&& pLinkedView->GetSpringActivation() > GetSpringActivation())
 			{
 				// draw the link
 				CVector<3> vFrom = GetSpringCenter();
 				CVector<3> vTo = pLinkedView->GetSpringCenter();
 				
-				m_pSkin->DrawLink(pDC, vFrom, m_springActivation, 
-					vTo, pLinkedView->m_springActivation);
+				m_pSkin->DrawLink(pDC, vFrom, GetSpringActivation(), 
+					vTo, pLinkedView->GetSpringActivation());
 			}
 //			}
 		}
@@ -290,8 +332,8 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 {
 	pDC->SetBkMode(TRANSPARENT);
 
-	int nDesiredHeight = min(rectInner.Height() / 4, 30);
-	nDesiredHeight = max(nDesiredHeight, 15);
+	int nDesiredHeight = __min(rectInner.Height() / 4, 30);
+	nDesiredHeight = __max(nDesiredHeight, 15);
 	int nDesiredWidth = rectInner.Width() / 80;
 
 	CFont font;
@@ -320,7 +362,7 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 	CPen *pOldPen = (CPen *)pDC->SelectStockObject(NULL_PEN);
 	CRect rectTitle = GetOuterRect();
 	rectTitle.top -= 5;
-	if (m_springActivation >= 0.01)
+	if (GetSpringActivation() >= 0.01)
 		rectTitle.bottom = rectText.bottom + 3;
 
 	// clip to the node view
@@ -344,7 +386,7 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 		DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	// now draw the description body
-	if (m_springActivation >= 0.01)
+	if (GetSpringActivation() >= 0.01)
 	{
 		rectText = rectInner;
 		// rectText.DeflateRect(5, 5, 5, 5);
@@ -370,14 +412,14 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 {
 	pDC->SetBkMode(TRANSPARENT);
 
-	int nDesiredHeight = min(rectInner.Height() / 4, 30);
-	nDesiredHeight = max(nDesiredHeight, 15);
+	int nDesiredHeight = __min(rectInner.Height() / 4, 30);
+	nDesiredHeight = __max(nDesiredHeight, 15);
 	int nDesiredWidth = rectInner.Width() / 80;
 
 	// now draw the description body
-	if (m_springActivation >= 0.01)
+	if (GetSpringActivation() >= 0.01)
 	{
-		nDesiredHeight = max(nDesiredHeight / 2, 14);
+		nDesiredHeight = __max(nDesiredHeight / 2, 14);
 
 		if (rectInner.bottom > GetOuterRect().bottom)
 

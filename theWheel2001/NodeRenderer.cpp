@@ -49,7 +49,8 @@ CMolding::CMolding()
 
 CMolding::CMolding(double theta, CVector<3> vOffset, double radius)
 {
-	CMatrix<4> mRotate = CreateRotate(theta, CVector<3>(0.0, 0.0, 1.0));
+	CMatrix<4> mRotate = 
+		CMatrix<4>(CreateRotate(theta, CVector<3>(0.0, 0.0, 1.0)));
 	for (int nAt = 0; nAt < NUM_STEPS+1; nAt++)
 	{
 		m_arrNormals[nAt] = 
@@ -72,18 +73,18 @@ CMolding CMolding::g_masterMolding;
 
 CNodeRenderer::CNodeRenderer(COpenGLView *pView)
 	: COpenGLRenderer(pView),
-		borderRadius(2.0),
-		rectangularity(1.0 / sqrt(2.0)),
-		width(25.0),
-		aspectRatio(0.625),
-		activation(0.1)
-		// color(RGB(192, 192, 192))
+		m_borderRadius(2.0),
+		m_rectangularity(1.0 / sqrt(2.0)),
+		m_width(25.0),
+		m_aspectRatio(0.625),
+		m_activation(0.1)
+		// m_color(RGB(192, 192, 192))
 {
-	color.Set(RGB(255, 255, 255));
+	// color.Set(RGB(255, 255, 255));
 
-	activation.AddObserver(this, (ChangeFunction) OnActivationChanged);
-	rectangularity.AddObserver(this, (ChangeFunction) OnChange);
-	width.AddObserver(this, (ChangeFunction) OnChange);
+	// activation.AddObserver(this, (ChangeFunction) OnActivationChanged);
+	// rectangularity.AddObserver(this, (ChangeFunction) OnChange);
+	// width.AddObserver(this, (ChangeFunction) OnChange);
 
 	// load an image
 	BOOL bResult = m_Image.Load("C:\\dragon_glow.bmp");
@@ -109,7 +110,7 @@ CMolding *CNodeRenderer::RenderMoldingSection(double angle_start, double angle_s
 {
 	if (pOldMolding == NULL)
 		pOldMolding = 
-			new CMolding(angle_start, EvalEllipseMolding(angle_start, a, b), borderRadius.Get());
+			new CMolding(angle_start, EvalEllipseMolding(angle_start, a, b), m_borderRadius);
 
 	double step = (angle_stop - angle_start) / 8.0;
 	for (double theta = angle_start; theta <= angle_stop; theta += step)
@@ -118,7 +119,7 @@ CMolding *CNodeRenderer::RenderMoldingSection(double angle_start, double angle_s
 		CVector<3> vShapePt = EvalEllipseMolding(theta, a, b);
 
 		// create a new molding object
-		CMolding *pNewMolding = new CMolding(theta, vShapePt, borderRadius.Get());
+		CMolding *pNewMolding = new CMolding(theta, vShapePt, m_borderRadius);
 
 		for (int nAt = 0; nAt < NUM_STEPS; nAt++)
 		{
@@ -149,10 +150,10 @@ CMolding *CNodeRenderer::RenderMoldingSection(double angle_start, double angle_s
 void CNodeRenderer::OnRenderScene()
 {
 	// compute the base ellipse a and b
-	double a = max(width.Get(), 10.0);
-	double b = a * aspectRatio.Get();
+	double a = __max(m_width, 10.0);
+	double b = a * m_aspectRatio;
 	
-	glTranslate(position.Get());
+	glTranslate(m_position);
 
 	// draw an image
 /*	void *pBits = m_Image.GetDIBits();
@@ -168,23 +169,23 @@ void CNodeRenderer::OnRenderScene()
 	glDrawPixels(bitmapSize.cx, bitmapSize.cy, GL_RGB, GL_UNSIGNED_BYTE, pBits);
 */
 	// set the color for the node
-	glColor(color.Get());
+	glColor(GetColor());
 
 	// draw an elliptangle
 	glBegin(GL_QUADS);
 		glNormal3d(  0.0, 0.0,   1.0);
-		glVertex3d(-a * rectangularity.Get(), -b * rectangularity.Get(), borderRadius.Get());
-		glVertex3d( a * rectangularity.Get(), -b * rectangularity.Get(), borderRadius.Get());
-		glVertex3d( a * rectangularity.Get(),  b * rectangularity.Get(), borderRadius.Get());
-		glVertex3d(-a * rectangularity.Get(),  b * rectangularity.Get(), borderRadius.Get());
+		glVertex3d(-a * m_rectangularity, -b * m_rectangularity, m_borderRadius);
+		glVertex3d( a * m_rectangularity, -b * m_rectangularity, m_borderRadius);
+		glVertex3d( a * m_rectangularity,  b * m_rectangularity, m_borderRadius);
+		glVertex3d(-a * m_rectangularity,  b * m_rectangularity, m_borderRadius);
 	glEnd();
 
 	// compute the angle dividing the sections of the elliptangle
 	double sectionAngle = atan2(b, a);
 
 	// computing the a and b adjustments for the sections of the elliptangle
-	double r_factor = rectangularity.Get()
-		/ sqrt(1.0 - rectangularity.Get() * rectangularity.Get());
+	double r_factor = m_rectangularity
+		/ sqrt(1.0 - m_rectangularity * m_rectangularity);
 
 	// now render the four sections of the molding
 	CMolding* pOld;
@@ -233,7 +234,7 @@ void CNodeRenderer::DrawText(const CString& strText, CRect rect)
 	// draw some text
 
 	// create a font
-	int nFontHeight = min(rect.Height(), 36);
+	int nFontHeight = __min(rect.Height(), 36);
 	CFont font;
 	font.CreateFont(nFontHeight, // height
 		0,						// width
@@ -274,25 +275,29 @@ void CNodeRenderer::DrawText(const CString& strText, CRect rect)
 	glPixelZoom(zoomFactor, -zoomFactor);
 	glRasterPos3d(0.0 - zoomFactor * (float) rect.Width() / 2.0f, 
 		0.0 + zoomFactor * (float) rect.Height() / 2.0f, 
-		borderRadius.Get() + 0.1);
+		m_borderRadius + 0.1);
 	glDrawPixels(rect.Width(), rect.Height(), GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 }
 
-void CNodeRenderer::OnActivationChanged(CObservableObject *pSource, void *pOldValue)
+void CNodeRenderer::SetActivation(double activation)
 {
+	m_activation = activation;
+
 	// set the new width for the node renderer
-	width.Set(30.0 + 100.0 * sqrt(activation.Get() / aspectRatio.Get()));
+	m_width = 30.0 + 100.0 * sqrt(m_activation / m_aspectRatio);
 
 	// set the new rectangularity for the shape
 	const double c = 0.99999 - 1.0 / sqrt(2.0);
-	double sigmoid = (exp(2.0 * activation.Get()) - exp(-2.0 * activation.Get()))
-		/ (exp(2.0 * activation.Get()) + exp(-2.0 * activation.Get()));
-	rectangularity.Set(sigmoid * c + 1.0 / sqrt(2.0));
+	double sigmoid = (exp(2.0 * m_activation) - exp(-2.0 * m_activation))
+		/ (exp(2.0 * m_activation) + exp(-2.0 * m_activation));
+	m_rectangularity = sigmoid * c + 1.0 / sqrt(2.0);
 
 	// set the aspect ratio for the renderer
-	aspectRatio.Set(0.75 - 0.375 * exp(-8.0 * activation.Get()));
+	m_aspectRatio = 0.75 - 0.375 * exp(-8.0 * m_activation);
 
 	// set the new border radius
-	borderRadius.Set(6.0 + sqrt(activation.Get()) * 5.0);
+	m_borderRadius = 6.0 + sqrt(m_activation) * 5.0;
+
+	Invalidate();
 }
 
