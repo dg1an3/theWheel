@@ -21,6 +21,9 @@
 
 #include "NodeLink.h"
 
+// forward declaration of the space class
+class CSpace;
+
 //////////////////////////////////////////////////////////////////////
 // class CNode
 // 
@@ -31,7 +34,9 @@ class CNode : public CModelObject
 {
 public:
 	// constructors/destructors
-	CNode(const CString& strName = "", const CString& strDesc = "");
+	CNode(CSpace *pSpace = NULL,
+		const CString& strName = "", 
+		const CString& strDesc = "");
 	virtual ~CNode();
 
 	// serialization support
@@ -93,6 +98,9 @@ public:
 	virtual void Serialize(CArchive &ar);
 
 protected:
+	// pointer to the space that holds this node
+	CSpace *m_pSpace;
+
 	// pointer to the DIB, if it is loaded
 	CDib *m_pDib;
 

@@ -27,8 +27,11 @@ static char THIS_FILE[]=__FILE__;
 // 
 // constructs a CNode object with the given name and description
 //////////////////////////////////////////////////////////////////////
-CNode::CNode(const CString& strName, const CString& strDesc)
-	: parent(NULL),
+CNode::CNode(CSpace *pSpace, 
+			 const CString& strName, 
+			 const CString& strDesc)
+	: m_pSpace(pSpace),
+		parent(NULL),
 		description(strDesc),
 		m_pDib(NULL),
 		// initialize with a very small activation
