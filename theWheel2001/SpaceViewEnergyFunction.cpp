@@ -24,8 +24,8 @@
 // constant containing a string that indicates the file 
 //		identification and version
 //////////////////////////////////////////////////////////////////////
-const char *pszEnergyFunctionFileId = "$Id$";
-
+const char *pszEnergyFunctionFileId = 
+	"$Id$";
 
 //////////////////////////////////////////////////////////////////////
 // attract_func
@@ -67,9 +67,9 @@ CSpaceViewEnergyFunction::CSpaceViewEnergyFunction(CSpaceView *pView)
 		m_energy(0.0),
 
 		m_attractFunc(&attract_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
-			"ATTRFUNC.TMP"),
+			"ATTRFUNC.TMP", pszEnergyFunctionFileId),
 		m_spacerFunc(&spacer_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
-			"SPACERFUNC.TMP")
+			"SPACERFUNC.TMP", pszEnergyFunctionFileId)
 {
 }
 
