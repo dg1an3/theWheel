@@ -882,17 +882,25 @@ void CSpaceTreeView::OnNewNode()
 
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceTreeView::OnNewNode
+// CSpaceTreeView::OnDeletenode
 // 
 // menu handler for deleting a node
 //////////////////////////////////////////////////////////////////////
 void CSpaceTreeView::OnDeletenode() 
 {
-	// get the currently selected node
+	// get the currently selected node (the marked node for removal)
 	HTREEITEM hSelItem = m_wndTree.GetSelectedItem();
 	if (NULL != hSelItem)	
 	{
+		CNode *pMarkedNode = (CNode *) m_wndTree.GetItemData(hSelItem);
+		ASSERT(pMarkedNode->IsKindOf(RUNTIME_CLASS(CNode)));
+
+		// remove the node from the space
+		GetDocument()->RemoveNode(pMarkedNode);
+
+		// and remove from the tree control
+		m_wndTree.DeleteItem(hSelItem);
 	}	
 
-}	// CSpaceTreeView::OnNewNode
+}	// CSpaceTreeView::OnDeletenode
 
