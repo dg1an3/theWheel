@@ -43,7 +43,7 @@ const REAL ACTIVATION_MIDPOINT = 0.25;
 const REAL K_POS = 600.0;
 
 // constant for weighting the repulsion energy
-const REAL K_REP = 2000.0;
+const REAL K_REP = 200.0;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -398,8 +398,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 					// compute the energy term
 					REAL inv_sq = 1.0 / (x_ratio + y_ratio + 0.1f);
-					REAL factor = K_REP 
-						* m_act[nAtNodeView] * m_act[nAtNodeView];
+					REAL factor = K_REP * m_act[nAtNodeView];
 
 					// add to total energy
 					m_energy += factor * inv_sq;
