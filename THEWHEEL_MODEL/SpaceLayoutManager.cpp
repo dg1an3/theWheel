@@ -397,14 +397,14 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 				const REAL dact_dist_dy = dy_ratio / act_dist;
 
 				// compute the gradient terms
-				const REAL denergy_dx = factor * ((REAL) 2.0) * dist_error * dact_dist_dx;
-				const REAL denergy_dy = factor * ((REAL) 2.0) * dist_error * dact_dist_dy;
+				const REAL denergy_dx = factor * dist_error * dact_dist_dx;
+				const REAL denergy_dy = factor * dist_error * dact_dist_dy;
 
 				// add to the gradient vector
-				m_vGrad[nAtNode*2   + 0] += denergy_dx;
-				m_vGrad[nAtNode*2   + 1] += denergy_dy;
-				m_vGrad[nAtLinked*2 + 0] -= denergy_dx;
-				m_vGrad[nAtLinked*2 + 1] -= denergy_dy;
+				m_vGrad[nAtNode*2   + 0] += denergy_dx + denergy_dx;
+				m_vGrad[nAtNode*2   + 1] += denergy_dy + denergy_dy;
+				m_vGrad[nAtLinked*2 + 0] -= denergy_dx + denergy_dx;
+				m_vGrad[nAtLinked*2 + 1] -= denergy_dy + denergy_dy;
 			}
 
 			//////////////////////////////////////////////////////////////
@@ -422,14 +422,14 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 			{
 				// compute gradient terms
 				const REAL inv_sq_sq = inv_sq * inv_sq;
-				const REAL dRepulsion_dx = ((REAL) -2.0) * factor_rep * dx_ratio * inv_sq_sq;
-				const REAL dRepulsion_dy = ((REAL) -2.0) * factor_rep * dy_ratio * inv_sq_sq;
+				const REAL dRepulsion_dx = factor_rep * dx_ratio * inv_sq_sq;
+				const REAL dRepulsion_dy = factor_rep * dy_ratio * inv_sq_sq;
 
 				// add to the gradient vectors
-				m_vGrad[nAtNode*2   + 0] += dRepulsion_dx;
-				m_vGrad[nAtNode*2   + 1] += dRepulsion_dy;
-				m_vGrad[nAtLinked*2 + 0] -= dRepulsion_dx;
-				m_vGrad[nAtLinked*2 + 1] -= dRepulsion_dy;
+				m_vGrad[nAtNode*2   + 0] -= dRepulsion_dx + dRepulsion_dx;
+				m_vGrad[nAtNode*2   + 1] -= dRepulsion_dy + dRepulsion_dy;
+				m_vGrad[nAtLinked*2 + 0] += dRepulsion_dx + dRepulsion_dx;
+				m_vGrad[nAtLinked*2 + 1] += dRepulsion_dy + dRepulsion_dy;
 			}
 		}
 
@@ -469,12 +469,12 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 			{
 				// compute gradient terms
 				const REAL inv_sq_sq = inv_sq * inv_sq;
-				const REAL dRepulsion_dx = ((REAL) -2.0) * factor_rep * dx_ratio * inv_sq_sq;
-				const REAL dRepulsion_dy = ((REAL) -2.0) * factor_rep * dy_ratio * inv_sq_sq;
+				const REAL dRepulsion_dx = factor_rep * dx_ratio * inv_sq_sq;
+				const REAL dRepulsion_dy = factor_rep * dy_ratio * inv_sq_sq;
 
 				// add to the gradient vectors
-				m_vGrad[nAtNode*2   + 0] += dRepulsion_dx;
-				m_vGrad[nAtNode*2   + 1] += dRepulsion_dy;
+				m_vGrad[nAtNode*2   + 0] -= dRepulsion_dx + dRepulsion_dx;
+				m_vGrad[nAtNode*2   + 1] -= dRepulsion_dy + dRepulsion_dy;
 			}
 		} 
 	}
