@@ -107,6 +107,10 @@ public:
 	CNodeView *m_pRecentClick1;
 	CNodeView *m_pRecentClick2;
 
+	// back buffer for drawing
+	CDC m_dcMem;
+	CBitmap m_bitmapBuffer;
+	CBitmap *m_pOldBitmap;
 
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -125,6 +129,8 @@ protected:
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnTimer(UINT nIDEvent);
+	afx_msg void OnSize(UINT nType, int cx, int cy);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 

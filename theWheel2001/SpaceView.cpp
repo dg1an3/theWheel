@@ -44,7 +44,7 @@ const SPV_STATE_TYPE TOLERANCE =
 
 // constant for the total activation
 const SPV_STATE_TYPE TOTAL_ACTIVATION = 
-	(SPV_STATE_TYPE) 0.45f;
+	(SPV_STATE_TYPE) 0.50f;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -59,7 +59,8 @@ CSpaceView::CSpaceView()
 : isPropagating(TRUE),
 	isWaveMode(FALSE),
 	m_pRecentClick1(NULL),
-	m_pRecentClick2(NULL)
+	m_pRecentClick2(NULL),
+	m_pOldBitmap(NULL)
 {
 	// create the energy function
 	m_pEnergyFunc = new CSpaceViewEnergyFunction(this);
@@ -73,6 +74,9 @@ CSpaceView::CSpaceView()
 
 	// set the tolerance
 	m_pOptimizer->SetTolerance(TOLERANCE);
+
+	// initialize the buffer
+	m_dcMem.CreateCompatibleDC(NULL);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -88,6 +92,15 @@ CSpaceView::~CSpaceView()
 	// delete the optimizer and energy function
 	delete m_pEnergyFunc;
 	delete m_pOptimizer;
+
+	// select out the bitmap
+	m_dcMem.SelectObject(m_pOldBitmap);
+
+	// delete the bitmap buffer
+	m_bitmapBuffer.DeleteObject();
+
+	// delete the device context
+	m_dcMem.DeleteDC();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -382,22 +395,12 @@ void CSpaceView::ActivateNode(CNodeView *pNodeView, float scale)
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnDraw(CDC* pDC)
 {
-	// create a memory device context
-	CDC dcMem;
-	dcMem.CreateCompatibleDC(pDC);
-
 	// get the inner rectangle for drawing the text
 	CRect rectClient;
 	GetClientRect(&rectClient);
 
-	// Draw the image to the back-buffer
-	CBitmap bitmapBuffer;
-	bitmapBuffer.CreateBitmap(rectClient.Width(), rectClient.Height(), 1, 32, NULL); 
-	dcMem.SelectObject(&bitmapBuffer);
-
 	CBrush brush(RGB(192, 192, 192));
-	// brush.CreateSolidBrush();
-	dcMem.FillRect(&rectClient, &brush);
+	m_dcMem.FillRect(&rectClient, &brush);
 
 	// create new node views
 	int nAtNodeView;
@@ -406,8 +409,8 @@ void CSpaceView::OnDraw(CDC* pDC)
 		CNodeView *pNodeView = (CNodeView *)nodeViews.Get(nAtNodeView);
 
 		CBrush greyBrush(RGB(160, 160, 160));
-		CBrush *pOldBrush = dcMem.SelectObject(&greyBrush);
-		CPen *pOldPen = (CPen *)dcMem.SelectStockObject(NULL_PEN);
+		CBrush *pOldBrush = m_dcMem.SelectObject(&greyBrush);
+		CPen *pOldPen = (CPen *)m_dcMem.SelectStockObject(NULL_PEN);
 
 		if (pNodeView->GetThresholdedActivation() > 0.0)
 		{
@@ -435,13 +438,13 @@ void CSpaceView::OnDraw(CDC* pDC)
 					ptPoly[4] = vFrom + vOffset - 3.0 * vNormal;
 					ptPoly[5] = vFrom - 12.0 * vNormal;
 
-					dcMem.Polygon(ptPoly, 6);
+					m_dcMem.Polygon(ptPoly, 6);
 				}
 			}
 		}
 
-		dcMem.SelectObject(pOldPen);
-		dcMem.SelectObject(pOldBrush);
+		m_dcMem.SelectObject(pOldPen);
+		m_dcMem.SelectObject(pOldBrush);
 		greyBrush.DeleteObject();
 	} 
 
@@ -449,16 +452,30 @@ void CSpaceView::OnDraw(CDC* pDC)
 	for (nAtNodeView = nodeViews.GetSize()-1; nAtNodeView >= 0; nAtNodeView--)
 	{
 		CNodeView *pNodeView = (CNodeView *)nodeViews.Get(nAtNodeView);
-		pNodeView->Draw(&dcMem);
+		pNodeView->Draw(&m_dcMem);
 	} 
 
 	// Now blit the backbuffer to the screen
-	pDC->BitBlt(0, 0, rectClient.Width(), rectClient.Height(), &dcMem, 0, 0, SRCCOPY);
+	pDC->BitBlt(0, 0, rectClient.Width(), rectClient.Height(), &m_dcMem, 0, 0, SRCCOPY);
 
 	// clean up
-	dcMem.DeleteDC();
-	bitmapBuffer.DeleteObject();
+	// dcMem.DeleteDC();
+	// bitmapBuffer.DeleteObject();
 }
+
+
+CSpaceView *g_pView = NULL;
+
+void CALLBACK EXPORT UpdateProc(
+   HWND hWnd,      // handle of CWnd that called SetTimer
+   UINT nMsg,      // WM_TIMER
+   UINT nIDEvent,   // timer identification
+   DWORD dwTime    // system time
+)
+{
+	// g_pView->OnTimer(nIDEvent);
+}
+
 
 //////////////////////////////////////////////////////////////////////
 // CSpaceView::OnInitialUpdate
@@ -473,8 +490,10 @@ void CSpaceView::OnInitialUpdate()
 	GetDocument()->Dump(afxDump);
 #endif
 
+	g_pView = this;
+
 	// create a timer
- 	UINT m_nTimerID = SetTimer(7, 10, NULL);
+ 	UINT m_nTimerID = SetTimer(7, 1, NULL);
 	ASSERT(m_nTimerID != 0);
 
 	// delete any old node views
@@ -606,6 +625,7 @@ BEGIN_MESSAGE_MAP(CSpaceView, CView)
 	ON_WM_LBUTTONDOWN()
 	ON_WM_RBUTTONDOWN()
 	ON_WM_TIMER()
+	ON_WM_SIZE()
 	//}}AFX_MSG_MAP
 	// Standard printing commands
 	ON_COMMAND(ID_FILE_PRINT, CView::OnFilePrint)
@@ -701,7 +721,8 @@ void CSpaceView::OnMouseMove(UINT nFlags, CPoint point)
 		CNodeView *pNodeView = nodeViews.Get(nAt);
 
 		// see if the mouse-click was within it
-		if (pNodeView->GetShape().PtInRegion(point))
+		if (pNodeView->GetShape().m_hObject != NULL
+			&& pNodeView->GetShape().PtInRegion(point))
 		{
 			// set the hand pointer cursor
 			::SetCursor(::LoadCursor(GetModuleHandle(NULL), 
@@ -709,7 +730,7 @@ void CSpaceView::OnMouseMove(UINT nFlags, CPoint point)
 
 			if (isWaveMode.Get())
 			{
-				ActivateNode(pNodeView, 0.10f);
+				ActivateNode(pNodeView, 0.05f);
 	
 				m_pRecentClick2 = m_pRecentClick1;
 				m_pRecentClick1 = pNodeView;
@@ -782,3 +803,93 @@ void CSpaceView::OnRButtonDown(UINT nFlags, CPoint point)
 	CView::OnRButtonDown(nFlags, point);
 }
 
+static DWORD g_dwPrevTickCount = 0;
+static DWORD g_dwSumTickCount = 0;
+static DWORD g_dwNumTickCount = 0;
+
+void CSpaceView::OnTimer(UINT nIDEvent) 
+{
+// #define LOG_IDLE_TIME
+#ifdef LOG_IDLE_TIME
+	DWORD dwTickCount = ::GetTickCount();
+	if (g_dwPrevTickCount > 0)
+	{
+		g_dwSumTickCount += (dwTickCount - g_dwPrevTickCount);
+		g_dwNumTickCount++;
+
+		if ((g_dwNumTickCount % 10) == 0)
+			LOG_TRACE("Average time between timer events = %lf\n",
+				(double) g_dwSumTickCount / (double) g_dwNumTickCount);
+	}
+	g_dwPrevTickCount = dwTickCount;
+#endif
+	
+// #define TIME_LAYOUT
+#ifdef TIME_LAYOUT
+	LARGE_INTEGER freq;
+	QueryPerformanceFrequency(&freq);
+	ASSERT(freq.QuadPart != 0);
+
+	LARGE_INTEGER start;
+	QueryPerformanceCounter(&start);
+#endif
+
+	LayoutNodeViews();
+
+#ifdef TIME_LAYOUT
+	LARGE_INTEGER end;
+	QueryPerformanceCounter(&end);
+
+	LOG_TRACE("Time to complete layout = %lf\n",
+		(double) (end.QuadPart - start.QuadPart) 
+			/ (double) freq.QuadPart);
+#endif
+
+
+	// update the privates
+	int nAt;
+	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
+		nodeViews.Get(nAt)->UpdateSprings();
+
+#define TIME_REDRAW
+#ifdef TIME_REDRAW
+	LARGE_INTEGER freq;
+	QueryPerformanceFrequency(&freq);
+	ASSERT(freq.QuadPart != 0);
+
+	LARGE_INTEGER start;
+	QueryPerformanceCounter(&start);
+#endif
+
+	RedrawWindow(NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
+
+#ifdef TIME_REDRAW
+	LARGE_INTEGER end;
+	QueryPerformanceCounter(&end);
+
+	LOG_TRACE("Time to redraw = %lf\n",
+		(double) (end.QuadPart - start.QuadPart) 
+			/ (double) freq.QuadPart);
+#endif
+
+	CView::OnTimer(nIDEvent);
+}
+
+void CSpaceView::OnSize(UINT nType, int cx, int cy) 
+{
+	CView::OnSize(nType, cx, cy);
+
+	// select out the back buffer bitmap
+	if (m_pOldBitmap)
+		m_dcMem.SelectObject(m_pOldBitmap);
+
+	// delete the back buffer bitmap
+	if (m_bitmapBuffer.m_hObject)
+		m_bitmapBuffer.DeleteObject();
+
+	// create a new back buffer bitmap
+	m_bitmapBuffer.CreateBitmap(cx, cy, 1, 32, NULL); 
+
+	// select it
+	m_pOldBitmap = m_dcMem.SelectObject(&m_bitmapBuffer);	
+}
