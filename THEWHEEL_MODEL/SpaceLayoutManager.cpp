@@ -39,7 +39,7 @@
 const REAL TOLERANCE = (REAL) 0.01;
 
 // scale for the sizes of the nodes
-const REAL SIZE_SCALE = 100.0;
+const REAL CSpaceLayoutManager::SIZE_SCALE = 100.0;
 
 // constants for the distance scale vs. activation curve
 const REAL DIST_SCALE_MIN = 1.0;
@@ -48,7 +48,7 @@ const REAL ACTIVATION_MIDPOINT = 0.25;
 
 // compute the optimal normalized distance
 const REAL MIDWEIGHT = 0.5;
-const REAL OPT_DIST = DIST_SCALE_MIN
+const REAL CSpaceLayoutManager::OPT_DIST = DIST_SCALE_MIN
 	+ (DIST_SCALE_MAX - DIST_SCALE_MIN) 
 		* (1.0 - MIDWEIGHT / (MIDWEIGHT + ACTIVATION_MIDPOINT));
 
@@ -60,9 +60,9 @@ const REAL K_POS = 600.0;
 const REAL K_REP = 3200.0;
 
 // constants for center repulsion
-const REAL CENTER_REP_MAX_ACT = 0.15;
-const REAL CENTER_REP_SCALE = SIZE_SCALE / 8.0;
-const REAL CENTER_REP_WEIGHT = 9.0;
+const REAL CSpaceLayoutManager::CENTER_REP_MAX_ACT = 0.15;
+const REAL CSpaceLayoutManager::CENTER_REP_SCALE = SIZE_SCALE / 8.0;
+const REAL CSpaceLayoutManager::CENTER_REP_WEIGHT = 9.0;
 
 //////////////////////////////////////////////////////////////////////
 // CSpaceLayoutManager::CSpaceLayoutManager
@@ -83,6 +83,7 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 		m_vInput(CVectorN<>()),
 		m_energy(0.0),
 		m_energyConst(0.0),
+		m_bCalcCenterRep(TRUE),
 
 		m_pPowellOptimizer(NULL)
 {
@@ -263,6 +264,11 @@ void CSpaceLayoutManager::LoadSizesLinks()
 		// get convenience pointers for the current node view and node
 		CNode *pAtNode = m_pSpace->GetNodeAt(nAtNode);
 
+		m_mSSX[nAtNode][nAtNode] = 1.0;
+		m_mSSY[nAtNode][nAtNode] = 1.0;
+		m_mAvgAct[nAtNode][nAtNode] = 0.0;
+		m_mLinks[nAtNode][nAtNode] = 0.0;
+
 		// iterate over the potential linked views
 		int nAtLinkedNode;
 		for (nAtLinkedNode = nAtNode+1; nAtLinkedNode < nNodeCount; nAtLinkedNode++)
@@ -285,16 +291,14 @@ void CSpaceLayoutManager::LoadSizesLinks()
 				(pAtNode->GetLinkWeight(pAtLinkedNode)
 					+ pAtLinkedNode->GetLinkWeight(pAtNode)) + (REAL) 1e-6;
 
-			m_mAvgAct[nAtNode][nAtLinkedNode] =
-				m_mAvgAct[nAtLinkedNode][nAtNode] =
-					(m_act[nAtNode] + m_act[nAtLinkedNode]);
+			m_mAvgAct[nAtNode][nAtLinkedNode] = 0.0;
+			m_mAvgAct[nAtLinkedNode][nAtNode] =
+				(m_act[nAtNode] + m_act[nAtLinkedNode]);
 
 			// store the link weight
-			m_mLinks[nAtNode][nAtLinkedNode] =
-				m_mLinks[nAtLinkedNode][nAtNode] =
-					weight 
-					
-					* m_mAvgAct[nAtNode][nAtLinkedNode];
+			m_mLinks[nAtNode][nAtLinkedNode] = 0.0;
+			m_mLinks[nAtLinkedNode][nAtNode] =
+				weight * m_mAvgAct[nAtLinkedNode][nAtNode];
 
 		}
 	}
@@ -393,7 +397,6 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 			// compute the factor controlling the importance of the
 			//		attraction term
 			const REAL factor = m_k_pos * weight;
-				// * (m_act[nAtNode] + m_act[nAtLinked]);
 
 			// and add the attraction term to the energy
 			m_energy += factor * dist_error * dist_error;
@@ -421,7 +424,6 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 			// compute the energy term
 			const REAL inv_sq = ((REAL) 1.0) / (x_ratio + y_ratio + ((REAL) 3.0));
 			const REAL factor_rep = m_k_rep * m_mAvgAct[nAtNode][nAtLinked];
-				// * (m_act[nAtNode] + m_act[nAtLinked]);
 
 			// add to total energy
 			m_energy += factor_rep * inv_sq;
@@ -440,53 +442,58 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 				m_vGrad[nAtLinked*2 + 1] += dRepulsion_dy + dRepulsion_dy;
 			}
 		}
-
-		//////////////////////////////////////////////////////////////
-		// compute the centering repulsion field
-
-		if (m_pSpace->GetNodeAt(nAtNode)->GetActivation()
-			// m_act[nAtNode] 
-			<= CENTER_REP_MAX_ACT)
+	}
+	
+	if (m_bCalcCenterRep)
+	{
+		for (nAtNode = nNodeCount-1; nAtNode >= 0; nAtNode--)
 		{
-			// compute the x- and y-offset between the views
-			const REAL x = m_vInput[nAtNode*2 + 0] - vCenter[0];
-			const REAL y = m_vInput[nAtNode*2 + 1] - vCenter[1];
+			//////////////////////////////////////////////////////////////
+			// compute the centering repulsion field
 
-			// compute the x- and y-scales for the fields -- average of
-			//		two rectangles
-			const REAL aspect_sq = (13.0 / 16.0) * (13.0 / 16.0);
-			const REAL ssx_sq =
-				(CENTER_REP_SCALE * CENTER_REP_SCALE / aspect_sq );
-			const REAL ssy_sq = 
-				(CENTER_REP_SCALE * CENTER_REP_SCALE * aspect_sq );
-
-			// compute the energy due to this interation
-			const REAL dx_ratio = x / ssx_sq; 
-			const REAL x_ratio = x * dx_ratio; 
-			const REAL dy_ratio = y / ssy_sq;
-			const REAL y_ratio = y * dy_ratio;
-
-			// compute the energy term
-			const REAL inv_sq = ((REAL) 1.0) / (x_ratio + y_ratio + ((REAL) 3.0));
-			const REAL factor_rep = m_k_rep * CENTER_REP_WEIGHT
-				* (CENTER_REP_MAX_ACT - abs(m_act[nAtNode])) 
-				* (CENTER_REP_MAX_ACT - abs(m_act[nAtNode]));
-
-			// add to total energy
-			m_energy += factor_rep * inv_sq;
-
-			if (NULL != pGrad)
+			if (m_pSpace->GetNodeAt(nAtNode)->GetActivation()
+						<= CENTER_REP_MAX_ACT)
 			{
-				// compute gradient terms
-				const REAL inv_sq_sq = inv_sq * inv_sq;
-				const REAL dRepulsion_dx = factor_rep * dx_ratio * inv_sq_sq;
-				const REAL dRepulsion_dy = factor_rep * dy_ratio * inv_sq_sq;
+				// compute the x- and y-offset between the views
+				const REAL x = m_vInput[nAtNode*2 + 0] - vCenter[0];
+				const REAL y = m_vInput[nAtNode*2 + 1] - vCenter[1];
 
-				// add to the gradient vectors
-				m_vGrad[nAtNode*2   + 0] -= dRepulsion_dx + dRepulsion_dx;
-				m_vGrad[nAtNode*2   + 1] -= dRepulsion_dy + dRepulsion_dy;
-			}
-		} 
+				// compute the x- and y-scales for the fields -- average of
+				//		two rectangles
+				const REAL aspect_sq = (13.0 / 16.0) * (13.0 / 16.0);
+				const REAL ssx_sq =
+					(CENTER_REP_SCALE * CENTER_REP_SCALE / aspect_sq );
+				const REAL ssy_sq = 
+					(CENTER_REP_SCALE * CENTER_REP_SCALE * aspect_sq );
+
+				// compute the energy due to this interation
+				const REAL dx_ratio = x / ssx_sq; 
+				const REAL x_ratio = x * dx_ratio; 
+				const REAL dy_ratio = y / ssy_sq;
+				const REAL y_ratio = y * dy_ratio;
+
+				// compute the energy term
+				const REAL inv_sq = ((REAL) 1.0) / (x_ratio + y_ratio + ((REAL) 3.0));
+				const REAL factor_rep = m_k_rep * CENTER_REP_WEIGHT
+					* (CENTER_REP_MAX_ACT - abs(m_act[nAtNode])) 
+					* (CENTER_REP_MAX_ACT - abs(m_act[nAtNode]));
+
+				// add to total energy
+				m_energy += factor_rep * inv_sq;
+
+				if (NULL != pGrad)
+				{
+					// compute gradient terms
+					const REAL inv_sq_sq = inv_sq * inv_sq;
+					const REAL dRepulsion_dx = factor_rep * dx_ratio * inv_sq_sq;
+					const REAL dRepulsion_dy = factor_rep * dy_ratio * inv_sq_sq;
+
+					// add to the gradient vectors
+					m_vGrad[nAtNode*2   + 0] -= dRepulsion_dx + dRepulsion_dx;
+					m_vGrad[nAtNode*2   + 1] -= dRepulsion_dy + dRepulsion_dy;
+				}
+			} 
+		}
 	}
 
 	// store the gradient vector if one was passed
@@ -562,6 +569,9 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 	REAL tol = 1e-12  * (m_pOptimizer->GetFinalValue() + 1.0);
 	m_pOptimizer->SetTolerance(tol);
 
+	// set up the interaction matrices
+	LoadSizesLinks();
+
 	// if we have constant nodes,
 	if (nConstNodes > 0)
 	{
@@ -578,9 +588,14 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 		// make sure no constant nodes
 		m_vConstPositions.SetDim(0);
 
-		// get the constant energy term
+		// set up the interaction matrices
 		LoadSizesLinks();
+
+		// get the constant energy term
+		m_bCalcCenterRep = FALSE;
+		m_energyConst = 0.0;
 		m_energyConst = (*this)(m_vState);
+		m_bCalcCenterRep = TRUE;
 
 		// restore old state dimension
 		SetStateDim(nOldStateDim);
@@ -599,9 +614,6 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 	m_vConstPositions.SetDim(nConstNodes * 2);
 	m_vConstPositions.CopyElements(m_vState, 0, nConstNodes * 2);
 
-	// now optimize
-	LoadSizesLinks();
-
 	// reset evaluation count
 	m_nEvaluations = 0;
 
@@ -611,18 +623,28 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 	vNewState.CopyElements(m_vState, nConstNodes * 2, 
 		GetStateDim() - nConstNodes * 2);
 
+	// set up the interaction matrices
+	LoadSizesLinks();
+
 	// perform the optimization
 	vNewState = m_pOptimizer->Optimize(vNewState);
 
 	// copy the optimized elements
 	m_vState.CopyElements(vNewState, 0, 
 		GetStateDim() - nConstNodes * 2, nConstNodes * 2);
-	
-	// set the resulting positions, rotate-translating in the process
-	pSSV->RotateTranslateTo(m_vState);
 
-	// retrieve the final state
-	pSSV->GetPositionsVector(m_vState);
+	if (nConstNodes == 0)
+	{
+		// set the resulting positions, rotate-translating in the process
+		pSSV->RotateTranslateTo(m_vState);
+
+		// retrieve the final state
+		pSSV->GetPositionsVector(m_vState);
+	}
+	else
+	{
+		pSSV->SetPositionsVector(m_vState);
+	}
 
 }	// CSpaceLayoutManager::LayoutNodes
 
