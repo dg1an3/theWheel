@@ -245,7 +245,7 @@ void CSpaceView::NormalizeNodeViews()
 		CNodeView *pView = nodeViews.Get(nAt);
 
 		// only include super-threshold nodes in the normalization sum
-		if (pView->activation.Get() > CNodeView::activationThreshold)
+		if (pView->activation.Get() >= CNodeView::activationThreshold)
 			sum += pView->activation.Get();
 	}
 
@@ -505,6 +505,9 @@ void CSpaceView::OnInitialUpdate()
 	// now normalize all the newly created node views
 	NormalizeNodeViews();
 
+	// ensure the nodeviews are sorted
+	SortNodeViews();
+
 	// and finally, lay them out
 	LayoutNodeViews();
 }
@@ -753,4 +756,25 @@ CNodeView * CSpaceView::GetMaxLinked(CNodeView *pView)
 	}
 
 	return pMaxLink;
+}
+
+void CSpaceView::SortNodeViews()
+{
+	BOOL bRearrange;
+	do 
+	{
+		bRearrange = FALSE;
+		for (int nAt = 0; nAt < nodeViews.GetSize()-1; nAt++)
+		{
+			CNodeView *pThisNodeView = nodeViews.Get(nAt);
+			CNodeView *pNextNodeView = nodeViews.Get(nAt+1);
+
+			if (pThisNodeView->activation.Get() < pNextNodeView->activation.Get())
+			{
+				nodeViews.Set(nAt, pNextNodeView);
+				nodeViews.Set(nAt+1, pThisNodeView);
+				bRearrange = TRUE;
+			}
+		}
+	} while (bRearrange);
 }

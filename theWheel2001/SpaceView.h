@@ -78,6 +78,7 @@ public:
 
 // Implementation
 public:
+	void SortNodeViews();
 	CNodeView * GetMaxLinked(CNodeView *pView);
 	void LearnForNode(CNodeView *pNodeView);
 	virtual ~CSpaceView();
