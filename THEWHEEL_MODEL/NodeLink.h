@@ -36,12 +36,24 @@ public:
 	DECLARE_SERIAL(CNodeLink)
 
 	// node weight
+	float GetWeight();
+	void SetWeight(float weight);
+
+	// DEPRECATED
 	CValue< float > weight;
 
 	// node target
+	CNode *GetTarget();
+	void SetTarget(CNode *pTarget);
+
+	// DEPRECATED
 	CAssociation< CNode > forTarget;
 
 	// flag to indicate that propagation has occurred through the link
+	BOOL HasPropagated();
+	void SetHasPropagated(BOOL bPropagated);
+
+	// DEPRECATED
 	CValue<BOOL> hasPropagated;
 
 	// serialization of this node link
