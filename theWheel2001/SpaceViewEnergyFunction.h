@@ -43,13 +43,6 @@ public:
 	//		is associated 
 	CSpaceViewEnergyFunction(CSpaceView *pView);
 
-	// retrieves the threshold for the given dimensionality
-	SPV_STATE_TYPE GetThreshold();
-
-	// gets and sets the state vector for the associated CSpaceView
-	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> GetStateVector();
-	void SetStateVector(const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vState);
-
 	// evaluates the energy function
 	virtual SPV_STATE_TYPE operator()(
 		const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput);

@@ -88,70 +88,6 @@ CSpaceViewEnergyFunction::CSpaceViewEnergyFunction(CSpaceView *pView)
 }
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceViewEnergyFunction::GetStateVector
-// 
-// forms the state vector for the associated CSpaceView
-//////////////////////////////////////////////////////////////////////
-CVector<SPV_STATE_DIM, SPV_STATE_TYPE> 
-		CSpaceViewEnergyFunction::GetStateVector()
-{
-	// compute the threshold
-	GetThreshold();
-
-	// for the state vector
-	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> vState;
-	for (int nAt = 0; nAt < SPV_STATE_DIM / 2; nAt++)
-	{
-		if (nAt < m_pView->nodeViews.GetSize())
-		{
-			CNodeView *pView = m_pView->nodeViews.Get(nAt);
-			vState[nAt*2] = (SPV_STATE_TYPE) pView->center.Get()[0];
-			vState[nAt*2+1] = (SPV_STATE_TYPE) pView->center.Get()[1];
-		}
-	}
-
-	// return the formed state vector
-	return vState;
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceViewEnergyFunction::SetStateVector
-// 
-// sets the state vector for the associated CSpaceView
-//////////////////////////////////////////////////////////////////////
-void CSpaceViewEnergyFunction::SetStateVector(
-		const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vState)
-{
-	// form the number of currently visualized node views
-	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), 
-		SPV_STATE_DIM / 2);
-
-	for (int nAt = 0; nAt < nNumVizNodeViews; nAt++)
-	{
-		CNodeView *pView = m_pView->nodeViews.Get(nAt);
-		pView->center.Set(CVector<2>(vState[nAt*2], vState[nAt*2+1]));
-	}
-}
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceViewEnergyFunction::GetThreshold
-// 
-// gets the threshold value for the associated CSpaceView
-// sets the static threshold value for the CNodeView class
-//////////////////////////////////////////////////////////////////////
-SPV_STATE_TYPE CSpaceViewEnergyFunction::GetThreshold()
-{
-	// form the number of currently visualized node views
-	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), 
-		SPV_STATE_DIM / 2);
-
-	CNodeView::activationThreshold = 
-		m_pView->nodeViews.Get(nNumVizNodeViews - 1)->activation.Get();
-
-	return CNodeView::activationThreshold;
-}
-
-//////////////////////////////////////////////////////////////////////
 // CSpaceViewEnergyFunction::operator()
 // 
 // evaluates the energy function at the given point
@@ -233,10 +169,10 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
 				//	* m_attractFunc(x / (ssx * 1.0), y / (ssy * 1.0));
 
 				// add attraction * weight
-				m_energy -= weight * (SPV_STATE_TYPE) 85.0
+				m_energy -= weight * (SPV_STATE_TYPE) 125.0
 					* m_attractFunc(
-						x / (ssx * (SPV_STATE_TYPE) 6.0), 
-						y / (ssy * (SPV_STATE_TYPE) 6.0));
+						x / (ssx * (SPV_STATE_TYPE) 7.0), 
+						y / (ssy * (SPV_STATE_TYPE) 7.0));
 			}
 		}
 
