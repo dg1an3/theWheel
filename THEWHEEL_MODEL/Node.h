@@ -1,5 +1,9 @@
+//////////////////////////////////////////////////////////////////////
 // Node.h: interface for the CNode class.
 //
+// Copyright (C) 1999-2001
+// $Id$
+// U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
 
 #if !defined(AFX_NODE_H__0C8AA66B_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
@@ -17,6 +21,12 @@
 
 #include "NodeLink.h"
 
+//////////////////////////////////////////////////////////////////////
+// class CNode
+// 
+// a node object has a collection of CNodeLinks to other node objects
+// the nodes are collected into a CSpace object.
+//////////////////////////////////////////////////////////////////////
 class CNode : public CModelObject  
 {
 public:
@@ -42,6 +52,14 @@ public:
 	// the current activation value of the node
 	CValue< double > activation;
 
+	// returns the sum of the activation of all descendants, 
+	//		plus this node's activation
+	double GetDescendantActivation();
+
+	// scales the activation of this node and all descendants by
+	//		the scale amount
+	void ScaleDescendantActivation(double scale);
+
 	// the node links
 	CCollection< CNodeLink > links;
 
@@ -54,9 +72,8 @@ public:
 	void SortLinks();
 
 	// propagation management
-	void PropagateActivation(float percent, float factor = 1.3f);
+	void PropagateActivation(double scale);
 	void ResetForPropagation();
-	static float ActivationCurve(float a, float a_max);
 
 	// serialization of this node
 	virtual void Serialize(CArchive &ar);
