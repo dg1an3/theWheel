@@ -10,19 +10,40 @@
 #include "SpaceViewEnergyFunction.h"
 #include "SpaceView.h"
 
+//////////////////////////////////////////////////////////////////////
+// attract_func
+// 
+// function which evaluates a gaussian attraction field at a given 
+//		point
+//////////////////////////////////////////////////////////////////////
 SPV_STATE_TYPE attract_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
 	return Gauss2D<SPV_STATE_TYPE>(x, y , 1.0f, 1.0f);
 }
 
+//////////////////////////////////////////////////////////////////////
+// spacer_func
+// 
+// function which evaluates a gaussian spacer field at a given 
+//		point
+//////////////////////////////////////////////////////////////////////
 SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
-	return 2.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
+	return // 1.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f, 1.0f) 
+		+ 2.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
 		+ 4.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 4.0f, 1.0f / 4.0f)
 		+ 8.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 8.0f, 1.0f / 8.0f);
 }
 
-SPV_STATE_TYPE CenterField(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE width, SPV_STATE_TYPE height, SPV_STATE_TYPE cs)
+//////////////////////////////////////////////////////////////////////
+// center_func
+// 
+// function which evaluates a centering field at a given point, with
+//		the given parameters
+//////////////////////////////////////////////////////////////////////
+SPV_STATE_TYPE center_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y, 
+						   SPV_STATE_TYPE width, SPV_STATE_TYPE height, 
+						   SPV_STATE_TYPE cs)
 {
 	SPV_STATE_TYPE energy = 0.0f;
 
@@ -51,20 +72,33 @@ SPV_STATE_TYPE CenterField(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE wi
 	return energy + 24.0f * Gauss(distMin + cs, cs);
 }
 
-CSpaceViewEnergyFunction::CSpaceViewEnergyFunction()
-	: m_attractFunc(&attract_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
+//////////////////////////////////////////////////////////////////////
+// CSpaceViewEnergyFunction::CSpaceViewEnergyFunction
+// 
+// constructs an energy function object for the associated space 
+//		view
+//////////////////////////////////////////////////////////////////////
+CSpaceViewEnergyFunction::CSpaceViewEnergyFunction(CSpaceView *pView)
+	: m_pView(pView),
+		m_attractFunc(&attract_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
 			"ATTRFUNC.TMP"),
 		m_spacerFunc(&spacer_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
 			"SPACERFUNC.TMP")
 {
-
 }
 
-CVector<SPV_STATE_DIM, SPV_STATE_TYPE> CSpaceViewEnergyFunction::GetStateVector()
+//////////////////////////////////////////////////////////////////////
+// CSpaceViewEnergyFunction::GetStateVector
+// 
+// forms the state vector for the associated CSpaceView
+//////////////////////////////////////////////////////////////////////
+CVector<SPV_STATE_DIM, SPV_STATE_TYPE> 
+		CSpaceViewEnergyFunction::GetStateVector()
 {
 	// compute the threshold
 	GetThreshold();
 
+	// for the state vector
 	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> vState;
 	for (int nAt = 0; nAt < SPV_STATE_DIM / 2; nAt++)
 	{
@@ -74,19 +108,24 @@ CVector<SPV_STATE_DIM, SPV_STATE_TYPE> CSpaceViewEnergyFunction::GetStateVector(
 			vState[nAt*2] = (SPV_STATE_TYPE) pView->center.Get()[0];
 			vState[nAt*2+1] = (SPV_STATE_TYPE) pView->center.Get()[1];
 		}
-		else
-		{
-			vState[nAt*2] = (SPV_STATE_TYPE) 0.0;
-			vState[nAt*2+1] = (SPV_STATE_TYPE) 0.0;
-		}
 	}
 
+	// return the formed state vector
 	return vState;
 }
 
-void CSpaceViewEnergyFunction::SetStateVector(const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vState)
+//////////////////////////////////////////////////////////////////////
+// CSpaceViewEnergyFunction::SetStateVector
+// 
+// sets the state vector for the associated CSpaceView
+//////////////////////////////////////////////////////////////////////
+void CSpaceViewEnergyFunction::SetStateVector(
+		const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vState)
 {
-	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), SPV_STATE_DIM / 2);
+	// form the number of currently visualized node views
+	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), 
+		SPV_STATE_DIM / 2);
+
 	for (int nAt = 0; nAt < nNumVizNodeViews; nAt++)
 	{
 		CNodeView *pView = m_pView->nodeViews.Get(nAt);
@@ -94,17 +133,31 @@ void CSpaceViewEnergyFunction::SetStateVector(const CVector<SPV_STATE_DIM, SPV_S
 	}
 }
 
-
+//////////////////////////////////////////////////////////////////////
+// CSpaceViewEnergyFunction::GetThreshold
+// 
+// gets the threshold value for the associated CSpaceView
+// sets the static threshold value for the CNodeView class
+//////////////////////////////////////////////////////////////////////
 SPV_STATE_TYPE CSpaceViewEnergyFunction::GetThreshold()
 {
-	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), SPV_STATE_DIM / 2);
+	// form the number of currently visualized node views
+	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), 
+		SPV_STATE_DIM / 2);
 
 	CNodeView::activationThreshold = 
 		m_pView->nodeViews.Get(nNumVizNodeViews - 1)->activation.Get();
+
 	return CNodeView::activationThreshold;
 }
 
-SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput)
+//////////////////////////////////////////////////////////////////////
+// CSpaceViewEnergyFunction::operator()
+// 
+// evaluates the energy function at the given point
+//////////////////////////////////////////////////////////////////////
+SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
+		const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput)
 {
 	// reset the energy
 	m_energy = 0.0;
@@ -116,11 +169,13 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 	CRect rectSpaceView;
 	m_pView->GetWindowRect(&rectSpaceView);
 
-	// iterate over all child node views
-	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), SPV_STATE_DIM / 2);
+	// form the number of currently visualized node views
+	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), 
+		SPV_STATE_DIM / 2);
+
+	// iterate over all current visualized node views
 	int nAtNodeView;
-	for (nAtNodeView = 0; nAtNodeView < nNumVizNodeViews; // m_pView->nodeViews.GetSize(); 
-		nAtNodeView++)
+	for (nAtNodeView = 0; nAtNodeView < nNumVizNodeViews; nAtNodeView++)
 	{
 		// get convenience pointers for the current node view and node
 		CNodeView *pAtNodeView = m_pView->nodeViews.Get(nAtNodeView);
@@ -133,8 +188,10 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 		// stores the x and y coordinates for various computations;
 		SPV_STATE_TYPE x;
 		SPV_STATE_TYPE y;
-		SPV_STATE_TYPE dx = (SPV_STATE_TYPE) rectNodeView.Width() / 4.0;
-		SPV_STATE_TYPE dy = (SPV_STATE_TYPE) rectNodeView.Height() / 4.0;
+		SPV_STATE_TYPE dx = (SPV_STATE_TYPE) rectNodeView.Width() 
+			/ (SPV_STATE_TYPE) 4.0;
+		SPV_STATE_TYPE dy = (SPV_STATE_TYPE) rectNodeView.Height() 
+			/ (SPV_STATE_TYPE) 4.0;
 
 		// iterate over the potential linked views
 		int nAtLinkedView;
@@ -152,7 +209,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 				pAtLinkedView->GetWindowRect(&rectLinked);
 
 				// retrieve the link weight for layout
-				SPV_STATE_TYPE weight = 0.5 *
+				SPV_STATE_TYPE weight = (SPV_STATE_TYPE) 0.5 *
 					(pAtNode->GetLinkWeight(pAtLinkedNode)
 					+ pAtLinkedNode->GetLinkWeight(pAtNode));
 
@@ -166,7 +223,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 				for (int nX = -2; nX <= 2; nX++)
 					for (int nY = -2; nY <= 2; nY++)
 					{
-						m_energy += 1.0 / 20.0						
+						m_energy += (SPV_STATE_TYPE) (1.0 / 20.0)
 							* m_spacerFunc((x + dx * (SPV_STATE_TYPE) nX) / ssx, 
 								(y + dy * (SPV_STATE_TYPE) nY) / ssy);
 					}
@@ -176,14 +233,16 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 				//	* m_attractFunc(x / (ssx * 1.0), y / (ssy * 1.0));
 
 				// add attraction * weight
-				m_energy -= weight * 85.0
-					* m_attractFunc(x / (ssx * 6.0), y / (ssy * 6.0));
+				m_energy -= weight * (SPV_STATE_TYPE) 85.0
+					* m_attractFunc(
+						x / (ssx * (SPV_STATE_TYPE) 6.0), 
+						y / (ssy * (SPV_STATE_TYPE) 6.0));
 			}
 		}
 
 		SPV_STATE_TYPE width = (SPV_STATE_TYPE) rectSpaceView.Width();
 		SPV_STATE_TYPE height = (SPV_STATE_TYPE) rectSpaceView.Height();
-		SPV_STATE_TYPE sigma = width + height / 32.0;
+		SPV_STATE_TYPE sigma = width + height / (SPV_STATE_TYPE) 32.0;
 
 		SPV_STATE_TYPE nodeViewWidth = (SPV_STATE_TYPE) rectNodeView.Width();
 		SPV_STATE_TYPE nodeViewHeight = (SPV_STATE_TYPE) rectNodeView.Height();
@@ -192,20 +251,30 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 		x = vInput[nAtNodeView*2 + 0];
 		y = vInput[nAtNodeView*2 + 1];
 
-		m_energy += CenterField(x - nodeViewWidth / 2.0,  y, width, height, sigma);
-		m_energy += CenterField(x,                        y, width, height, sigma);
-		m_energy += CenterField(x + nodeViewWidth / 2.0,  y, width, height, sigma);
+		m_energy += center_func(x - nodeViewWidth / (SPV_STATE_TYPE) 2.0,  y, 
+			width, height, sigma);
+		m_energy += center_func(x, y, 
+			width, height, sigma);
+		m_energy += center_func(x + nodeViewWidth / (SPV_STATE_TYPE) 2.0,  
+			y, width, height, sigma);
 
-		m_energy += CenterField(x, y - nodeViewHeight / 2.0, width, height, sigma);
-//			m_energy += CenterField(x, y,                        width, height, sigma);
-		m_energy += CenterField(x, y + nodeViewHeight / 2.0, width, height, sigma);
+		m_energy += center_func(x, y - nodeViewHeight / (SPV_STATE_TYPE) 2.0, 
+			width, height, sigma);
+//			m_energy += center_func(x, y,                        width, height, sigma);
+		m_energy += center_func(x, y + nodeViewHeight / (SPV_STATE_TYPE) 2.0, 
+			width, height, sigma);
 	}
 
 	return m_energy;
 }
 
-CVector<SPV_STATE_DIM, SPV_STATE_TYPE> 
-	CSpaceViewEnergyFunction::Grad(const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput)
+//////////////////////////////////////////////////////////////////////
+// CSpaceViewEnergyFunction::Grad
+// 
+// evaluates the gradient of the energy function at the given point
+//////////////////////////////////////////////////////////////////////
+CVector<SPV_STATE_DIM, SPV_STATE_TYPE> CSpaceViewEnergyFunction::Grad(
+		const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput)
 {
 	// if the input vector is not equal to the cached value
 	// if (m_vInput != vInput)

@@ -20,8 +20,8 @@
 #include "LookupFunction.h"
 
 int nNodeID = 1100;
-const SPV_STATE_TYPE TOLERANCE = 0.7;
-const SPV_STATE_TYPE TOTAL_ACTIVATION = 0.35f;
+const SPV_STATE_TYPE TOLERANCE = (SPV_STATE_TYPE) 0.7;
+const SPV_STATE_TYPE TOTAL_ACTIVATION = (SPV_STATE_TYPE) 0.35f;
 
 #define LEARNING_EPSILON 10.0
 
@@ -76,13 +76,12 @@ CSpaceView::CSpaceView()
 : isPropagating(TRUE),
 	isWaveMode(FALSE)
 {
-	m_pEnergyFunc = new CSpaceViewEnergyFunction();
-	m_pEnergyFunc->m_pView = this;
+	m_pEnergyFunc = new CSpaceViewEnergyFunction(this);
 
 #ifdef USE_GRAD
-	m_pOptimizer = new CConjGradOptimizer<SPV_STATE_DIM, double>(m_pEnergyFunc);
+	m_pOptimizer = new CConjGradOptimizer<SPV_STATE_DIM, SPV_STATE_TYPE>(m_pEnergyFunc);
 #else
-	m_pOptimizer = new CPowellOptimizer<SPV_STATE_DIM, double>(m_pEnergyFunc);
+	m_pOptimizer = new CPowellOptimizer<SPV_STATE_DIM, SPV_STATE_TYPE>(m_pEnergyFunc);
 #endif
 
 	// set the tolerance
@@ -759,3 +758,4 @@ void CSpaceView::SortNodeViews()
 		}
 	} while (bRearrange);
 }
+
