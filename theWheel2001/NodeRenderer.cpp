@@ -40,7 +40,7 @@ CMolding::CMolding()
 		nAt++;
 	}
 
-	m_arrVertices[nAt][0] = -4.5;
+	m_arrVertices[nAt][0] = -2.5;
 	m_arrVertices[nAt][2] = 1.0;
 
 	m_arrNormals[nAt][2] = 1.0;
@@ -84,7 +84,7 @@ CNodeRenderer::CNodeRenderer(COpenGLView *pView)
 	width.AddObserver(this, (ChangeFunction) OnChange);
 
 	// load an image
-	BOOL bResult = m_Image.Load("D:\\dragon_glow.bmp");
+	BOOL bResult = m_Image.Load("C:\\dragon_glow.bmp");
 }
 
 CNodeRenderer::~CNodeRenderer()
@@ -145,11 +145,6 @@ CMolding *CNodeRenderer::RenderMoldingSection(double angle_start, double angle_s
 	return pOldMolding;
 }
 
-/* CBitmap *CNodeRenderer::GetBitmap()
-{
-}
-*/
-
 void CNodeRenderer::OnRenderScene()
 {
 	// compute the base ellipse a and b
@@ -159,7 +154,7 @@ void CNodeRenderer::OnRenderScene()
 	// draw an image
 	void *pBits = m_Image.GetDIBits();
 	CSize bitmapSize = m_Image.GetBitmapSize();
-	float zoomFactor = (float) (2.0f * width.Get() * aspectRatio.Get()) 
+	float zoomFactor = (float) (2.0f * width.Get() * aspectRatio.Get() * rectangularity.Get()) 
 		/ (float) bitmapSize.cy;
 	glPixelZoom(zoomFactor, zoomFactor);
 	glRasterPos3d(0.0 + zoomFactor * (float) bitmapSize.cx / 2.0f, 
@@ -206,11 +201,13 @@ void CNodeRenderer::OnRenderScene()
 void CNodeRenderer::OnActivationChanged(CObservableObject *pSource, void *pOldValue)
 {
 	// set the new width for the node renderer
-	width.Set(50.0 + 200.0 * sqrt(activation.Get() / aspectRatio.Get()));
+	width.Set(30.0 + 100.0 * sqrt(activation.Get() / aspectRatio.Get()));
 
 	// set the new rectangularity for the shape
-	const double c = 0.92 - 1.0 / sqrt(2.0);
-	rectangularity.Set(activation.Get() * c + 1.0 / sqrt(2.0));
+	const double c = 0.99999 - 1.0 / sqrt(2.0);
+	double sigmoid = (exp(2.0 * activation.Get()) - exp(-2.0 * activation.Get()))
+		/ (exp(2.0 * activation.Get()) + exp(-2.0 * activation.Get()));
+	rectangularity.Set(sigmoid * c + 1.0 / sqrt(2.0));
 
 	// set the aspect ratio for the renderer
 	aspectRatio.Set(0.75 - 0.375 * exp(-8.0 * activation.Get()));
