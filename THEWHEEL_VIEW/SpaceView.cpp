@@ -145,8 +145,11 @@ CSpaceView::CSpaceView()
 	m_pTracker(NULL),
 	m_bDragging(FALSE)
 {
+	DWORD dwBkColor = ::AfxGetApp()->GetProfileInt("Settings", "BkColor", 
+		(DWORD) RGB(115, 158, 206));
+
 	// set default background color
-	SetBkColor(RGB(115, 158, 206));
+	SetBkColor((COLORREF) dwBkColor);
 
 }	// CSpaceView::CSpaceView
 
