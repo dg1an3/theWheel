@@ -94,7 +94,9 @@ BOOL CtheWheelApp::InitInstance()
 		return FALSE;
 
 	// The one and only window has been initialized, so show and update it.
-	m_pMainWnd->ShowWindow(SW_SHOW);
+	// WriteProfileInt("Settings", "InitWindowState", SW_MINIMIZE);
+	int nShowState = GetProfileInt("Settings", "InitWindowState", SW_SHOW);
+	m_pMainWnd->ShowWindow(nShowState);
 	m_pMainWnd->UpdateWindow();
 
 	// Enable drag/drop open
