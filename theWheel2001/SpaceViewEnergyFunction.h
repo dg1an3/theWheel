@@ -27,7 +27,7 @@ typedef float SPV_STATE_TYPE;
 // declaration for the dimensionality of the energy function state
 //		vector
 //////////////////////////////////////////////////////////////////////
-const int SPV_STATE_DIM = 26;
+const int SPV_STATE_DIM = 30;
 
 //////////////////////////////////////////////////////////////////////
 // class CSpaceViewEnergyFunction
