@@ -39,9 +39,6 @@ public:
 	// loads the image file, if necessary
 	CDib *GetDib();
 
-	// the child nodes
-//	CCollection< CNode > children;
-
 	// the node links
 	CCollection< CNodeLink > links;
 
@@ -49,17 +46,15 @@ public:
 	void LinkTo(CNode *toNode, float weight);
 	CNodeLink *GetLink(CNode * toNode);
 	float GetLinkWeight(CNode * toNode);
-	float GetLinkWeightBoltz(CNode * toNode, float temperature = 0.1f);
-	void NormalizeLinks(float temperature = -1.0f);
+
+	// sorts the links descending by weight
+	void SortLinks();
 	
 	// serialization of this node
 	virtual void Serialize(CArchive &ar);
 
 protected:
-	// temporary storage for cached Boltzmann weights
-	float m_currTemperature;
-	float m_currSum;
-
+	// pointer to the DIB, if it is loaded
 	CDib *m_pDib;
 };
 

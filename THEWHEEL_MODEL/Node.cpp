@@ -21,26 +21,32 @@ static char THIS_FILE[]=__FILE__;
 CNode::CNode(const CString& strName, const CString& strDesc)
 	: parent(NULL),
 		description(strDesc),
-		m_currTemperature(0.0f),
 		m_pDib(NULL)
 {
+	// set the node's name
 	name.Set(strName);
 }
 
 CNode::~CNode()
 {
+	// delete the DIB, if present
+	delete m_pDib;
 }
 
 IMPLEMENT_SERIAL(CNode, CModelObject, 4);
 
 CDib *CNode::GetDib()
 {
-	// imageFilename.Set("FakeImage.bmp");
+	// if we have not loaded the image,
 	if (m_pDib == NULL && imageFilename.Get() != "")
 	{
+		// create a new DIB
 		m_pDib = new CDib();
+
+		// and try to load the image
 		if (!m_pDib->Load("./images/" + imageFilename.Get()))
 		{
+			// no luck -- delete the DIB and return NULL
 			delete m_pDib;
 			m_pDib = NULL;
 		}
@@ -51,195 +57,91 @@ CDib *CNode::GetDib()
 
 void CNode::LinkTo(CNode *pToNode, float weight)
 {
+	// create a new node link with the target and weight
 	links.Add(new CNodeLink(pToNode, weight));
+
+	// cross-link at the same weight
 	pToNode->links.Add(new CNodeLink(this, weight));
 }
 
 CNodeLink * CNode::GetLink(CNode * pToNode)
 {
+	// search through the links,
 	for (int nAt = 0; nAt < links.GetSize(); nAt++)
+
+		// looking for the one with the desired target
 		if (links.Get(nAt)->forTarget.Get() == pToNode)
+
+			// and return it
 			return links.Get(nAt); 
 
+	// not found?  return NULL
 	return NULL;
 }
 
 float CNode::GetLinkWeight(CNode * pToNode)
 {
+	// try to find the link
 	CNodeLink *pLink = GetLink(pToNode);
+
+	// found it?
 	if (pLink)
+	
+		// return the weight
 		return pLink->weight.Get();
 
+	// not found? return 0.0
 	return 0.0f;
 }
 
-float CNode::GetLinkWeightBoltz(CNode * pToNode, float temperature)
+void CNode::SortLinks()
 {
-/*	if (m_currTemperature != temperature)
+	BOOL bRearrange;
+	do 
 	{
-		m_currSum = 0.0f;
-		for (int nAt = 0; nAt < links.GetSize(); nAt++)		
-			m_currSum += (float) exp(links.Get(nAt)->weight.Get() / temperature);
-		m_currTemperature = temperature;
-	}
+		bRearrange = FALSE;
+		for (int nAt = 0; nAt < links.GetSize()-1; nAt++)
+		{
+			CNodeLink *pThisLink = links.Get(nAt);
+			CNodeLink *pNextLink = links.Get(nAt+1);
 
-	float boltzWeight = 
-		(float) exp(GetLinkWeight(pToNode) / m_currTemperature) / m_currSum;
+			if (pThisLink->weight.Get() < pNextLink->weight.Get())
+			{
+				links.Set(nAt, pNextLink);
+				links.Set(nAt+1, pThisLink);
+				bRearrange = TRUE;
+			}
+		}
+	} while (bRearrange);
 
-	return boltzWeight * 1.02 - 0.02;
-	*/
-
-	return GetLinkWeight(pToNode);
 }
 
 void CNode::Serialize(CArchive &ar)
 {
+	// serialize the node name
 	name.Serialize(ar);
+
+	// serialize the node body
 	description.Serialize(ar);
 
-//	if (ar.IsStoring())
-		imageFilename.Serialize(ar);
+	// serialize the image filename
+	imageFilename.Serialize(ar);
 
+	// serialize children
 	children.Serialize(ar);
+
+	// serialize links
 	links.Serialize(ar);
 
-	if (!ar.IsStoring())
+	// if we are loading,
+	if (ar.IsLoading())
 	{
+		// set the children's parent
 		for (int nAt = 0; nAt < children.GetSize(); nAt++)
 			((CNode *)children.Get(nAt))->parent.Set(this);
 
-#define FIX_WEIGHTS
-#ifdef FIX_WEIGHTS
-		float prevMax = 10.0f;
-		for (int nIter = 0; nIter < min(5, links.GetSize()); nIter++)
-		{
-			float maxWeight = 0.0f;
-
-			for (int nAt = 0; nAt < links.GetSize(); nAt++)
-			{
-				// 
-				float weight = links.Get(nAt)->weight.Get();
-				if (weight > maxWeight && weight < prevMax)
-					maxWeight = weight;
-			}
-
-			prevMax = maxWeight;
-		}
-
-		for (nAt = 0; nAt < links.GetSize(); nAt++)
-		{
-			// 
-			float weight = links.Get(nAt)->weight.Get();
-			if (weight < prevMax)
-				links.Get(nAt)->weight.Set(0.0f);
-		}
-
-		NormalizeLinks();
-
-#endif
-	}
-
-//	CObArray arrChildren;
-//	CObArray arrLinks;
-//	if (ar.IsStoring())
-//	{
-//		for (int nAt = 0; nAt < myChildren.GetSize(); nAt++)
-//			arrChildren.Add(myChildren.Get(nAt));
-//		arrChildren.Serialize(ar);
-//
-//		for (nAt = 0; nAt < myLinks.GetSize(); nAt++)
-//			arrLinks.Add(myLinks.Get(nAt));
-//		arrLinks.Serialize(ar);
-//	}
-//	else
-//	{
-//		arrChildren.Serialize(ar);
-//		for (int nAt = 0; nAt < arrChildren.GetSize(); nAt++)
-//			myChildren.Add((CNode *)arrChildren.GetAt(nAt));
-//
-//		arrLinks.Serialize(ar);
-//		for (nAt = 0; nAt < arrLinks.GetSize(); nAt++)
-//			myLinks.Add((CNodeLink *)arrLinks.GetAt(nAt));
-//	}
-}
-
-#ifdef NONE
-void CNode::NormalizeLinks()
-{
-	float sum = 0.0;
-	for (int nAt = 0; nAt < links.GetSize(); nAt++)
-	{
-		CNodeLink *pLink = links.Get(nAt);
-		sum += pLink->weight.Get();
-	}
-
-	for (nAt = 0; nAt < links.GetSize(); nAt++)
-	{
-		CNodeLink *pLink = links.Get(nAt);
-		pLink->weight.Set(pLink->weight.Get() / sum);
-	}
-
-	float entropy = 0.0;
-	for (nAt = 0; nAt < links.GetSize(); nAt++)
-	{
-		float weight = links.Get(nAt)->weight.Get();
-		entropy += - weight * log( weight);
-	}
-	TRACE2("Node %s entropy = %lf\n", name.Get(), entropy);
-
-	for (nAt = 0; nAt < children.GetSize(); nAt++)
-	{
-		CNode *pChild = (CNode *)children.Get(nAt);
-		pChild->NormalizeLinks();
+		// and sort the links
+		SortLinks();
 	}
 }
-#endif
 
-void CNode::NormalizeLinks(float temperature)
-{
-	if (temperature == -1.0f)
-	{
-		float sum = 0.0;
-		for (int nAt = 0; nAt < links.GetSize(); nAt++)
-		{
-			CNodeLink *pLink = links.Get(nAt);
-			sum += pLink->weight.Get();
-		}
-
-		for (nAt = 0; nAt < links.GetSize(); nAt++)
-		{
-			CNodeLink *pLink = links.Get(nAt);
-			pLink->weight.Set(pLink->weight.Get() / sum);
-		}
-
-		return;
-	}
-
-
-	float sum = 0.0;
-	for (int nAt = 0; nAt < links.GetSize(); nAt++)
-	{
-		CNodeLink *pLink = links.Get(nAt);
-		sum += (float) exp(pLink->weight.Get() / temperature);
-	}
-
-	for (nAt = 0; nAt < links.GetSize(); nAt++)
-	{
-		CNodeLink *pLink = links.Get(nAt);
-		pLink->weight.Set((float) exp(pLink->weight.Get() / temperature) / sum);
-	}
-
-	float entropy = 0.0;
-	for (nAt = 0; nAt < links.GetSize(); nAt++)
-	{
-		float weight = links.Get(nAt)->weight.Get();
-		entropy += (float)(-weight * log( weight));
-	}
-	TRACE2("Node %s entropy = %lf\n", name.Get(), entropy);
-
-	for (nAt = 0; nAt < children.GetSize(); nAt++)
-	{
-		CNode *pChild = (CNode *)children.Get(nAt);
-		pChild->NormalizeLinks(temperature);
-	}
-}
