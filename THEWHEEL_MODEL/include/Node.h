@@ -51,7 +51,6 @@ const LPARAM EVT_NODE_POSITION_CHANGED =2007;
 class CNode : public CObject  
 {
 public:
-	HICON GetIcon();
 	// constructors/destructors
 	CNode(CSpace *pSpace = NULL,
 		const CString& strName = "",
@@ -99,8 +98,8 @@ public:
 	// loads the image file, if necessary
 	CDib *GetDib();
 
-	// alternative to image file = icon
-	void SetIcon(HICON hIcon);
+	// gets a Windows icon for the node (instead of DIB, if applicable)
+	HICON GetIcon();
 
 	// a sound filename, if present
 	const CString& GetSoundFilename() const;
@@ -117,6 +116,9 @@ public:
 	const CVectorD<3>& GetPosition() const;
 	void SetPosition(const CVectorD<3>& vPos, BOOL bFireChange = FALSE);
 	CVectorD<3> GetSize(REAL activation) const;
+
+	// returns the RMSE for node position
+	REAL GetRMSE();
 
 	//////////////////////////////////////////////////////////////////
 	// link accessors
@@ -273,8 +275,12 @@ private:
 	// optimal SSV
 	CSpaceStateVector *m_pOptSSV;
 
+	// stores rmse for positions
+	REAL m_rmse;
+
 	// convenience pointer to a view object
 	CObject *m_pView;
-};
+
+};	// class CNode
 
 #endif // !defined(NODE_H)
