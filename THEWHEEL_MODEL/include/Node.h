@@ -51,6 +51,7 @@ const LPARAM EVT_NODE_POSITION_CHANGED =2007;
 class CNode : public CObject  
 {
 public:
+	HICON GetIcon();
 	// constructors/destructors
 	CNode(CSpace *pSpace = NULL,
 		const CString& strName = "",
@@ -97,6 +98,9 @@ public:
 
 	// loads the image file, if necessary
 	CDib *GetDib();
+
+	// alternative to image file = icon
+	void SetIcon(HICON hIcon);
 
 	// a sound filename, if present
 	const CString& GetSoundFilename() const;
@@ -225,6 +229,9 @@ private:
 
 	// pointer to the DIB, if it is loaded
 	CDib *m_pDib;
+
+	// alternatively, an icon
+	HICON m_hIcon;
 
 	// the node's sound filename
 	CString m_strSoundFilename;
