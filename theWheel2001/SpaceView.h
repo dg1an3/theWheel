@@ -78,6 +78,7 @@ public:
 
 // Implementation
 public:
+	void LearnForNode(CNodeView *pNodeView);
 	virtual ~CSpaceView();
 #ifdef _DEBUG
 	virtual void AssertValid() const;

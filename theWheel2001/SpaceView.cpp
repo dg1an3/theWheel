@@ -602,3 +602,40 @@ void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI)
 {
 	pCmdUI->SetCheck(isWaveMode.Get() ? 1 : 0);		
 }
+
+void CSpaceView::LearnForNode(CNodeView *pNodeView)
+{
+	int nAtNodeView;
+	for (nAtNodeView = 0; nAtNodeView < nodeViews.GetSize(); nAtNodeView++)
+	{
+		// retrieve the node view
+		CNodeView *pOtherNodeView = nodeViews.Get(nAtNodeView);
+
+		if (pOtherNodeView != pNodeView)
+		{
+			// get the link for the node
+			CNodeLink *pLink = 
+				pOtherNodeView->forNode->GetLink(pNodeView->forNode.Get());
+
+			if (pLink == NULL)
+				break;
+
+			// compute the new link weight
+			float putativeAct = 
+				pOtherNodeView->activation.Get() * pLink->weight.Get();
+
+			if (pNodeView->activation.Get() < putativeAct)
+			{
+				// compute the new weight
+				float newWeight = pLink->weight.Get()
+					* putativeAct / pNodeView->activation.Get();
+
+				// adjust the link weight using the node views
+				pLink->weight.Set(pLink->weight.Get() * 0.75f + newWeight * 0.25f);
+
+				// now normalize the links on the node
+				pOtherNodeView->forNode->NormalizeLinks(); // 0.3f);
+			}
+		}
+	}
+}

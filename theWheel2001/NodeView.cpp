@@ -459,6 +459,9 @@ void CNodeView::OnLButtonDown(UINT nFlags, CPoint point)
 
 		// now normalize all children
 		pParent->NormalizeNodeViews();
+
+		// apply the delta learning rule
+		pParent->LearnForNode(this);
 #endif
 	}
 
@@ -490,6 +493,9 @@ void CNodeView::OnLButtonUp(UINT nFlags, CPoint point)
 
 		// now normalize all children
 		pParent->NormalizeNodeViews();
+
+		// apply the delta learning rule
+		pParent->LearnForNode(this);
 	}
 #endif
 
