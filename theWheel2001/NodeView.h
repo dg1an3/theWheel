@@ -35,23 +35,17 @@ public:
 
 	// moves the nodeview slowly toward its actual center
 	CValue< CVector<2> > center;
-private:
-	CValue< CVector<2> > privCenter;
-public:
+	CValue< CVector<2> > springCenter;
 
 	// wave mode means activation on mouse movement
 	CValue< BOOL > isWaveMode;
 
 	// activation value for this window
-	// CValue< float > activation;
-private:
-	CValue< float > privActivation;
-public:
+	CValue< float > thresholdedActivation;
+	CValue< float > springActivation;
 
-	static float activationThreshold;
-
-	// helper to compute sigmoidal activation changes
-	static float ActivationCurve(float a, float a_max);
+	// smooth updating of spring state variables
+	void UpdateSprings();
 
 // Operations
 public:
@@ -67,10 +61,6 @@ public:
 // Implementation
 public:
 	virtual ~CNodeView();
-
-	// smooth updating of internally maintained private state 
-	//		(center and activation)
-	void UpdatePrivates();
 
 protected:
 	// accessor for the inner and outer rectangles 

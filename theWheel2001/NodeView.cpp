@@ -22,16 +22,14 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-float CNodeView::activationThreshold = 0.000001f;
-
 /////////////////////////////////////////////////////////////////////////////
 // CNodeView
 
 CNodeView::CNodeView(CNode *pNode)
 : forNode(pNode),
 	center(CPoint(0, 0)),
-	privCenter(CPoint(0, 0)),
-	privActivation(pNode->activation.Get()),
+	springCenter(CPoint(0, 0)),
+	springActivation(pNode->activation.Get()),
 	m_ptMouseDown(-1, -1),
 	m_bDragging(FALSE),
 	m_bDragged(FALSE),
@@ -39,14 +37,15 @@ CNodeView::CNodeView(CNode *pNode)
 	m_pPiggyBack(NULL)
 {
 	rectWindow.AddObserver(this, (ChangeFunction) OnChange);
-	privCenter.AddObserver(this, (ChangeFunction) OnChange);
-	privActivation.AddObserver(this, (ChangeFunction) OnChange);
+	springCenter.AddObserver(this, (ChangeFunction) OnChange);
+	springActivation.AddObserver(this, (ChangeFunction) OnChange);
 }
 
 CNodeView::~CNodeView()
 {
 }
 
+// TODO: break this up
 void CNodeView::OnChange(CObservableObject *pSource, void *pOldValue)
 {
 	if ((pSource == &rectWindow) && ::IsWindow(m_hWnd))
@@ -67,30 +66,30 @@ void CNodeView::OnChange(CObservableObject *pSource, void *pOldValue)
 		// move the window
 		MoveWindow(rectWindow.Get(), FALSE);
 
-		// set the privCenter point
-		privCenter.Set(rectWindow.Get().CenterPoint());
+		// set the springCenter point
+		springCenter.Set(rectWindow.Get().CenterPoint());
 
 		// and invalidate
 		Invalidate(FALSE);
 	}
-	else if (pSource == &privCenter)
+	else if (pSource == &springCenter)
 	{
 		// compute the offset
-		CPoint ptOffset = rectWindow.Get().CenterPoint() - privCenter.Get();
+		CPoint ptOffset = rectWindow.Get().CenterPoint() - springCenter.Get();
 		rectWindow.Set(rectWindow.Get() - ptOffset);
 	}
-	else if ((pSource == &privActivation) && ::IsWindow(m_hWnd))
+	else if ((pSource == &springActivation) && ::IsWindow(m_hWnd))
 	{
 		// CSpaceView *pParent = (CSpaceView *)GetParent();
 		CRect rectParent;
 		GetParent()->GetWindowRect(&rectParent);
 
-		// compute the area interpreting privActivation as the fraction of the 
+		// compute the area interpreting springActivation as the fraction of the 
 		//		parent's total area
-		float area = privActivation.Get() * (rectParent.Width() * rectParent.Height());
+		float area = springActivation.Get() * (rectParent.Width() * rectParent.Height());
 
 		// compute the desired aspect ratio (maintain the current aspect ratio)
-		float aspectRatio = 0.75f - 0.375f * (float) exp(-8.0f * privActivation.Get());
+		float aspectRatio = 0.75f - 0.375f * (float) exp(-8.0f * springActivation.Get());
 
 		// compute the new width and height from the desired area and the desired
 		//		aspect ratio
@@ -99,20 +98,13 @@ void CNodeView::OnChange(CObservableObject *pSource, void *pOldValue)
 
 		// set the width and height of the window, keeping the center constant
 		CRect rect;
-		rect.left = (long) privCenter.Get()[0] - nWidth / 2;
-		rect.right = (long) privCenter.Get()[0] + nWidth / 2;
-		rect.top = (long) privCenter.Get()[1] - nHeight / 2;
-		rect.bottom = (long) privCenter.Get()[1] + nHeight / 2;
+		rect.left = (long) springCenter.Get()[0] - nWidth / 2;
+		rect.right = (long) springCenter.Get()[0] + nWidth / 2;
+		rect.top = (long) springCenter.Get()[1] - nHeight / 2;
+		rect.bottom = (long) springCenter.Get()[1] + nHeight / 2;
 
 		rectWindow.Set(rect);
 	}
-}
-
-float CNodeView::ActivationCurve(float a, float a_max)
-{
-	float frac = a / (a + a_max);
-
-	return (1 - frac) * a + (frac * a_max);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -141,7 +133,7 @@ CRect CNodeView::GetInnerRect()
 
 	// compute the r, which represents the amount of "elliptical-ness"
 	float r = 1.0f - (1.0f - 1.0f / (float) sqrt(2.0f))
-		* (float) exp(-8.0f * privActivation.Get());
+		* (float) exp(-8.0f * springActivation.Get());
 
 	CRect rectInner = rectOuter;
 	rectInner.top = (long) ((float) (rectOuter.top + rectOuter.Height() / 2) 
@@ -260,10 +252,10 @@ void CNodeView::OnPaint()
 	// get the inner rectangle for drawing the text
 	CRect rectInner = GetInnerRect();
 
-	if (forNode->GetDib() != NULL && privActivation.Get() < 0.05)
+	if (forNode->GetDib() != NULL && springActivation.Get() < 0.05)
 	{
 		// calculate the bitmap size 
-		float bitmapSize = rectInner.Height() * 0.03f / privActivation.Get();
+		float bitmapSize = rectInner.Height() * 0.03f / springActivation.Get();
 		bitmapSize = min(bitmapSize, rectInner.Height());
 		float margin = rectInner.Height() - bitmapSize;
 
@@ -320,7 +312,7 @@ void CNodeView::OnPaint()
 	// now draw the description body
 //	CPen penTemp(PS_SOLID, 1, RGB(0, 0, 0));
 //	pOldPen = dcMem.SelectObject(&penTemp);
-	if (privActivation.Get() >= 0.05)
+	if (springActivation.Get() >= 0.05)
 	{
 		rectText = rectInner;
 		rectText.DeflateRect(5, 5, 5, 5);
@@ -516,25 +508,15 @@ void CNodeView::OnLButtonDown(UINT nFlags, CPoint point)
 		m_bDragged = FALSE;
 
 		// compute the new activation
-		float oldActivation = forNode->activation.Get();
-		float newActivation = ActivationCurve(oldActivation * 1.6f,
-			0.3f);
-		forNode->activation.Set(newActivation);
+		// float oldActivation = forNode->activation.Get();
+		// float newActivation = ActivationCurve(oldActivation * 1.6f,
+		//	0.3f);
+		// forNode->activation.Set(newActivation);
 
 		CSpaceView *pParent = (CSpaceView *)GetParent();
-
+		
 		// propagate activation
-		forNode->PropagateActivation(0.8);
-		pParent->GetDocument()->rootNode.ResetForPropagation();
-
-		// now normalize all children
-		pParent->NormalizeNodeViews();
-
-		// ensure the nodeviews are sorted
-		pParent->SortNodeViews();
-
-		// apply the delta learning rule
-		// pParent->LearnForNode(this);
+		pParent->ActivateNode(this, 0.25);
 	}
 
 	SetCapture();
@@ -565,8 +547,8 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 			m_bDragged = TRUE;
 		}
 
-		privCenter.Set(privCenter.Get() + CVector<2>(ptOffset));
-		center.Set(privCenter.Get());
+		springCenter.Set(springCenter.Get() + CVector<2>(ptOffset));
+		center.Set(springCenter.Get());
 
 		CSpaceView *pParent = (CSpaceView *)GetParent();
 
@@ -577,24 +559,28 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 		CPoint ptOffset = (point - m_ptMouseDown);
 		float lengthSq = (float) sqrt(ptOffset.x * ptOffset.x + ptOffset.y * ptOffset.y);
 
-		if (lengthSq > 50.0f)
+		if (lengthSq > 10.0f)
 		{
 			// compute the new activation
-			float oldActivation = forNode->activation.Get();
-			float newActivation = ActivationCurve(oldActivation * 1.2, 0.3f);
-			forNode->activation.Set(newActivation);
-
 			CSpaceView *pParent = (CSpaceView *)GetParent();
+			pParent->ActivateNode(this, 0.15);
 
-			// propagate activation
-			forNode->PropagateActivation(0.8);
-			pParent->GetDocument()->rootNode.ResetForPropagation();
+			// do some idle time processing
+			CSpaceView *pSpaceView = (CSpaceView *)GetParent();
+			pSpaceView->LayoutNodeViews();
 
-			// now normalize all children
-			pParent->NormalizeNodeViews();
+			// update the privates
+			int nAt;
+			for (nAt = 0; nAt < pSpaceView->nodeViews.GetSize(); nAt++)
+			{
+				pSpaceView->nodeViews.Get(nAt)->UpdateSprings();
+			}
 
-			// ensure the nodeviews are sorted
-			pParent->SortNodeViews();
+			pSpaceView->RedrawWindow();
+			for (nAt = 0; nAt < pSpaceView->nodeViews.GetSize(); nAt++)
+			{
+				pSpaceView->nodeViews.Get(nAt)->RedrawWindow();
+			}
 
 			m_ptMouseDown = point;
 		}
@@ -603,7 +589,7 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 	CWnd::OnMouseMove(nFlags, point);
 }
 
-void CNodeView::UpdatePrivates()
+void CNodeView::UpdateSprings()
 {
 	CSpaceView *pSpaceView = (CSpaceView *)GetParent();
 
@@ -612,14 +598,13 @@ void CNodeView::UpdatePrivates()
 	CVector<2> vNewCenter(rect.CenterPoint());
 
 	float newActivation;
-	if (forNode->activation.Get() >= activationThreshold)
-		newActivation = forNode->activation.Get() * 0.125f + privActivation.Get() * 0.875f;
-	else
-		newActivation = privActivation.Get() * 0.875f;
+	newActivation = thresholdedActivation.Get() * 0.125f
+		+ springActivation.Get() * 0.875f;
 
-	if (forNode->activation.Get() >= activationThreshold)
+	// if (forNode->activation.Get() >= activationThreshold)
+	if (thresholdedActivation.Get() > 0.0f)
 	{
-		vNewCenter = center.Get() * 0.125 + privCenter.Get() * 0.875;
+		vNewCenter = center.Get() * 0.125 + springCenter.Get() * 0.875;
 	}
 	else 
 	{
@@ -640,9 +625,9 @@ void CNodeView::UpdatePrivates()
 			center.Set(vNewCenter);
 		}
 	}
-	privCenter.Set(vNewCenter);
+	springCenter.Set(vNewCenter);
 
-	privActivation.Set(newActivation);
+	springActivation.Set(newActivation);
 }
 
 void CNodeView::OnLButtonDblClk(UINT nFlags, CPoint point) 
