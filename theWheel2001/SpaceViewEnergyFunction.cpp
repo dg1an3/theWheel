@@ -29,47 +29,11 @@ SPV_STATE_TYPE attract_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 //////////////////////////////////////////////////////////////////////
 SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
-	return // 1.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f, 1.0f) 
+	return
+		+ 1.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f, 1.0f) 
 		+ 2.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
 		+ 4.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 4.0f, 1.0f / 4.0f)
 		+ 8.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 8.0f, 1.0f / 8.0f);
-}
-
-//////////////////////////////////////////////////////////////////////
-// center_func
-// 
-// function which evaluates a centering field at a given point, with
-//		the given parameters
-//////////////////////////////////////////////////////////////////////
-SPV_STATE_TYPE center_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y, 
-						   SPV_STATE_TYPE width, SPV_STATE_TYPE height, 
-						   SPV_STATE_TYPE cs)
-{
-	SPV_STATE_TYPE energy = 0.0f;
-
-	// compute distance to nearest side
-	SPV_STATE_TYPE distToLeft = x;
-	if (distToLeft < 0.0)
-		energy += -distToLeft;
-
-	SPV_STATE_TYPE distToRight = width - x;
-	if (distToRight < 0.0)
-		energy += -distToRight;
-
-	SPV_STATE_TYPE distToTop = y;
-	if (distToTop < 0.0)
-		energy += -distToTop;
-
-	SPV_STATE_TYPE distToBottom = height - y;
-	if (distToBottom < 0.0)
-		energy += -distToBottom;
-
-	SPV_STATE_TYPE distHorz = min(distToLeft, distToRight);
-	SPV_STATE_TYPE distVert = min(distToTop, distToBottom);
-
-	SPV_STATE_TYPE distMin = min(distHorz, distVert);
-
-	return energy + 24.0f * Gauss(distMin + cs, cs);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -80,7 +44,7 @@ SPV_STATE_TYPE center_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y,
 //////////////////////////////////////////////////////////////////////
 CSpaceViewEnergyFunction::CSpaceViewEnergyFunction(CSpaceView *pView)
 	: m_pView(pView),
-		m_attractFunc(&attract_func, -2.0f, 2.0f, 1024, -2.0f, 2.0f, 1024, 
+		m_attractFunc(&attract_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
 			"ATTRFUNC.TMP"),
 		m_spacerFunc(&spacer_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
 			"SPACERFUNC.TMP")
@@ -121,14 +85,6 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
 		CRect rectNodeView;
 		pAtNodeView->GetWindowRect(&rectNodeView);
 
-		// stores the x and y coordinates for various computations;
-		SPV_STATE_TYPE x;
-		SPV_STATE_TYPE y;
-		SPV_STATE_TYPE dx = (SPV_STATE_TYPE) rectNodeView.Width() 
-			/ (SPV_STATE_TYPE) 4.0;
-		SPV_STATE_TYPE dy = (SPV_STATE_TYPE) rectNodeView.Height() 
-			/ (SPV_STATE_TYPE) 4.0;
-
 		// iterate over the potential linked views
 		int nAtLinkedView;
 		for (nAtLinkedView = 0; nAtLinkedView < nNumVizNodeViews; nAtLinkedView++)
@@ -152,54 +108,24 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
 				SPV_STATE_TYPE ssx = (SPV_STATE_TYPE) rectLinked.Width();
 				SPV_STATE_TYPE ssy = (SPV_STATE_TYPE) rectLinked.Height();
 
-				x = vInput[nAtNodeView*2 + 0] - vInput[nAtLinkedView*2 + 0];
-				y = vInput[nAtNodeView*2 + 1] - vInput[nAtLinkedView*2 + 1];
-
+				SPV_STATE_TYPE x = vInput[nAtNodeView*2 + 0] - vInput[nAtLinkedView*2 + 0];
+				SPV_STATE_TYPE y = vInput[nAtNodeView*2 + 1] - vInput[nAtLinkedView*2 + 1];
+				
 				// compute the energy due to this interation
-				for (int nX = -2; nX <= 2; nX++)
-					for (int nY = -2; nY <= 2; nY++)
-					{
-						m_energy += (SPV_STATE_TYPE) (1.0 / 20.0)
-							* m_spacerFunc((x + dx * (SPV_STATE_TYPE) nX) / ssx, 
-								(y + dy * (SPV_STATE_TYPE) nY) / ssy);
-					}
 
-				// add general repulsion
-				// m_energy += 0.5
-				//	* m_attractFunc(x / (ssx * 1.0), y / (ssy * 1.0));
+				// add the repulsion fiel
+				m_energy += (SPV_STATE_TYPE) 5.0
+					* m_spacerFunc(
+						x / ssx, 
+						y / ssy);
 
 				// add attraction * weight
-				m_energy -= weight * (SPV_STATE_TYPE) 135.0
+				m_energy -= weight * (SPV_STATE_TYPE) 275.0
 					* m_attractFunc(
-						x / (ssx * (SPV_STATE_TYPE) 7.0), 
-						y / (ssy * (SPV_STATE_TYPE) 7.0));
+						x / (ssx * (SPV_STATE_TYPE) 3.0), 
+						y / (ssy * (SPV_STATE_TYPE) 3.0));
 			}
 		}
-
-/*		SPV_STATE_TYPE width = (SPV_STATE_TYPE) rectSpaceView.Width();
-		SPV_STATE_TYPE height = (SPV_STATE_TYPE) rectSpaceView.Height();
-		SPV_STATE_TYPE sigma = width + height / (SPV_STATE_TYPE) 32.0;
-
-		SPV_STATE_TYPE nodeViewWidth = (SPV_STATE_TYPE) rectNodeView.Width();
-		SPV_STATE_TYPE nodeViewHeight = (SPV_STATE_TYPE) rectNodeView.Height();
-
-		// set the x and y coordinates for the centering calculation
-		x = vInput[nAtNodeView*2 + 0];
-		y = vInput[nAtNodeView*2 + 1];
-
-		m_energy += center_func(x - nodeViewWidth / (SPV_STATE_TYPE) 2.0,  y, 
-			width, height, sigma);
-		m_energy += center_func(x, y, 
-			width, height, sigma);
-		m_energy += center_func(x + nodeViewWidth / (SPV_STATE_TYPE) 2.0,  
-			y, width, height, sigma);
-
-		m_energy += center_func(x, y - nodeViewHeight / (SPV_STATE_TYPE) 2.0, 
-			width, height, sigma);
-//			m_energy += center_func(x, y,                        width, height, sigma);
-		m_energy += center_func(x, y + nodeViewHeight / (SPV_STATE_TYPE) 2.0, 
-			width, height, sigma);
-*/
 	}
 
 	return m_energy;
