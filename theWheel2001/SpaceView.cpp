@@ -25,29 +25,7 @@ const SPV_STATE_TYPE TOTAL_ACTIVATION = 0.35f;
 
 #define LEARNING_EPSILON 10.0
 
-extern SPV_STATE_TYPE Gauss2D(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE sx, SPV_STATE_TYPE sy);
-//{
-//	SPV_STATE_TYPE d = (x * x) / (2.0f * sx * sx) 
-//		+ (y * y) / (2.0f * sy * sy);
-//
-//	return (SPV_STATE_TYPE) exp(-d)
-//		/ (SPV_STATE_TYPE) (sqrt(2.0f * PI * sx * sy));
-//}
-
-//SPV_STATE_TYPE Gauss(SPV_STATE_TYPE x, SPV_STATE_TYPE s)
-//{
-//	SPV_STATE_TYPE d = (x * x) / (2.0f * s * s); 
-//
-//	return (SPV_STATE_TYPE) exp(-d)
-//		/ (SPV_STATE_TYPE) (sqrt(2.0f * PI * s));
-//}
-
-//SPV_STATE_TYPE attract_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
-//{
-//	return Gauss2D(x, y, 1.0f, 1.0f);
-//}
-
-extern CLookupFunction<SPV_STATE_TYPE> attractFunc; // (&attract_func, 
+// extern CLookupFunction<SPV_STATE_TYPE> attractFunc; // (&attract_func, 
 		// -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "ATTRFUNC.TMP");
 
 #ifdef _DEBUG
@@ -56,7 +34,10 @@ extern CLookupFunction<SPV_STATE_TYPE> attractFunc; // (&attract_func,
 static char THIS_FILE[] = __FILE__;
 #endif
 
-extern SPV_STATE_TYPE MinSize(SPV_STATE_TYPE x, SPV_STATE_TYPE xmin);
+SPV_STATE_TYPE MinSize(SPV_STATE_TYPE x, SPV_STATE_TYPE xmin)
+{
+	return 0.0;
+}
 //{
 //	SPV_STATE_TYPE frac = x / (x + xmin);
 //
@@ -698,9 +679,9 @@ void CSpaceView::LearnForNode(CNodeView *pNodeView)
 				float dWeight = (float) LEARNING_EPSILON 
 					* pNodeView->activation.Get() 
 					* pOtherNodeView->activation.Get()
-					* pLink->weight.Get()
-					* (float) attractFunc(vOffset[0] / (ssx * 3.0), 
-						vOffset[1] / (ssy * 3.0));
+					* pLink->weight.Get();
+					// * (float) attractFunc(vOffset[0] / (ssx * 3.0), 
+					//	vOffset[1] / (ssy * 3.0));
 
 				if (dWeight > 0.001)
 				{
