@@ -132,11 +132,14 @@ TODO
 
 2) Clean project resources
 
-3) Move activation to the CNode objects
+4) Make CNodeView into a non-CWnd object
+		Move mouse operations to CSpaceView
+		Remove dependence on Windows instantiation/resizing/etc.
 
-4) Move propagation to the CNode objects
+3) Fix piggyback logic in CNodeView -- tie to the propagate in CNode
+		see item under THEWHEEL_MODEL\Readme.txt
 
-5) Move learning to the CNode objects
+4) Re-arrange text drawing code in CNodeView
 
 6) Make CSpaceView : public COpenGLView
 
