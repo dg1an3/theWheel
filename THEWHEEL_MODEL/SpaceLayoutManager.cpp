@@ -74,19 +74,25 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 	: CObjectiveFunction(TRUE),
 		m_pSpace(pSpace),
 
-		m_nStateDim(80),
-
 		m_k_pos(K_POS),
 		m_k_rep(K_REP),
 		m_tolerance(TOLERANCE),
 
-		m_vInput(CVectorN<>()),
 		m_energy(0.0),
 		m_energyConst(0.0),
 		m_bCalcCenterRep(TRUE),
 
-		m_pPowellOptimizer(NULL)
+		m_mSSX(NULL),
+		m_mSSY(NULL),
+		m_mAvgAct(NULL),
+		m_mLinks(NULL),
+
+		m_pPowellOptimizer(NULL),
+		m_pConjGradOptimizer(NULL),
+		m_pGradDescOptimizer(NULL)
 {
+	SetStateDim(80);
+
 	// create and initialize the Powell optimizer
 	m_pPowellOptimizer = new CPowellOptimizer(this);
 	m_pPowellOptimizer->SetTolerance(TOLERANCE);
@@ -112,6 +118,11 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 //////////////////////////////////////////////////////////////////////
 CSpaceLayoutManager::~CSpaceLayoutManager()
 {
+	delete m_mSSX;
+	delete m_mSSY;
+	delete m_mAvgAct;
+	delete m_mLinks;
+
 	// delete the optimizers
 	delete m_pPowellOptimizer;
 	delete m_pConjGradOptimizer;
@@ -140,6 +151,9 @@ int CSpaceLayoutManager::GetStateDim() const
 void CSpaceLayoutManager::SetStateDim(int nStateDim)
 {
 	m_nStateDim = nStateDim;
+
+	// re-initialize the state vector
+	m_vState.SetDim(GetStateDim());
 
 }	// CSpaceLayoutManager::SetStateDim
 
@@ -233,36 +247,35 @@ void CSpaceLayoutManager::SetTolerance(REAL tolerance)
 // 
 // loads the sizes and links for quick access
 //////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::LoadSizesLinks()
+void CSpaceLayoutManager::LoadSizesLinks(int nConstNodes, int nNodeCount)
 {
 	// stores the computed sizes for the nodes, based on current act
-	int nNodeCount = __min(GetStateDim() / 2, m_pSpace->GetNodeCount());
+	nNodeCount = __min(nNodeCount, GetStateDim() / 2);
+	nNodeCount = __min(nNodeCount, m_pSpace->GetNodeCount());
 
-	// iterate over all current visualized node views
-	int nAtNode;
-	for (nAtNode = 0; nAtNode < nNodeCount; nAtNode++)
+	// stores the sizes of the nodes
+	static REAL arrSize[MAX_STATE_DIM][2];
+
+	if (NULL == m_mSSX)
 	{
-		// get convenience pointers for the current node view and node
-		CNode *pAtNode = m_pSpace->GetNodeAt(nAtNode);
-
-		// store the activations
-		m_act[nAtNode] = pAtNode->GetActivation();
-
-		// compute the x- and y-scales for the fields (from the linked rectangle)
-		const CVectorD<3> vSize = pAtNode->GetSize(m_act[nAtNode]);
-		const REAL size_scale = SIZE_SCALE;
-
-		// store the size -- add 10 to ensure non-zero sizes
-		m_vSize[nAtNode][0] = size_scale * vSize[0] + (REAL) 10.0;
-		m_vSize[nAtNode][1] = size_scale * vSize[1] + (REAL) 10.0;
-
+		m_mSSX = new REAL[MAX_STATE_DIM][MAX_STATE_DIM];
+		m_mSSY = new REAL[MAX_STATE_DIM][MAX_STATE_DIM];
+		m_mAvgAct = new REAL[MAX_STATE_DIM][MAX_STATE_DIM];
+		m_mLinks = new REAL[MAX_STATE_DIM][MAX_STATE_DIM];
 	}
 
 	// iterate over all current visualized node views
-	for (nAtNode = 0; nAtNode < nNodeCount; nAtNode++)
+	for (int nAtNode = nNodeCount-1; nAtNode >= 0; nAtNode--)
 	{
 		// get convenience pointers for the current node view and node
 		CNode *pAtNode = m_pSpace->GetNodeAt(nAtNode);
+
+		// compute the x- and y-scales for the fields (from the linked rectangle)
+		const CVectorD<3> vSize = pAtNode->GetSize(pAtNode->GetActivation());
+
+		// store the size -- add 10 to ensure non-zero sizes
+		arrSize[nAtNode][0] = SIZE_SCALE * vSize[0] + (REAL) 10.0;
+		arrSize[nAtNode][1] = SIZE_SCALE * vSize[1] + (REAL) 10.0;
 
 		m_mSSX[nAtNode][nAtNode] = 1.0;
 		m_mSSY[nAtNode][nAtNode] = 1.0;
@@ -275,14 +288,14 @@ void CSpaceLayoutManager::LoadSizesLinks()
 		{
 			// get convenience pointers for the linked node view and node
 			CNode *pAtLinkedNode = m_pSpace->GetNodeAt(nAtLinkedNode);
-
-			const REAL ssx = (m_vSize[nAtNode][0] 
-					+ m_vSize[nAtLinkedNode][0]) / (REAL) 2.0;
+		
+			const REAL ssx = (arrSize[nAtNode][0] 
+					+ arrSize[nAtLinkedNode][0]) / (REAL) 2.0;
 			m_mSSX[nAtNode][nAtLinkedNode] = 
 				m_mSSX[nAtLinkedNode][nAtNode] = (ssx * ssx); 
 
-			const REAL ssy = (m_vSize[nAtNode][1] 
-					+ m_vSize[nAtLinkedNode][1]) / (REAL) 2.0;
+			const REAL ssy = (arrSize[nAtNode][1] 
+					+ arrSize[nAtLinkedNode][1]) / (REAL) 2.0;
 			m_mSSY[nAtNode][nAtLinkedNode] = 
 				m_mSSY[nAtLinkedNode][nAtNode] = (ssy * ssy); 
 
@@ -293,7 +306,7 @@ void CSpaceLayoutManager::LoadSizesLinks()
 
 			m_mAvgAct[nAtNode][nAtLinkedNode] = 0.0;
 			m_mAvgAct[nAtLinkedNode][nAtNode] =
-				(m_act[nAtNode] + m_act[nAtLinkedNode]);
+				(pAtNode->GetActivation() + pAtLinkedNode->GetActivation());
 
 			// store the link weight
 			m_mLinks[nAtNode][nAtLinkedNode] = 0.0;
@@ -302,6 +315,36 @@ void CSpaceLayoutManager::LoadSizesLinks()
 
 		}
 	}
+
+	// zero constant energy term
+	m_energyConst = 0.0;
+
+	// if we have constant nodes,
+	if (nConstNodes > 0)
+	{
+		// get the positions vector
+		CVectorN<> vConstPositions;
+		vConstPositions.SetElements(nConstNodes * 2, &m_vState[0], FALSE);
+
+		// cache the old state dimension
+		int nOldStateDim = GetStateDim();
+
+		// set new state dimension to only constant nodes
+		m_nStateDim = nConstNodes * 2;
+
+		// make sure no constant nodes
+		m_nConstNodes = 0;
+
+		// get the constant energy term
+		m_bCalcCenterRep = FALSE;
+		m_energyConst = CSpaceLayoutManager::operator()(vConstPositions);
+		m_bCalcCenterRep = TRUE;
+
+		// restore old state dimension
+		m_nStateDim = nOldStateDim;
+	}
+
+	m_nConstNodes = nConstNodes;
 
 }	// CSpaceLayoutManager::LoadSizesLinks()
 
@@ -325,25 +368,22 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 	}
 
 	// prepare the input vector for the full positional information
-	ASSERT(m_vConstPositions.GetDim() + vInput.GetDim() == GetStateDim());
-	m_vInput.SetDim(GetStateDim());
-	m_vInput.CopyElements(m_vConstPositions, 0, 
-		m_vConstPositions.GetDim());
-	m_vInput.CopyElements(vInput, 0, vInput.GetDim(),
-		m_vConstPositions.GetDim());
+	ASSERT(m_nConstNodes * 2 + vInput.GetDim() <= GetStateDim());
+	m_vState.CopyElements(vInput, 0, vInput.GetDim(), m_nConstNodes * 2);
 
 	// and the total number of nodes plus clusters
 	int nNodeCount = __min(GetStateDim() / 2, m_pSpace->GetNodeCount());
+	nNodeCount = __min(nNodeCount, vInput.GetDim() / 2 + m_nConstNodes);
 
 	// compute the weighted center of the nodes, for the center repulsion
 	REAL vCenter[2];
 	REAL totalAct = 0.0;
-	for (int nAt = 0; nAt < nNodeCount; // TRIAL: Removed m_vInput.GetDim() / 2; 
-		nAt++)
+	for (int nAt = 0; nAt < nNodeCount; nAt++)
 	{
-		vCenter[0] = m_act[nAt] * m_vInput[nAt * 2];
-		vCenter[1] = m_act[nAt] * m_vInput[nAt * 2 + 1];
-		totalAct += m_act[nAt];
+		REAL act = m_pSpace->GetNodeAt(nAt)->GetActivation();
+		vCenter[0] = act * m_vState[nAt * 2];
+		vCenter[1] = act * m_vState[nAt * 2 + 1];
+		totalAct += act;
 	}
 
 	// scale weighted center by total weight
@@ -352,8 +392,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 	// iterate over all current visualized node views
 	int nAtNode;
-	for (nAtNode = nNodeCount-1; nAtNode >= m_vConstPositions.GetDim() / 2;
-		nAtNode--)
+	for (nAtNode = nNodeCount-1; nAtNode >= m_nConstNodes; nAtNode--)
 	{
 		// iterate over the potential linked views
 		int nAtLinked;
@@ -368,8 +407,8 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 			// set up some common values
 
 			// compute the x- and y-offset between the views
-			const REAL x = m_vInput[nAtNode*2 + 0] - m_vInput[nAtLinked*2 + 0];
-			const REAL y = m_vInput[nAtNode*2 + 1] - m_vInput[nAtLinked*2 + 1];
+			const REAL x = m_vState[nAtNode*2 + 0] - m_vState[nAtLinked*2 + 0];
+			const REAL y = m_vState[nAtNode*2 + 1] - m_vState[nAtLinked*2 + 1];
 
 			// compute the x- and y-scales for the fields -- average of
 			//		two rectangles
@@ -450,13 +489,12 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 		{
 			//////////////////////////////////////////////////////////////
 			// compute the centering repulsion field
-
-			if (m_pSpace->GetNodeAt(nAtNode)->GetActivation()
-						<= CENTER_REP_MAX_ACT)
+			REAL act = m_pSpace->GetNodeAt(nAtNode)->GetActivation();
+			if (act	<= CENTER_REP_MAX_ACT)
 			{
 				// compute the x- and y-offset between the views
-				const REAL x = m_vInput[nAtNode*2 + 0] - vCenter[0];
-				const REAL y = m_vInput[nAtNode*2 + 1] - vCenter[1];
+				const REAL x = m_vState[nAtNode*2 + 0] - vCenter[0];
+				const REAL y = m_vState[nAtNode*2 + 1] - vCenter[1];
 
 				// compute the x- and y-scales for the fields -- average of
 				//		two rectangles
@@ -475,8 +513,8 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 				// compute the energy term
 				const REAL inv_sq = ((REAL) 1.0) / (x_ratio + y_ratio + ((REAL) 3.0));
 				const REAL factor_rep = m_k_rep * CENTER_REP_WEIGHT
-					* (CENTER_REP_MAX_ACT - abs(m_act[nAtNode])) 
-					* (CENTER_REP_MAX_ACT - abs(m_act[nAtNode]));
+					* (CENTER_REP_MAX_ACT - abs(act)) 
+					* (CENTER_REP_MAX_ACT - abs(act));
 
 				// add to total energy
 				m_energy += factor_rep * inv_sq;
@@ -503,7 +541,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 		pGrad->SetDim(vInput.GetDim());
 
 		// and assign
-		pGrad->CopyElements(m_vGrad, m_vConstPositions.GetDim(), vInput.GetDim());
+		pGrad->CopyElements(m_vGrad, m_nConstNodes * 2, vInput.GetDim());
 	}
 
 	// increment evaluation count
@@ -557,7 +595,7 @@ REAL CSpaceLayoutManager::GetDistError(CNode *pFrom, CNode *pTo)
 void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV, 
 									  int nConstNodes)
 {
-	nConstNodes = __min(nConstNodes, MAX_STATE_DIM / 2);
+	nConstNodes = __min(nConstNodes, GetStateDim() / 2);
 
 	// if all nodes are constant
 	if (nConstNodes * 2 >= GetStateDim())
@@ -570,70 +608,23 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 	m_pOptimizer->SetTolerance(tol);
 
 	// set up the interaction matrices
-	LoadSizesLinks();
-
-	// if we have constant nodes,
-	if (nConstNodes > 0)
-	{
-		// cache the old state dimension
-		int nOldStateDim = GetStateDim();
-
-		// set new state dimension to only constant nodes
-		SetStateDim(nConstNodes * 2);
-		m_vState.SetDim(nConstNodes * 2);
-
-		// get the positions vector
-		pSSV->GetPositionsVector(m_vState);
-
-		// make sure no constant nodes
-		m_vConstPositions.SetDim(0);
-
-		// set up the interaction matrices
-		LoadSizesLinks();
-
-		// get the constant energy term
-		m_bCalcCenterRep = FALSE;
-		m_energyConst = 0.0;
-		m_energyConst = (*this)(m_vState);
-		m_bCalcCenterRep = TRUE;
-
-		// restore old state dimension
-		SetStateDim(nOldStateDim);
-	}
-	else
-	{
-		// no constant nodes, no constant energy term
-		m_energyConst = 0.0;
-	}
+	LoadSizesLinks(nConstNodes, GetStateDim() / 2);
 
 	// form the state vector
-	m_vState.SetDim(GetStateDim());
 	pSSV->GetPositionsVector(m_vState, TRUE);
-
-	// store the constant positions
-	m_vConstPositions.SetDim(nConstNodes * 2);
-	m_vConstPositions.CopyElements(m_vState, 0, nConstNodes * 2);
 
 	// reset evaluation count
 	m_nEvaluations = 0;
 
-	// form the new state vector
-	static CVectorN<> vNewState;
-	vNewState.SetDim(GetStateDim() - nConstNodes * 2);
-	vNewState.CopyElements(m_vState, nConstNodes * 2, 
-		GetStateDim() - nConstNodes * 2);
-
-	// set up the interaction matrices
-	LoadSizesLinks();
+	// form the partial state vector
+	CVectorN<> vPartState;
+	vPartState.SetElements(GetStateDim() - m_nConstNodes * 2,
+		&m_vState[m_nConstNodes * 2], FALSE);
 
 	// perform the optimization
-	vNewState = m_pOptimizer->Optimize(vNewState);
+	vPartState = m_pOptimizer->Optimize(vPartState);
 
-	// copy the optimized elements
-	m_vState.CopyElements(vNewState, 0, 
-		GetStateDim() - nConstNodes * 2, nConstNodes * 2);
-
-	if (nConstNodes == 0)
+	if (m_nConstNodes == 0)
 	{
 		// set the resulting positions, rotate-translating in the process
 		pSSV->RotateTranslateTo(m_vState);
