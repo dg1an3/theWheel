@@ -104,7 +104,7 @@ void CSpace::Dump(CDumpContext& dc) const
 
 	for (int nAt = 0; nAt < rootNode.children.GetSize(); nAt++)
 	{
-		const CNode *pNode = rootNode.children.Get(nAt);
+		const CNode *pNode = (const CNode *) rootNode.children.Get(nAt);
 		for (int nAtLink = 0; nAtLink < pNode->links.GetSize(); nAtLink++)
 		{
 			const CNodeLink *pLink = pNode->links.Get(nAtLink);

@@ -32,7 +32,7 @@ public:
 	CValue< CString > description;
 
 	// the child nodes
-	CCollection< CNode > children;
+//	CCollection< CNode > children;
 
 	// the node links
 	CCollection< CNodeLink > links;
