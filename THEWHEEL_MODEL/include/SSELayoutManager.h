@@ -18,13 +18,11 @@ public:
 	virtual ~CSSELayoutManager();
 
 	// loads the links and sizes for quick access
-	virtual void LoadSizesLinks();
+	virtual void LoadSizesLinks(int nConstNodes, int nNodeCount);
 
 	// evaluates the energy function
 	virtual REAL operator()(const CVectorN<>& vInput, 
 		CVectorN<> *pGrad = NULL);
-
-
 };
 
 #endif // !defined(AFX_SSELAYOUTMANAGER_H__B9E239F3_FF26_410E_8DAC_0F59DCACB005__INCLUDED_)
