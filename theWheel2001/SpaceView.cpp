@@ -657,6 +657,8 @@ void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI)
 
 void CSpaceView::LearnForNode(CNodeView *pNodeView)
 {
+	return;
+
 	// get the rectangle for the target node view
 	CRect rectNodeView;
 	pNodeView->GetWindowRect(&rectNodeView);
@@ -716,8 +718,11 @@ void CSpaceView::LearnForNode(CNodeView *pNodeView)
 
 void CSpaceView::OnTimer(UINT nIDEvent) 
 {
-	// do a layout
-	LayoutNodeViews();
+	if (GetQueueStatus(QS_MOUSE) == 0)
+	{
+		// do a layout
+		LayoutNodeViews();
+	}
 
 	// update the privates
 	int nAt;

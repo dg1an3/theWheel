@@ -452,14 +452,14 @@ void CNodeView::OnLButtonDown(UINT nFlags, CPoint point)
 #ifdef PROPAGATE_ON_DOWN
 		// compute the new activation
 		float oldActivation = activation.Get();
-		float newActivation = ActivationCurve(oldActivation * 1.5f,
-			0.2f);
+		float newActivation = ActivationCurve(oldActivation * 1.6f,
+			0.3f);
 		activation.Set(newActivation);
 
 		CSpaceView *pParent = (CSpaceView *)GetParent();
 
 		// propagate activation
-		pParent->PropagateActivation(this, newActivation, 1.5f);
+		pParent->PropagateActivation(this, newActivation, 1.6f);
 		pParent->ResetForPropagation();
 
 		// now normalize all children
@@ -538,7 +538,7 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 			// compute the new activation
 			float factor = 1.0f; //   + lengthSq * 1e-2f;
 			float oldActivation = activation.Get();
-			float newActivation = ActivationCurve(oldActivation * factor, 0.1f);
+			float newActivation = ActivationCurve(oldActivation * factor, 0.3f);
 
 			activation.Set(newActivation);
 
@@ -563,7 +563,9 @@ void CNodeView::UpdatePrivates()
 	CSpaceView *pSpaceView = (CSpaceView *)GetParent();
 	CNodeView *pParentView = pSpaceView->GetViewForNode(forNode->parent.Get());
 
-	CVector<2> vNewCenter;
+	CRect rect;
+	pSpaceView->GetClientRect(&rect);
+	CVector<2> vNewCenter(rect.CenterPoint());
 	if (activation.Get() > activationThreshold)
 	{
 		vNewCenter = center.Get() * 0.125 + privCenter.Get() * 0.875;

@@ -45,7 +45,7 @@ BOOL CSpace::OnNewDocument()
 	// remove all nodes
 	rootNode.children.RemoveAll();
 
-#define VSIM
+// #define VSIM
 #ifdef VSIM
 	// now populate with some dummy data
 	CNode *pVSIMNode = new CNode("VSIM");
@@ -68,21 +68,35 @@ BOOL CSpace::OnNewDocument()
 	pBeamNode->LinkTo(pVSIMNode, 0.3f);
 #endif
 
+#define RECREATION
 #ifdef RECREATION
 	// now populate with some dummy data
-	CNode *pSongsNode = new CNode("Songs");
-	rootNode.children.Add(pSongsNode);
 
-	CNode *pBandsNode = new CNode("Bands/Singers");
-	rootNode.children.Add(pBandsNode); 
+	CNode *pR_B_Soul = new CNode("R&B/Soul");
+	rootNode.children.Add(pR_B_Soul); 
 
-	pSongsNode->LinkTo(pBandsNode, 0.3f);
+//	CNode *pJazz = new CNode("Jazz");
+//	rootNode.children.Add(pJazz);
 
-	CNode *pFoodNode = new CNode("Food");
-	rootNode.children.Add(pFoodNode);
+	CNode *pGroove = new CNode("Groove");
+	rootNode.children.Add(pGroove); 
 
-	pFoodNode->LinkTo(pSongsNode, 0.2f);
-	pFoodNode->LinkTo(pBandsNode, 0.2f);
+	CNode *pAlternative = new CNode("Alternative");
+	rootNode.children.Add(pAlternative); 
+
+	CNode *pTechnoDance = new CNode("Techno/Dance");
+	rootNode.children.Add(pTechnoDance);
+
+	// pR_B_Soul->LinkTo(pJazz, 0.3f);
+	pR_B_Soul->LinkTo(pGroove, 0.3f);
+	pR_B_Soul->LinkTo(pAlternative, 0.1f);
+	pR_B_Soul->LinkTo(pTechnoDance, 0.3f);
+
+	pGroove->LinkTo(pAlternative, 0.2f);
+	pGroove->LinkTo(pTechnoDance, 0.1f);
+
+	pAlternative->LinkTo(pTechnoDance, 0.3f);
+
 #endif
 
 	return TRUE;
