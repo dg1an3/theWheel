@@ -49,17 +49,6 @@ public:
 	// loads the image file, if necessary
 	CDib *GetDib();
 
-	// the current activation value of the node
-	CValue< double > activation;
-
-	// returns the sum of the activation of all descendants, 
-	//		plus this node's activation
-	double GetDescendantActivation();
-
-	// scales the activation of this node and all descendants by
-	//		the scale amount
-	void ScaleDescendantActivation(double scale);
-
 	// the node links
 	CCollection< CNodeLink > links;
 
@@ -71,9 +60,28 @@ public:
 	// sorts the links descending by weight
 	void SortLinks();
 
+	// accessors for the node's activation
+	double GetActivation();
+	void SetActivation(double newActivation, CNode *pActivator = NULL);
+
+	// returns the current maximum activator
+	CNode *GetMaxActivator();
+
+	// returns the sum of the activation of all descendants, 
+	//		plus this node's activation
+	double GetDescendantActivation();
+
+	// scales the activation of this node and all descendants by
+	//		the scale amount
+	void ScaleDescendantActivation(double scale);
+
 	// propagation management
-	void PropagateActivation(double scale);
 	void ResetForPropagation();
+	void PropagateActivation(double scale);
+
+	// convenience pointer to a view object
+	CObject *GetView();
+	void SetView(CObject *pView);
 
 	// serialization of this node
 	virtual void Serialize(CArchive &ar);
@@ -81,6 +89,19 @@ public:
 protected:
 	// pointer to the DIB, if it is loaded
 	CDib *m_pDib;
+
+	// the current activation value of the node
+	double m_activation;
+
+	// maximum activation delta
+	double m_maxDeltaActivation;
+
+	// stores a pointer to the maximum activator for this
+	//		propagation cycle
+	CNode *m_pMaxActivator;
+
+	// convenience pointer to a view object
+	CObject *m_pView;
 };
 
 #endif // !defined(AFX_NODE_H__0C8AA66B_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)

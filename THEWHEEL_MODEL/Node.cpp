@@ -31,9 +31,11 @@ CNode::CNode(const CString& strName, const CString& strDesc)
 	: parent(NULL),
 		description(strDesc),
 		m_pDib(NULL),
-
 		// initialize with a very small activation
-		activation(0.01)
+		m_activation(0.01),
+		m_maxDeltaActivation(0.0),
+		m_pMaxActivator(NULL),
+		m_pView(NULL)
 {
 	// set the node's name
 	name.Set(strName);
@@ -79,51 +81,6 @@ CDib *CNode::GetDib()
 	}
 
 	return m_pDib;
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNode::GetDescendantActivation
-// 
-// sums the activation value of this node with all children nodes
-//////////////////////////////////////////////////////////////////////
-double CNode::GetDescendantActivation()
-{
-	// initialize with the activation of this node
-	double sum = activation.Get();
-
-	// iterate over child nodes
-	for (int nAt = 0; nAt < children.GetSize(); nAt++)
-	{
-		// for each child node
-		CNode *pNode = (CNode *)children.Get(nAt);
-
-		// sum its descendent activation
-		sum += pNode->GetDescendantActivation();
-	}
-
-	// return the sum
-	return sum;
-}
-
-//////////////////////////////////////////////////////////////////////
-// CNode::ScaleDescendantActivation
-// 
-// sums the activation value of this node with all children nodes
-//////////////////////////////////////////////////////////////////////
-void CNode::ScaleDescendantActivation(double scale)
-{
-	// scale this node's activation
-	activation.Set(activation.Get() * scale);
-
-	// iterate over child nodes
-	for (int nAt = 0; nAt < children.GetSize(); nAt++)
-	{
-		// for each child node
-		CNode *pNode = (CNode *)children.Get(nAt);
-
-		// scale the child's activation
-		pNode->ScaleDescendantActivation(scale);
-	}
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -235,6 +192,93 @@ void CNode::SortLinks()
 }
 
 //////////////////////////////////////////////////////////////////////
+// CNode::GetActivation
+// 
+// returns the node's activation
+//////////////////////////////////////////////////////////////////////
+double CNode::GetActivation()
+{
+	return m_activation;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNode::SetActivation
+// 
+// sets the node's activation.  if an activator is passed, it is
+//		compared to the current Max Activator
+//////////////////////////////////////////////////////////////////////
+void CNode::SetActivation(double newActivation, CNode *pActivator)
+{
+	// compute the delta
+	double deltaActivation = newActivation - GetActivation();
+
+	// set the activation
+	m_activation = newActivation;
+
+	// compare the delta for a new max activator
+	if (deltaActivation > m_maxDeltaActivation 
+		&& pActivator != NULL)
+	{
+		m_pMaxActivator = pActivator;
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetMaxActivator
+// 
+// returns the current maximum activator
+//////////////////////////////////////////////////////////////////////
+CNode *CNode::GetMaxActivator()
+{
+	return m_pMaxActivator;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetDescendantActivation
+// 
+// sums the activation value of this node with all children nodes
+//////////////////////////////////////////////////////////////////////
+double CNode::GetDescendantActivation()
+{
+	// initialize with the activation of this node
+	double sum = GetActivation();
+
+	// iterate over child nodes
+	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	{
+		// for each child node
+		CNode *pNode = (CNode *)children.Get(nAt);
+
+		// sum its descendent activation
+		sum += pNode->GetDescendantActivation();
+	}
+
+	// return the sum
+	return sum;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNode::ScaleDescendantActivation
+// 
+// sums the activation value of this node with all children nodes
+//////////////////////////////////////////////////////////////////////
+void CNode::ScaleDescendantActivation(double scale)
+{
+	// scale this node's activation
+	SetActivation(GetActivation() * scale);
+
+	// iterate over child nodes
+	for (int nAt = 0; nAt < children.GetSize(); nAt++)
+	{
+		// for each child node
+		CNode *pNode = (CNode *)children.Get(nAt);
+
+		// scale the child's activation
+		pNode->ScaleDescendantActivation(scale);
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
 // CNode::PropagateActivation
 // 
 // propagates the activation of this node through the other nodes
@@ -261,7 +305,7 @@ void CNode::PropagateActivation(double scale)
 			CNode *pTarget = pLink->forTarget.Get();
 
 			// compute the desired new activation = this activation * weight
-			double targetActivation = activation.Get() 
+			double targetActivation = GetActivation() 
 				* pLink->weight.Get();
 
 			// perturb the new activation
@@ -269,14 +313,14 @@ void CNode::PropagateActivation(double scale)
 				(1.0005f - 0.001f * (float) rand() / (float) RAND_MAX);
 
 			// now change it if the current target activation is less than the target
-			if (pTarget->activation.Get() < targetActivation)
+			if (pTarget->GetActivation() < targetActivation)
 			{
 				// compute the new actual activation
-				double newActivation = pTarget->activation.Get() + 
-					(targetActivation - pTarget->activation.Get()) * scale;
+				double newActivation = pTarget->GetActivation() + 
+					(targetActivation - pTarget->GetActivation()) * scale;
 
 				// set the new actual activation
-				pTarget->activation.Set(newActivation);
+				pTarget->SetActivation(newActivation, this);
 
 				// and propagate to linked nodes
 				pTarget->PropagateActivation(scale);
@@ -292,7 +336,11 @@ void CNode::PropagateActivation(double scale)
 //////////////////////////////////////////////////////////////////////
 void CNode::ResetForPropagation()
 {
-	// reset each of the passed node's links
+	// reset the max delta activation
+	m_maxDeltaActivation = 0.0;
+	m_pMaxActivator = NULL;
+
+	// reset each of the node's links
 	for (int nAt = 0; nAt < links.GetSize(); nAt++)
 	{
 		CNodeLink *pLink = links.Get(nAt);
@@ -307,6 +355,26 @@ void CNode::ResetForPropagation()
 		// now recursively reset the children
 		pChildNode->ResetForPropagation();
 	}
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNode::GetView
+// 
+// returns the view object for this node
+//////////////////////////////////////////////////////////////////////
+CObject *CNode::GetView()
+{
+	return m_pView;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNode::SetView
+// 
+// sets the view object for this node
+//////////////////////////////////////////////////////////////////////
+void CNode::SetView(CObject *pView)
+{
+	m_pView = pView;
 }
 
 //////////////////////////////////////////////////////////////////////
