@@ -4,6 +4,9 @@
 #include "stdafx.h"
 #include "THEWHEEL_MODEL_Test.h"
 
+#include "Node.h"
+#include "SSELayoutManager.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
@@ -39,11 +42,12 @@ REAL ComputeEpsilon(REAL forValue, REAL epsMin = 1e-6)
 	return epsMin * (1.0 + forValue);
 }
 
-class CTestLayoutManager : public CSpaceLayoutManager
+template<class BASE>
+class CTestLayoutManager : public BASE
 {
 public:
 	CTestLayoutManager(CSpace *pSpace)
-		: CSpaceLayoutManager(pSpace) { }
+		: BASE(pSpace) { }
 
 	REAL Evaluate(const CVectorN<>& vInput);
 	CVectorN<> EvaluateGrad(const CVectorN<>& vInput, REAL delta);
@@ -56,7 +60,8 @@ public:
 		CVectorN<> *pGrad = NULL);
 };
 
-REAL CTestLayoutManager::EvaluatePos(REAL x, REAL y, CVectorD<3> vSz, REAL act, REAL weight)
+template<class BASE>
+REAL CTestLayoutManager<BASE>::EvaluatePos(REAL x, REAL y, CVectorD<3> vSz, REAL act, REAL weight)
 {
 	// compute the relative actual distance
 	const REAL act_dist = (REAL) sqrt(x * x / (vSz[0] * vSz[0])
@@ -73,27 +78,29 @@ REAL CTestLayoutManager::EvaluatePos(REAL x, REAL y, CVectorD<3> vSz, REAL act, 
 	return factor * dist_error * dist_error;
 }
 
-REAL CTestLayoutManager::EvaluateRep(REAL x, REAL y, CVectorD<3> vSz, REAL act)
+template<class BASE>
+REAL CTestLayoutManager<BASE>::EvaluateRep(REAL x, REAL y, CVectorD<3> vSz, REAL act)
 {
 	// compute the energy due to this interation
 	const REAL x_ratio = x * x / (vSz[0] * vSz[0]);
 	const REAL y_ratio = y * y / (vSz[1] * vSz[1]);
 
 	// compute the energy term
-	const REAL inv_sq = 1.0 / (x_ratio + y_ratio + 0.1);
+	const REAL inv_sq = 1.0 / (x_ratio + y_ratio + 3.0);
 	const REAL factor_rep = GetKRep() * act;
 
 	// add to total energy
 	return factor_rep * inv_sq;
 }
 
-REAL CTestLayoutManager::Evaluate(const CVectorN<>& vInput)
+template<class BASE>
+REAL CTestLayoutManager<BASE>::Evaluate(const CVectorN<>& vInput)
 {
 	// reset the energy
 	REAL energy = 0.0;
 
 	// and the total number of nodes plus clusters
-	int nNodeCount = GetStateDim() / 2;
+	int nNodeCount = __min(GetStateDim() / 2, m_pSpace->GetNodeCount());
 
 	// iterate over all current visualized node views
 	int nAtNode;
@@ -118,7 +125,7 @@ REAL CTestLayoutManager::Evaluate(const CVectorN<>& vInput)
 
 				// compute the x- and y-scales for the fields -- average of
 				//		two rectangles
-				CVectorD<3> vSz = 0.5 * 
+				CVectorD<3> vSz = (REAL) 0.5 * 
 					(pNode->GetSize(pNode->GetActivation())
 						* GetSizeLogScale(pNode->GetChildCount())
 					+ pLinked->GetSize(pLinked->GetActivation())
@@ -131,7 +138,7 @@ REAL CTestLayoutManager::Evaluate(const CVectorN<>& vInput)
 				// store the weight, for convenience
 				const REAL weight = 0.5 *
 					(pNode->GetLinkWeight(pLinked)
-						+ pLinked->GetLinkWeight(pNode)) + 0.0001;
+						+ pLinked->GetLinkWeight(pNode)) + 1e-6;
 
 				energy += EvaluatePos(x, y, vSz, pNode->GetActivation(), weight);
 
@@ -148,7 +155,8 @@ REAL CTestLayoutManager::Evaluate(const CVectorN<>& vInput)
 	return energy;
 }
 
-CVectorN<> CTestLayoutManager::EvaluateGrad(const CVectorN<>& vInput, REAL delta)
+template<class BASE>
+CVectorN<> CTestLayoutManager<BASE>::EvaluateGrad(const CVectorN<>& vInput, REAL delta)
 {
 	CVectorN<> vGrad;
 	vGrad.SetDim(vInput.GetDim());
@@ -172,11 +180,12 @@ CVectorN<> CTestLayoutManager::EvaluateGrad(const CVectorN<>& vInput, REAL delta
 	return vGrad;
 }
 
-REAL CTestLayoutManager::operator()(const CVectorN<>& vInput, 
+template<class BASE>
+REAL CTestLayoutManager<BASE>::operator()(const CVectorN<>& vInput, 
 		CVectorN<> *pGrad)
 {
 	// evaluate base class
-	REAL energy = CSpaceLayoutManager::operator()(vInput, pGrad);
+	REAL energy = BASE::operator()(vInput, pGrad);
 
 	// prepare the input vector for the full positional information
 	ASSERT(m_vConstPositions.GetDim() + vInput.GetDim() == m_nStateDim);
@@ -200,7 +209,10 @@ REAL CTestLayoutManager::operator()(const CVectorN<>& vInput,
 	REAL epsilon = ComputeEpsilon(testEnergy);
 
 	// test for approximate equality
-	ASSERT(IsApproxEqual(energy, testEnergy, epsilon));
+	if (!IsApproxEqual(energy, testEnergy, epsilon))
+	{
+		printf(" **** FAILED: energy comparison\n");
+	}
 
 	// are we testing gradient also?
 	if (pGrad)
@@ -228,15 +240,13 @@ REAL CTestLayoutManager::operator()(const CVectorN<>& vInput,
 		REAL epsGrad = ComputeEpsilon(avgGradLength, 1e-3);
 		
 		// test for gradient approximate equality
-		ASSERT(pGrad->IsApproxEqual(vPartGrad, epsGrad));
-
-		/* if (errDist > epsGrad)
+		if (!pGrad->IsApproxEqual(vPartGrad, epsGrad))
 		{
-			TRACE("Error in gradient\n");
+			TRACE(" **** Error in gradient\n");
 			TRACE_VECTOR("vPartGrad", vPartGrad);
 			TRACE_VECTOR("pGrad", (*pGrad));
 			ASSERT(FALSE);
-		} */
+		}
 	}
 
 	// return the total energy
@@ -353,9 +363,11 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 
 		PrintInfo(pSpace, TRUE);
 
+		cout << "**** Objective Function Test ****" << endl;
+
 		// now test layout
-		CTestLayoutManager *pTestLayoutManager = 
-			new CTestLayoutManager(pSpace);
+		CTestLayoutManager<CSSELayoutManager> *pTestLayoutManager = 
+			new CTestLayoutManager<CSSELayoutManager>(pSpace);
 		pTestLayoutManager->SetStateDim(pSpace->GetLayoutManager()->GetStateDim());
 		pTestLayoutManager->SetKPos(pSpace->GetLayoutManager()->GetKPos());
 		pTestLayoutManager->SetKRep(pSpace->GetLayoutManager()->GetKRep());

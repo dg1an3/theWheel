@@ -57,7 +57,7 @@ public:
 	void SetStateDim(int nStateDim);
 
 	// loads the links and sizes for quick access
-	void LoadSizesLinks();
+	virtual void LoadSizesLinks();
 
 	// evaluates the energy function
 	virtual REAL operator()(const CVectorN<>& vInput, 
@@ -79,7 +79,6 @@ protected:
 	// vector holding the const positions
 	CVectorN<> m_vConstPositions;
 
-private:
 	// the optimizer for the layout
 	COptimizer *m_pPowellOptimizer;
 	COptimizer *m_pConjGradOptimizer;
@@ -93,7 +92,6 @@ private:
 	REAL m_k_rep;
 	REAL m_tolerance;
 
-protected:
 	// caches previous input vector
 	CVectorN<> m_vInput;
 
@@ -117,6 +115,7 @@ protected:
 
 	// stores the link weights for quick access
 	_declspec(align(16)) REAL m_mLinks[MAX_STATE_DIM][MAX_STATE_DIM];
+	_declspec(align(16)) REAL m_mAvgAct[MAX_STATE_DIM][MAX_STATE_DIM];
 
 	// holds the number of evaluations that have been done
 	int m_nEvaluations;

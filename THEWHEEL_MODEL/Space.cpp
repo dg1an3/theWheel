@@ -15,6 +15,8 @@
 // the class definition
 #include "Space.h"
 
+#include "SSELayoutManager.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
@@ -77,6 +79,26 @@ REAL GenerateRandom(REAL min, REAL max)
 }	// GenerateRandom
 
 
+__declspec(cpu_specific(pentium))
+BOOL HasMMX()
+{
+	return FALSE;
+}
+
+
+__declspec(cpu_specific(pentium_MMX)) 
+BOOL HasMMX()
+{
+	return TRUE;
+}
+
+__declspec(cpu_dispatch(pentium, pentium_MMX))
+BOOL HasMMX()
+{
+   /* Empty function body informs the compiler to generate the
+   CPU-dispatch function listed in the cpu_dispatch clause. */
+}  
+
 //////////////////////////////////////////////////////////////////////
 // Event Firing
 //////////////////////////////////////////////////////////////////////
@@ -107,8 +129,16 @@ CSpace::CSpace()
 {
 	m_pStateVector = new CSpaceStateVector(this);
 
-	// create the layout manager
-	m_pLayoutManager = new CSpaceLayoutManager(this);
+	if (::AfxGetApp()->GetProfileInt("LAYOUT", "RUN_FAST", 0) == 1
+		&& HasMMX())
+	{
+		// create the layout manager
+		m_pLayoutManager = new CSSELayoutManager(this);
+	}
+	else
+	{
+		m_pLayoutManager = new CSpaceLayoutManager(this);
+	}
 
 	// set the spring constant (from the profile)
 	SetSpringConst( 1.0 / 100.0 * 

@@ -285,10 +285,17 @@ void CSpaceLayoutManager::LoadSizesLinks()
 				(pAtNode->GetLinkWeight(pAtLinkedNode)
 					+ pAtLinkedNode->GetLinkWeight(pAtNode)) + (REAL) 1e-6;
 
+			m_mAvgAct[nAtNode][nAtLinkedNode] =
+				m_mAvgAct[nAtLinkedNode][nAtNode] =
+					(m_act[nAtNode] + m_act[nAtLinkedNode]);
+
 			// store the link weight
 			m_mLinks[nAtNode][nAtLinkedNode] =
 				m_mLinks[nAtLinkedNode][nAtNode] =
-					weight;
+					weight 
+					
+					* m_mAvgAct[nAtNode][nAtLinkedNode];
+
 		}
 	}
 
@@ -327,7 +334,8 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 	// compute the weighted center of the nodes, for the center repulsion
 	REAL vCenter[2];
 	REAL totalAct = 0.0;
-	for (int nAt = 0; nAt < m_vInput.GetDim() / 2; nAt++)
+	for (int nAt = 0; nAt < nNodeCount; // TRIAL: Removed m_vInput.GetDim() / 2; 
+		nAt++)
 	{
 		vCenter[0] = m_act[nAt] * m_vInput[nAt * 2];
 		vCenter[1] = m_act[nAt] * m_vInput[nAt * 2 + 1];
@@ -384,8 +392,8 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 			// compute the factor controlling the importance of the
 			//		attraction term
-			const REAL factor = m_k_pos * weight 
-				* (m_act[nAtNode] + m_act[nAtLinked]);
+			const REAL factor = m_k_pos * weight;
+				// * (m_act[nAtNode] + m_act[nAtLinked]);
 
 			// and add the attraction term to the energy
 			m_energy += factor * dist_error * dist_error;
@@ -412,8 +420,8 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 			// compute the energy term
 			const REAL inv_sq = ((REAL) 1.0) / (x_ratio + y_ratio + ((REAL) 3.0));
-			const REAL factor_rep = m_k_rep 
-				* (m_act[nAtNode] + m_act[nAtLinked]);
+			const REAL factor_rep = m_k_rep * m_mAvgAct[nAtNode][nAtLinked];
+				// * (m_act[nAtNode] + m_act[nAtLinked]);
 
 			// add to total energy
 			m_energy += factor_rep * inv_sq;
@@ -436,7 +444,9 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 		//////////////////////////////////////////////////////////////
 		// compute the centering repulsion field
 
-		if (m_act[nAtNode] <= CENTER_REP_MAX_ACT)
+		if (m_pSpace->GetNodeAt(nAtNode)->GetActivation()
+			// m_act[nAtNode] 
+			<= CENTER_REP_MAX_ACT)
 		{
 			// compute the x- and y-offset between the views
 			const REAL x = m_vInput[nAtNode*2 + 0] - vCenter[0];
