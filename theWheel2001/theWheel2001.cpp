@@ -1,7 +1,15 @@
-// theWheel2001.cpp : Defines the class behaviors for the application.
+//////////////////////////////////////////////////////////////////////
+// theWheel2001.cpp: implementation of the CtheWheelApp class.
 //
+// Copyright (C) 1996-2001
+// $Id$
+// U.S. Patent Pending
+//////////////////////////////////////////////////////////////////////
 
+// pre-compiled headers
 #include "stdafx.h"
+
+// main include
 #include "theWheel2001.h"
 
 #include "MainFrm.h"
@@ -16,24 +24,13 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 /////////////////////////////////////////////////////////////////////////////
-// CtheWheelApp
-
-BEGIN_MESSAGE_MAP(CtheWheelApp, CWinApp)
-	//{{AFX_MSG_MAP(CtheWheelApp)
-	ON_COMMAND(ID_APP_ABOUT, OnAppAbout)
-		// NOTE - the ClassWizard will add and remove mapping macros here.
-		//    DO NOT EDIT what you see in these blocks of generated code!
-	//}}AFX_MSG_MAP
-	// Standard file based document commands
-	ON_COMMAND(ID_FILE_NEW, CWinApp::OnFileNew)
-	ON_COMMAND(ID_FILE_OPEN, CWinApp::OnFileOpen)
-	// Standard print setup command
-	ON_COMMAND(ID_FILE_PRINT_SETUP, CWinApp::OnFilePrintSetup)
-END_MESSAGE_MAP()
-
-/////////////////////////////////////////////////////////////////////////////
 // CtheWheelApp construction
 
+//////////////////////////////////////////////////////////////////////
+// CtheWheelApp::CtheWheelApp
+// 
+// constructs a new instance of the application object 
+//////////////////////////////////////////////////////////////////////
 CtheWheelApp::CtheWheelApp()
 {
 	// TODO: add construction code here,
@@ -48,6 +45,11 @@ CtheWheelApp theApp;
 /////////////////////////////////////////////////////////////////////////////
 // CtheWheelApp initialization
 
+//////////////////////////////////////////////////////////////////////
+// CtheWheelApp::InitInstance
+// 
+// constructs a new instance of the application object 
+//////////////////////////////////////////////////////////////////////
 BOOL CtheWheelApp::InitInstance()
 {
 	AfxEnableControlContainer();
@@ -107,11 +109,32 @@ BOOL CtheWheelApp::InitInstance()
 
 
 /////////////////////////////////////////////////////////////////////////////
-// CAboutDlg dialog used for App About
+// CtheWheelApp Message Map
+/////////////////////////////////////////////////////////////////////////////
 
+BEGIN_MESSAGE_MAP(CtheWheelApp, CWinApp)
+	//{{AFX_MSG_MAP(CtheWheelApp)
+	ON_COMMAND(ID_APP_ABOUT, OnAppAbout)
+		// NOTE - the ClassWizard will add and remove mapping macros here.
+		//    DO NOT EDIT what you see in these blocks of generated code!
+	//}}AFX_MSG_MAP
+	// Standard file based document commands
+	ON_COMMAND(ID_FILE_NEW, CWinApp::OnFileNew)
+	ON_COMMAND(ID_FILE_OPEN, CWinApp::OnFileOpen)
+	// Standard print setup command
+	ON_COMMAND(ID_FILE_PRINT_SETUP, CWinApp::OnFilePrintSetup)
+END_MESSAGE_MAP()
+
+
+//////////////////////////////////////////////////////////////////////
+// class CAboutDlg
+//
+// dialog used for App About
+//////////////////////////////////////////////////////////////////////
 class CAboutDlg : public CDialog
 {
 public:
+	// Construction/Destruction
 	CAboutDlg();
 
 // Dialog Data
@@ -133,12 +156,22 @@ protected:
 	DECLARE_MESSAGE_MAP()
 };
 
+//////////////////////////////////////////////////////////////////////
+// CAboutDlg::CAboutDlg
+// 
+// constructs a new CAboutDlg
+//////////////////////////////////////////////////////////////////////
 CAboutDlg::CAboutDlg() : CDialog(CAboutDlg::IDD)
 {
 	//{{AFX_DATA_INIT(CAboutDlg)
 	//}}AFX_DATA_INIT
 }
 
+//////////////////////////////////////////////////////////////////////
+// CAboutDlg::DoDataExchange
+// 
+// performs data exchange for the about dialog
+//////////////////////////////////////////////////////////////////////
 void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
@@ -146,23 +179,36 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 	//}}AFX_DATA_MAP
 }
 
+/////////////////////////////////////////////////////////////////////////////
+// CAboutDlg Message Map
+/////////////////////////////////////////////////////////////////////////////
+
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialog)
 	//{{AFX_MSG_MAP(CAboutDlg)
 		// No message handlers
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
-// App command to run the dialog
+
+/////////////////////////////////////////////////////////////////////////////
+// CtheWheelApp message handlers
+
+//////////////////////////////////////////////////////////////////////
+// CtheWheelApp::OnAppAbout
+// 
+// Menu command to display the about dialog
+//////////////////////////////////////////////////////////////////////
 void CtheWheelApp::OnAppAbout()
 {
 	CAboutDlg aboutDlg;
 	aboutDlg.DoModal();
 }
 
-/////////////////////////////////////////////////////////////////////////////
-// CtheWheelApp message handlers
-
-
+//////////////////////////////////////////////////////////////////////
+// CtheWheelApp::OnIdle
+// 
+// Idle time processing for the application
+//////////////////////////////////////////////////////////////////////
 BOOL CtheWheelApp::OnIdle(LONG lCount) 
 {
 	CWinApp::OnIdle(lCount);

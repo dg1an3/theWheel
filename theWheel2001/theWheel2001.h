@@ -1,5 +1,10 @@
-// theWheel2001.h : main header file for the THEWHEEL2001 application
+//////////////////////////////////////////////////////////////////////
+// theWheel2001.h: interface for the CtheWheelApp class.
 //
+// Copyright (C) 1996-2001
+// $Id$
+// U.S. Patent Pending
+//////////////////////////////////////////////////////////////////////
 
 #if !defined(AFX_THEWHEEL2001_H__0C8AA654_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
 #define AFX_THEWHEEL2001_H__0C8AA654_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_
@@ -14,14 +19,15 @@
 
 #include "resource.h"       // main symbols
 
-/////////////////////////////////////////////////////////////////////////////
-// CtheWheelApp:
-// See theWheel2001.cpp for the implementation of this class
+//////////////////////////////////////////////////////////////////////
+// class CtheWheelApp
 //
-
+// main application object for theWheel2001
+//////////////////////////////////////////////////////////////////////
 class CtheWheelApp : public CWinApp
 {
 public:
+	// Construction/Destruction
 	CtheWheelApp();
 
 // Overrides
