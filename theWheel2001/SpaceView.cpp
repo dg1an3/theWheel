@@ -220,143 +220,43 @@ void CSpaceView::NormalizeNodeViews()
 	}
 }
 
-void CSpaceView::PropagateActivation(CNodeView *pSource, float percent, float factor)
+void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt)
 {
-	if (!isPropagating.Get())
-		return;
+	// construct a new node view for this node
+	CNodeView *pNewNodeView = new CNodeView(pParentNode);
 
-	pSource->forNode->PropagateActivation(percent, factor);
-	return;
+	// synchronize the node view's wave mode flag
+	pNewNodeView->isWaveMode.SyncTo(&isWaveMode);
 
-	CNodeView *pMaxDest;
-	do
+	// compute the initial rectangle for the node view
+	CRect rect(pt.x - 10, pt.y - 5, pt.x + 10, pt.y + 5);
+
+	// create it with the style for a node view
+	DWORD dwStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS; 
+	if (!pNewNodeView->CreateEx(WS_EX_TRANSPARENT, NULL, NULL, dwStyle, 
+			rect, this, nNodeID++))
 	{
-		float maxWeight = 0.0f;
-		pMaxDest = NULL;
-		CNodeLink *pMaxLink = NULL;
-		for (int nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-		{
-			CNodeView *pDest = nodeViews.Get(nAt);
-			if (pDest != pSource)
-			{
-				// determine the weight linking this
-				CNodeLink *pLink = pSource->forNode->GetLink(pDest->forNode.Get());
-				if ((pLink != NULL) && (!pLink->hasPropagated.Get()) 
-						&& (pLink->weight.Get() > maxWeight))
-				{
-					// maxWeight = pSource->forNode->GetLinkWeightBoltz(pDest->forNode.Get(), 
-					//	sqrt(pSource->activation.Get())); 
-
-					maxWeight = pLink->weight.Get();
-					pMaxDest = pDest;
-					pMaxLink = pLink;
-				}
-			}
-		} 
-
-		if (pMaxDest != NULL)
-		{
-			pMaxLink->hasPropagated.Set(TRUE);
-
-			// compute the new activation
-			float oldActivation = pMaxDest->forNode->activation.Get();
-			if (oldActivation < percent * maxWeight)
-			{
-				float newActivation = CNodeView::ActivationCurve(oldActivation * factor * 1.3f,
-					percent * maxWeight * 1.5f);
-				newActivation *= (1.0005f - 0.001f * (float) rand() / (float) RAND_MAX);
-				pMaxDest->forNode->activation.Set(newActivation);
-				PropagateActivation(pMaxDest, newActivation);
-			}
-		}
-
-	} while (pMaxDest != NULL);
-}
-
-void CSpaceView::ResetForPropagation()
-{
-	GetDocument()->rootNode.ResetForPropagation();
-	return;
-
-	for (int nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-	{
-		CNodeView *pView = nodeViews.Get(nAt);
-		for (int nAt = 0; nAt < pView->forNode->links.GetSize(); nAt++)
-		{
-			CNodeLink *pLink = pView->forNode->links.Get(nAt);
-			pLink->hasPropagated.Set(FALSE);
-		}
+		TRACE("Failed to create node view\n");
 	}
-}
 
-void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt, 
-								 float initActivation)
-{
-	if (pParentNode->children.GetSize() == 0)
-		return;
-
-	CArray<CNodeView *, CNodeView *&> arrNodeViews;
-
-	// create the child node views
-	int nAtNode;
-	for (nAtNode = 0; nAtNode < pParentNode->children.GetSize(); nAtNode++)
-	{
-		CNode *pNode = (CNode *) pParentNode->children.Get(nAtNode);
-
-		// construct a new node view for this node
-		CNodeView *pNewNodeView = new CNodeView(pNode);
-		pNewNodeView->isWaveMode.SyncTo(&isWaveMode);
-		arrNodeViews.Add(pNewNodeView);
-
-		// compute the initial rectangle for the node view
-//		CRect rect(pt.x - 100, pt.y - 75, pt.x + 100, pt.y + 75);
-		CRect rect(pt.x - 10, pt.y - 5, pt.x + 10, pt.y + 5);
-
-		// set the style for the node view
-		DWORD dwStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS; 
-
-		// create it
-		if (!pNewNodeView->CreateEx(WS_EX_TRANSPARENT, NULL, NULL, dwStyle, 
-				rect, this, nNodeID++))
-		{
-			TRACE("Failed to create node view\n");
-		}
-
-		// and add to the array
-		nodeViews.Add(pNewNodeView);
-
-		// compute the initial weight
-		float weight = 1.0f;
-		if (pParentNode)
-			weight = pParentNode->GetLinkWeight(pNode) + 0.01f;
-
-		// set the activation for the new node
-		pNewNodeView->forNode->activation.Set(initActivation * weight);
-
-		pNewNodeView->UpdatePrivates();
-		pNewNodeView->UpdatePrivates();
-	}
+	// and add to the array
+	nodeViews.Add(pNewNodeView);
 
 	// now layout the child node views
 	NormalizeNodeViews();
 
+	// make sure the existing node views are in order
+	SortNodeViews();
+
 	// layout the child node views
 	LayoutNodeViews();
 
-	// and finally, let each child create its child node views
-	// now place the children
+	// and finally, create the child node views
+	int nAtNode;
 	for (nAtNode = 0; nAtNode < pParentNode->children.GetSize(); nAtNode++)
 	{
-		CNode *pNode = (CNode *) pParentNode->children.Get(nAtNode);
-
 		// construct a new node view for this node
-		CPoint ptCenter = arrNodeViews[nAtNode]->center.Get();
-
-		CreateNodeViews(pNode, ptCenter, 
-			arrNodeViews[nAtNode]->forNode->activation.Get() / 1.0f);
-
-		arrNodeViews[nAtNode]->UpdatePrivates();
-		arrNodeViews[nAtNode]->UpdatePrivates();
+		CreateNodeViews((CNode *) pParentNode->children.Get(nAtNode), pt);
 	}
 }
 
@@ -468,9 +368,7 @@ void CSpaceView::OnInitialUpdate()
 	// create the child node views
 	CRect rect;
 	GetClientRect(&rect);
-	CreateNodeViews(&GetDocument()->rootNode, rect.CenterPoint(), 
-		(float) TOTAL_ACTIVATION 
-			/ (float) (GetDocument()->rootNode.children.GetSize()));
+	CreateNodeViews(&GetDocument()->rootNode, rect.CenterPoint());
 
 	// now normalize all the newly created node views
 	NormalizeNodeViews();
@@ -626,27 +524,6 @@ void CSpaceView::OnViewWave()
 void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI) 
 {
 	pCmdUI->SetCheck(isWaveMode.Get() ? 1 : 0);		
-}
-
-CNodeView * CSpaceView::GetMaxLinked(CNodeView *pView)
-{
-	CNodeView *pMaxLink = NULL;
-	float maxActWeight = 0.0f;
-
-	// update the privates
-	int nAt;
-	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-	{
-		float act = nodeViews.Get(nAt)->forNode->activation.Get();
-		float weight = nodeViews.Get(nAt)->forNode->GetLinkWeight(pView->forNode.Get());
-		if (act * weight * weight> maxActWeight)
-		{
-			maxActWeight = act * weight * weight;
-			pMaxLink = nodeViews.Get(nAt);
-		}		
-	}
-
-	return pMaxLink;
 }
 
 void CSpaceView::SortNodeViews()

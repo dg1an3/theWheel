@@ -56,7 +56,7 @@ public:
 // Operations
 public:
 	// creates the node views for the children of the passed node
-	void CreateNodeViews(CNode *pParentNode, CPoint pt, float initActivation);
+	void CreateNodeViews(CNode *pParentNode, CPoint pt);
 
 	// adds a new node to the space, creating and initializing the node view
 	//		along the way
@@ -73,15 +73,6 @@ public:
 
 	// normalization
 	void NormalizeNodeViews();
-
-	// propagates the activation for a particular node view
-	void PropagateActivation(CNodeView *pFrom, float percent, float factor = 1.3f);
-
-	// resets the propagation flag after a propagation
-	void ResetForPropagation();
-
-	// returns the maximum node view linked to the passed node view
-	CNodeView * GetMaxLinked(CNodeView *pView);
 
 // Overrides
 	// ClassWizard generated virtual function overrides
