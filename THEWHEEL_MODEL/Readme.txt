@@ -33,4 +33,8 @@ should add to or customize.
 /////////////////////////////////////////////////////////////////////////////
 TODO
 
-1) Skeleton of learning algorithm
+1) Move headers to include subdirectory
+
+2) New objective function
+
+3) Clean code
