@@ -106,10 +106,10 @@ public:
 
 public:
 	// the type for the state vector
-	typedef float STATE_TYPE;
+	typedef SPV_STATE_TYPE STATE_TYPE;
 
 	// the number of dimensions in the state vector
-	enum { STATE_DIM = 24 };
+	enum { STATE_DIM = SPV_STATE_DIM };
 
 	// defines the type for the state vector
 	typedef CVector<STATE_DIM, STATE_TYPE> CStateVector;
