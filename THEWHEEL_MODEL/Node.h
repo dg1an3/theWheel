@@ -39,6 +39,9 @@ public:
 	// loads the image file, if necessary
 	CDib *GetDib();
 
+	// the current activation value of the node
+	CValue< double > activation;
+
 	// the node links
 	CCollection< CNodeLink > links;
 
@@ -49,7 +52,12 @@ public:
 
 	// sorts the links descending by weight
 	void SortLinks();
-	
+
+	// propagation management
+	void PropagateActivation(float percent, float factor = 1.3f);
+	void ResetForPropagation();
+	static float ActivationCurve(float a, float a_max);
+
 	// serialization of this node
 	virtual void Serialize(CArchive &ar);
 

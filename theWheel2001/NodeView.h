@@ -43,7 +43,7 @@ public:
 	CValue< BOOL > isWaveMode;
 
 	// activation value for this window
-	CValue< float > activation;
+	// CValue< float > activation;
 private:
 	CValue< float > privActivation;
 public:

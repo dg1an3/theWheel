@@ -97,7 +97,7 @@ void CSpaceView::AddNodeToSpace(CNode *pNewNode)
 	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 	{
 		CNodeView *pView = nodeViews.Get(nAt);
-		totalWeight += pView->activation.Get();
+		totalWeight += pView->forNode->activation.Get();
 	}
 
 	// accumulate max weight, and set the parent node and initial
@@ -113,7 +113,7 @@ void CSpaceView::AddNodeToSpace(CNode *pNewNode)
 		CNodeView *pView = nodeViews.Get(nAt);
 
 		// determine the appropriate link weight
-		float weight = pView->activation.Get() / totalWeight;
+		float weight = pView->forNode->activation.Get() / totalWeight;
 
 		// establish the link
 		pNewNode->LinkTo(pView->forNode.Get(), weight);
@@ -135,7 +135,7 @@ void CSpaceView::AddNodeToSpace(CNode *pNewNode)
 	pNewNodeView->isWaveMode.SyncTo(&isWaveMode);
 
 	// set the activation for the new node
-	pNewNodeView->activation.Set(maxWeight * 0.25f);
+	pNewNodeView->forNode->activation.Set(maxWeight * 0.25f);
 
 	// compute the initial rectangle for the node view
 	CRect rect(ptInit.x - 100, ptInit.y - 75, 
@@ -208,15 +208,15 @@ void CSpaceView::NormalizeNodeViews()
 		CNodeView *pView = nodeViews.Get(nAt);
 
 		// only include super-threshold nodes in the normalization sum
-		if (pView->activation.Get() >= CNodeView::activationThreshold)
-			sum += pView->activation.Get();
+		if (pView->forNode->activation.Get() >= CNodeView::activationThreshold)
+			sum += pView->forNode->activation.Get();
 	}
 
 	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 	{
 		CNodeView *pView = nodeViews.Get(nAt);
-		float newActivation = pView->activation.Get() * (float) TOTAL_ACTIVATION / sum;
-		pView->activation.Set(newActivation);
+		float newActivation = pView->forNode->activation.Get() * (float) TOTAL_ACTIVATION / sum;
+		pView->forNode->activation.Set(newActivation);
 	}
 }
 
@@ -224,6 +224,9 @@ void CSpaceView::PropagateActivation(CNodeView *pSource, float percent, float fa
 {
 	if (!isPropagating.Get())
 		return;
+
+	pSource->forNode->PropagateActivation(percent, factor);
+	return;
 
 	CNodeView *pMaxDest;
 	do
@@ -256,13 +259,13 @@ void CSpaceView::PropagateActivation(CNodeView *pSource, float percent, float fa
 			pMaxLink->hasPropagated.Set(TRUE);
 
 			// compute the new activation
-			float oldActivation = pMaxDest->activation.Get();
+			float oldActivation = pMaxDest->forNode->activation.Get();
 			if (oldActivation < percent * maxWeight)
 			{
 				float newActivation = CNodeView::ActivationCurve(oldActivation * factor * 1.3f,
 					percent * maxWeight * 1.5f);
 				newActivation *= (1.0005f - 0.001f * (float) rand() / (float) RAND_MAX);
-				pMaxDest->activation.Set(newActivation);
+				pMaxDest->forNode->activation.Set(newActivation);
 				PropagateActivation(pMaxDest, newActivation);
 			}
 		}
@@ -272,6 +275,9 @@ void CSpaceView::PropagateActivation(CNodeView *pSource, float percent, float fa
 
 void CSpaceView::ResetForPropagation()
 {
+	GetDocument()->rootNode.ResetForPropagation();
+	return;
+
 	for (int nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 	{
 		CNodeView *pView = nodeViews.Get(nAt);
@@ -325,7 +331,7 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt,
 			weight = pParentNode->GetLinkWeight(pNode) + 0.01f;
 
 		// set the activation for the new node
-		pNewNodeView->activation.Set(initActivation * weight);
+		pNewNodeView->forNode->activation.Set(initActivation * weight);
 
 		pNewNodeView->UpdatePrivates();
 		pNewNodeView->UpdatePrivates();
@@ -347,7 +353,7 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt,
 		CPoint ptCenter = arrNodeViews[nAtNode]->center.Get();
 
 		CreateNodeViews(pNode, ptCenter, 
-			arrNodeViews[nAtNode]->activation.Get() / 1.0f);
+			arrNodeViews[nAtNode]->forNode->activation.Get() / 1.0f);
 
 		arrNodeViews[nAtNode]->UpdatePrivates();
 		arrNodeViews[nAtNode]->UpdatePrivates();
@@ -377,7 +383,7 @@ void CSpaceView::CenterNodeViews()
 	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 	{
 		CNodeView *pView = nodeViews.Get(nAt);
-		double scaleFactor = 10000.0 * pView->activation.Get();
+		double scaleFactor = 10000.0 * pView->forNode->activation.Get();
 		vMeanCenter = vMeanCenter 
 			+ pView->center.Get() * scaleFactor; 
 		totalScaleFactor += scaleFactor;
@@ -631,7 +637,7 @@ CNodeView * CSpaceView::GetMaxLinked(CNodeView *pView)
 	int nAt;
 	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 	{
-		float act = nodeViews.Get(nAt)->activation.Get();
+		float act = nodeViews.Get(nAt)->forNode->activation.Get();
 		float weight = nodeViews.Get(nAt)->forNode->GetLinkWeight(pView->forNode.Get());
 		if (act * weight * weight> maxActWeight)
 		{
@@ -654,7 +660,7 @@ void CSpaceView::SortNodeViews()
 			CNodeView *pThisNodeView = nodeViews.Get(nAt);
 			CNodeView *pNextNodeView = nodeViews.Get(nAt+1);
 
-			if (pThisNodeView->activation.Get() < pNextNodeView->activation.Get())
+			if (pThisNodeView->forNode->activation.Get() < pNextNodeView->forNode->activation.Get())
 			{
 				nodeViews.Set(nAt, pNextNodeView);
 				nodeViews.Set(nAt+1, pThisNodeView);
@@ -719,7 +725,7 @@ SPV_STATE_TYPE CSpaceView::GetThreshold()
 	int nNumVizNodeViews = min(nodeViews.GetSize(), STATE_DIM / 2);
 
 	CNodeView::activationThreshold = 
-		nodeViews.Get(nNumVizNodeViews - 1)->activation.Get();
+		nodeViews.Get(nNumVizNodeViews - 1)->forNode->activation.Get();
 
 	return CNodeView::activationThreshold;
 }

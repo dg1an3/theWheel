@@ -515,10 +515,10 @@ void CNodeView::OnLButtonDown(UINT nFlags, CPoint point)
 #define PROPAGATE_ON_DOWN
 #ifdef PROPAGATE_ON_DOWN
 		// compute the new activation
-		float oldActivation = activation.Get();
+		float oldActivation = forNode->activation.Get();
 		float newActivation = ActivationCurve(oldActivation * 1.6f,
 			0.3f);
-		activation.Set(newActivation);
+		forNode->activation.Set(newActivation);
 
 		CSpaceView *pParent = (CSpaceView *)GetParent();
 
@@ -607,10 +607,10 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 		{
 			// compute the new activation
 			float factor = 1.0f; //   + lengthSq * 1e-2f;
-			float oldActivation = activation.Get();
+			float oldActivation = forNode->activation.Get();
 			float newActivation = ActivationCurve(oldActivation * factor, 0.3f);
 
-			activation.Set(newActivation);
+			forNode->activation.Set(newActivation);
 
 			CSpaceView *pParent = (CSpaceView *)GetParent();
 
@@ -641,12 +641,12 @@ void CNodeView::UpdatePrivates()
 	CVector<2> vNewCenter(rect.CenterPoint());
 
 	float newActivation;
-	if (activation.Get() >= activationThreshold)
-		newActivation = activation.Get() * 0.125f + privActivation.Get() * 0.875f;
+	if (forNode->activation.Get() >= activationThreshold)
+		newActivation = forNode->activation.Get() * 0.125f + privActivation.Get() * 0.875f;
 	else
 		newActivation = privActivation.Get() * 0.875f;
 
-	if (activation.Get() >= activationThreshold)
+	if (forNode->activation.Get() >= activationThreshold)
 	{
 		vNewCenter = center.Get() * 0.125 + privCenter.Get() * 0.875;
 	}

@@ -21,7 +21,8 @@ static char THIS_FILE[]=__FILE__;
 CNode::CNode(const CString& strName, const CString& strDesc)
 	: parent(NULL),
 		description(strDesc),
-		m_pDib(NULL)
+		m_pDib(NULL),
+		activation(0.01f)
 {
 	// set the node's name
 	name.Set(strName);
@@ -115,6 +116,58 @@ void CNode::SortLinks()
 	} while (bRearrange);
 
 }
+
+void CNode::PropagateActivation(float percent, float factor)
+{
+	// sort the links
+	SortLinks();
+
+	// iterate through the links from highest to lowest activation
+	for (int nAt = 0; nAt < links.GetSize(); nAt++)
+	{
+		CNodeLink *pLink = links.Get(nAt);
+		CNode *pTarget = pLink->forTarget.Get();
+
+		// compute the new activation
+		double oldActivation = pTarget->activation.Get();
+		if (oldActivation < percent * pLink->weight.Get())
+		{
+			float newActivation = 
+				CNode::ActivationCurve(oldActivation * factor * 1.3f,
+					percent * pLink->weight.Get() * 1.5f);
+			newActivation *= (1.0005f - 0.001f * (float) rand() / (float) RAND_MAX);
+			pTarget->activation.Set(newActivation);
+			pTarget->PropagateActivation(newActivation);
+		}
+	}
+}
+
+void CNode::ResetForPropagation()
+{
+	// reset each of the passed node's links
+	for (int nAt = 0; nAt < links.GetSize(); nAt++)
+	{
+		CNodeLink *pLink = links.Get(nAt);
+		pLink->hasPropagated.Set(FALSE);
+	}
+
+	// now do the same for all children
+	for (nAt = 0; nAt < children.GetSize(); nAt++)
+	{
+		// for each child,
+		CNode *pChildNode = (CNode *) children.Get(nAt);
+		// now recursively reset the children
+		pChildNode->ResetForPropagation();
+	}
+}
+
+float CNode::ActivationCurve(float a, float a_max)
+{
+	float frac = a / (a + a_max);
+
+	return (1 - frac) * a + (frac * a_max);
+}
+
 
 void CNode::Serialize(CArchive &ar)
 {
