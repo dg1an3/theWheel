@@ -7,7 +7,7 @@
 // ActivationControlBar.h : header file
 //
 
-#include <Value.h>
+#include <NodeRenderer.h>
 
 /////////////////////////////////////////////////////////////////////////////
 // CActivationControlBar dialog
@@ -25,7 +25,9 @@ public:
 	//}}AFX_DATA
 
 	// holds the current activation value (0.0 -> 1.0)
-	CValue< double > activation;
+	double m_activation;
+
+	CNodeRenderer *m_pRenderer;
 
 // Overrides
 	// ClassWizard generated virtual function overrides

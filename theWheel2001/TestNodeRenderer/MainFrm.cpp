@@ -61,26 +61,25 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 	}
 	m_pNodeRenderer = new CNodeRenderer(&m_wndView);
-	m_wndView.renderers.Add(m_pNodeRenderer);
+	m_wndView.AddRenderer(m_pNodeRenderer);
 
 	// m_wndView.camera.direction.Set(CVector<3>(0.0, 0.0, -1.0));
-	m_wndView.camera.distance.Set(700.0);
-	m_wndView.camera.nearPlane.Set(650.0);
-	m_wndView.camera.farPlane.Set(750.0);
-	m_wndView.camera.SetFieldOfView(100.0);
+	m_wndView.GetCamera().SetDistance(700.0);
+	m_wndView.GetCamera().SetClippingPlanes(650.0, 750.0);
+	m_wndView.GetCamera().SetFieldOfView(100.0);
 
-	m_wndView.backgroundColor.Set(RGB(48, 0, 64));
+	m_wndView.SetBackgroundColor(RGB(48, 0, 64));
 
-	m_wndView.lights.RemoveAll();
+	m_wndView.RemoveAllLights();
 	COpenGLLight *pLight = new COpenGLLight();
-	pLight->position.Set(CVector<3>(-500.0, 500.0, 500.0));
-	m_wndView.lights.Add(pLight);
+	pLight->SetPosition(CVector<3>(-500.0, 500.0, 500.0));
+	m_wndView.AddLight(pLight);
 
 	CRotateTracker *pRotateTracker = new CRotateTracker(&m_wndView);
-	m_wndView.leftTrackers.Add(pRotateTracker);
+	m_wndView.AddLeftTracker(pRotateTracker);
 
 	CZoomTracker *pZoomTracker = new CZoomTracker(&m_wndView);
-	m_wndView.middleTrackers.Add(pZoomTracker);
+	m_wndView.AddMiddleTracker(pZoomTracker);
 
 	if (!m_wndToolBar.CreateEx(this, TBSTYLE_FLAT, WS_CHILD | WS_VISIBLE | CBRS_TOP
 		| CBRS_GRIPPER | CBRS_TOOLTIPS | CBRS_FLYBY | CBRS_SIZE_DYNAMIC) ||
@@ -107,8 +106,9 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		TRACE0("Failed to create activation control bar\n");
 		return -1;      // fail to create
 	}
-	m_pNodeRenderer->activation.SyncTo(&m_wndActivationBar.activation);
+	// m_pNodeRenderer->activation.SyncTo(&m_wndActivationBar.activation);
 	// m_pNodeRenderer->activation.Set(90.0);
+	m_wndActivationBar.m_pRenderer = m_pNodeRenderer;
 
 	// TODO: Delete these three lines if you don't want the toolbar to
 	//  be dockable
