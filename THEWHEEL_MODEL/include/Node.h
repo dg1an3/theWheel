@@ -48,6 +48,9 @@ public:
 	//////////////////////////////////////////////////////////////////
 	// hierarchy
 
+	// the space that contains the node
+	CSpace *GetSpace();
+
 	// the node's parent
 	CNode *GetParent();
 	const CNode *GetParent() const;
@@ -152,9 +155,6 @@ public:
 	// serialization of this node
 	virtual void Serialize(CArchive &ar);
 
-	// pointer to the space that contains this node
-	CSpace *m_pSpace;
-
 protected:
 
 	// declares CSpace as a friend class, to access the helper functions
@@ -175,6 +175,9 @@ protected:
 	void PropagateActivation(REAL scale);
 
 private:
+	// pointer to the space that contains this node
+	CSpace *m_pSpace;
+
 	// pointer to the node's parent
 	CNode *m_pParent;
 
