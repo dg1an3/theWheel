@@ -76,3 +76,40 @@ void CRuntimeTracker::OnTimer(UINT nElapsed, CPoint point)
 		pSelectedView->AddPendingActivation((REAL) 0.02);
 	}
 }
+
+
+void CRuntimeTracker::OnKeyDown(UINT nChar, UINT nFlags)
+{
+	if (nChar == VK_F9)
+	{
+	}
+}
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+// CDesigntimeTracker::OnButtonDown
+// 
+// processes the design-time button down
+//////////////////////////////////////////////////////////////////////
+void CRuntimeTracker::OnButtonDown(UINT nFlags, CPoint point) 
+{ 
+	// find the node view containing the point
+	CNodeView *pSelectedView = m_pView->FindNodeViewAt(point);
+
+	// was a node view found?
+	if (pSelectedView != NULL)
+	{
+		CString strUrl = pSelectedView->GetNode()->GetUrl();
+		if (strUrl != "")
+		{
+			ShellExecute(::AfxGetMainWnd()->m_hWnd, NULL, 
+				strUrl, NULL, NULL, SW_SHOWNORMAL);
+		}
+	}
+
+}	// CDesigntimeTracker::OnButtonDown
+
+
+

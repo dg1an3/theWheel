@@ -90,6 +90,10 @@ void CTracker::OnMouseDrag(UINT nFlags, CPoint point)
 { 
 }	// CTracker::OnMouseDrag
 
+void CTracker::OnKeyDown(UINT nChar, UINT nFlags)
+{
+}
+
 
 //////////////////////////////////////////////////////////////////////
 // CTracker::OnTimer

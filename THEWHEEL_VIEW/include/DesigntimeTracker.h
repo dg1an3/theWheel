@@ -40,6 +40,11 @@ public:
 	virtual void OnMouseMove(UINT nFlags, CPoint point);
 	virtual void OnMouseDrag(UINT nFlags, CPoint point);
 
+	virtual void OnKeyDown(UINT nChar, UINT nFlags);
+
+	// timer message
+	virtual void OnTimer(UINT nElapsed, CPoint point);
+
 	// drawing function for special annotations
 	virtual void OnDraw(CDC *pDC);
 

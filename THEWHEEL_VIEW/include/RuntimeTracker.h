@@ -29,8 +29,13 @@ public:
 	CRuntimeTracker(CSpaceView *pView);
 	virtual ~CRuntimeTracker();
 
+	// handlers for button click events
+	virtual void OnButtonDown(UINT nFlags, CPoint point);	
+
 	// handlers for mouse move events
 	virtual void OnMouseMove(UINT nFlags, CPoint point);
+
+	virtual void OnKeyDown(UINT nChar, UINT nFlags);
 
 	// timer message
 	virtual void OnTimer(UINT nElapsed, CPoint point);

@@ -37,6 +37,8 @@ public:
 	virtual void OnMouseMove(UINT nFlags, CPoint point);
 	virtual void OnMouseDrag(UINT nFlags, CPoint point);
 
+	virtual void OnKeyDown(UINT nChar, UINT nFlags);
+
 	// drawing function for special annotations
 	virtual void OnDraw(CDC *pDC);
 
