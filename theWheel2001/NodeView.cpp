@@ -1,20 +1,25 @@
-////////////////////////////////////
-// Copyright (C) 1996-2000 DG Lane
-// U.S. Patent Pending
-////////////////////////////////////
-
-// NodeView.cpp : implementation file
+//////////////////////////////////////////////////////////////////////
+// NodeView.cpp: implementation of the CNodeView class.
 //
+// Copyright (C) 1996-2001
+// $Id$
+// U.S. Patent Pending
+//////////////////////////////////////////////////////////////////////
 
+// pre-compiled headers
 #include "stdafx.h"
-#include "theWheel2001.h"
+
+// resource includes
+#include "resource.h"
+
+// the class definition
 #include "NodeView.h"
 
+// parent class
 #include "SpaceView.h"
 
+// node dialog
 #include "NewNodeDlg.h"
-
-#include "math.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -23,94 +28,126 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 /////////////////////////////////////////////////////////////////////////////
-// CNodeView
+// Constants for the colors of the CNodeView
+//
+/////////////////////////////////////////////////////////////////////////////
+COLORREF BACKGROUND_COLOR = RGB(232, 232, 232);
 
+COLORREF UPPER_DARK_COLOR = RGB(240, 240, 240);
+COLORREF UPPER_LIGHT_COLOR = RGB(255, 255, 255);
+
+COLORREF LOWER_LIGHT_COLOR = RGB(160, 160, 160);
+COLORREF LOWER_DARK_COLOR = RGB(128, 128, 128);
+
+//////////////////////////////////////////////////////////////////////
+// Construction/Destruction
+//////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::CNodeView
+// 
+// constructs a new CNodeView object for the passed CNode
+//////////////////////////////////////////////////////////////////////
 CNodeView::CNodeView(CNode *pNode)
 : forNode(pNode),
-	center(CPoint(0, 0)),
-	springCenter(CPoint(0, 0)),
-	springActivation(pNode->activation.Get()),
+	center(CVector<2>(0.0, 0.0)),
+	springCenter(CVector<2>(0.0, 0.0)),
+	springActivation((float) pNode->activation.Get()),
 	m_ptMouseDown(-1, -1),
 	m_bDragging(FALSE),
 	m_bDragged(FALSE),
 	isWaveMode(FALSE),
 	m_pPiggyBack(NULL)
 {
-	rectWindow.AddObserver(this, (ChangeFunction) OnChange);
-	springCenter.AddObserver(this, (ChangeFunction) OnChange);
-	springActivation.AddObserver(this, (ChangeFunction) OnChange);
+	rectWindow.AddObserver(this, 
+		(ChangeFunction) OnRectChanged);
+	springCenter.AddObserver(this, 
+		(ChangeFunction) OnSpringCenterChanged);
+	springActivation.AddObserver(this, 
+		(ChangeFunction) OnSpringActivationChanged);
 }
 
+//////////////////////////////////////////////////////////////////////
+// CNodeView::~CNodeView
+// 
+// destroys the node view
+//////////////////////////////////////////////////////////////////////
 CNodeView::~CNodeView()
 {
 }
 
-// TODO: break this up
-void CNodeView::OnChange(CObservableObject *pSource, void *pOldValue)
+//////////////////////////////////////////////////////////////////////
+// CNodeView::UpdateSprings
+// 
+// updates the spring-dynamic variables -- should be called on a 
+//		regular basis
+//////////////////////////////////////////////////////////////////////
+void CNodeView::UpdateSprings()
 {
-	if ((pSource == &rectWindow) && ::IsWindow(m_hWnd))
+	CSpaceView *pSpaceView = (CSpaceView *)GetParent();
+
+	CRect rect;
+	pSpaceView->GetClientRect(&rect);
+	CVector<2> vNewCenter(rect.CenterPoint());
+
+	float newActivation;
+	newActivation = thresholdedActivation.Get() * 0.125f
+		+ springActivation.Get() * 0.875f;
+
+	if (thresholdedActivation.Get() > 0.0f)
 	{
-		CRect rectWnd;
-		GetWindowRect(&rectWnd);	// get the old window rectangle
-
-		// get the parent window and transform to its coordinates
-		GetParent()->ScreenToClient(&rectWnd);
-
-		// invalidate the old region
-		CRgn rgn;
-		rgn.CreateRectRgn(0, 0, 1, 1);
-		GetWindowRgn(rgn);
-		rgn.OffsetRgn(rectWnd.TopLeft());
-		GetParent()->InvalidateRgn(&rgn, FALSE);
-
-		// move the window
-		MoveWindow(rectWindow.Get(), FALSE);
-
-		// set the springCenter point
-		springCenter.Set(rectWindow.Get().CenterPoint());
-
-		// and invalidate
-		Invalidate(FALSE);
+		vNewCenter = center.Get() * 0.125 + springCenter.Get() * 0.875;
 	}
-	else if (pSource == &springCenter)
+	else 
 	{
-		// compute the offset
-		CPoint ptOffset = rectWindow.Get().CenterPoint() - springCenter.Get();
-		rectWindow.Set(rectWindow.Get() - ptOffset);
+		if (m_pPiggyBack == NULL)
+		{
+			CNodeLink *pMaxLink = forNode->links.Get(0);
+			if (pMaxLink != NULL)
+			{
+				m_pPiggyBack = pSpaceView->
+					GetViewForNode(pMaxLink->forTarget.Get());
+				ASSERT(m_pPiggyBack->forNode.Get() == pMaxLink->forTarget.Get());
+			}
+		}
+		if (m_pPiggyBack != NULL)
+		{
+			vNewCenter = center.Get() * 0.9375 
+				+ m_pPiggyBack->center.Get() * 0.0625;
+			center.Set(vNewCenter);
+		}
 	}
-	else if ((pSource == &springActivation) && ::IsWindow(m_hWnd))
-	{
-		// CSpaceView *pParent = (CSpaceView *)GetParent();
-		CRect rectParent;
-		GetParent()->GetWindowRect(&rectParent);
+	springCenter.Set(vNewCenter);
 
-		// compute the area interpreting springActivation as the fraction of the 
-		//		parent's total area
-		float area = springActivation.Get() * (rectParent.Width() * rectParent.Height());
+	springActivation.Set(newActivation);
+}
 
-		// compute the desired aspect ratio (maintain the current aspect ratio)
-		float aspectRatio = 0.75f - 0.375f * (float) exp(-8.0f * springActivation.Get());
+//////////////////////////////////////////////////////////////////////
+// CNodeView::PreCreateWindow
+// 
+// sets the window class attributes
+//////////////////////////////////////////////////////////////////////
+BOOL CNodeView::PreCreateWindow(CREATESTRUCT& cs) 
+{
+#ifdef NO_NODEVIEWS
+	LONG mask = ~WS_VISIBLE;
+	cs.style &= mask;
+#endif
 
-		// compute the new width and height from the desired area and the desired
-		//		aspect ratio
-		int nWidth = (int) sqrt(area / aspectRatio);
-		int nHeight = (int) sqrt(area * aspectRatio);
+	if (!CWnd::PreCreateWindow(cs))
+		return FALSE;
 
-		// set the width and height of the window, keeping the center constant
-		CRect rect;
-		rect.left = (long) springCenter.Get()[0] - nWidth / 2;
-		rect.right = (long) springCenter.Get()[0] + nWidth / 2;
-		rect.top = (long) springCenter.Get()[1] - nHeight / 2;
-		rect.bottom = (long) springCenter.Get()[1] + nHeight / 2;
+	cs.lpszClass = AfxRegisterWndClass(CS_HREDRAW|CS_VREDRAW|CS_DBLCLKS, 
+		::LoadCursor(AfxGetInstanceHandle(), MAKEINTRESOURCE(IDC_HANDPOINT)),
+		CreateSolidBrush(BACKGROUND_COLOR), NULL);
 
-		rectWindow.Set(rect);
-	}
+	return TRUE;
 }
 
 /////////////////////////////////////////////////////////////////////////////
 // CNodeView::GetOuterRect
 //
-//
+// returns the outer (bounding) rectangle of the elliptangle
 /////////////////////////////////////////////////////////////////////////////
 CRect CNodeView::GetOuterRect()
 {
@@ -121,11 +158,10 @@ CRect CNodeView::GetOuterRect()
 	return rectOuter;
 }
 
-
 /////////////////////////////////////////////////////////////////////////////
 // CNodeView::GetInnerRect
 //
-//
+// returns the inner rectangle of the elliptangle
 /////////////////////////////////////////////////////////////////////////////
 CRect CNodeView::GetInnerRect()
 {
@@ -148,11 +184,11 @@ CRect CNodeView::GetInnerRect()
 	return rectInner;
 }
 
-
 /////////////////////////////////////////////////////////////////////////////
 // CNodeView::GetLeftRightEllipseRect
 //
-//
+// returns the rectangle that bounds the ellipse for the left and right
+//		sides of the elliptangle
 /////////////////////////////////////////////////////////////////////////////
 CRect CNodeView::GetLeftRightEllipseRect()
 {
@@ -174,11 +210,11 @@ CRect CNodeView::GetLeftRightEllipseRect()
 	return rectLeftRightEllipse;
 }
 
-
 /////////////////////////////////////////////////////////////////////////////
 // CNodeView::GetTopBottomEllipseRect
 //
-//
+// returns the rectangle that bounds the ellipse for the top and bottom
+//		sides of the elliptangle
 /////////////////////////////////////////////////////////////////////////////
 CRect CNodeView::GetTopBottomEllipseRect()
 {
@@ -199,6 +235,86 @@ CRect CNodeView::GetTopBottomEllipseRect()
 	return rectTopBottomEllipse;
 }
 
+//////////////////////////////////////////////////////////////////////
+// CNodeView::OnRectChanged
+// 
+// handles a change in the window rectangle
+//////////////////////////////////////////////////////////////////////
+void CNodeView::OnRectChanged(CObservableObject *pSource, void *pOldValue)
+{
+	CRect rectWnd;
+	GetWindowRect(&rectWnd);	// get the old window rectangle
+
+	// get the parent window and transform to its coordinates
+	GetParent()->ScreenToClient(&rectWnd);
+
+	// invalidate the old region
+	CRgn rgn;
+	rgn.CreateRectRgn(0, 0, 1, 1);
+	GetWindowRgn(rgn);
+	rgn.OffsetRgn(rectWnd.TopLeft());
+	GetParent()->InvalidateRgn(&rgn, FALSE);
+
+	// move the window
+	MoveWindow(rectWindow.Get(), FALSE);
+
+	// set the springCenter point
+	springCenter.Set(rectWindow.Get().CenterPoint());
+
+	// and invalidate
+	Invalidate(FALSE);
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::OnSpringCenterChanged
+// 
+// handles a change in the node view center
+//////////////////////////////////////////////////////////////////////
+void CNodeView::OnSpringCenterChanged(CObservableObject *pSource, void *pOldValue)
+{
+	// compute the offset
+	CPoint ptOffset = rectWindow.Get().CenterPoint() - springCenter.Get();
+	rectWindow.Set(rectWindow.Get() - ptOffset);
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::OnSpringActivationChanged
+// 
+// handles a change in the activation
+//////////////////////////////////////////////////////////////////////
+void CNodeView::OnSpringActivationChanged(CObservableObject *pSource, void *pOldValue)
+{
+	// get the parent rectangle
+	CRect rectParent;
+	GetParent()->GetWindowRect(&rectParent);
+
+	// compute the area interpreting springActivation as the fraction of the 
+	//		parent's total area
+	float area = springActivation.Get() * (rectParent.Width() * rectParent.Height());
+
+	// compute the desired aspect ratio (maintain the current aspect ratio)
+	float aspectRatio = 0.75f - 0.375f * (float) exp(-8.0f * springActivation.Get());
+
+	// compute the new width and height from the desired area and the desired
+	//		aspect ratio
+	int nWidth = (int) sqrt(area / aspectRatio);
+	int nHeight = (int) sqrt(area * aspectRatio);
+
+	// set the width and height of the window, keeping the center constant
+	CRect rect;
+	rect.left = (long) springCenter.Get()[0] - nWidth / 2;
+	rect.right = (long) springCenter.Get()[0] + nWidth / 2;
+	rect.top = (long) springCenter.Get()[1] - nHeight / 2;
+	rect.bottom = (long) springCenter.Get()[1] + nHeight / 2;
+
+	// now set the window rectangle
+	rectWindow.Set(rect);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// CNodeView Message Map
+/////////////////////////////////////////////////////////////////////////////
+
 BEGIN_MESSAGE_MAP(CNodeView, CWnd)
 	//{{AFX_MSG_MAP(CNodeView)
 	ON_WM_PAINT()
@@ -215,18 +331,63 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // CNodeView message handlers
 
-/////////////////////////////////////////////////////////////////////////////
-// Constants for the colors of the CNodeView
-//
-/////////////////////////////////////////////////////////////////////////////
-COLORREF BACKGROUND_COLOR = RGB(232, 232, 232);
+//////////////////////////////////////////////////////////////////////
+// CNodeView::OnSize
+// 
+// changes the node view's rectangle and region in response to
+//		a re-sizing event
+//////////////////////////////////////////////////////////////////////
+void CNodeView::OnSize(UINT nType, int cx, int cy) 
+{
+	// form the ellipse for top/bottom clipping
+	CRect rectTopBottomEllipse = GetTopBottomEllipseRect();
+	CRgn ellipseTopBottom;
+	ellipseTopBottom.CreateEllipticRgnIndirect(&rectTopBottomEllipse);
 
-COLORREF UPPER_DARK_COLOR = RGB(240, 240, 240);
-COLORREF UPPER_LIGHT_COLOR = RGB(255, 255, 255);
+	// form the ellipse for left/right clipping
+	CRect rectLeftRightEllipse = GetLeftRightEllipseRect();
+	CRgn ellipseLeftRight;
+	ellipseLeftRight.CreateEllipticRgnIndirect(&rectLeftRightEllipse);
 
-COLORREF LOWER_LIGHT_COLOR = RGB(160, 160, 160);
-COLORREF LOWER_DARK_COLOR = RGB(128, 128, 128);
+	// form the intersection of the two
+	CRect rectInner = GetInnerRect();
+	CRgn rgnWindow;
+	rgnWindow.CreateRectRgnIndirect(rectInner);
+#ifndef NO_CURVE
+	rgnWindow.CombineRgn(&ellipseTopBottom, &ellipseLeftRight, RGN_AND);
+#endif
 
+	// set the window's region to the intersection
+	SetWindowRgn(rgnWindow, FALSE);	
+
+	CWnd::OnSize(nType, cx, cy);
+
+	// retrieve the new window rectangle
+	CRect rectWnd;
+	GetWindowRect(&rectWnd);
+
+	// get the parent window and transform to its coordinates
+	GetParent()->ScreenToClient(&rectWnd);
+
+	// set the window rect value
+	rectWindow.Set(rectWnd);
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::OnEraseBkgnd
+// 
+// over-rides the erase background call
+//////////////////////////////////////////////////////////////////////
+BOOL CNodeView::OnEraseBkgnd(CDC* pDC) 
+{
+	return TRUE; // CWnd::OnEraseBkgnd(pDC);
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::OnPaint
+// 
+// paints the node view
+//////////////////////////////////////////////////////////////////////
 void CNodeView::OnPaint() 
 {
 	// device context for painting
@@ -440,64 +601,11 @@ void CNodeView::OnPaint()
 	// Do not call CWnd::OnPaint() for painting messages
 }
 
-void CNodeView::OnSize(UINT nType, int cx, int cy) 
-{
-	// form the ellipse for top/bottom clipping
-	CRect rectTopBottomEllipse = GetTopBottomEllipseRect();
-	CRgn ellipseTopBottom;
-	ellipseTopBottom.CreateEllipticRgnIndirect(&rectTopBottomEllipse);
-
-	// form the ellipse for left/right clipping
-	CRect rectLeftRightEllipse = GetLeftRightEllipseRect();
-	CRgn ellipseLeftRight;
-	ellipseLeftRight.CreateEllipticRgnIndirect(&rectLeftRightEllipse);
-
-	// form the intersection of the two
-	CRect rectInner = GetInnerRect();
-	CRgn rgnWindow;
-	rgnWindow.CreateRectRgnIndirect(rectInner);
-#ifndef NO_CURVE
-	rgnWindow.CombineRgn(&ellipseTopBottom, &ellipseLeftRight, RGN_AND);
-#endif
-
-	// set the window's region to the intersection
-	SetWindowRgn(rgnWindow, FALSE);	
-
-	CWnd::OnSize(nType, cx, cy);
-
-	// retrieve the new window rectangle
-	CRect rectWnd;
-	GetWindowRect(&rectWnd);
-
-	// get the parent window and transform to its coordinates
-	GetParent()->ScreenToClient(&rectWnd);
-
-	// set the window rect value
-	rectWindow.Set(rectWnd);
-}
-
-BOOL CNodeView::PreCreateWindow(CREATESTRUCT& cs) 
-{
-#ifdef NO_NODEVIEWS
-	LONG mask = ~WS_VISIBLE;
-	cs.style &= mask;
-#endif
-
-	if (!CWnd::PreCreateWindow(cs))
-		return FALSE;
-
-	cs.lpszClass = AfxRegisterWndClass(CS_HREDRAW|CS_VREDRAW|CS_DBLCLKS, 
-		::LoadCursor(AfxGetInstanceHandle(), MAKEINTRESOURCE(IDC_HANDPOINT)),
-		CreateSolidBrush(BACKGROUND_COLOR), NULL);
-
-	return TRUE;
-}
-
-BOOL CNodeView::OnEraseBkgnd(CDC* pDC) 
-{
-	return TRUE; // CWnd::OnEraseBkgnd(pDC);
-}
-
+//////////////////////////////////////////////////////////////////////
+// CNodeView::OnLButtonDown
+// 
+// handles a left mouse button down event
+//////////////////////////////////////////////////////////////////////
 void CNodeView::OnLButtonDown(UINT nFlags, CPoint point) 
 {
 	if (!m_bDragging)
@@ -506,12 +614,6 @@ void CNodeView::OnLButtonDown(UINT nFlags, CPoint point)
 		m_ptMouseDown = point;
 	
 		m_bDragged = FALSE;
-
-		// compute the new activation
-		// float oldActivation = forNode->activation.Get();
-		// float newActivation = ActivationCurve(oldActivation * 1.6f,
-		//	0.3f);
-		// forNode->activation.Set(newActivation);
 
 		CSpaceView *pParent = (CSpaceView *)GetParent();
 		
@@ -524,6 +626,11 @@ void CNodeView::OnLButtonDown(UINT nFlags, CPoint point)
 	CWnd::OnLButtonDown(nFlags, point);
 }
 
+//////////////////////////////////////////////////////////////////////
+// CNodeView::OnLButtonUp
+// 
+// handles a left mouse button up event
+//////////////////////////////////////////////////////////////////////
 void CNodeView::OnLButtonUp(UINT nFlags, CPoint point) 
 {
 	m_bDragging = FALSE;
@@ -536,6 +643,11 @@ void CNodeView::OnLButtonUp(UINT nFlags, CPoint point)
 	CWnd::OnLButtonUp(nFlags, point);
 }
 
+//////////////////////////////////////////////////////////////////////
+// CNodeView::OnMouseMove
+// 
+// handles a mouse move event
+//////////////////////////////////////////////////////////////////////
 void CNodeView::OnMouseMove(UINT nFlags, CPoint point) 
 {
 	if (m_bDragging)
@@ -563,7 +675,7 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 		{
 			// compute the new activation
 			CSpaceView *pParent = (CSpaceView *)GetParent();
-			pParent->ActivateNode(this, 0.15);
+			pParent->ActivateNode(this, 0.15f);
 
 			// do some idle time processing
 			CSpaceView *pSpaceView = (CSpaceView *)GetParent();
@@ -589,47 +701,11 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 	CWnd::OnMouseMove(nFlags, point);
 }
 
-void CNodeView::UpdateSprings()
-{
-	CSpaceView *pSpaceView = (CSpaceView *)GetParent();
-
-	CRect rect;
-	pSpaceView->GetClientRect(&rect);
-	CVector<2> vNewCenter(rect.CenterPoint());
-
-	float newActivation;
-	newActivation = thresholdedActivation.Get() * 0.125f
-		+ springActivation.Get() * 0.875f;
-
-	// if (forNode->activation.Get() >= activationThreshold)
-	if (thresholdedActivation.Get() > 0.0f)
-	{
-		vNewCenter = center.Get() * 0.125 + springCenter.Get() * 0.875;
-	}
-	else 
-	{
-		if (m_pPiggyBack == NULL)
-		{
-			CNodeLink *pMaxLink = forNode->links.Get(0);
-			if (pMaxLink != NULL)
-			{
-				m_pPiggyBack = pSpaceView->
-					GetViewForNode(pMaxLink->forTarget.Get());
-				ASSERT(m_pPiggyBack->forNode.Get() == pMaxLink->forTarget.Get());
-			}
-		}
-		if (m_pPiggyBack != NULL)
-		{
-			vNewCenter = center.Get() * 0.9375 
-				+ m_pPiggyBack->center.Get() * 0.0625;
-			center.Set(vNewCenter);
-		}
-	}
-	springCenter.Set(vNewCenter);
-
-	springActivation.Set(newActivation);
-}
-
+//////////////////////////////////////////////////////////////////////
+// CNodeView::OnLButtonDblClk
+// 
+// handles a double-click event
+//////////////////////////////////////////////////////////////////////
 void CNodeView::OnLButtonDblClk(UINT nFlags, CPoint point) 
 {
 	CNewNodeDlg newDlg(GetParent());
