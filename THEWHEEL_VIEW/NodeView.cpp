@@ -487,19 +487,15 @@ void CNodeView::DrawTitleBand(CDC *pDC, CRect& rectInner)
 		DT_CALCRECT | DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	// draw the background for the title
+	COLORREF backColor = DEFAULT_TITLE;
+	if (GetNode()->GetSpace() != NULL)
+	{
+		GetNode()->GetSpace()->GetClassColorMap().Lookup(
+			GetNode()->GetClass(), backColor);
+	}
+
 	CBrush backBrush;
-	if (GetNode()->GetClass() == "Genre")
-	{
-		backBrush.CreateSolidBrush(RGB(176, 176, 160)); // 174, 220, 154));
-	}
-	else if (GetNode()->GetClass() == "Artist")
-	{
-		backBrush.CreateSolidBrush(RGB(182, 139, 224));
-	}
-	else
-	{
-		backBrush.CreateSolidBrush(DEFAULT_TITLE);
-	}
+	backBrush.CreateSolidBrush(backColor);
 
 	CBrush *pOldBrush = pDC->SelectObject(&backBrush);
 	CPen *pOldPen = (CPen *)pDC->SelectStockObject(NULL_PEN);
