@@ -123,19 +123,38 @@ void CNode::NormalizeLinks()
 }
 #endif
 
-void CNode::NormalizeLinks(float temp)
+void CNode::NormalizeLinks(float temperature)
 {
+	if (temperature == -1.0f)
+	{
+		float sum = 0.0;
+		for (int nAt = 0; nAt < links.GetSize(); nAt++)
+		{
+			CNodeLink *pLink = links.Get(nAt);
+			sum += pLink->weight.Get();
+		}
+
+		for (nAt = 0; nAt < links.GetSize(); nAt++)
+		{
+			CNodeLink *pLink = links.Get(nAt);
+			pLink->weight.Set(pLink->weight.Get() / sum);
+		}
+
+		return;
+	}
+
+
 	float sum = 0.0;
 	for (int nAt = 0; nAt < links.GetSize(); nAt++)
 	{
 		CNodeLink *pLink = links.Get(nAt);
-		sum += (float) exp(pLink->weight.Get() / temp);
+		sum += (float) exp(pLink->weight.Get() / temperature);
 	}
 
 	for (nAt = 0; nAt < links.GetSize(); nAt++)
 	{
 		CNodeLink *pLink = links.Get(nAt);
-		pLink->weight.Set((float) exp(pLink->weight.Get() / temp) / sum);
+		pLink->weight.Set((float) exp(pLink->weight.Get() / temperature) / sum);
 	}
 
 	float entropy = 0.0;
@@ -149,6 +168,6 @@ void CNode::NormalizeLinks(float temp)
 	for (nAt = 0; nAt < children.GetSize(); nAt++)
 	{
 		CNode *pChild = (CNode *)children.Get(nAt);
-		pChild->NormalizeLinks(temp);
+		pChild->NormalizeLinks(temperature);
 	}
 }
