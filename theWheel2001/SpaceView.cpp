@@ -201,32 +201,9 @@ void CSpaceView::NormalizeNodeViews()
 	if (nodeViews.GetSize() == 0)
 		return;
 
-	// compute the off-center attenuation first
-	CRect rect;
-	GetClientRect(&rect);
-
-	int nAt = 0;
-	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-	{
-		CNodeView *pView = nodeViews.Get(nAt);
-
-		// compute the off-center attenuation
-		CVector<2> vCenter = pView->center.Get();
-
-		vCenter[0] -= (double) rect.CenterPoint().x;
-		vCenter[0] /= (double) (rect.Width() / 2);
-
-		vCenter[1] -= (double) rect.CenterPoint().y;
-		vCenter[1] /= (double) (rect.Height() / 2);
-
-		float atten = (float) exp(-vCenter.GetLength() / 2.0);
-		float newActivation = atten * sqrt(pView->activation.Get());
-		pView->activation.Set(newActivation * newActivation);
-	}
-
 	float sum = 0.0;
 
-	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
+	for (int nAt = 0; nAt < nodeViews.GetSize(); nAt++)
 	{
 		CNodeView *pView = nodeViews.Get(nAt);
 
