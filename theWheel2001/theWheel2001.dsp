@@ -173,10 +173,6 @@ SOURCE=.\theWheel2001.h
 # PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
 # Begin Source File
 
-SOURCE=.\res\folder_closed.bmp
-# End Source File
-# Begin Source File
-
 SOURCE=.\res\H_point.cur
 # End Source File
 # Begin Source File
