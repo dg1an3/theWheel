@@ -271,8 +271,8 @@ CSpaceViewEnergyFunction::CStateVector
 	for (int nAtCluster = 0; nAtCluster < nClusters; nAtCluster++)
 	{
 		CNodeCluster *pCluster = m_pView->GetDocument()->GetClusterAt(nAtCluster);
-		vState[(STATE_DIM / 2 - nClusters + nAtCluster)*2] = pCluster->m_vCenter[0];
-		vState[(STATE_DIM / 2 - nClusters + nAtCluster)*2+1] = pCluster->m_vCenter[1];
+		vState[(STATE_DIM / 2 - nClusters + nAtCluster)*2] = pCluster->GetPosition()[0];
+		vState[(STATE_DIM / 2 - nClusters + nAtCluster)*2+1] = pCluster->GetPosition()[1];
 	}
 
 	// return the formed state vector
@@ -304,8 +304,12 @@ void CSpaceViewEnergyFunction::SetStateVector(
 	for (int nAtCluster = 0; nAtCluster < nClusters; nAtCluster++)
 	{
 		CNodeCluster *pCluster = m_pView->GetDocument()->GetClusterAt(nAtCluster);
-		pCluster->m_vCenter[0] = vState[(STATE_DIM / 2 - nClusters + nAtCluster)*2];
-		pCluster->m_vCenter[1] = vState[(STATE_DIM / 2 - nClusters + nAtCluster)*2+1];
+
+		CVector<3> vPosition(
+			vState[(STATE_DIM / 2 - nClusters + nAtCluster)*2],
+			vState[(STATE_DIM / 2 - nClusters + nAtCluster)*2+1],
+			0.0);
+		pCluster->SetPosition(vPosition);
 	}
 }
 
@@ -386,7 +390,7 @@ STATE_TYPE CSpaceViewEnergyFunction::operator()(
 				if (nAtLinkedView < nRealNodeCount)
 				{
 					STATE_TYPE inv_sq = 1.0f / (x_ratio + y_ratio + 0.1f);
-					m_energy += 12.0f * inv_sq;
+					m_energy += 16.0f * inv_sq;
 				}
 #endif
 
