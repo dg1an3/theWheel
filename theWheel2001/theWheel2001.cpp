@@ -209,13 +209,53 @@ void CtheWheelApp::OnAppAbout()
 // 
 // Idle time processing for the application
 //////////////////////////////////////////////////////////////////////
+DWORD g_dwPrevTickCount = 0;
+DWORD g_dwSumTickCount = 0;
+DWORD g_dwNumTickCount = 0;
+
+
 BOOL CtheWheelApp::OnIdle(LONG lCount) 
 {
 	CWinApp::OnIdle(lCount);
 
+#ifdef LOG_IDLE_TIME
+	DWORD dwTickCount = ::GetTickCount();
+	if (g_dwPrevTickCount > 0)
+	{
+		g_dwSumTickCount += (dwTickCount - g_dwPrevTickCount);
+		g_dwNumTickCount++;
+
+		if ((g_dwNumTickCount % 10) == 0)
+			LOG_TRACE("Average time between idle = %lf\n",
+				(double) g_dwSumTickCount / (double) g_dwNumTickCount);
+	}
+	g_dwPrevTickCount = dwTickCount;
+#endif
+
 	CMainFrame *pFrame = (CMainFrame *)AfxGetMainWnd();
 	CSpaceView *pSpaceView = pFrame->GetRightPane();
+
+#define TIME_LAYOUT
+#ifdef TIME_LAYOUT
+	LARGE_INTEGER freq;
+	QueryPerformanceFrequency(&freq);
+	ASSERT(freq.QuadPart != 0);
+
+	LARGE_INTEGER start;
+	QueryPerformanceCounter(&start);
+#endif
+
 	pSpaceView->LayoutNodeViews();
+
+#ifdef TIME_LAYOUT
+	LARGE_INTEGER end;
+	QueryPerformanceCounter(&end);
+
+	LOG_TRACE("Time to complete layout = %lf\n",
+		(double) (end.QuadPart - start.QuadPart) 
+			/ (double) freq.QuadPart);
+#endif
+
 
 	// update the privates
 	int nAt;
