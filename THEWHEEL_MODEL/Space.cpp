@@ -28,6 +28,7 @@ static char THIS_FILE[] = __FILE__;
 // constructs an empty CSpace object.  use OnNewDocument to initialize
 //////////////////////////////////////////////////////////////////////
 CSpace::CSpace()
+	: m_totalActivation(0.0)
 {
 }
 
@@ -58,6 +59,9 @@ void CSpace::NormalizeNodes(double sum)
 
 	// normalize to equal sum
 	rootNode.ScaleDescendantActivation(scale);
+
+	// set the total activation for the space
+	m_totalActivation = rootNode.GetDescendantActivation();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -86,16 +90,16 @@ BOOL CSpace::OnNewDocument()
 
 	// set the name of the root node
 	rootNode.name.Set("root");
-	rootNode.description.Set("This is the root node of the space.  "
-		"All other nodes are descendants of it.  "
-		"Thou shalt have no other node before it.");
+	rootNode.description.Set("Eadf eeqrjij afga gdfijagg ahvuert8qu4 vadfgahg."
+		"Jkdjfwheu sdfg hahrewgakdjf asg hag7un34gafasdgha vhg haeirnga."
+		"Sdff jdf jdskljfa; lkdjfsjd fkjweu iagh eurafgnls uashfre.");
 
-	for (int nAt = 0; nAt < 133; nAt++)
+	for (int nAt = 0; nAt < 2173; nAt++)
 		rand();
 
 	// add random children to the root node
-	AddChildren(&rootNode, 3, 3);
-	CrossLinkNodes(rootNode.GetDescendantCount() / 10);
+	AddChildren(&rootNode, 4, 3);
+	CrossLinkNodes(rootNode.GetDescendantCount() / 25);
 
 	// initialize the node activations from the root node
 	rootNode.SetActivation(0.5);
@@ -120,11 +124,11 @@ void CSpace::AddChildren(CNode *pParent, int nLevels,
 		CString strChildName;
 		strChildName.Format("%s%s%d", 
 			pParent->name.Get(), "->", nAt+1);
-		CNode *pChild = new CNode(strChildName);
+		CNode *pChild = new CNode(this, strChildName);
 
-		pChild->description.Set("I am a child node.  "
-			"I am the cat of the dog.  I am the mouse of the cheese.  "
-			"I am the leaf of the tea.  I am the down of the charm.");
+		pChild->description.Set("Ud dfjaskf rtertj 23 adsjf.  "
+			"Lkdjfsdfj sdaf ajskjgew ajg ajsdklgj; slrj jagifj ajdfgjkld.  "
+			"I d fdmgj sdl jdsgiow mrektmrejgj migmoergmmsos m ksdfogkf.");
 		pParent->children.Add(pChild);
 		pChild->parent.Set(pParent);
 
@@ -185,6 +189,8 @@ void CSpace::Serialize(CArchive& ar)
 {
 	// just serialize the root node
 	rootNode.Serialize(ar);
+
+	// TODO: now set the space pointers for the nodes to this
 }
 
 /////////////////////////////////////////////////////////////////////////////

@@ -62,6 +62,12 @@ protected:
 	// helper function to randomly cross-link nodes
 	void CrossLinkNodes(int nCount, float weight = 0.50f);
 
+	// accessors for the total activation value for all nodes in the space
+	double GetTotalActivation();
+	void SetTotalActivation();
+
+	// adds to the total activation value for all nodes in the space
+	void AddTotalActivation(double activation);
 
 // Generated message map functions
 protected:
@@ -70,6 +76,10 @@ protected:
 		//    DO NOT EDIT what you see in these blocks of generated code !
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
+
+private:
+	// holds the the total activation value for all nodes in the space
+	double m_totalActivation;
 };
 
 /////////////////////////////////////////////////////////////////////////////
