@@ -155,81 +155,108 @@ void CSpaceTreeView::OnInitialUpdate()
 //////////////////////////////////////////////////////////////////////
 void CSpaceTreeView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint) 
 {
-	// update the tree view for the currently selected node
-	CNode *pSelNode = NULL;
-	HTREEITEM hSelItem = m_wndTree.GetSelectedItem();
-	if (NULL != hSelItem)
-	{
-		pSelNode = (CNode *) m_wndTree.GetItemData(hSelItem);
-		ASSERT(pSelNode->IsKindOf(RUNTIME_CLASS(CNode)));
-	}
+	// cast the hint object to a CNode
+	CNode *pNode = (CNode *)pHint;
+	ASSERT(pNode == NULL || pNode->IsKindOf(RUNTIME_CLASS(CNode)));
 
-	if (pSelNode != GetDocument()->GetCurrentNode())
+	HTREEITEM hItem = NULL;
+	m_mapItemHandles.Lookup(pNode, hItem);
+
+	switch (lHint)
 	{
-		if (m_mapItemHandles.Lookup(GetDocument()->GetCurrentNode(), hSelItem))
+	case EVT_NODE_SELCHANGED :
+
+		if (hItem != NULL)
 		{
 			// set the current node as selected
-			m_wndTree.SelectItem(hSelItem);
+			m_wndTree.SelectItem(hItem);
 		}
-	}
 
-	if (!m_bPropertyPagesEnabled)
-	{
-		return;
-	}
-
-	// initialize to root node, if no node is sent as hint
-	CNode *pNode = (CNode *) pHint;
-	ASSERT(pNode != NULL ? pNode->IsKindOf(RUNTIME_CLASS(CNode)) : TRUE);
-
-	// if it is the root node,
-	if (pNode == NULL || pNode == GetDocument()->GetRootNode())
-	{
-		// show the space properties
-		m_wndSpaceProperties.ShowWindow(SW_SHOW);
-		m_wndNodeProperties.ShowWindow(SW_HIDE);
-
-		// return, no more processing
-		return;
-	}
-
-	// don't add the item if it has no name
-	if ("" == pNode->GetName())
-	{
-		return;
-	}
-
-	// else show the node properties
-	m_wndSpaceProperties.ShowWindow(SW_HIDE);
-	m_wndNodeProperties.ShowWindow(SW_SHOW);
-
-	// first check to see if an item exists for this node
-	HTREEITEM hItem;
-	BOOL bResult = m_mapItemHandles.Lookup(pNode, hItem);
-	if (!bResult)
-	{
-		if (pNode->GetSpace() != NULL)
+		if (m_bPropertyPagesEnabled)
 		{
-			// add the node to the tree ctrl
-			AddNodeItem(pNode);
+			// set the property pages based on the class of node
+			if (pNode && pNode != GetDocument()->GetRootNode())
+			{
+				m_wndSpaceProperties.ShowWindow(SW_HIDE);
+				m_wndNodeProperties.ShowWindow(SW_SHOW);
+			}
+			else
+			{
+				m_wndSpaceProperties.ShowWindow(SW_SHOW);
+				m_wndNodeProperties.ShowWindow(SW_HIDE);
+			}
+
+			if (pNode)
+			{
+				// now set the property dialogs to the selected node
+				m_dlgNodeProp.SetCurNode(pNode);
+				m_dlgLinkProp.SetCurNode(pNode);
+				m_dlgImageProp.SetCurNode(pNode);
+			}
 		}
 
-		// and return
-		return;
-	}
+		break;
 
-	// the item is present, so now check the label
-	CString strName = m_wndTree.GetItemText(hItem);
-	if (strName != pNode->GetName())
-	{
-		// change text
-		m_wndTree.SetItemText(hItem, pNode->GetName());
+	case EVT_NODE_ADDED :
+
+		// add the node to the tree ctrl
+		AddNodeItem(pNode);
+		break;
+
+	case EVT_NODE_REMOVED :
+
+		// remove the node item from the tree
+		RemoveNodeItem(pNode);
+		break;
+
+	case EVT_NODE_REPARENTED :
+
+		// move the node
+		RemoveNodeItem(pNode);
+		AddNodeItem(pNode);
+
+		// select, if needed
+		if (pNode == GetDocument()->GetCurrentNode())
+		{
+			HTREEITEM hSelItem = NULL;
+			if (m_mapItemHandles.Lookup(pNode, hSelItem))
+			{
+				// set the current node as selected
+				m_wndTree.SelectItem(hSelItem);
+			}
+		}
+
+		break;
+
+	case EVT_NODE_NAMED_CHANGED :
+
+		// the item is present, so now check the label
+		if (m_wndTree.GetItemText(hItem) != pNode->GetName())
+		{
+			// change text
+			m_wndTree.SetItemText(hItem, pNode->GetName());
+		}
+
+		if (pNode == GetDocument()->GetCurrentNode()
+			&& m_dlgNodeProp.m_strName != pNode->GetName())
+		{
+			// now set the property dialogs to the selected node
+			m_dlgNodeProp.UpdateData(FALSE);
+		}
+		
+		break;
+
+	case EVT_NODE_DESC_CHANGED :
+
+		if (pNode == GetDocument()->GetCurrentNode()
+			&& m_dlgNodeProp.m_strDesc != pNode->GetDescription())
+		{
+			// now set the property dialogs to the selected node
+			m_dlgNodeProp.UpdateData(FALSE);
+		}
+		
+		break;
 	}
-	
-	// now set the property dialogs to the selected node
-	m_dlgNodeProp.SetCurNode(GetDocument()->GetCurrentNode());
-	m_dlgLinkProp.SetCurNode(GetDocument()->GetCurrentNode());
-	m_dlgImageProp.SetCurNode(GetDocument()->GetCurrentNode());
 
 }	// CSpaceTreeView::OnUpdate
 
@@ -303,6 +330,19 @@ CSpace* CSpaceTreeView::GetDocument() // non-debug version is inline
 //////////////////////////////////////////////////////////////////////
 void CSpaceTreeView::AddNodeItem(CNode *pNode, HTREEITEM hParentItem)
 {
+	// first check to see if an item exists for this node
+	HTREEITEM hItem;
+	if (m_mapItemHandles.Lookup(pNode, hItem))
+	{
+		return;
+	}
+
+	// don't add if no name
+	if ("" == pNode->GetName())
+	{
+		return;
+	}
+
     // only if the parent is not NULL,
     if ((hParentItem == NULL) && (pNode->GetParent() != NULL))
     {
