@@ -41,29 +41,6 @@ __declspec(naked) void func() {		\
 #define EPS_INV 3.0f
 #define POS_SCALE 10.0f
 #define REP_SCALE 20.0f
-#define OPT_DIST_ 8.3f
-
-
-// scale for the sizes of the nodes
-const REAL SIZE_SCALE = 100.0;
-
-
-// constants for center repulsion
-const REAL CENTER_REP_MAX_ACT = 0.15;
-const REAL CENTER_REP_SCALE = SIZE_SCALE / 8.0;
-const REAL CENTER_REP_WEIGHT = 9.0;
-
-
-// constants for the distance scale vs. activation curve
-const REAL DIST_SCALE_MIN = 1.0;
-const REAL DIST_SCALE_MAX = 1.35;
-const REAL ACTIVATION_MIDPOINT = 0.25;
-
-// compute the optimal normalized distance
-const REAL MIDWEIGHT = 0.5;
-const REAL OPT_DIST = DIST_SCALE_MIN
-	+ (DIST_SCALE_MAX - DIST_SCALE_MIN) 
-		* (1.0 - MIDWEIGHT / (MIDWEIGHT + ACTIVATION_MIDPOINT));
 
 
 ///////////////////////////////////////////////////////////////////
@@ -104,9 +81,9 @@ vec_xy_struct vec_xy[VEC_SIZE];
 ssx_ssy_struct ssx_ssy[VEC_SIZE * VEC_SIZE / 4];
 
 // constants used during optimization
-static XMMFLOAT opt_dist[] = { OPT_DIST, OPT_DIST, OPT_DIST, OPT_DIST };
-static XMMFLOAT posscale[] = { POS_SCALE, POS_SCALE, POS_SCALE, POS_SCALE };
-static XMMFLOAT repscale[] = { REP_SCALE, REP_SCALE, REP_SCALE, REP_SCALE };
+static XMMFLOAT opt_dist[4]; 
+static XMMFLOAT posscale[4]; 
+static XMMFLOAT repscale[4];
 static XMMFLOAT eps_sq[] = { EPS_SQ, EPS_SQ, EPS_SQ, EPS_SQ };
 static XMMFLOAT eps_inv[] = { EPS_INV, EPS_INV, EPS_INV, EPS_INV };
 
@@ -367,7 +344,7 @@ inline float eval_obj_all(long nCoords, long nConstNodes)
 
 	// base offset and counter for shift operations
 	vec_xy_struct *p_src = &vec_xy[(nCoords-1) / 4];
-	vec_xy_struct *p_const = &vec_xy[(nConstNodes-1) / 4 - 1];
+	vec_xy_struct *p_const = &vec_xy[(nConstNodes-1) / 4];
 
 	// parameter block
 	ssx_ssy_struct *p_ssx_ssy= &ssx_ssy[0];
@@ -375,9 +352,9 @@ inline float eval_obj_all(long nCoords, long nConstNodes)
 	do
 	{
 		vec_xy_struct *p_dst = &vec_xy[(nCoords-1) / 4];
-		while (p_dst != p_src)
+		while (p_dst >= p_src)
 		{
-			if (p_dst > p_const)
+			if (p_dst >= p_const)
 			{
 				START_ASM
 
@@ -424,56 +401,11 @@ inline float eval_obj_all(long nCoords, long nConstNodes)
 			}
 			else
 			{
-				p_ssx_ssy++;
-				p_ssx_ssy++;
-				p_ssx_ssy++;
-				p_ssx_ssy++;
+				p_ssx_ssy += 4;
 			}
 
 			p_dst--;
 		}
-
-		START_ASM
-
-		// initialize source and destination pointers
-		mov eax, DWORD PTR [p_src]
-		mov ebx, eax
-
-		// initialize parameter block pointer
-		mov ecx, DWORD PTR [p_ssx_ssy]
-
-		// call for first permutation
-		LOAD_XY_SHUF(2, 1, 0, 3)
-		call eval_obj
-
-		// next parameter block
-		add ecx, SIZE ssx_ssy_struct
-
-		// store and clear the sum for the final permutation,
-		//    as the upper two floats must be discarded
-		movaps XMMWORD PTR [sum_all], xmm_sum
-		xorps xmm_sum, xmm_sum
-
-		// call for final permutation
-		LOAD_XY_SHUF(1, 0, 3, 2)
-		call eval_obj
-
-		// clear upper two floats in sum
-		xorps xmm_zeroes, xmm_zeroes
-		shufps xmm_sum, xmm_zeroes, _MM_SHUFFLE(0, 0, 1, 0)
-
-		// add to stored sum
-		addps xmm_sum, XMMWORD PTR [sum_all]
-
-		// skip next 3 parameter blocks (at end of block row)
-		add ecx, SIZE ssx_ssy_struct
-		add ecx, SIZE ssx_ssy_struct
-		add ecx, SIZE ssx_ssy_struct
-
-		// store the pointer
-		mov DWORD PTR [p_ssx_ssy], ecx
-
-		END_ASM
 
 		p_src--;
 
@@ -570,7 +502,7 @@ inline float eval_obj_grad_all(long nCoords, long nConstNodes)
 
 	// base offset and counter for shift operations
 	vec_xy_struct *p_src = &vec_xy[(nCoords-1) / 4];
-	vec_xy_struct *p_const = &vec_xy[(nConstNodes-1) / 4 - 1];
+	vec_xy_struct *p_const = &vec_xy[(nConstNodes-1) / 4 -1];
 
 	// parameter block
 	ssx_ssy_struct *p_ssx_ssy= &ssx_ssy[0];
@@ -578,9 +510,9 @@ inline float eval_obj_grad_all(long nCoords, long nConstNodes)
 	do
 	{
 		vec_xy_struct *p_dst = &vec_xy[(nCoords-1) / 4];
-		while (p_dst != p_src)
+		while (p_dst >= p_src)
 		{
-			if (p_dst > p_const)
+			if (p_dst >= p_const)
 			{
 				START_ASM
 
@@ -631,67 +563,11 @@ inline float eval_obj_grad_all(long nCoords, long nConstNodes)
 			}
 			else
 			{
-				p_ssx_ssy++;
-				p_ssx_ssy++;
-				p_ssx_ssy++;
-				p_ssx_ssy++;
+				p_ssx_ssy += 4;
 			}
 
 			p_dst--;
 		}
-
-		START_ASM
-
-		// initialize source and destination pointers
-		mov eax, DWORD PTR [p_src]
-		mov ebx, eax
-
-		// initialize parameter block pointer
-		mov ecx, DWORD PTR [p_ssx_ssy]
-
-		// call for first permutation
-		LOAD_XY_SHUF(2, 1, 0, 3)
-		call eval_obj_grad
-		SUM_DX_DY_SHUF(0, 3, 2, 1)
-
-		// next parameter block
-		add ecx, SIZE ssx_ssy_struct
-
-		// store and clear the sum for the final permutation,
-		//    as the upper two floats must be discarded
-		movaps XMMWORD PTR [sum_all], xmm_sum
-		xorps xmm_sum, xmm_sum
-
-		// call for final permutation
-		LOAD_XY_SHUF(1, 0, 3, 2)
-		call eval_obj_grad
-
-		// sum up vec_xy.dx
-		addps xmm_d_dx, XMMWORD PTR [eax]vec_xy.dx
-		// addps xmm_d_dx, xmm_d_dx	// multiply by two
-		movaps XMMWORD PTR [eax]vec_xy.dx, xmm_d_dx
-
-		// sum up vec_xy.dy
-		addps xmm_d_dy, XMMWORD PTR [eax]vec_xy.dy
-		// addps xmm_d_dy, xmm_d_dy	// multiply by two
-		movaps XMMWORD PTR [eax]vec_xy.dy, xmm_d_dy 
-
-		// clear upper two floats in sum
-		xorps xmm_zeroes, xmm_zeroes
-		shufps xmm_sum, xmm_zeroes, _MM_SHUFFLE(0, 0, 1, 0)
-
-		// add to stored sum
-		addps xmm_sum, XMMWORD PTR [sum_all]
-
-		// skip next 3 parameter blocks (at end of block row)
-		add ecx, SIZE ssx_ssy_struct
-		add ecx, SIZE ssx_ssy_struct
-		add ecx, SIZE ssx_ssy_struct
-
-		// store the pointer
-		mov DWORD PTR [p_ssx_ssy], ecx
-
-		END_ASM
 
 		p_src--;
 
@@ -741,6 +617,7 @@ void CSSELayoutManager::LoadSizesLinks()
 
 	// stores the computed sizes for the nodes, based on current act
 	int nNodeCount = __min(GetStateDim() / 2, m_pSpace->GetNodeCount());
+	int nConstNodes = m_vConstPositions.GetDim() / 2;
 
 	// populate rotated matrix elements
 	long nAt = 0;
@@ -755,12 +632,15 @@ void CSSELayoutManager::LoadSizesLinks()
 					int nMatrixRow = nBlockRow + nRow;
 					int nMatrixCol = nBlockCol + (nRow+nCol) % 4;
 
-					if (nMatrixRow < nNodeCount && nMatrixCol < nNodeCount)
+					if (nMatrixRow < nNodeCount			// zero trailing elements
+						&& nMatrixCol < nNodeCount
+						&& (nMatrixCol >= nConstNodes	// and constant nodes
+							|| nMatrixRow >= nConstNodes))
 					{
-						ssx_ssy[nAt].ssx[nRow] = m_mSSX[nMatrixRow][nMatrixCol];
-						ssx_ssy[nAt].ssy[nRow] = m_mSSY[nMatrixRow][nMatrixCol];
-						ssx_ssy[nAt].weight_act[nRow] = m_mLinks[nMatrixRow][nMatrixCol];
-						ssx_ssy[nAt].act[nRow] = m_mAvgAct[nMatrixRow][nMatrixCol];
+						ssx_ssy[nAt].ssx[nRow] = m_mSSX[nMatrixCol][nMatrixRow];
+						ssx_ssy[nAt].ssy[nRow] = m_mSSY[nMatrixCol][nMatrixRow];
+						ssx_ssy[nAt].weight_act[nRow] = m_mLinks[nMatrixCol][nMatrixRow];
+						ssx_ssy[nAt].act[nRow] = m_mAvgAct[nMatrixCol][nMatrixRow];
 					}
 					else
 					{
@@ -793,6 +673,7 @@ void CSSELayoutManager::LoadSizesLinks()
 REAL CSSELayoutManager::operator()(const CVectorN<REAL>& vInput,
 									 CVectorN<> *pGrad)
 {
+// #define _COMPARE_WITH_BASE
 #ifdef _COMPARE_WITH_BASE
 	static CVectorN<> vSubGrad;
 	REAL sub_energy = CSpaceLayoutManager::operator()(vInput, &vSubGrad);
@@ -852,7 +733,7 @@ REAL CSSELayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 	if (NULL != pGrad)
 	{
-		m_energy = eval_obj_grad_all(nNodeCount, m_vConstPositions.GetDim() / 2);
+		m_energy += eval_obj_grad_all(nNodeCount, m_vConstPositions.GetDim() / 2);
 
 		for (nAt = 0; nAt < nNodeCount; nAt++)
 		{
@@ -862,60 +743,62 @@ REAL CSSELayoutManager::operator()(const CVectorN<REAL>& vInput,
 	}
 	else
 	{
-		m_energy = eval_obj_all(nNodeCount, m_vConstPositions.GetDim() / 2);
+		m_energy += eval_obj_all(nNodeCount, m_vConstPositions.GetDim() / 2);
 	}
 
-	// iterate over all current visualized node views
-	int nAtNode;
-	for (nAtNode = nNodeCount-1; nAtNode >= m_vConstPositions.GetDim() / 2;
-		nAtNode--)
+	if (m_bCalcCenterRep)
 	{
-		//////////////////////////////////////////////////////////////
-		// compute the centering repulsion field
-
-		if (m_pSpace->GetNodeAt(nAtNode)->GetActivation() <= CENTER_REP_MAX_ACT)
+		// iterate over all current visualized node views
+		int nAtNode;
+		for (nAtNode = nNodeCount-1; nAtNode >= 0; nAtNode--)
 		{
-			// compute the x- and y-offset between the views
-			const REAL x = m_vInput[nAtNode*2 + 0] - vCenter[0];
-			const REAL y = m_vInput[nAtNode*2 + 1] - vCenter[1];
+			//////////////////////////////////////////////////////////////
+			// compute the centering repulsion field
 
-			// compute the x- and y-scales for the fields -- average of
-			//		two rectangles
-			const REAL aspect_sq = (13.0 / 16.0) * (13.0 / 16.0);
-			const REAL ssx_sq =
-				(CENTER_REP_SCALE * CENTER_REP_SCALE / aspect_sq );
-			const REAL ssy_sq = 
-				(CENTER_REP_SCALE * CENTER_REP_SCALE * aspect_sq );
-
-			// compute the energy due to this interation
-			const REAL dx_ratio = x / ssx_sq; 
-			const REAL x_ratio = x * dx_ratio; 
-			const REAL dy_ratio = y / ssy_sq;
-			const REAL y_ratio = y * dy_ratio;
-
-			// compute the energy term
-			const REAL inv_sq = ((REAL) 1.0) / (x_ratio + y_ratio + ((REAL) 3.0));
-			const REAL factor_rep = m_k_rep * CENTER_REP_WEIGHT
-				* (CENTER_REP_MAX_ACT - abs(m_act[nAtNode])) 
-				* (CENTER_REP_MAX_ACT - abs(m_act[nAtNode]));
-
-			// add to total energy
-			m_energy += factor_rep * inv_sq;
-
-			if (NULL != pGrad)
+			if (m_pSpace->GetNodeAt(nAtNode)->GetActivation() <= CENTER_REP_MAX_ACT)
 			{
-				// compute gradient terms
-				const REAL inv_sq_sq = inv_sq * inv_sq;
-				const REAL dRepulsion_dx = factor_rep * dx_ratio * inv_sq_sq;
-				const REAL dRepulsion_dy = factor_rep * dy_ratio * inv_sq_sq;
+				// compute the x- and y-offset between the views
+				const REAL x = m_vInput[nAtNode*2 + 0] - vCenter[0];
+				const REAL y = m_vInput[nAtNode*2 + 1] - vCenter[1];
 
-				// add to the gradient vectors
-				m_vGrad[nAtNode*2   + 0] -= (dRepulsion_dx + dRepulsion_dx);
-				m_vGrad[nAtNode*2   + 1] -= (dRepulsion_dy + dRepulsion_dy);
-			}
-		} 
+				// compute the x- and y-scales for the fields -- average of
+				//		two rectangles
+				const REAL aspect_sq = (13.0 / 16.0) * (13.0 / 16.0);
+				const REAL ssx_sq =
+					(CENTER_REP_SCALE * CENTER_REP_SCALE / aspect_sq );
+				const REAL ssy_sq = 
+					(CENTER_REP_SCALE * CENTER_REP_SCALE * aspect_sq );
+
+				// compute the energy due to this interation
+				const REAL dx_ratio = x / ssx_sq; 
+				const REAL x_ratio = x * dx_ratio; 
+				const REAL dy_ratio = y / ssy_sq;
+				const REAL y_ratio = y * dy_ratio;
+
+				// compute the energy term
+				const REAL inv_sq = ((REAL) 1.0) / (x_ratio + y_ratio + ((REAL) 3.0));
+				const REAL factor_rep = m_k_rep * CENTER_REP_WEIGHT
+					* (CENTER_REP_MAX_ACT - abs(m_act[nAtNode])) 
+					* (CENTER_REP_MAX_ACT - abs(m_act[nAtNode]));
+
+				// add to total energy
+				m_energy += factor_rep * inv_sq;
+
+				if (NULL != pGrad)
+				{
+					// compute gradient terms
+					const REAL inv_sq_sq = inv_sq * inv_sq;
+					const REAL dRepulsion_dx = factor_rep * dx_ratio * inv_sq_sq;
+					const REAL dRepulsion_dy = factor_rep * dy_ratio * inv_sq_sq;
+
+					// add to the gradient vectors
+					m_vGrad[nAtNode*2   + 0] -= (dRepulsion_dx + dRepulsion_dx);
+					m_vGrad[nAtNode*2   + 1] -= (dRepulsion_dy + dRepulsion_dy);
+				}
+			} 
+		}
 	}
-		
+	
 	// store the gradient vector if one was passed
 	if (NULL != pGrad)
 	{
@@ -927,12 +810,16 @@ REAL CSSELayoutManager::operator()(const CVectorN<REAL>& vInput,
 	}
 
 #ifdef _COMPARE_WITH_BASE
-	// output stats
-	TRACE("Energy = %f | sub  = %f\n", m_energy, sub_energy);
-	if (NULL != pGrad)
+	if (abs(m_energy - sub_energy) > 1.0)
 	{
-		TRACE_VECTOR("Grad = ", (*pGrad));
-		TRACE_VECTOR("Sub grad = ", vSubGrad);
+		// output stats
+		TRACE("Const nodes = %i\n", m_vConstPositions.GetDim() / 2);
+		TRACE("Energy = %f | sub  = %f\n", m_energy, sub_energy);
+		if (NULL != pGrad)
+		{
+			TRACE_VECTOR("Grad = ", (*pGrad));
+			TRACE_VECTOR("Sub grad = ", vSubGrad);
+		}
 	}
 #endif
 
