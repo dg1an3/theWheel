@@ -84,6 +84,61 @@ void CNodeLink::SetWeight(REAL newWeight)
 
 
 //////////////////////////////////////////////////////////////////////
+// CNodeLink::GetGainWeight
+// 
+// gets the gain weight = weight * gain
+//////////////////////////////////////////////////////////////////////
+REAL CNodeLink::GetGainWeight() const
+{
+	return 0.99 * m_gain * GetWeight() + 0.01 * GetWeight();
+
+}	// CNodeLink::GetGainWeight
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeLink::SetGain
+// 
+// sets the gain for the link weight
+//////////////////////////////////////////////////////////////////////
+void CNodeLink::SetGain(REAL gain)
+{
+	// ensure the gain is finite
+	ASSERT(_finite(m_gain));
+
+	// set by filtering with the currrent gain
+	m_gain = 0.5 * m_gain + 0.5 * gain;
+
+	// ensure still finite
+	ASSERT(_finite(m_gain));
+
+}	// CNodeLink::SetGain
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeLink::IsStabilizer
+// 
+// returns TRUE if this link is a stabilizer link
+//////////////////////////////////////////////////////////////////////
+BOOL CNodeLink::IsStabilizer() const
+{
+	return m_bIsStabilizer;
+
+}	// CNode::IsStabilizer
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeLink::SetStabilizer
+// 
+// links the node to the target node (creating a CNodeLink in the
+// proces, if necessary).
+//////////////////////////////////////////////////////////////////////
+void CNodeLink::SetStabilizer(BOOL bIsStabilizer)
+{
+	m_bIsStabilizer = bIsStabilizer;
+}
+
+
+//////////////////////////////////////////////////////////////////////
 // CNodeLink::GetTarget
 // 
 // returns the target of this link
@@ -179,39 +234,4 @@ void CNodeLink::Serialize(CArchive &ar)
 
 }	// CNodeLink::Serialize
 
-void CNodeLink::SetGain(REAL gain)
-{
-	ASSERT(_finite(m_gain));
-	m_gain = 0.5 * m_gain + 0.5 * gain;
-	ASSERT(_finite(m_gain));
-}
-
-REAL CNodeLink::GetGainWeight() const
-{
-	return 0.99 * m_gain * GetWeight() + 0.01 * GetWeight();
-}
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeLink::IsStabilizer
-// 
-// returns TRUE if this link is a stabilizer link
-//////////////////////////////////////////////////////////////////////
-BOOL CNodeLink::IsStabilizer() const
-{
-	return m_bIsStabilizer;
-
-}	// CNode::IsStabilizer
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeLink::SetStabilizer
-// 
-// links the node to the target node (creating a CNodeLink in the
-// proces, if necessary).
-//////////////////////////////////////////////////////////////////////
-void CNodeLink::SetStabilizer(BOOL bIsStabilizer)
-{
-	m_bIsStabilizer = bIsStabilizer;
-}
 
