@@ -26,20 +26,13 @@ CLookupFunction<SPV_STATE_TYPE> attractFunc(&attract_func,
 
 SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
-	return // 2.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
+	return 2.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
 		+ 4.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 4.0f, 1.0f / 4.0f)
 		+ 8.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 8.0f, 1.0f / 8.0f);
 }
 
 CLookupFunction<SPV_STATE_TYPE> spacerFunc(&spacer_func, 
 		-4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, "SPACERFUNC.TMP");
-
-SPV_STATE_TYPE MinSize(SPV_STATE_TYPE x, SPV_STATE_TYPE xmin)
-{
-	SPV_STATE_TYPE frac = x / (x + xmin);
-
-	return (1.0f - frac) * xmin + frac * x;
-}
 
 SPV_STATE_TYPE CenterField(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE width, SPV_STATE_TYPE height, SPV_STATE_TYPE cs)
 {
@@ -108,50 +101,10 @@ void CSpaceViewEnergyFunction::SetStateVector(const CVector<SPV_STATE_DIM, SPV_S
 SPV_STATE_TYPE CSpaceViewEnergyFunction::GetThreshold()
 {
 	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), SPV_STATE_DIM / 2);
+
 	CNodeView::activationThreshold = 
 		m_pView->nodeViews.Get(nNumVizNodeViews - 1)->activation.Get();
 	return CNodeView::activationThreshold;
-
-	// set initial threshold greater than the max activation
-	SPV_STATE_TYPE threshold = 200.0;
-	SPV_STATE_TYPE prevThreshold;
-
-	// set initial count to zero
-	int nSuperThresholdViewCount = 0;
-	int nPrevSuperThresholdViewCount;
-
-	while (nSuperThresholdViewCount < SPV_STATE_DIM / 2)
-	{
-		nPrevSuperThresholdViewCount = nSuperThresholdViewCount;
-		prevThreshold = threshold;
-
-		threshold = 0.0;
-		for (int nAt = 0; nAt < m_pView->nodeViews.GetSize(); nAt++)
-		{
-			SPV_STATE_TYPE currActivation = m_pView->nodeViews.Get(nAt)->activation.Get();
-			if (currActivation < prevThreshold)
-			{
-				if (currActivation > threshold)
-				{
-					// set the threshold to the current activation
-					threshold = currActivation;
-
-					// reset count (to disregard previous activations, which
-					//		must have been lower then the new threshold
-					nSuperThresholdViewCount = nPrevSuperThresholdViewCount;
-				}
-				
-				// if we are equal, increment the count
-				if (currActivation == threshold)
-					nSuperThresholdViewCount++;
-			}
-		}
-	}
-
-	ASSERT(nPrevSuperThresholdViewCount < SPV_STATE_DIM / 2);
-
-	CNodeView::activationThreshold = (float) threshold; // prevThreshold;
-	return threshold; // prevThreshold;
 }
 
 SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput)
@@ -180,15 +133,11 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 		CRect rectNodeView;
 		pAtNodeView->GetWindowRect(&rectNodeView);
 
-		// temporary variables to hold the derivative of the energy
-		SPV_STATE_TYPE dEnergyDx = 0.0;
-		SPV_STATE_TYPE dEnergyDy = 0.0;
-
 		// stores the x and y coordinates for various computations;
 		SPV_STATE_TYPE x;
 		SPV_STATE_TYPE y;
-		SPV_STATE_TYPE dx = (SPV_STATE_TYPE) rectNodeView.Width() / 2.0;
-		SPV_STATE_TYPE dy = (SPV_STATE_TYPE) rectNodeView.Height() / 2.0;
+		SPV_STATE_TYPE dx = (SPV_STATE_TYPE) rectNodeView.Width() / 4.0;
+		SPV_STATE_TYPE dy = (SPV_STATE_TYPE) rectNodeView.Height() / 4.0;
 
 		// iterate over the potential linked views
 		int nAtLinkedView;
@@ -216,29 +165,27 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 
 				SPV_STATE_TYPE weight = (weight1 + weight2) / 2.0f;
 
-				SPV_STATE_TYPE ssx = MinSize((SPV_STATE_TYPE) rectLinked.Width(), 
-					(SPV_STATE_TYPE) rectNodeView.Width() / 8.0f);
-				SPV_STATE_TYPE ssy = MinSize((SPV_STATE_TYPE) rectLinked.Height(), 
-					(SPV_STATE_TYPE) rectNodeView.Height() / 8.0f);
+				SPV_STATE_TYPE ssx = (SPV_STATE_TYPE) rectLinked.Width();
+				SPV_STATE_TYPE ssy = (SPV_STATE_TYPE) rectLinked.Height();
 
 				x = vInput[nAtNodeView*2 + 0] - vInput[nAtLinkedView*2 + 0];
 				y = vInput[nAtNodeView*2 + 1] - vInput[nAtLinkedView*2 + 1];
 
 				// compute the energy due to this interation
-				for (int nX = -1; nX <= 1; nX++)
-					for (int nY = -1; nY <= 1; nY++)
+				for (int nX = -2; nX <= 2; nX++)
+					for (int nY = -2; nY <= 2; nY++)
 					{
-						m_energy += 1.0 / 10.0
+						m_energy += 1.0 / 22.5							
 							* spacerFunc((x + dx * (SPV_STATE_TYPE) nX) / ssx, 
 								(y + dy * (SPV_STATE_TYPE) nY) / ssy);
 					}
 
 				// add general repulsion
-				m_energy += 2.0
+				m_energy += 0.666
 					* attractFunc(x / (ssx * 1.0), y / (ssy * 1.0));
 
 				// add attraction * weight
-				m_energy -= weight * 75.0
+				m_energy -= weight * 65.0
 					* attractFunc(x / (ssx * 6.0), y / (ssy * 6.0));
 			}
 		}
