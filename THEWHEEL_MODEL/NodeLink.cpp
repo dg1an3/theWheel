@@ -26,7 +26,9 @@ static char THIS_FILE[]=__FILE__;
 CNodeLink::CNodeLink(CNode *pToNode, REAL weight)
 	: m_pTarget(pToNode),
 		m_weight(weight),
-		m_bHasPropagated(FALSE)
+		m_bHasPropagated(TRUE)
+		// initialize to HasPropagated to prevent immediate 
+		//		propagation
 {
 }
 
