@@ -31,3 +31,14 @@ should add to or customize.
 
 
 /////////////////////////////////////////////////////////////////////////////
+TODO
+
+1) Files to be cleaned:
+
+	Node.h
+	Node.cpp
+	NodeLink.h
+	NodeLink.cpp
+	Space.h
+	Space.cpp
+

@@ -109,3 +109,36 @@ don't do this, some of the UI elements of your application will remain in the
 language of the operating system.
 
 /////////////////////////////////////////////////////////////////////////////
+TODO
+
+1) Files to be cleaned:
+
+	MainFrm.h
+	MainFrm.cpp
+	NewNodeDlg.h
+	NewNodeDlg.cpp
+	NodeRenderer.h
+	NodeRenderer.cpp
+	NodeView.h
+	NodeView.cpp
+	SpaceTreeView.h
+	SpaceTreeView.cpp
+	SpaceView.h
+	SpaceView.cpp
+	SpaceViewEnergyFunction.h
+	SpaceViewEnergyFunction.cpp
+	theWheel2001.h
+	theWheel2001.cpp
+
+2) Clean project resources
+
+3) Move activation to the CNode objects
+
+4) Move propagation to the CNode objects
+
+5) Move learning to the CNode objects
+
+6) Make CSpaceView : public COpenGLView
+
+7) Instantiate CNodeRenderers instead of CNodeViews
+
