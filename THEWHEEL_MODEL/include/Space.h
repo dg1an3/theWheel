@@ -169,6 +169,7 @@ private:
 	CObArray m_arrNodes;
 
 public:
+	void Relax();
 	int m_nLastPostSuper;
 
 	// flag to indicate sorting
