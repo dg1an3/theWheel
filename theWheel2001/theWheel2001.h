@@ -35,7 +35,6 @@ public:
 	//{{AFX_VIRTUAL(CtheWheelApp)
 	public:
 	virtual BOOL InitInstance();
-	virtual BOOL OnIdle(LONG lCount);
 	//}}AFX_VIRTUAL
 
 // Implementation
