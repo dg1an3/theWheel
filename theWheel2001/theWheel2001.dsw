@@ -27,6 +27,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "THEWHEEL_VIEW"="..\THEWHEEL_VIEW\THEWHEEL_VIEW.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "VecMat"="..\VecMat\VecMat.dsp" - Package Owner=<4>
 
 Package=<5>
@@ -64,6 +76,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name VecMat
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name THEWHEEL_VIEW
     End Project Dependency
 }}}
 

@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /Ob2 /I "..\THEWHEEL_MODEL" /I "..\OptimizeN" /I "..\VecMat" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /FR /Yu"stdafx.h" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /Ob2 /I "..\THEWHEEL_VIEW\include" /I "..\THEWHEEL_MODEL\include" /I "..\OptimizeN\include" /I "..\VecMat" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /FR /Yu"stdafx.h" /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\GEOM_VIEW\include" /I "..\GEOM_MODEL\include" /I "..\THEWHEEL_MODEL" /I "..\OptimizeN" /I "..\VecMat" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /FR /Yu"stdafx.h" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "..\THEWHEEL_VIEW\include" /I "..\THEWHEEL_MODEL\include" /I "..\OptimizeN\include" /I "..\VecMat" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /FR /Yu"stdafx.h" /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "_DEBUG" /d "_AFXDLL"
@@ -92,24 +92,7 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\DDUTIL.CPP
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-# Begin Source File
-
-SOURCE=.\EditNodeDlg.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\MainFrm.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\NodeView.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\NodeViewSkin.cpp
 # End Source File
 # Begin Source File
 
@@ -118,14 +101,6 @@ SOURCE=.\SpaceAndBrowserView.cpp
 # Begin Source File
 
 SOURCE=.\SpaceBrowser.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\SpaceTreeView.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\SpaceView.cpp
 # End Source File
 # Begin Source File
 
@@ -140,7 +115,7 @@ SOURCE=.\theWheel2001.cpp
 
 SOURCE=.\theWheel2001.rc
 # ADD BASE RSC /l 0x409
-# ADD RSC /l 0x409
+# ADD RSC /l 0x409 /i "..\THEWHEEL_VIEW" /i "..\GEOM_VIEW"
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -148,23 +123,7 @@ SOURCE=.\theWheel2001.rc
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=.\DDUTIL.H
-# End Source File
-# Begin Source File
-
-SOURCE=.\EditNodeDlg.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\MainFrm.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\NodeView.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\NodeViewSkin.h
 # End Source File
 # Begin Source File
 
@@ -177,14 +136,6 @@ SOURCE=.\SpaceAndBrowserView.h
 # Begin Source File
 
 SOURCE=.\SpaceBrowser.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\SpaceTreeView.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\SpaceView.h
 # End Source File
 # Begin Source File
 
