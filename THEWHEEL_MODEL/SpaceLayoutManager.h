@@ -21,7 +21,7 @@ class CSpace;
 // declaration for the dimensionality of the energy function state
 //		vector
 //////////////////////////////////////////////////////////////////////
-const int STATE_DIM = 42;
+const int STATE_DIM = 36;
 
 //////////////////////////////////////////////////////////////////////
 // class CSpaceLayoutManager
@@ -56,10 +56,9 @@ public:
 	// performs the layout
 	void LayoutNodes();
 
+	// member function to rotate and translate the state vector
+	//		to minimize the diff. w/ the previous state vector
 	void RotateTranslateStateVector(CStateVector *pState, const CStateVector& vOldState);
-
-	// holds the number of evaluations that have been done
-	int m_nEvaluations;
 
 private:
 	// pointer to the energy function's spaceview
@@ -69,6 +68,9 @@ private:
 	COptimizer *m_pPowellOptimizer;
 	COptimizer *m_pConjGradOptimizer;
 	COptimizer *m_pGradDescOptimizer;
+
+	// pointer to the optimizer to be used
+	COptimizer *m_pOptimizer;
 
 	// caches previous input vector
 	CStateVector m_vInput;
@@ -88,6 +90,9 @@ private:
 
 	// stores the link weights for quick access
 	REAL m_mLinks[STATE_DIM][STATE_DIM];
+
+	// holds the number of evaluations that have been done
+	int m_nEvaluations;
 };
 
 
