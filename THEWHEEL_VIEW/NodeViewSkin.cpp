@@ -93,7 +93,10 @@ CNodeViewSkin::CNodeViewSkin()
 CNodeViewSkin::~CNodeViewSkin()
 {
 	// sets the client area to 0, 0 (frees surfaces)
-	SetClientArea(0, 0);
+	SetClientArea(0, 0, m_colorBk);
+
+	m_lpD3D->Release();
+	m_lpDD->Release();
 
 }	// CNodeViewSkin::~CNodeViewSkin
 
@@ -107,6 +110,7 @@ BOOL CNodeViewSkin::InitDDraw(LPDIRECTDRAW lpDD)
 {
 	// store a pointer to the main DirectDraw object
 	m_lpDD = lpDD;
+	m_lpDD->AddRef();
 
 	// get the Direct3D2 interface
 	CHECK_HRESULT(m_lpDD->QueryInterface(IID_IDirect3D2, (void**)&m_lpD3D));
@@ -118,9 +122,9 @@ BOOL CNodeViewSkin::InitDDraw(LPDIRECTDRAW lpDD)
 /////////////////////////////////////////////////////////////////////////////
 // CNodeViewSkin::SetClientArea
 //
-// sets the client area for this skin
+// sets the client area dimensions and color for this skin
 /////////////////////////////////////////////////////////////////////////////
-void CNodeViewSkin::SetClientArea(int nWidth, int nHeight)
+void CNodeViewSkin::SetClientArea(int nWidth, int nHeight, COLORREF colorBk)
 {
 	// set the width and height parameters
 	m_nWidth = nWidth;
@@ -141,6 +145,9 @@ void CNodeViewSkin::SetClientArea(int nWidth, int nHeight)
 	// size to max client area
 	m_arrlpSkinDDS.SetSize(m_nWidth);
 
+	// set background color
+	m_colorBk = colorBk;
+
 }	// CNodeViewSkin::SetClientArea
 
 
@@ -160,8 +167,8 @@ CRect& CNodeViewSkin::CalcOuterRect(CNodeView *pNodeView)
 		pNodeView->GetNode()->GetSize(pNodeView->GetSpringActivation());
 
 	// get the width and height for the node view
-	int nWidth = (int) (vSize[0] * scale);
-	int nHeight = (int) (vSize[1] * scale);
+	int nWidth = (int) (1.05 * vSize[0] * scale);
+	int nHeight = (int) (1.05 * vSize[1] * scale);
 
 	// set the width and height of the window, keeping the center constant
 	CRect& rectOuter = pNodeView->GetOuterRect();
@@ -303,6 +310,11 @@ CRect CNodeViewSkin::CalcTopBottomEllipseRect(CNodeView *pNodeView)
 }	// CNodeViewSkin::CalcTopBottomEllipseRect
 
 
+/////////////////////////////////////////////////////////////////////////////
+// CNodeViewSkin::InitD3DDevice
+//
+// initializes the D3D device upon which rendering will occur
+/////////////////////////////////////////////////////////////////////////////
 BOOL CNodeViewSkin::InitD3DDevice(LPDIRECTDRAWSURFACE lpDDS,
 							LPDIRECT3DDEVICE2 *lppD3DDev)
 {
@@ -322,8 +334,15 @@ BOOL CNodeViewSkin::InitD3DDevice(LPDIRECTDRAWSURFACE lpDDS,
 		(DWORD) D3DRGB(0.25, 0.25, 0.25)));
 
 	return TRUE;
-}
 
+}	// CNodeViewSkin::InitD3DDevice
+
+
+/////////////////////////////////////////////////////////////////////////////
+// CNodeViewSkin::InitViewport
+//
+// initializes the viewport within which rendering will occur
+/////////////////////////////////////////////////////////////////////////////
 BOOL CNodeViewSkin::InitViewport(LPDIRECT3DDEVICE2 lpD3DDev, CRect rect,
 						   LPDIRECT3DVIEWPORT2 *lppViewport)
 {
@@ -350,17 +369,16 @@ BOOL CNodeViewSkin::InitViewport(LPDIRECT3DDEVICE2 lpD3DDev, CRect rect,
     viewData.dvMaxZ = 1.0f;
     CHECK_HRESULT((*lppViewport)->SetViewport2(&viewData));
 
-	D3DMATRIX mat;
-	ZeroMemory(&mat, sizeof(D3DMATRIX));
-	mat(0, 0) = (D3DVALUE) 1.0 / rect.Width();
-	mat(1, 1) = (D3DVALUE) 1.0 / rect.Width();
-	mat(2, 2) = (D3DVALUE) 1.0; // 0.0025;
-	mat(3, 3) = (D3DVALUE) 1.0;
-	CHECK_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_VIEW, &mat));
-
 	return TRUE;
-}
+
+}	// CNodeViewSkin::InitViewport
+
     
+/////////////////////////////////////////////////////////////////////////////
+// CNodeViewSkin::InitLights
+//
+// initializes the viewport within which rendering will occur
+/////////////////////////////////////////////////////////////////////////////
 BOOL CNodeViewSkin::InitLights(LPDIRECT3DVIEWPORT2 lpViewport, 
 						 LPDIRECT3DLIGHT *lppLights)
 {
@@ -368,9 +386,9 @@ BOOL CNodeViewSkin::InitLights(LPDIRECT3DVIEWPORT2 lpViewport,
 	ZeroMemory(&light, sizeof(D3DLIGHT2));
 	light.dwSize = sizeof(D3DLIGHT2);
     light.dltType = D3DLIGHT_DIRECTIONAL;
-    light.dcvColor.r = (D3DVALUE) 0.75;
-    light.dcvColor.g = (D3DVALUE) 0.75;
-    light.dcvColor.b = (D3DVALUE) 0.75;
+    light.dcvColor.r = (D3DVALUE) 0.8;
+    light.dcvColor.g = (D3DVALUE) 0.8;
+    light.dcvColor.b = (D3DVALUE) 0.8;
     light.dvDirection.x = (D3DVALUE) 1.0;
     light.dvDirection.y = (D3DVALUE) -1.0;
     light.dvDirection.z = (D3DVALUE) -0.1;
@@ -380,9 +398,9 @@ BOOL CNodeViewSkin::InitLights(LPDIRECT3DVIEWPORT2 lpViewport,
 	CHECK_HRESULT(lppLights[0]->SetLight((LPD3DLIGHT) &light));
 	CHECK_HRESULT(lpViewport->AddLight(lppLights[0]));
 
-    light.dcvColor.r = (D3DVALUE) 0.5;
-    light.dcvColor.g = (D3DVALUE) 0.5;
-    light.dcvColor.b = (D3DVALUE) 0.5;
+    light.dcvColor.r = (D3DVALUE) 0.6;
+    light.dcvColor.g = (D3DVALUE) 0.6;
+    light.dcvColor.b = (D3DVALUE) 0.6;
     light.dvDirection.x = (D3DVALUE) 0.0;
     light.dvDirection.y = (D3DVALUE) 0.0;
     light.dvDirection.z = (D3DVALUE) -1.0;
@@ -391,8 +409,15 @@ BOOL CNodeViewSkin::InitLights(LPDIRECT3DVIEWPORT2 lpViewport,
 	CHECK_HRESULT(lpViewport->AddLight(lppLights[1]));
 
 	return TRUE;
-}
 
+}	// CNodeViewSkin::InitLights
+
+
+/////////////////////////////////////////////////////////////////////////////
+// CNodeViewSkin::InitMaterial
+//
+// initializes the material for rendering
+/////////////////////////////////////////////////////////////////////////////
 BOOL CNodeViewSkin::InitMaterial(LPDIRECT3DMATERIAL2 *lppD3DMat)
 {
 	// initialize material
@@ -416,7 +441,9 @@ BOOL CNodeViewSkin::InitMaterial(LPDIRECT3DMATERIAL2 *lppD3DMat)
     CHECK_HRESULT((*lppD3DMat)->SetMaterial(&mat));
 
     return TRUE;
-}
+
+}	// CNodeViewSkin::InitMaterial
+
 
 //////////////////////////////////////////////////////////////////////
 // CNodeViewSkin::BltSkin
@@ -429,7 +456,10 @@ void CNodeViewSkin::BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView)
 	const CRect& rectOuter = CalcOuterRect(pNodeView);
 	const CRect& rectInner = CalcInnerRect(pNodeView);
 
-	if (rectOuter.Width() < THICK_PEN_WIDTH)
+	// calculate the node-views shape rgn, for hit-testing
+	CalcShape(pNodeView, pNodeView->GetShape(), THICK_PEN_WIDTH);
+
+	if (rectOuter.Height() < 10)
 	{
 		return;
 	}
@@ -460,9 +490,6 @@ void CNodeViewSkin::BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView)
 		ASSERT_HRESULT(lpDDS->Blt(rectDestIntersect, lpSkinDDS,
 			rectDestIntersect - rectDest.TopLeft(), DDBLT_KEYSRC, NULL));
 	}
-
-	// calculate the node-views shape rgn, for hit-testing
-	CalcShape(pNodeView, pNodeView->GetShape(), THICK_PEN_WIDTH);
 
 }	// CNodeViewSkin::BltSkin
 
@@ -533,6 +560,16 @@ LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView,
 
 		LPDIRECT3DVIEWPORT2	lpViewport = NULL;
 		ASSERT_BOOL(InitViewport(lpD3DDev, rectSrc, &lpViewport));
+
+		// set up the zoom transform, accounting for rectangle
+		//		inflation
+		D3DMATRIX mat;
+		ZeroMemory(&mat, sizeof(D3DMATRIX));
+		mat(0, 0) = (D3DVALUE) 1.0 / (rectSrc.Width() + 10.0);
+		mat(1, 1) = (D3DVALUE) 1.0 / (rectSrc.Width() + 10.0);
+		mat(2, 2) = (D3DVALUE) 1.0; // 0.0025;
+		mat(3, 3) = (D3DVALUE) 1.0;
+		CHECK_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_VIEW, &mat));
 
 		LPDIRECT3DLIGHT lpLights[2];
 		ASSERT_BOOL(InitLights(lpViewport, lpLights));
@@ -685,7 +722,8 @@ void CNodeViewSkin::DrawSkinD3D(IDirect3DDevice2 *lpD3DDev,
 
 	// create a previous molding, to connect to next
 	CMolding* pPrev = new CMolding(2*PI, EvalElliptangle(2*PI, pVert), 
-		BORDER_RADIUS);
+		(rectOuter.Height() > BORDER_RADIUS * 4) ? BORDER_RADIUS 
+			: rectOuter.Height() / 4);
 
 	// now render the four sections of the molding
 	pPrev = CMolding::RenderMoldingSection(lpD3DDev, 
@@ -762,9 +800,3 @@ void CNodeViewSkin::DrawLink(CDC *pDC, CVectorD<3>& vFrom, REAL actFrom,
 
 }	// CNodeViewSkin::DrawLink
 
-
-
-void CNodeViewSkin::SetBkColor(COLORREF color)
-{
-	m_colorBk = color;
-}
