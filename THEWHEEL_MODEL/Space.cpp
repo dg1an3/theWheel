@@ -212,6 +212,9 @@ void CSpace::AddNode(CNode *pNewNode, CNode *pParentNode)
 	//		the array (because it will update the total activation)
 	pNewNode->SetActivation(actWeight * 0.1);
 
+	// set dirty flag
+	SetModifiedFlag(TRUE);
+
 	// update all the views, passing the new node as a hint
 	SPACE_FIRE_CHANGE(EVT_NODE_ADDED, pNewNode);
 
@@ -304,6 +307,8 @@ void CSpace::SetCurrentNode(CNode *pNode)
 //////////////////////////////////////////////////////////////////////
 void CSpace::ActivateNode(CNode *pNode, REAL scale)
 {
+	scale = _cpp_min<REAL>(scale, 0.5);
+
 	// first, compute the new activation of the node up to the max
 	REAL oldActivation = pNode->GetActivation();
 	REAL newActivation = 
@@ -335,11 +340,13 @@ void CSpace::NormalizeNodes(REAL sum)
 {
 	// scale for secondary
 	REAL scale_2 = sum 
-		/ (m_primSecRatio * GetTotalPrimaryActivation() 
-			+ GetTotalSecondaryActivation()); 
+		/ (GetTotalPrimaryActivation() 
+			+ m_primSecRatio * GetTotalSecondaryActivation() + 0.0001); 
 
 	// scale for primary
-	REAL scale_1 = scale_2 * m_primSecRatio;
+	REAL scale_1 = sum 
+		 / (GetTotalPrimaryActivation() / m_primSecRatio 
+			+ GetTotalSecondaryActivation() + 0.0001); 
 
 	// scale the nodes
 	for (int nAt = 0; nAt < GetNodeCount(); nAt++)
@@ -357,6 +364,61 @@ void CSpace::NormalizeNodes(REAL sum)
 	}
 
 }	// CSpace::NormalizeNodes
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpace::Relax
+// 
+// relaxes the link weights (adjusts gain based on dist error)
+//////////////////////////////////////////////////////////////////////
+void CSpace::Relax()
+{
+	// iterate over all super nodes
+	for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
+	{
+		// get current node
+		CNode *pNode = GetNodeAt(nAt);
+
+		// iterate over linked nodes
+		for (int nAtLinked = 0; nAtLinked < GetSuperNodeCount(); nAtLinked++)
+		{
+			// skip if we are at the same node
+			if (nAt == nAtLinked)
+			{
+				continue;
+			}
+
+			// get the target and link
+			CNode *pTarget = GetNodeAt(nAtLinked);
+
+			// get the link, if there is one
+			CNodeLink *pLink = pNode->GetLinkTo(pTarget);
+			if (pLink != NULL)
+			{
+				// compute the distance error
+				const REAL distErr = m_pLayoutManager->GetDistError(pNode, pTarget);
+				const REAL distErrScaled = distErr / pNode->GetActivation();
+
+				// compute the exponential of the distance
+				const REAL exp_dist = 3.0 * exp(0.004 * distErrScaled); //  + 2.0);
+
+				// check that the exponential is finite
+				if (_finite(exp_dist))
+				{
+					// compute the gain and set it
+					REAL new_gain = 1.0 - exp_dist / (exp_dist + 24.0); // 80.0);
+					pLink->SetGain(new_gain);
+				}
+				else
+				{
+					// getting too far away, need more power
+					pLink->SetGain(1.0);
+				}
+			}
+		}
+	}
+
+}	// CSpace::Relax
 
 
 //////////////////////////////////////////////////////////////////////
@@ -381,6 +443,9 @@ void CSpace::SetMaxSuperNodeCount(int nSuperNodeCount)
 {
 	// m_nSuperNodeCount = nSuperNodeCount;
 	GetLayoutManager()->SetStateDim(nSuperNodeCount * 2);
+
+	// flag to indicate dirty doc
+	SetModifiedFlag(TRUE);
 
 	// update all the views
 	SPACE_FIRE_CHANGE(EVT_SUPERNODECOUNT_CHANGED, NULL);
@@ -410,6 +475,9 @@ void CSpace::SetPrimSecRatio(REAL primSecRatio)
 {
 	m_primSecRatio = primSecRatio;
 
+	// flag to indicate dirty doc
+	SetModifiedFlag(TRUE);
+
 	// update all the views
 	SPACE_FIRE_CHANGE(EVT_LAYOUTPARAMS_CHANGED, NULL);
 
@@ -436,6 +504,9 @@ REAL CSpace::GetSpringConst()
 void CSpace::SetSpringConst(REAL springConst)
 {
 	m_springConst = springConst;
+
+	// flag to indicate dirty doc
+	SetModifiedFlag(TRUE);
 
 	// update all the views
 	SPACE_FIRE_CHANGE(EVT_LAYOUTPARAMS_CHANGED, NULL);
@@ -478,6 +549,8 @@ BOOL CSpace::OnNewDocument()
 		return FALSE;
 	}
 
+	DeleteContents();
+
 	// clear the array
 	m_totalPrimaryActivation = 0.0;
 	m_totalSecondaryActivation = 0.0;
@@ -499,10 +572,13 @@ BOOL CSpace::OnNewDocument()
 	// initialize the node activations from the root node
 	pMainNode->SetActivation((REAL) 0.5);
 	pMainNode->ResetForPropagation();
-	pMainNode->PropagateActivation((REAL) 0.8);
+	pMainNode->PropagateActivation((REAL) 0.5);
 
 	SortNodes();
 	NormalizeNodes();
+
+	// remove modified flag
+	SetModifiedFlag(FALSE);
 
 	// everything OK, return TRUE
 	return TRUE;
@@ -524,23 +600,6 @@ void CSpace::SortNodes()
 		qsort(m_arrNodes.GetData(), m_arrNodes.GetSize(), sizeof(CNode*),
 			CompareNodeActivations);
 
-/*		// arrange new super nodes
-		int nAtLastNotNewSuper = GetSuperNodeCount()-1;
-		for (int nAt = GetSuperNodeCount()-1; nAt >= 0; nAt--)
-		{
-			CNode *pNode = GetNodeAt(nAt);
-			if (!pNode->IsSubThreshold())
-			{
-				nAtLastNotNewSuper = nAt;
-			}
-			else if (pNode->IsSubThreshold() && nAtLastNotNewSuper > nAt)
-			{
-				m_arrNodes[nAt] = m_arrNodes[nAtLastNotNewSuper];
-				m_arrNodes[nAtLastNotNewSuper] = pNode;
-				nAtLastNotNewSuper = nAt;
-			}
-		}
-*/
 		// arrange post-super nodes
 		m_nLastPostSuper = GetSuperNodeCount();
 		for (int nAt = GetSuperNodeCount(); nAt < GetNodeCount(); nAt++)
@@ -838,12 +897,14 @@ void CSpace::Serialize(CArchive& ar)
 		if (ar.IsLoading())
 		{
 			// spring constant
-			REAL springConst;
+			double springConst;
 			ar >> springConst;
 			SetSpringConst(springConst);
 
 			// primary/secondary ratio
-			ar >> m_primSecRatio;
+			double primSecRatio;
+			ar >> primSecRatio;
+			m_primSecRatio = primSecRatio;
 
 			// super node count
 			int nSuperNodeCount;
@@ -851,35 +912,38 @@ void CSpace::Serialize(CArchive& ar)
 			SetMaxSuperNodeCount(nSuperNodeCount);
 
 			// layout manager parameters
-			REAL tolerance;
+			double tolerance;
 			ar >> tolerance;
 			GetLayoutManager()->SetTolerance(tolerance);
 
-			REAL k_pos;
+			double k_pos;
 			ar >> k_pos;
 			GetLayoutManager()->SetKPos(k_pos);
 
-			REAL k_rep;
+			double k_rep;
 			ar >> k_rep;
 			GetLayoutManager()->SetKRep(k_rep);
 		}
 		else
 		{
 			// spring constant
-			ar << GetSpringConst();
+			ar << (double) GetSpringConst();
 
 			// primary/secondary ratio
-			ar << GetPrimSecRatio();
+			ar << (double) GetPrimSecRatio();
 
 			// super node count
 			ar << GetLayoutManager()->GetStateDim() / 2;
 
 			// layout manager parameters
-			ar << GetLayoutManager()->GetTolerance();
-			ar << GetLayoutManager()->GetKPos();
-			ar << GetLayoutManager()->GetKRep();
+			ar << (double) GetLayoutManager()->GetTolerance();
+			ar << (double) GetLayoutManager()->GetKPos();
+			ar << (double) GetLayoutManager()->GetKRep();
 		}
 	}
+
+	// remove modified flag
+	SetModifiedFlag(FALSE);
 
 }	// CSpace::Serialize
 
@@ -1103,45 +1167,3 @@ LPDIRECTSOUND CSpace::GetDirectSound()
 
 }	// CSpace::GetDirectSound
 
-
-void CSpace::Relax()
-{
-	for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
-	{
-		CNode *pNode = GetNodeAt(nAt);
-
-		for (int nAtLinked = 0; nAtLinked < GetSuperNodeCount(); nAtLinked++)
-		{
-			if (nAt != nAtLinked)
-			{
-				CNode *pTarget = GetNodeAt(nAtLinked);
-
-				CNodeLink *pLink = pNode->GetLinkTo(pTarget);
-
-				if (pLink != NULL)
-				{
-					const REAL distErr = m_pLayoutManager->GetDistError(pNode, pTarget);
-					TRACE("DistErr = %lf\n", distErr);
-
-					// compute the exponential of the distance
-					const REAL exp_dist = exp(1.0 *	distErr + 0.5);
-						// (norm_distance - opt_dist + 5.0);
-
-					TRACE("Exp distance = %lf\n", exp_dist);
-					if (_finite(exp_dist))
-					{
-						// compute the gain and set it
-						REAL new_gain = 1.0 - exp_dist / (exp_dist + 80.0);
-						TRACE("New gain = %lf\n", new_gain);
-						pLink->SetGain(new_gain);
-					}
-					else
-					{
-						// getting too far away, need more power
-						pLink->SetGain(1.0);
-					}
-				}
-			}
-		}
-	}
-}
