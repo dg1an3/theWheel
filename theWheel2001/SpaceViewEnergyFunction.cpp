@@ -17,15 +17,27 @@
 #include "SpaceViewEnergyFunction.h"
 #include "SpaceView.h"
 
+#define SIGMA_POINT 1.60
+
 //////////////////////////////////////////////////////////////////////
 // attract_func
 // 
 // function which evaluates a gaussian attraction field at a given 
 //		point
 //////////////////////////////////////////////////////////////////////
+
+const SPV_STATE_TYPE k = (0.3989f - exp(-SIGMA_POINT * SIGMA_POINT / 2.0f) / (sqrt(2.0f * PI)));
+
 SPV_STATE_TYPE attract_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
-	return Gauss2D<SPV_STATE_TYPE>(x, y , 1.0f, 1.0f);
+	return // Gauss2D<SPV_STATE_TYPE>(x, y , 1.0f, 1.0f);
+		0.3989f - k * (x * x + y * y);
+}
+
+SPV_STATE_TYPE dSq_attract_func(SPV_STATE_TYPE dSq, SPV_STATE_TYPE)
+{
+	return // Gauss2D<SPV_STATE_TYPE>(x, y , 1.0f, 1.0f);
+		0.3989f - k * dSq;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -59,10 +71,22 @@ SPV_STATE_TYPE dattract_func_dy(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 SPV_STATE_TYPE spacer_func(SPV_STATE_TYPE x, SPV_STATE_TYPE y)
 {
 	return
+		1.0f / // sqrt
+			(x * x + y * y + 0.1);
+	/*
+		+ 1.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 8.0f, 8.0f) 
+		+ 1.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 4.0f, 4.0f) 
+		+ 1.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 2.0f, 2.0f) 
 		+ 1.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f, 1.0f) 
 		+ 2.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 2.0f, 1.0f / 2.0f)
 		+ 4.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 4.0f, 1.0f / 4.0f)
 		+ 8.0f * Gauss2D<SPV_STATE_TYPE>(x, y, 1.0f / 8.0f, 1.0f / 8.0f);
+	*/
+}
+
+SPV_STATE_TYPE dSq_spacer_func(SPV_STATE_TYPE dSq, SPV_STATE_TYPE)
+{
+	return 1.0f / sqrt(dSq);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -114,8 +138,9 @@ CSpaceViewEnergyFunction::CSpaceViewEnergyFunction(CSpaceView *pView)
 		m_pView(pView),
 
 		m_vInput(CVector<SPV_STATE_DIM, SPV_STATE_TYPE>()),
-		m_energy(0.0),
+		m_energy(0.0)
 
+		/*
 		m_attractFunc(&attract_func, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
 			"ATTRFUNC.TMP", __TIMESTAMP__),
 		m_dattractFunc_dx(&dattract_func_dx, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
@@ -127,8 +152,84 @@ CSpaceViewEnergyFunction::CSpaceViewEnergyFunction(CSpaceView *pView)
 		m_dspacerFunc_dx(&dspacer_func_dx, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
 			"SPACERFUNC_DX.TMP", __TIMESTAMP__),
 		m_dspacerFunc_dy(&dspacer_func_dy, -4.0f, 4.0f, 1024, -4.0f, 4.0f, 1024, 
-			"SPACERFUNC_DY.TMP", __TIMESTAMP__)
+			"SPACERFUNC_DY.TMP", __TIMESTAMP__) 
+		*/
+
+//		m_attractFunc(&attract_func, 0.0f, 0.0f, 1, 0.0f, 0.0f, 1, 
+//			"ATTRFUNC.TMP", __TIMESTAMP__),
+//		m_attractFunc(&attract_func, -32.0f, 32.0f, 4096, -32.0f, 32.0f, 4096, 
+//			"ATTRFUNC.TMP", __TIMESTAMP__),
+//		m_dattractFunc_dx(&dattract_func_dx, -32.0f, 32.0f, 4096, -32.0f, 32.0f, 4096, 
+//			"ATTRFUNC_DX.TMP", __TIMESTAMP__),
+//		m_dattractFunc_dy(&dattract_func_dy, -32.0f, 32.0f, 4096, -32.0f, 32.0f, 4096, 
+//			"ATTRFUNC_DY.TMP", __TIMESTAMP__),
+
+//		m_spacerFunc(&spacer_func, 0.0f, 0.0f, 1, 0.0f, 0.0f, 1, 
+//			"SPACERFUNC.TMP", __TIMESTAMP__)
+//		m_spacerFunc(&spacer_func, -32.0f, 32.0f, 4096, -32.0f, 32.0f, 4096, 
+//			"SPACERFUNC.TMP", __TIMESTAMP__),
+//		m_dspacerFunc_dx(&dspacer_func_dx, -32.0f, 32.0f, 4096, -32.0f, 32.0f, 4096, 
+//			"SPACERFUNC_DX.TMP", __TIMESTAMP__),
+//		m_dspacerFunc_dy(&dspacer_func_dy, -32.0f, 32.0f, 4096, -32.0f, 32.0f, 4096, 
+//			"SPACERFUNC_DY.TMP", __TIMESTAMP__)
+
+		// m_dSq_attractFunc(&dSq_attract_func, -1024.0f, 1024.0f, 4096, -0.1f, 0.0f, 1,
+		//	"DSQSPACERFUNC.TMP", __TIMESTAMP__),
+//		m_dSq_spacerFunc(&dSq_spacer_func, -1024.0f, 1024.0f, 4096, -0.1f, 0.0f, 1,
+//			"DSQATTRFUNC.TMP", __TIMESTAMP__)
 {
+}
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceViewEnergyFunction::LoadSizesLinks()
+// 
+// loads the sizes and links for quick access
+//////////////////////////////////////////////////////////////////////
+void CSpaceViewEnergyFunction::LoadSizesLinks()
+{
+	// form the number of currently visualized node views
+	int nNumVizNodeViews = min(m_pView->nodeViews.GetSize(), 
+		SPV_STATE_DIM / 2);
+
+	// iterate over all current visualized node views
+	int nAtNodeView;
+	for (nAtNodeView = 0; nAtNodeView < nNumVizNodeViews; nAtNodeView++)
+	{
+		// get convenience pointers for the current node view and node
+		CNodeView *pAtNodeView = m_pView->nodeViews.Get(nAtNodeView);
+		CNode *pAtNode = pAtNodeView->forNode.Get();
+
+		// compute the x- and y-scales for the fields (from the linked rectangle)
+		CRect rect = pAtNodeView->GetOuterRect(); // GetRectNoSpring(); // 
+		SPV_STATE_TYPE ssx = 0.85f * (SPV_STATE_TYPE) rect.Width();
+		SPV_STATE_TYPE ssy = (SPV_STATE_TYPE) rect.Height();
+
+		// store the size
+		m_vSize[nAtNodeView][0] = ssx + 10.0;
+		m_vSize[nAtNodeView][1] = ssy + 10.0;
+
+		// iterate over the potential linked views
+		int nAtLinkedView;
+		for (nAtLinkedView = 0; nAtLinkedView < nNumVizNodeViews; nAtLinkedView++)
+		{
+			// only process the linked view if it is in the vector
+			if (nAtLinkedView != nAtNodeView) 
+			{
+				// get convenience pointers for the linked node view and node
+				CNodeView *pAtLinkedView = m_pView->nodeViews.Get(nAtLinkedView);
+				CNode *pAtLinkedNode = pAtLinkedView->forNode.Get();
+
+				// retrieve the link weight for layout
+				SPV_STATE_TYPE weight = (SPV_STATE_TYPE) 0.5 *
+					(pAtNode->GetLinkWeight(pAtLinkedNode)
+					+ pAtLinkedNode->GetLinkWeight(pAtNode));
+				weight += 0.0001;
+
+				// store the link weight
+				m_mLinks[nAtNodeView][nAtLinkedView] = weight;
+			}
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -139,6 +240,8 @@ CSpaceViewEnergyFunction::CSpaceViewEnergyFunction(CSpaceView *pView)
 SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
 		const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput)
 {
+	m_nEvaluations++;
+
 	// reset the energy
 	m_energy = 0.0;
 
@@ -160,13 +263,6 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
 	int nAtNodeView;
 	for (nAtNodeView = 0; nAtNodeView < nNumVizNodeViews; nAtNodeView++)
 	{
-		// get convenience pointers for the current node view and node
-		CNodeView *pAtNodeView = m_pView->nodeViews.Get(nAtNodeView);
-		CNode *pAtNode = pAtNodeView->forNode.Get();
-
-		// get the rectangle for the current node view
-		CRect rectNodeView = pAtNodeView->GetOuterRect();
-
 		// iterate over the potential linked views
 		int nAtLinkedView;
 		for (nAtLinkedView = 0; nAtLinkedView < nNumVizNodeViews; nAtLinkedView++)
@@ -174,37 +270,42 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(
 			// only processs the linked view if it is in the vector
 			if (nAtLinkedView != nAtNodeView) 
 			{
-				// get convenience pointers for the linked node view and node
-				CNodeView *pAtLinkedView = m_pView->nodeViews.Get(nAtLinkedView);
-				CNode *pAtLinkedNode = pAtLinkedView->forNode.Get();
-
-				// get the rectangle of the current linked view
-				CRect rectLinked = pAtLinkedView->GetOuterRect();
-
-				// retrieve the link weight for layout
-				SPV_STATE_TYPE weight = (SPV_STATE_TYPE) 0.5 *
-					(pAtNode->GetLinkWeight(pAtLinkedNode)
-					+ pAtLinkedNode->GetLinkWeight(pAtNode));
-
-				SPV_STATE_TYPE ssx = (SPV_STATE_TYPE) rectLinked.Width();
-				SPV_STATE_TYPE ssy = (SPV_STATE_TYPE) rectLinked.Height();
-
+				// compute the x- and y-offset between the views
 				SPV_STATE_TYPE x = vInput[nAtNodeView*2 + 0] - vInput[nAtLinkedView*2 + 0];
 				SPV_STATE_TYPE y = vInput[nAtNodeView*2 + 1] - vInput[nAtLinkedView*2 + 1];
-				
+
+				// compute the x- and y-scales for the fields (from the linked rectangle)
+				// CRect rectLinked = pAtLinkedView->GetOuterRect();
+				SPV_STATE_TYPE ssx = m_vSize[nAtLinkedView][0]; 
+				SPV_STATE_TYPE ssy = m_vSize[nAtLinkedView][1];
+
 				// compute the energy due to this interation
 
 				// add the repulsion fiel
-				m_energy += (SPV_STATE_TYPE) 5.0
-					* m_spacerFunc(
-						x / ssx, 
-						y / ssy);
+				m_energy += (SPV_STATE_TYPE) 3.5
+				//	/ (x * x / (ssx) + y * y / (ssy) + 0.1);
+					/ (x * x / (ssx * ssx) + y * y / (ssy * ssy) + 0.1);
+				// spacer_func( // m_spacerFunc(
+				//		x / ssx, 
+				//		y / ssy);
 
 				// add attraction * weight
-				m_energy -= weight * (SPV_STATE_TYPE) 275.0
-					* m_attractFunc(
+				// SPV_STATE_TYPE attract_term = 
+				//	m_attractFunc(
+				//		x / (ssx * (SPV_STATE_TYPE) 4.0), 
+				//		y / (ssy * (SPV_STATE_TYPE) 4.0));
+				SPV_STATE_TYPE attract_term_comp = 
+					attract_func(
 						x / (ssx * (SPV_STATE_TYPE) 4.0), 
 						y / (ssy * (SPV_STATE_TYPE) 4.0));
+				// ASSERT(fabs(attract_term - attract_term_comp) < 1.0);
+				// SPV_STATE_TYPE dSq_attract_term = 
+				//	dSq_attract_func(
+				//		x * x / (ssx * ssx * 16.0f) + y * y / (ssy * ssy * 16.0f), 0);
+				m_energy -= m_mLinks[nAtNodeView][nAtLinkedView] * (SPV_STATE_TYPE) 400.0
+					* attract_term_comp;
+
+				// m_vInput[0] = dSq_attract_term;
 			}
 		}
 	}
