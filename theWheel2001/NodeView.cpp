@@ -234,14 +234,25 @@ COLORREF LOWER_DARK_COLOR = RGB(128, 128, 128);
 
 void CNodeView::OnPaint() 
 {
-	CPaintDC dc(this); // device context for painting
+	// device context for painting
+	CPaintDC dc(this); 
 	
+	// create a memory device context
+	CDC dcMem;
+	dcMem.CreateCompatibleDC(&dc);
+
 	// get the inner rectangle for drawing the text
 	CRect rectClient;
 	GetClientRect(&rectClient);
+
+	// Draw the image to the back-buffer
+	CBitmap bitmapBuffer;
+	bitmapBuffer.CreateBitmap(rectClient.Width(), rectClient.Height(), 1, 32, NULL); 
+	dcMem.SelectObject(&bitmapBuffer);
+
 	CBrush brush;
 	brush.CreateSolidBrush(BACKGROUND_COLOR);
-	dc.FillRect(&rectClient, &brush);
+	dcMem.FillRect(&rectClient, &brush);
 
 	// get the inner rectangle for drawing the text
 	CRect rectInner = GetInnerRect();
@@ -261,16 +272,16 @@ void CNodeView::OnPaint()
 		rectImage.DeflateRect(5, 5, 5, 5);
 
 		// draw the bitmap next to the title
-		forNode->GetDib()->Draw(dc, &rectImage);
+		forNode->GetDib()->Draw(dcMem, &rectImage);
 
-		// dc.Ellipse(rectImage);
+		// dcMem.Ellipse(rectImage);
 
 		// adjust the rectangle to account for the bitmap
 		rectInner.left += bitmapSize;
 	}
 
 	// draw the text
-	dc.SetBkMode(TRANSPARENT);
+	dcMem.SetBkMode(TRANSPARENT);
 
 	int nDesiredHeight = min(rectInner.Height() / 3, 20);
 	int nDesiredWidth = rectInner.Width() / 80;
@@ -287,17 +298,17 @@ void CNodeView::OnPaint()
 		"Arial");
 	ASSERT(bResult);
 
-	CFont *pOldFont = dc.SelectObject(&font);
+	CFont *pOldFont = dcMem.SelectObject(&font);
 
 	CRect rectText(rectInner);
 	rectText.DeflateRect(5, 5, 5, 5);
-	dc.DrawText(forNode->name.Get(), rectText, 
+	dcMem.DrawText(forNode->name.Get(), rectText, 
 		DT_CENTER | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	// now calculate the height of the drawn text
 	rectText = rectInner;
 	rectText.DeflateRect(5, 5, 5, 5);
-	int nHeight = dc.DrawText(forNode->name.Get(), rectText, 
+	int nHeight = dcMem.DrawText(forNode->name.Get(), rectText, 
 		DT_CALCRECT | DT_CENTER | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	// stores the old pen that was selected into the context
@@ -305,7 +316,7 @@ void CNodeView::OnPaint()
 
 	// now draw the description body
 //	CPen penTemp(PS_SOLID, 1, RGB(0, 0, 0));
-//	pOldPen = dc.SelectObject(&penTemp);
+//	pOldPen = dcMem.SelectObject(&penTemp);
 	if (privActivation.Get() >= 0.05)
 	{
 		rectText = rectInner;
@@ -319,19 +330,19 @@ void CNodeView::OnPaint()
 			// rectImage.left += rectImage.Height();
 
 			rectImage.DeflateRect(5, 5, 5, 5);
-			forNode->GetDib()->Draw(dc, &rectImage);
+			forNode->GetDib()->Draw(dcMem, &rectImage);
 
 			// draw the bitmap next to the title
-			// dc.Ellipse(rectImage);
+			// dcMem.Ellipse(rectImage);
 
 			// adjust the rectangle to account for the bitmap
 			rectText.left += rectText.Height();
 		}
 //	}
 
-//	dc.Rectangle( rectText );
+//	dcMem.Rectangle( rectText );
 
-//	dc.SelectObject(pOldPen);
+//	dcMem.SelectObject(pOldPen);
 
 //	if (nDesiredHeight > 12)
 //	{
@@ -348,15 +359,15 @@ void CNodeView::OnPaint()
 			"Arial");
 		ASSERT(bResult);
 
-		dc.SelectObject(&smallFont);
-		dc.DrawText(forNode->description.Get(), rectText, 
+		dcMem.SelectObject(&smallFont);
+		dcMem.DrawText(forNode->description.Get(), rectText, 
 			DT_LEFT | DT_END_ELLIPSIS | DT_WORDBREAK);
 
-		dc.SelectObject(pOldFont);
+		dcMem.SelectObject(pOldFont);
 		smallFont.DeleteObject();
 	}
 	else
-		dc.SelectObject(pOldFont);
+		dcMem.SelectObject(pOldFont);
 
 	font.DeleteObject();
 
@@ -369,60 +380,67 @@ void CNodeView::OnPaint()
 
 	// draw the upper-left half of the outline
 	CPen penUpperLeftThick(PS_SOLID, 6, UPPER_DARK_COLOR);
-	pOldPen = dc.SelectObject(&penUpperLeftThick);
+	pOldPen = dcMem.SelectObject(&penUpperLeftThick);
 #ifdef NO_CURVE
-	dc.MoveTo(rectInner.left, rectInner.bottom);
-	dc.LineTo(rectInner.TopLeft());
-	dc.LineTo(rectInner.right, rectInner.top);
+	dcMem.MoveTo(rectInner.left, rectInner.bottom);
+	dcMem.LineTo(rectInner.TopLeft());
+	dcMem.LineTo(rectInner.right, rectInner.top);
 #else
-	dc.Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
+	dcMem.Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
 		CPoint(rectInner.left, rectInner.bottom));
-	dc.Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
+	dcMem.Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
 		rectInner.TopLeft());
 #endif
 
 	CPen penUpperLeftThin(PS_SOLID, 3, UPPER_LIGHT_COLOR);
-	dc.SelectObject(&penUpperLeftThin);
+	dcMem.SelectObject(&penUpperLeftThin);
 #ifdef NO_CURVE
-	dc.MoveTo(rectInner.left, rectInner.bottom);
-	dc.LineTo(rectInner.TopLeft());
-	dc.LineTo(rectInner.right, rectInner.top);
+	dcMem.MoveTo(rectInner.left, rectInner.bottom);
+	dcMem.LineTo(rectInner.TopLeft());
+	dcMem.LineTo(rectInner.right, rectInner.top);
 #else
-	dc.Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
+	dcMem.Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
 		CPoint(rectInner.left, rectInner.bottom));
-	dc.Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
+	dcMem.Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
 		rectInner.TopLeft());
 #endif
 
 	// draw the lower-right half of the outline
 	CPen penLowerRightThick(PS_SOLID, 6, LOWER_LIGHT_COLOR);
-	dc.SelectObject(&penLowerRightThick);
+	dcMem.SelectObject(&penLowerRightThick);
 #ifdef NO_CURVE
-	dc.MoveTo(rectInner.right, rectInner.top);
-	dc.LineTo(rectInner.BottomRight());
-	dc.LineTo(rectInner.left, rectInner.bottom);
+	dcMem.MoveTo(rectInner.right, rectInner.top);
+	dcMem.LineTo(rectInner.BottomRight());
+	dcMem.LineTo(rectInner.left, rectInner.bottom);
 #else
-	dc.Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
+	dcMem.Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
 		CPoint(rectInner.right, rectInner.top));
-	dc.Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
+	dcMem.Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
 		rectInner.BottomRight());
 #endif
 
 	CPen penLowerRightThin(PS_SOLID, 3, LOWER_DARK_COLOR);
-	dc.SelectObject(&penLowerRightThin);
+	dcMem.SelectObject(&penLowerRightThin);
 #ifdef NO_CURVE
-	dc.MoveTo(rectInner.right, rectInner.top);
-	dc.LineTo(rectInner.BottomRight());
-	dc.LineTo(rectInner.left, rectInner.bottom);
+	dcMem.MoveTo(rectInner.right, rectInner.top);
+	dcMem.LineTo(rectInner.BottomRight());
+	dcMem.LineTo(rectInner.left, rectInner.bottom);
 #else
-	dc.Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
+	dcMem.Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
 		CPoint(rectInner.right, rectInner.top));
-	dc.Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
+	dcMem.Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
 		rectInner.BottomRight());
 #endif
 
 	// restore the old pen 
-	dc.SelectObject(pOldPen);
+	dcMem.SelectObject(pOldPen);
+
+	// Now blit the backbuffer to the screen
+	dc.BitBlt(0, 0, rectClient.Width(), rectClient.Height(), &dcMem, 0, 0, SRCCOPY);
+
+	// clean up
+	dcMem.DeleteDC();
+	bitmapBuffer.DeleteObject();
 
 	// Do not call CWnd::OnPaint() for painting messages
 }
