@@ -262,6 +262,7 @@ void CSpaceView::PropagateActivation(CNodeView *pSource, float percent, float fa
 			{
 				float newActivation = CNodeView::ActivationCurve(oldActivation * factor * 1.3f,
 					percent * maxWeight * 1.5f);
+				newActivation *= (1.0005f - 0.001f * (float) rand() / (float) RAND_MAX);
 				pMaxDest->activation.Set(newActivation);
 				PropagateActivation(pMaxDest, newActivation);
 			}
