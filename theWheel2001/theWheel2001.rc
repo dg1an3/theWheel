@@ -458,7 +458,6 @@ LANGUAGE 9, 1
 #include "afxprint.rc"       // printing/print preview resources
 #endif
 
-#include "GUI_BASE.rc"
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 
