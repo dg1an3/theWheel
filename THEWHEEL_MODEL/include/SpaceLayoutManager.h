@@ -21,7 +21,7 @@ class CSpace;
 // declaration for the dimensionality of the energy function state
 //		vector
 //////////////////////////////////////////////////////////////////////
-const int STATE_DIM = 36;
+const int MAX_STATE_DIM = 64;
 
 //////////////////////////////////////////////////////////////////////
 // class CSpaceLayoutManager
@@ -42,6 +42,10 @@ public:
 	// typedef for the actual state vector
 	typedef CVectorN<REAL> CStateVector;
 
+	// dimension of the state vector
+	int GetStateDim() const;
+	void SetStateDim(int nStateDim);
+
 	// loads the links and sizes for quick access
 	void LoadSizesLinks();
 
@@ -60,6 +64,15 @@ public:
 	//		to minimize the diff. w/ the previous state vector
 	void RotateTranslateStateVector(CStateVector *pState, const CStateVector& vOldState);
 
+	double GetKPos();
+	void SetKPos(double k_pos);
+
+	double GetKRep();
+	void SetKRep(double k_rep);
+
+	double GetTolerance();
+	void SetTolerance(double tolerance);
+
 private:
 	// pointer to the energy function's spaceview
 	CSpace *m_pSpace;
@@ -71,6 +84,9 @@ private:
 
 	// pointer to the optimizer to be used
 	COptimizer *m_pOptimizer;
+
+	// current state dimension
+	int m_nStateDim;
 
 	// caches previous input vector
 	CStateVector m_vInput;
@@ -85,11 +101,11 @@ private:
 	CStateVector m_vGrad;
 
 	// stores the view sizes for quick access
-	REAL m_vSize[STATE_DIM][2];
-	REAL m_act[STATE_DIM];
+	REAL m_vSize[MAX_STATE_DIM][2];
+	REAL m_act[MAX_STATE_DIM];
 
 	// stores the link weights for quick access
-	REAL m_mLinks[STATE_DIM][STATE_DIM];
+	REAL m_mLinks[MAX_STATE_DIM][MAX_STATE_DIM];
 
 	// holds the number of evaluations that have been done
 	int m_nEvaluations;
