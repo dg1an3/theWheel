@@ -88,6 +88,16 @@ BOOL theWheelApp::InitInstance()
 	EnableShellOpen();
 	RegisterShellFileTypes(TRUE);
 
+	// Set up the help file path
+	CString strExeFilename;
+	::GetModuleFileName(NULL, strExeFilename.GetBuffer(128), 128);
+	strExeFilename.ReleaseBuffer();
+	int nSlash = strExeFilename.ReverseFind('\\');
+	CString strHelpFileRelPath;
+	strHelpFileRelPath.LoadString(IDS_HELPFILE_REL_PATH);
+	m_pszHelpFilePath = _tcsdup(_T(strExeFilename.Left(nSlash) 
+		+ strHelpFileRelPath));
+
 	// Parse command line for standard shell commands, DDE, file open
 	CCommandLineInfo cmdInfo;
 	ParseCommandLine(cmdInfo);

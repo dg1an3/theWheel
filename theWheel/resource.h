@@ -8,6 +8,7 @@
 #define IDR_SPACETYPE                   129
 #define IDD_DIALOG1                     130
 #define ID_RUNTIME                      32773
+#define IDS_HELPFILE_REL_PATH           61446
 
 // Next default values for new objects
 // 

@@ -50,6 +50,7 @@ static UINT indicators[] =
 CMainFrame::CMainFrame()
 : m_bRuntime(FALSE)
 {
+	m_bRuntime = ::AfxGetApp()->GetProfileInt("Settings", "RunTime", 1) == 1;
 }
 
 CMainFrame::~CMainFrame()
@@ -159,12 +160,15 @@ CSpaceView * CMainFrame::GetRightPane()
 void CMainFrame::OnHelpFinder() 
 {
 	HINSTANCE hInst = ::ShellExecute(GetSafeHwnd(), "open", 
-		".\\htmlhlp\\main.htm", "", "", SW_SHOW);
+		::AfxGetApp()->m_pszHelpFilePath, "", "", SW_SHOW);
 }
 
 void CMainFrame::OnRuntime() 
 {
 	SetRuntime(!m_bRuntime);
+	::AfxGetApp()->WriteProfileInt("Settings", "RunTime", 
+		m_bRuntime ? 1 : 0);
+
 }
 
 void CMainFrame::OnUpdateRuntime(CCmdUI* pCmdUI) 
