@@ -122,7 +122,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::GetThreshold()
 	}
 
 	// set initial threshold greater than the max activation
-	SPV_STATE_TYPE threshold = 2.0;
+	SPV_STATE_TYPE threshold = 200.0;
 	SPV_STATE_TYPE prevThreshold;
 
 	// set initial count to zero
@@ -159,7 +159,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::GetThreshold()
 
 	ASSERT(nPrevSuperThresholdViewCount < SPV_STATE_DIM / 2);
 
-	CNodeView::activationThreshold = (float) prevThreshold;
+	CNodeView::activationThreshold = (float) threshold; // prevThreshold;
 	return threshold; // prevThreshold;
 }
 
@@ -170,6 +170,17 @@ const CArray<int, int>& CSpaceViewEnergyFunction::GetMap()
 
 SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput)
 {
+	// count how many nodeviews have an activation >= the threshold
+	TRACE0("Super-threshold NodeViews: \n");
+	int nAtSuperthreshCount = 0;
+	for (int nAt = 0; nAt < m_pView->nodeViews.GetSize(); nAt++)
+	{
+		if (m_pView->nodeViews.Get(nAt)->activation.Get() > CNodeView::activationThreshold)
+		{
+			TRACE1(">>>> Node %s\n", m_pView->nodeViews.Get(nAt)->forNode->name.Get());
+		}
+	}
+
 	// reset the energy
 	m_energy = 0.0;
 
