@@ -119,7 +119,7 @@ int __cdecl CompareNodeViewActDiff(const void *elem1, const void *elem2 )
 //////////////////////////////////////////////////////////////////////
 // constants for the window's timer
 //////////////////////////////////////////////////////////////////////
-const int TIMER_ELAPSED = 30;	// ms per tick
+const int TIMER_ELAPSED = 20;	// ms per tick
 const int TIMER_ID = 7;			// luck 7
 
 // initialize to the main module state, or to static module state
