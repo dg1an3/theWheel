@@ -58,6 +58,10 @@ public:
 	CNode *GetChildAt(int nAt);
 	const CNode *GetChildAt(int nAt) const;
 
+	// virtual spawn function -- over-ride to implement spawn
+	//		behavior
+	//virtual void Spawn();
+
 	//////////////////////////////////////////////////////////////////
 	// attribute accessors
 
@@ -68,6 +72,10 @@ public:
 	// the node description
 	const CString& GetDescription() const;
 	void SetDescription(const CString& strDesc);
+
+	// the node class
+	const CString& GetClass() const;
+	void SetClass(const CString& strClass);
 
 	// an image filename, if present
 	const CString& GetImageFilename() const;
@@ -167,7 +175,10 @@ protected:
 
 	// set accessor sets either the primary or the secondary activation, based
 	//		on whether the activator is NULL
-	void SetActivation(REAL newActivation, CNode *pActivator = NULL);
+	// over-rides can perform special functions, for instance when the
+	//		activation reaches a threshold
+	virtual void SetActivation(REAL newActivation, 
+		CNode *pActivator = NULL);
 
 	// propagation management
 	void ResetForPropagation();
@@ -183,10 +194,11 @@ protected:
 	// returns a random descendant
 	CNode * GetRandomDescendant();
 
-private:
+protected:
 	// pointer to the space that contains this node
 	CSpace *m_pSpace;
 
+private:
 	// pointer to the node's parent
 	CNode *m_pParent;
 
@@ -198,6 +210,9 @@ private:
 
 	// the node's description
 	CString m_strDescription;
+
+	// the node's class
+	CString m_strClass;
 
 	// the node's image filename
 	CString m_strImageFilename;
