@@ -1,10 +1,11 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Developer Studio generated include file.
-// Used by C:\Documents and Settings\All Users\Desktop\src\THEWHEEL_VIEW\THEWHEEL_VIEW.rc
+// Used by C:\My Documents\Projects\SOM2001\src\THEWHEEL_VIEW\THEWHEEL_VIEW.rc
 //
 #define IDC_HANDPOINT                   203
 #define IDC_LINK                        205
 #define IDC_SAW                         207
+#define IDS_ERR_TRUECOLOR32             61447
 
 // Next default values for new objects
 // 

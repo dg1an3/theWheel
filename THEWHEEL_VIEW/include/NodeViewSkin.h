@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // NodeViewSkin.h: interface for the CNodeViewSkin class.
 //
-// Copyright (C) 1996-2001
+// Copyright (C) 1996-2003 Derek G Lane
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
@@ -24,9 +24,9 @@
 class CNodeView;
 
 //////////////////////////////////////////////////////////////////////
-// class CNodeView
+// class CNodeViewSkin
 // 
-// a view of a CNode object; child of a CSpaceView
+// class to draw the skins of nodes
 //////////////////////////////////////////////////////////////////////
 class CNodeViewSkin  
 {
@@ -95,6 +95,8 @@ private:
 
 	// pointer to the skin drawing surface for blt
 	CArray<LPDIRECTDRAWSURFACE, LPDIRECTDRAWSURFACE&> m_arrlpSkinDDS;
-};
+
+};	// class CNodeViewSkin
+
 
 #endif // !defined(NODEVIEWSKIN_H)

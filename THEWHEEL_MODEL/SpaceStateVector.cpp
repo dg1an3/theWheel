@@ -1,33 +1,62 @@
+//////////////////////////////////////////////////////////////////////
 // SpaceStateVector.cpp: implementation of the CSpaceStateVector class.
 //
+// Copyright (C) 1999-2003 Derek Graham Lane
+// $Id$
+// U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
 
+// pre-compiled headers
 #include "stdafx.h"
+
+// included for completness
+#include <MatrixBase.inl>
+
+// class definition
 #include "SpaceStateVector.h"
 
-#include <Space.h>
-
-#include <MatrixBase.inl>
+// depends on CSpace
+#include "Space.h"
 
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
+//////////////////////////////////////////////////////////////////////
+// CSpaceStateVector::CSpaceStateVector
+// 
+// returns positional RMSE
+//////////////////////////////////////////////////////////////////////
 CSpaceStateVector::CSpaceStateVector(CSpace *pSpace)
 	: m_pSpace(pSpace)
 {
-	// ASSERT(m_pSpace != NULL);
-}
+}	// CSpaceStateVector::CSpaceStateVector
 
+
+//////////////////////////////////////////////////////////////////////
+// SpaceStateVector::~CSpaceStateVector
+// 
+// destroys the state vector
+//////////////////////////////////////////////////////////////////////
 CSpaceStateVector::~CSpaceStateVector()
 {
-}
+}	// SpaceStateVector::~CSpaceStateVector
 
+
+//////////////////////////////////////////////////////////////////////
+// IMPLEMENT_SERIAL
+// 
+// allows state vector to be serialized
+//////////////////////////////////////////////////////////////////////
 IMPLEMENT_SERIAL(CSpaceStateVector, CObject, VERSIONABLE_SCHEMA | 1);
 
 
-// accessors for the activation vector
+//////////////////////////////////////////////////////////////////////
+// CSpaceStateVector::GetActivationsVector
+// 
+// accessor for the activation vector
+//////////////////////////////////////////////////////////////////////
 void CSpaceStateVector::GetActivationsVector(CVectorN<>& vActivations)
 {
 	if (!m_pSpace) return;
@@ -39,8 +68,15 @@ void CSpaceStateVector::GetActivationsVector(CVectorN<>& vActivations)
 	{
 		vActivations[nAt] = m_pSpace->GetNodeAt(nAt)->GetActivation();
 	}
-}
 
+}	// CSpaceStateVector::GetActivationsVector
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceStateVector::SetActivationsVector
+// 
+// sets the activation part of the state vector
+//////////////////////////////////////////////////////////////////////
 void CSpaceStateVector::SetActivationsVector(const CVectorN<>& vActivations)
 {
 	if (!m_pSpace) return;
@@ -52,11 +88,16 @@ void CSpaceStateVector::SetActivationsVector(const CVectorN<>& vActivations)
 	{
 		m_pSpace->GetNodeAt(nAt)->SetActivation(vActivations[nAt]);
 	}
-}
+
+}	// CSpaceStateVector::SetActivationsVector
 
 
-// accessors for the positions vector
-void CSpaceStateVector::GetPositionsVector(CVectorN<>& vPositions)
+//////////////////////////////////////////////////////////////////////
+// CSpaceStateVector::GetPositionsVector
+// 
+// accessor for the positions vector
+//////////////////////////////////////////////////////////////////////
+void CSpaceStateVector::GetPositionsVector(CVectorN<>& vPositions, BOOL bPerturb)
 {
 	if (!m_pSpace) return;
 
@@ -67,11 +108,47 @@ void CSpaceStateVector::GetPositionsVector(CVectorN<>& vPositions)
 	{
 		CNode *pNode = m_pSpace->GetNodeAt(nAt);
 
+		// get position vector
 		vPositions[nAt*2 + 0] = pNode->GetPosition()[0];
 		vPositions[nAt*2 + 1] = pNode->GetPosition()[1];
-	}
-}
 
+		// are we perturbing?
+		if (bPerturb)
+		{
+			// yes, so get the size of the node
+			REAL size = pNode->GetSize(pNode->GetActivation()).GetLength();
+
+			// compute theoretical perturbation amount
+			REAL perturb = 0.75 * size
+				* pNode->GetRMSE() / (size + pNode->GetRMSE());
+
+			// compute half-height of scaling sigma
+			REAL half = m_pSpace->GetNodeAt(0)->GetActivation() / 10.0;
+
+			// compute scale (proportional to activation
+			REAL scale = half / (pNode->GetActivation() + half); 
+
+			// perturb
+			vPositions[nAt*2 + 0] += perturb * half
+				* (0.5 - (REAL) rand() / (REAL) (RAND_MAX-1));
+			vPositions[nAt*2 + 1] += perturb * half
+				* (0.5 - (REAL) rand() / (REAL) (RAND_MAX-1)); 
+
+#ifdef _PERTURB_FIXED
+			Perturb(&vPositions[nAt*2 + 0], perturb);
+			Perturb(&vPositions[nAt*2 + 1], perturb);
+#endif
+		}
+	}
+
+}	// CSpaceStateVector::GetPositionsVector
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceStateVector::SetPositionsVector
+// 
+// sets the node positions
+//////////////////////////////////////////////////////////////////////
 void CSpaceStateVector::SetPositionsVector(const CVectorN<>& vPositions)
 {
 	if (!m_pSpace) return;
@@ -89,9 +166,14 @@ void CSpaceStateVector::SetPositionsVector(const CVectorN<>& vPositions)
 		// load positions from nodes
 		m_pSpace->GetNodeAt(nAt)->SetPosition(vPosition);
 	}
-}
+}	// CSpaceStateVector::SetPositionsVector
 
-// serialization of this node
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceStateVector::Serialize
+// 
+// serialization of this state vector
+//////////////////////////////////////////////////////////////////////
 void CSpaceStateVector::Serialize(CArchive &ar)
 {
 	CObArray arrNodesOrder;
@@ -99,30 +181,43 @@ void CSpaceStateVector::Serialize(CArchive &ar)
 
 	if (ar.IsLoading())
 	{
-		CVectorN<> vActivations;
+		CVectorN<double> vActivations;
 		ar >> vActivations;
-		SetActivationsVector(vActivations);
+		CVectorN<> vActReal;
+		for (int nAt = 0; nAt < vActivations.GetDim(); nAt++)
+			vActReal[nAt] = vActivations[nAt];
+		SetActivationsVector(vActReal);
 
-		CVectorN<> vPositions;
+		CVectorN<double> vPositions;
 		ar >> vPositions;
-		SetPositionsVector(vPositions);
+		CVectorN<> vPosReal;
+		for (nAt = 0; nAt < vActivations.GetDim(); nAt++)
+			vPosReal[nAt] = vActivations[nAt];
+		SetPositionsVector(vPosReal);
 
 		// LoadMaps();
 	}
 	else
 	{
-		CVectorN<> vActivations;
-		GetActivationsVector(vActivations);
+		CVectorN<> vActReal;
+		GetActivationsVector(vActReal);
+		CVectorN<double> vActivations;
+		for (int nAt = 0; nAt < vActReal.GetDim(); nAt++)
+			vActivations[nAt] = vActReal[nAt];
 		ar << vActivations;
 
-		CVectorN<> vPositions;
-		GetPositionsVector(vPositions);
+		CVectorN<> vPosReal;
+		GetPositionsVector(vPosReal);
+		CVectorN<double> vPositions;
+		for (nAt = 0; nAt < vPosReal.GetDim(); nAt++)
+			vPositions[nAt] = vPosReal[nAt];
 		ar << vPositions;
 	}
-}
+}	// CSpaceStateVector::Serialize
+
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceLayoutManager::RotateTranslateStateVector
+// CSpaceStateVector::RotateTranslateStateVector
 // 
 // called to minimize rotate/translate error between old state
 //		and new
@@ -130,7 +225,10 @@ void CSpaceStateVector::Serialize(CArchive &ar)
 void CSpaceStateVector::RotateTranslateTo(const CVectorN<>& vPositions)
 {
 	if (m_pSpace->GetSuperNodeCount() <= 3)
+	{
+		SetPositionsVector(vPositions);
 		return;
+	}
 
 	static CVectorN<> vActivations;
 	vActivations.SetDim(m_pSpace->GetSuperNodeCount());
@@ -151,7 +249,7 @@ void CSpaceStateVector::RotateTranslateTo(const CVectorN<>& vPositions)
 
 	for (int nAt = 0; nAt < mOld.GetCols(); nAt++)
 	{
-		double act = vActivations[nAt];
+		REAL act = vActivations[nAt];
 
 		mOld[nAt][0] = act * vOldPositions[nAt * 2 + 0];
 		mOld[nAt][1] = act * vOldPositions[nAt * 2 + 1];
@@ -221,11 +319,45 @@ void CSpaceStateVector::RotateTranslateTo(const CVectorN<>& vPositions)
 				vPositions[nAt * 2 + 1] = mNew[nAt][1] / mNew[nAt][2];
 			}
 
-			SetPositionsVector(vPositions);
+			if (GetPositionsError(vPositions) > 10.0 * vPositions.GetDim())
+			{
+				SetPositionsVector(vPositions);
+			}
 		}
 	}
 
 }	// CSpaceLayoutManager::RotateTranslateStateVector
 
 
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceStateVector::GetPositionsError
+// 
+// compuptes the total positional error between vector and current
+//////////////////////////////////////////////////////////////////////
+REAL CSpaceStateVector::GetPositionsError(const CVectorN<>& vPositions)
+{
+	if (!m_pSpace) return 0.0;
+
+	int nNodes = __min(m_pSpace->GetSuperNodeCount(),
+		vPositions.GetDim() / 2);
+
+	REAL error = 0.0;
+	for (int nAt = 0; nAt < nNodes; nAt++)
+	{
+		// form the node view's position
+		static CVectorD<3> vOffset;
+		vOffset[0] = vPositions[nAt*2 + 0];
+		vOffset[1] = vPositions[nAt*2 + 1];
+
+		// load positions from nodes
+		vOffset -= m_pSpace->GetNodeAt(nAt)->GetPosition();
+
+		error += vOffset * vOffset;
+	}
+
+	return error;
+
+}	// CSpaceStateVector::GetPositionsError
 

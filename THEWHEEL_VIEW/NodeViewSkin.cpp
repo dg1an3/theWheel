@@ -1,20 +1,32 @@
+//////////////////////////////////////////////////////////////////////
 // NodeViewSkin.cpp: implementation of the CNodeViewSkin class.
 //
+// Copyright (C) 1996-2003 Derek G Lane
+// $Id$
+// U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
 
+// pre-compiled headers
 #include "stdafx.h"
 
+// resources
 #include "THEWHEEL_VIEW_resource.h"
 
+// math stuff
 #include <math.h>
 
+// DirectDraw utilities
 #include "DDUTIL.h"
 
+// header file
 #include "NodeViewSkin.h"
 
+// node views
 #include "NodeView.h"
 
+// the molding for the skin
 #include "Molding.h"
+
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -44,6 +56,7 @@ const REAL BORDER_RADIUS = 10.0;
 const int MIN_HEIGHT_ELLIPTANGLE = 15;
 const int MAX_HEIGHT_GDI = MIN_HEIGHT_ELLIPTANGLE + 40;
 
+
 /////////////////////////////////////////////////////////////////////////////
 // ComputeEllipticalness
 //
@@ -53,12 +66,17 @@ REAL ComputeEllipticalness(REAL activation)
 {
 	// compute the r, which represents the amount of "elliptical-ness"
 	REAL scale = (1.0 - 1.0 / sqrt(2.0));
-	return 1.0 - scale * exp(-8.0 * activation);
+	return 1.0 - scale * exp(-8.0 * activation + 0.01);
 
 }	// ComputeEllipticalness
 
 
-CVectorD<3> EvalElliptangle(double theta, double *p)
+/////////////////////////////////////////////////////////////////////////////
+// EvalElliptangle
+//
+// helper function to evaluate an elliptangle
+/////////////////////////////////////////////////////////////////////////////
+CVectorD<3, double> EvalElliptangle(double theta, double *p)
 {
 	// compute theta_prime for the ellipse
 	double sign = cos(theta) > 0 ? 1.0 : -1.0;
@@ -66,18 +84,29 @@ CVectorD<3> EvalElliptangle(double theta, double *p)
 
 	return CVectorD<3>(p[0] * cos(theta_prime), p[1] * sin(theta_prime), 0.0);
 
-}
+}	// EvalElliptangle
 
+
+/////////////////////////////////////////////////////////////////////////////
+// BlendColors
+//
+// helper function to blend two colors
+/////////////////////////////////////////////////////////////////////////////
 COLORREF BlendColors(COLORREF color1, COLORREF color2, REAL frac1)
 {
+	// compute blended color
 	REAL red = (REAL) GetRValue(color1) * frac1 
 		+ (REAL) GetRValue(color2) * (1.0 - frac1);
 	REAL grn = (REAL) GetGValue(color1) * frac1 
 		+ (REAL) GetGValue(color2) * (1.0 - frac1);
 	REAL blu = (REAL) GetBValue(color1) * frac1 
 		+ (REAL) GetBValue(color2) * (1.0 - frac1);
+
+	// return computed color
 	return RGB(red, grn, blu);
-}
+
+}	// BlendColors
+
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -108,8 +137,11 @@ CNodeViewSkin::~CNodeViewSkin()
 	// sets the client area to 0, 0 (frees surfaces)
 	SetClientArea(0, 0, m_colorBk);
 
-	m_lpD3D->Release();
-	m_lpDD->Release();
+	if (m_lpD3D)
+		m_lpD3D->Release();
+
+	if (m_lpDD)
+		m_lpDD->Release();
 
 }	// CNodeViewSkin::~CNodeViewSkin
 
@@ -131,6 +163,7 @@ BOOL CNodeViewSkin::InitDDraw(LPDIRECTDRAW lpDD)
 	return TRUE;
 
 }	// CNodeViewSkin::InitDDraw
+
 
 /////////////////////////////////////////////////////////////////////////////
 // CNodeViewSkin::SetClientArea
@@ -180,8 +213,10 @@ CRect& CNodeViewSkin::CalcOuterRect(CNodeView *pNodeView)
 		pNodeView->GetNode()->GetSize(pNodeView->GetSpringActivation());
 
 	// get the width and height for the node view
-	int nWidth = (int) (1.1 * vSize[0] * scale);
-	int nHeight = (int) (1.1 * vSize[1] * scale);
+	int nWidth = (int) (1.1 * vSize[0] * scale); // * 0.75
+		// + 0.25 * (REAL) rectOuterOld.Width());
+	int nHeight = (int) (1.1 * vSize[1] * scale); // * 0.75
+		// + 0.25 * (REAL) rectOuterOld.Height());
 
 	// set the width and height of the window, keeping the center constant
 	CRect& rectOuter = pNodeView->GetOuterRect();
@@ -583,7 +618,7 @@ LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView,
 			ZeroMemory(&mat, sizeof(D3DMATRIX));
 			mat(0, 0) = (D3DVALUE) 1.0 / (rectSrc.Width() + 10.0);
 			mat(1, 1) = (D3DVALUE) 1.0 / (rectSrc.Width() + 10.0);
-			mat(2, 2) = (D3DVALUE) 1.0; // 0.0025;
+			mat(2, 2) = (D3DVALUE) 1.0; 
 			mat(3, 3) = (D3DVALUE) 1.0;
 			CHECK_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_VIEW, &mat));
 

@@ -116,9 +116,6 @@ BOOL theWheelApp::InitInstance()
 	m_pMainWnd->ShowWindow(SW_SHOWMAXIMIZED);
 	m_pMainWnd->UpdateWindow();
 
-	// Enable drag/drop open
-	// m_pMainWnd->DragAcceptFiles();
-
 	return TRUE;
 }
 

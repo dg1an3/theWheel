@@ -62,7 +62,7 @@ BOOL IntersectLineSegments(CVectorD<2> vP1, CVectorD<2> vO1,
 
 	// compute lambda -- distance from the second point to the first
 	//		along the second's direction
-	double lambda = (vP2 - vP1) * vN2 / (vO1 * vN2);
+	REAL lambda = (vP2 - vP1) * vN2 / (vO1 * vN2);
 
 	// intersection if lambda is between 0.0 and 1.0
 	return (lambda >= 0.0 && lambda <= 1.0);
@@ -140,6 +140,7 @@ CSpaceView::CSpaceView()
 		m_lpDDSOne(NULL),		// Offscreen surface 1
 		m_lpClipper(NULL),		// clipper for primary
 		m_pTracker(NULL),
+		m_pMaximizedView(NULL),
 		m_bDragging(FALSE)
 {
 	DWORD dwBkColor = ::AfxGetApp()->GetProfileInt("Settings", "BkColor", 
@@ -147,6 +148,9 @@ CSpaceView::CSpaceView()
 
 	// set default background color
 	SetBkColor((COLORREF) dwBkColor);
+
+	m_pRecentActivated[0] = NULL;
+	m_pRecentActivated[1] = NULL;
 
 }	// CSpaceView::CSpaceView
 
@@ -272,7 +276,7 @@ CNodeView *CSpaceView::FindNodeViewAt(CPoint pt)
 CNodeView *CSpaceView::FindNearestNodeView(CPoint pt)
 {
 	CNodeView *pNearest = NULL;
-	double minDistSq = FLT_MAX;
+	REAL minDistSq = FLT_MAX;
 
 	// search throught the node views
 	for (int nAt = 0; nAt < GetVisibleNodeCount() / 2; nAt++)
@@ -281,7 +285,7 @@ CNodeView *CSpaceView::FindNearestNodeView(CPoint pt)
 		CNodeView *pNodeView = GetNodeView(nAt);
 		CRect rect = pNodeView->GetInnerRect();
 		CSize sz = rect.CenterPoint() - pt;
-		double distSq = sz.cx * sz.cx + sz.cy * sz.cy;
+		REAL distSq = sz.cx * sz.cx + sz.cy * sz.cy;
 		if (distSq < minDistSq)
 		{
 			pNearest = pNodeView;
@@ -405,10 +409,24 @@ BOOL CSpaceView::InitDDraw()
     CHECK_HRESULT(DirectDrawCreate( NULL, &m_lpDD, NULL ));
     CHECK_HRESULT(m_lpDD->SetCooperativeLevel( m_hWnd, DDSCL_NORMAL ));
 
-    // create the primary surface
+	// check display mode
     DDSURFACEDESC	ddsd;
+	ZeroMemory(&ddsd, sizeof(ddsd));
     ddsd.dwSize = sizeof( ddsd );
-    ddsd.dwFlags = DDSD_CAPS;
+	CHECK_HRESULT(m_lpDD->GetDisplayMode(&ddsd));
+
+	// ensure true-color 32-bit mode
+	if ((ddsd.ddpfPixelFormat.dwFlags & DDPF_RGB) == 0
+		|| ddsd.ddpfPixelFormat.dwRGBBitCount != 32)
+	{
+		::AfxMessageBox(IDS_ERR_TRUECOLOR32, MB_OK | MB_ICONEXCLAMATION);
+		return FALSE;
+	}
+
+    // create the primary surface
+	ZeroMemory(&ddsd, sizeof(ddsd));
+    ddsd.dwSize = sizeof( ddsd );
+	ddsd.dwFlags = DDSD_CAPS;
     ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE | DDSCAPS_3DDEVICE;
     CHECK_HRESULT(m_lpDD->CreateSurface( &ddsd, &m_lpDDSPrimary, NULL ));
 
@@ -497,7 +515,9 @@ void CSpaceView::CenterNodeViews()
 		CNodeView *pView = GetNodeView(nAt);
 
 		// scale by the activation of the node view
-		REAL scaleFactor = 10.0f * (pView->GetNode()->GetPrimaryActivation());
+		REAL scaleFactor = // 10.0f * 
+			(pView->GetNode()->GetPrimaryActivation());
+		// scaleFactor *= scaleFactor; // pView->GetNode()->GetActivation();
 
 		// weight recently activated node views more than others
 		if (pView == m_pRecentActivated[0])
@@ -547,30 +567,59 @@ void CSpaceView::CenterNodeViews()
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::ActivatePending()
 {
+	// m_pRecentActivated[1] = NULL;
+	// m_pRecentActivated[0] = NULL;
+	REAL maxPending = 0.0;
+	CNodeView *pMaxPending = NULL;
+	REAL secMaxPending = 0.0;
+	CNodeView *pSecMaxPending = NULL;
+
 	// perform any pending activations
 	for (int nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
 	{
 		CNodeView *pNodeView = GetNodeView(nAt);
 
-		double maxPending = 0.0f;
-		CNodeView *pMaxPending = NULL;
 		if (pNodeView->GetPendingActivation() > 0.0f)
 		{
 			ActivateNodeView(pNodeView, pNodeView->GetPendingActivation());
 			if (pNodeView->GetPendingActivation() > maxPending)
 			{
+				secMaxPending = maxPending;
+				pSecMaxPending = pMaxPending;
 				maxPending = pNodeView->GetPendingActivation();
 				pMaxPending = pNodeView;
 			}
+			else if (pNodeView->GetPendingActivation() > secMaxPending)
+			{
+				secMaxPending = pNodeView->GetPendingActivation();
+				pSecMaxPending = pNodeView;
+			}
+			
 			pNodeView->ResetPendingActivation();
 		}
 
-		if (NULL != pMaxPending)
+/*		if (NULL != pMaxPending)
 		{
 			// update the recent click list
-			m_pRecentActivated[1] = m_pRecentActivated[0];
+			m_pRecentActivated[1] = pSecMaxPending; // m_pRecentActivated[0];
 			m_pRecentActivated[0] = pMaxPending;
-		}
+		}  */
+	}
+
+	if (maxPending > 0.0)
+	{
+		// update the recent click list
+		m_pRecentActivated[1] = pSecMaxPending;
+		m_pRecentActivated[0] = pMaxPending;
+
+		if (m_pRecentActivated[0])
+			ActivateNodeView(m_pRecentActivated[0], 0.0);
+
+		if (m_pRecentActivated[1])
+			ActivateNodeView(m_pRecentActivated[1], 0.0); 
+
+		// normalize the nodes
+		GetDocument()->NormalizeNodes();
 	}
 
 }	// CSpaceView::ActivatePending
@@ -607,7 +656,10 @@ void CSpaceView::OnDraw(CDC* pDC)
 	{
 		// draw the energy
 		CString strEnergy;
-		strEnergy.Format("%lf", GetDocument()->GetLayoutManager()->GetEnergy());
+		strEnergy.Format("%lf", 
+			// GetDocument()->GetStateVector()->m_rmse);
+
+			GetDocument()->GetLayoutManager()->GetEnergy());
 
 		// get the inner rectangle for drawing the text
 		CRect rectClient;
@@ -725,7 +777,7 @@ void CSpaceView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 		{
 			// position changed big, so update springs
 			CNodeView *pNodeView = (CNodeView *) pNode->GetView();
-			pNodeView->UpdateSpringPosition(0.3);
+			pNodeView->UpdateSpringPosition(0.5); // 0.3);
 		}
 
 		break;
@@ -814,6 +866,7 @@ BEGIN_MESSAGE_MAP(CSpaceView, CView)
 	ON_WM_LBUTTONUP()
 	ON_WM_TIMER()
 	ON_WM_KEYDOWN()
+	ON_WM_LBUTTONDBLCLK()
 	//}}AFX_MSG_MAP
 	// Standard printing commands
 	ON_COMMAND(ID_FILE_PRINT, CView::OnFilePrint)
@@ -838,7 +891,8 @@ int CSpaceView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 
 	// initialize the direct-draw routines
-	InitDDraw();
+	if (!InitDDraw())
+		return -1;
 
 	// initialze the direct-draw for the skin
 	m_skin.InitDDraw(m_lpDD);
@@ -961,6 +1015,10 @@ void CSpaceView::OnPaint()
 			// sort by activation difference comparison
 			qsort(arrNodeViewsToDraw.GetData(), arrNodeViewsToDraw.GetSize(), 
 				sizeof(CObject *), CompareNodeViewActDiff);
+
+
+			if (m_pMaximizedView)
+				arrNodeViewsToDraw.Add(m_pMaximizedView);
 
 			// draw in sorted order
 			for (nAtNodeView = 0; nAtNodeView < arrNodeViewsToDraw.GetSize(); 
@@ -1089,6 +1147,19 @@ void CSpaceView::OnLButtonUp(UINT nFlags, CPoint point)
 }	// CSpaceView::OnLButtonUp
 
 
+void CSpaceView::OnLButtonDblClk(UINT nFlags, CPoint point) 
+{
+	AFX_MANAGE_STATE(m_pModuleState);
+
+	if (NULL != m_pTracker)
+	{
+		m_pTracker->OnButtonDblClk(nFlags, point);
+	}
+	
+	CView::OnLButtonDblClk(nFlags, point);
+}
+
+
 //////////////////////////////////////////////////////////////////////
 // CSpaceView::OnTimer
 // 
@@ -1209,3 +1280,4 @@ DROPEFFECT CSpaceView::OnDragOver(COleDataObject* pDataObject, DWORD dwKeyState,
 
 	return de;	
 }
+

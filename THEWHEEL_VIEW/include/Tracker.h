@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // Tracker.h: interface for the CTracker class.
 //
-// Copyright (C) 2002
+// Copyright (C) 2003  Derek G Lane
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
@@ -32,6 +32,7 @@ public:
 	// handlers for button click events
 	virtual void OnButtonDown(UINT nFlags, CPoint point);	
 	virtual void OnButtonUp(UINT nFlags, CPoint point);
+	virtual void OnButtonDblClk(UINT nFlags, CPoint point) { }
 
 	// handlers for mouse move events
 	virtual void OnMouseMove(UINT nFlags, CPoint point);
@@ -48,6 +49,8 @@ public:
 protected:
 	// pointer to the view
 	CSpaceView *m_pView;
-};
+
+};	// class CTracker
+
 
 #endif // !defined(TrackerSPV_H)

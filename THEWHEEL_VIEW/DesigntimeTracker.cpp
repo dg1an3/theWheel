@@ -248,24 +248,3 @@ void CDesigntimeTracker::OnDraw(CDC *pDC)
 	}
 
 }	// CDesigntimeTracker::OnDraw
-
-
-void CDesigntimeTracker::OnTimer(UINT nElapsed, CPoint point)
-{
-	CTracker::OnTimer(nElapsed, point);
-
-	CSpace *pSpace = m_pView->GetDocument();
-
-	CNode *pCurNode = pSpace->GetCurrentNode();
-	if (pCurNode)
-	{
-	}
-}
-
-void CDesigntimeTracker::OnKeyDown(UINT nChar, UINT nFlags)
-{
-	if (nChar == ' ')
-	{
-	}
-}
-

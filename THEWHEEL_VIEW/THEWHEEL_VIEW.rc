@@ -55,6 +55,17 @@ END
 IDC_HANDPOINT           CURSOR  DISCARDABLE     "res\\H_point.cur"
 IDC_LINK                CURSOR  DISCARDABLE     "res\\link.cur"
 IDC_SAW                 CURSOR  DISCARDABLE     "res\\saw.cur"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_ERR_TRUECOLOR32     "The display mode is not set to 32 Bit True Color for theWheel.  Please change the display mode and restart the application."
+END
+
 #endif    // English (U.S.) resources
 /////////////////////////////////////////////////////////////////////////////
 

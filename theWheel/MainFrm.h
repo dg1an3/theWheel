@@ -61,6 +61,7 @@ protected:
 	afx_msg void OnHelpFinder();
 	afx_msg void OnRuntime();
 	afx_msg void OnUpdateRuntime(CCmdUI* pCmdUI);
+	afx_msg void OnPerturb();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

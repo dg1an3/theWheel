@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // NodeView.cpp: implementation of the CNodeView class.
 //
-// Copyright (C) 1996-2001
+// Copyright (C) 1996-2003 Derek G Lane
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
@@ -38,7 +38,7 @@ const COLORREF DEFAULT_TITLE = RGB(149, 205, 208);
 
 const REAL MAX_SPRING_CONST = 0.99;
 const REAL MIN_POST_SUPER = 0.0014;
-const REAL VIEW_SCALE = 500.0;
+const REAL VIEW_SCALE = 720.0;
 
 const REAL MIN_WEIGHT_TO_DRAW_LINK = 0.1;
 
@@ -59,8 +59,13 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 	m_bDragged(FALSE),
 	m_pParent(pParent),
 	m_bBackgroundImage(FALSE),
-	m_pendingActivation(0.0f)
+	m_pendingActivation(0.0f),
+	m_bMaximized(FALSE)
 {
+
+	ZeroMemory(m_rectOuter, sizeof(CRect));
+	ZeroMemory(m_rectInner, sizeof(CRect));
+
 	// set the view pointer for the node
 	GetNode()->SetView(this);
 
@@ -125,8 +130,14 @@ CVectorD<3> CNodeView::GetScaledNodeCenter()
 		(REAL) rectParent.Width() / 2, 
 		(REAL) rectParent.Height() / 2, 0.0);
 
+	CVectorD<3> vPos = GetNode()->GetPosition();
+	if (m_bMaximized)
+	{
+		vPos = (REAL) 0.5 * (vPos + GetNode()->GetSpace()->m_vCenter);
+	}
+
 	// compute the scaled position
-	return scale * (GetNode()->GetPosition() - vCenter) + vCenter;
+	return scale * (vPos - vCenter) + vCenter;
 
 }	// CNodeView::GetScaledNodeCenter
 
@@ -149,7 +160,7 @@ REAL CNodeView::GetThresholdedActivation()
 		REAL activationThreshold = pLastSuperNode->GetActivation();
 
 		// compute the normalization factor for super-threshold node views
-		REAL superThresholdScale = TOTAL_ACTIVATION * 1.2f
+		REAL superThresholdScale = TOTAL_ACTIVATION // * 1.1
 			/ m_pParent->GetDocument()->GetTotalActivation();
 
 		// get this node's activation
@@ -159,8 +170,8 @@ REAL CNodeView::GetThresholdedActivation()
 		if (activation >= activationThreshold)
 		{
 			// return the scaled, thresholded activation
-			return activation * superThresholdScale * superThresholdScale;
-
+			return 	_cpp_min<REAL>(activation * superThresholdScale * superThresholdScale, 
+				TOTAL_ACTIVATION * 0.2);
 		}
 	}
 
@@ -177,10 +188,8 @@ REAL CNodeView::GetThresholdedActivation()
 //////////////////////////////////////////////////////////////////////
 REAL CNodeView::GetSpringActivation() 
 {
-	REAL dist = (GetSpringCenter() - GetNode()->GetPosition()).GetLength();
-	REAL factor = 0.8 + 0.5 * (1.0 / (0.5 * dist * dist + 1.0));
 
-	return factor * m_springActivation; 
+	return m_springActivation; 
 
 }	// CNodeView::GetSpringActivation
 
@@ -232,9 +241,16 @@ void CNodeView::UpdateSpringPosition(REAL springConst)
 	// compute the scaled position
 	CVectorD<3> vScaledPos = GetScaledNodeCenter();
 
+	if ((vScaledPos - m_vSpringCenter).GetLength() < 10.0)
+		springConst = 0.999; 
+	else if ((vScaledPos - m_vSpringCenter).GetLength() < 20.0)
+		springConst = 0.99;
+	else if ((vScaledPos - m_vSpringCenter).GetLength() < 30.0)
+		springConst = 0.95;
+
 	// update the center spring
 	m_vSpringCenter = vScaledPos 
-		* (1.0 - springConst) + m_vSpringCenter * (springConst);
+		* ((REAL) 1.0 - springConst) + m_vSpringCenter * (springConst);
 
 	// and invalidate the parent window
 	m_pParent->Invalidate(FALSE);
@@ -250,6 +266,15 @@ void CNodeView::UpdateSpringPosition(REAL springConst)
 //////////////////////////////////////////////////////////////////////
 void CNodeView::UpdateSpringActivation(REAL springConst)
 {
+	if (m_bMaximized)
+	{
+		// update spring activation
+ 		m_springActivation = TOTAL_ACTIVATION * 0.35 * (1.0 - springConst)
+			+ m_springActivation * springConst;
+
+		return;
+	}
+
 	// see if the activation is below threshold
 	// compute the threshold
 	int nSuperNodeCount = 
@@ -289,7 +314,7 @@ void CNodeView::UpdateSpringActivation(REAL springConst)
 // 
 // draws the band upon which the title is displayed
 //////////////////////////////////////////////////////////////////////
-void CNodeView::AddPendingActivation(double pending)
+void CNodeView::AddPendingActivation(REAL pending)
 {
 	m_pendingActivation += pending;
 
@@ -321,6 +346,18 @@ void CNodeView::ResetPendingActivation()
 
 
 //////////////////////////////////////////////////////////////////////
+// CNodeView::SetMaximized
+// 
+// sets the node maximized flag
+//////////////////////////////////////////////////////////////////////
+void CNodeView::SetMaximized(BOOL bMax)
+{
+	m_bMaximized = bMax;
+
+}	// CNodeView::SetMaximized
+
+
+//////////////////////////////////////////////////////////////////////
 // CNodeView::Draw
 // 
 // draws the entire node view
@@ -328,7 +365,7 @@ void CNodeView::ResetPendingActivation()
 void CNodeView::Draw(CDC *pDC)
 {
 	// only draw if it has a substantial area
-	if (GetOuterRect().Height() >= 10)
+	if (GetOuterRect().Height() >= 6)
 	{
 		// get the inner rectangle for drawing 
 		CRect rectInner = GetInnerRect();
@@ -370,6 +407,12 @@ void CNodeView::Draw(CDC *pDC)
 //////////////////////////////////////////////////////////////////////
 void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 {
+	if ((GetScaledNodeCenter() - GetSpringCenter()).GetLength() > 
+		GetOuterRect().Width() * 4)
+	{
+		return;
+	}
+
 	pDC->SetBkMode(TRANSPARENT);
 
 	// draw the links only if the activation is above 0.0
@@ -382,6 +425,12 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 			CNodeLink *pLink = GetNode()->GetLinkAt(nAtLink);
 			CNodeView *pLinkedView = (CNodeView *)pLink->GetTarget()->GetView();
 
+			if ((pLinkedView->GetScaledNodeCenter() - pLinkedView->GetSpringCenter()).GetLength() > 
+				pLinkedView->GetOuterRect().Width() * 2)
+			{
+				continue;
+			}
+
 			// only draw the link to node view's with activations greater than the current
 			if (!pLink->IsStabilizer()
 				&& pLink->GetWeight() > MIN_WEIGHT_TO_DRAW_LINK
@@ -393,15 +442,18 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 				// draw the link
 				CVectorD<3> vFrom = GetSpringCenter();
 				CVectorD<3> vTo = pLinkedView->GetSpringCenter();
-				
-				pSkin->DrawLink(pDC, vFrom, GetSpringActivation(), 
-					vTo, pLinkedView->GetSpringActivation());
+				REAL gain = GetNode()->GetLinkTo(pLinkedView->GetNode())->GetGain();
 
-				if (FALSE)
+				pSkin->DrawLink(pDC, vFrom, 
+					gain * GetSpringActivation(), 
+					vTo,
+					gain * pLinkedView->GetSpringActivation());
+
+				PROFILE_FLAG("Display", "Gain")
 				{
-					CVectorD<3> vMid = 0.5 * (vFrom + vTo);
+					CVectorD<3> vMid = (REAL) 0.5 * (vFrom + vTo);
 					CString strGain;
-					strGain.Format("%0.2lf", pLink->m_gain);
+					strGain.Format("%0.2lf", pLink->GetGain());
 					pDC->TextOut(vMid[0], vMid[1], strGain);
 				}
 			}
@@ -446,6 +498,15 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 	CString strName = GetNode()->GetName();
 	if (GetNode()->GetOptimalStateVector() != NULL)
 		strName += "*";
+
+	PROFILE_FLAG("Display", "Activation")
+	{
+		CString strAct;
+		strAct.Format(" (%2.1lf/%2.1lf)", 
+			100.0 * GetSpringActivation(),
+			100.0 * GetThresholdedActivation());
+		strName += strAct;
+	}
 
 	int nHeight = pDC->DrawText(strName, rectText, 
 		DT_CALCRECT | DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
@@ -538,7 +599,9 @@ void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
 	{
 		CSize sizeImage;
 		if (GetNode()->GetDib())
+		{
 			sizeImage = GetNode()->GetDib()->GetSize();
+		}
 		else 
 		{
 			sizeImage = CSize(48, 48);
@@ -547,8 +610,9 @@ void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
 		if (!m_bBackgroundImage)
 		{
 			CRect rectImage = rectInner;
+			rectImage.bottom = rectImage.top + __min(rectImage.Height(), 64);
+
 			int nActualWidth;
-	
 			nActualWidth = sizeImage.cx * rectImage.Height() / sizeImage.cy;
 			rectImage.right = rectImage.left + nActualWidth;
 
@@ -681,5 +745,6 @@ void CNodeView::DrawTitleBand(CDC *pDC, CRect& rectInner)
 	font.DeleteObject();
 
 }	// CNodeView::DrawTitleBand
+
 
 

@@ -31,14 +31,22 @@ public:
 
 	// handlers for button click events
 	virtual void OnButtonDown(UINT nFlags, CPoint point);	
+	virtual void OnButtonDblClick(UINT nFlags, CPoint point);	
 
 	// handlers for mouse move events
 	virtual void OnMouseMove(UINT nFlags, CPoint point);
 
-	virtual void OnKeyDown(UINT nChar, UINT nFlags);
-
 	// timer message
 	virtual void OnTimer(UINT nElapsed, CPoint point);
-};
+
+protected:
+	// helper to browse to a particular page
+	HRESULT OpenUrl(const CString& strUrl);
+
+	// pointer to the browser 
+	IWebBrowser2 * m_pBrowser;
+
+};	// class CRuntimeTracker
+
 
 #endif // !defined(RuntimeTracker_H)

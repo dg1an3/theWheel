@@ -39,7 +39,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "THEWHEEL_TREEVIEW"="..\THEWHEEL_VIEW\THEWHEEL_TREEVIEW.dsp" - Package Owner=<4>
+Project: "THEWHEEL_TREEVIEW"="..\THEWHEEL_TREEVIEW\THEWHEEL_TREEVIEW.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -72,7 +72,7 @@ Package=<5>
 Package=<4>
 {{{
     Begin Project Dependency
-    Project_Dep_Name THEWHEEL_VIEW
+    Project_Dep_Name MTL
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name OPTIMIZER_BASE
@@ -81,7 +81,7 @@ Package=<4>
     Project_Dep_Name THEWHEEL_MODEL
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name MTL
+    Project_Dep_Name THEWHEEL_VIEW
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name THEWHEEL_TREEVIEW

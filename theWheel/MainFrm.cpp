@@ -28,6 +28,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_COMMAND(ID_HELP_FINDER, OnHelpFinder)
 	ON_COMMAND(ID_RUNTIME, OnRuntime)
 	ON_UPDATE_COMMAND_UI(ID_RUNTIME, OnUpdateRuntime)
+	ON_COMMAND(ID_PERTURB, OnPerturb)
 	//}}AFX_MSG_MAP
 	// Global help commands
 	// ON_COMMAND(ID_HELP_FINDER, CFrameWnd::OnHelpFinder)
@@ -205,5 +206,36 @@ void CMainFrame::SetRuntime(BOOL bRuntime)
 
 		// install the tracker on the space view
 		pSpaceView->SetTracker(pTracker);
+	}
+}
+
+void CMainFrame::OnPerturb() 
+{
+	// CDialog dlg(IDD_PERTURBDIALOG, this);
+	if (TRUE) // dlg.DoModal() == IDOK)
+	{
+/*		CEdit *pEditAmt = (CEdit *) dlg.GetDlgItem(IDC_EDIT_AMOUNT);
+
+		CString strAmount;
+		pEditAmt->GetWindowText(strAmount);
+*/
+		double amount = 0.10;
+//		sscanf(strAmount.GetBuffer(100), "%lf", &amount);
+
+		CSpace *pSpace = (CSpace *) GetActiveDocument();
+		for (int nAt = 0; nAt < pSpace->GetNodeCount(); nAt++)
+		{
+			CNode *pNode = pSpace->GetNodeAt(nAt);
+
+			for (int nAtLink = 0; nAtLink < pNode->GetLinkCount(); nAtLink++)
+			{
+				CNodeLink *pLink = pNode->GetLinkAt(nAtLink);
+
+				double weight = pLink->GetWeight();
+				Perturb(&weight, weight * amount);	
+
+				pNode->LinkTo(pLink->GetTarget(), weight, FALSE);
+			}
+		}
 	}
 }

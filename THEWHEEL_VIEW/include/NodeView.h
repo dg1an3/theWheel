@@ -70,7 +70,9 @@ public:
     void DrawLinks(CDC *pDC, CNodeViewSkin *pSkin);
 
     // adds an amount of pending activation
-    void AddPendingActivation(double pending);
+    void AddPendingActivation(REAL pending);
+
+	void SetMaximized(BOOL bMax);
 
 // Implementation
 public:
@@ -115,6 +117,8 @@ private:
 
     // flag to indicate image is to be drawn in background
     BOOL m_bBackgroundImage;
+
+	BOOL m_bMaximized;
 
 };	// class CNodeView
 
