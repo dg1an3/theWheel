@@ -6,19 +6,24 @@
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(AFX_SPACEVIEW_H__0C8AA65C_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
-#define AFX_SPACEVIEW_H__0C8AA65C_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_
+#if !defined(SPACEVIEW_H)
+#define SPACEVIEW_H
 
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
 
+// the displayed model CSpace object
+#include <Space.h>
+
+// DirectDraw and utilities
 #include <ddraw.h>
 #include "ddutil.h"
 
-#include "Space.h"
+// subordinate classes
 #include "NodeView.h"
 #include "NodeViewSkin.h"
+#include "Tracker.h"
 
 
 //////////////////////////////////////////////////////////////////////
@@ -33,6 +38,7 @@ protected: // create from serialization only
 	CSpaceView();
 	virtual ~CSpaceView();
 
+	// CSpaceView must be dynamically created
 	DECLARE_DYNCREATE(CSpaceView)
 
 // Attributes
@@ -50,8 +56,15 @@ public:
 	// locates the topmost node view containing the specified point
 	CNodeView *FindNodeViewAt(CPoint pt);
 
-	// pointer to the connected browser (for navigating to a link);
-	// CHtmlView *m_pBrowser;
+	// locates the topmost node view containing the specified point
+	CNodeView *FindNearestNodeView(CPoint pt);
+
+	// finds a link, given a line segment that crosses the link
+	BOOL FindLink(CPoint ptFrom, CPoint ptTo, 
+		CNodeView **pLinkingView, CNodeView**pLinkedView);
+
+	// set the tracker
+	void SetTracker(CTracker *pTracker);
 
 // Operations
 public:
@@ -73,8 +86,10 @@ public:
 
 // Implementation
 public:
-	double GetSpringConst();
-	void SetSpringConst(double springConst);
+	// initializes the direct draw surfaces
+	BOOL InitDDraw();
+	LPGUID m_lpGuid;
+
 	// creates the node views for the children of the passed node
 	void CreateNodeViews(CNode *pParentNode, CPoint pt);
 
@@ -84,17 +99,13 @@ public:
 	// centering all child views based on center-of-gravity
 	void CenterNodeViews();
 
-	// initializes the direct draw surfaces
-	BOOL InitDDraw();
+	// activates pending
+	void ActivatePending();
 
-	// processes a mouse wave activation
-	void WaveActivate(CPoint pt);
-
-	double GetSaccadeFactor(int nIndex);
-	CVector<2> GetVelocity(int nIndex);
-	CVector<2> GetAvgVelocity(int nIndex);
-	CVector<2> GetAccel(int nIndex);
-	CVector<2> GetAvgAccel(int nIndex);
+	// TODO: move this to the space
+	// accessors for spring constant
+	double GetSpringConst();
+	void SetSpringConst(double springConst);
 
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -109,11 +120,8 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
-	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
-	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnTimer(UINT nIDEvent);
-	afx_msg void OnNewNode();
-	afx_msg void OnNewEevorg();
 	afx_msg void OnEditOptions();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
@@ -122,9 +130,13 @@ private:
 	// the child node views
 	CObArray m_arrNodeViews;
 
+	// TODO: move this to the space
 	// spring constant for node views
 	double m_springConst;
 
+public:
+	void SetBkColor(COLORREF color);
+	COLORREF m_colorBk;
 	// the skin for the node views
 	CNodeViewSkin m_skin;
 
@@ -132,27 +144,19 @@ private:
 	LPDIRECTDRAW		m_lpDD;			// DirectDraw object
 	LPDIRECTDRAWSURFACE	m_lpDDSPrimary;	// DirectDraw primary surface
 	LPDIRECTDRAWSURFACE	m_lpDDSOne;		// Offscreen surface 1
-	LPDIRECTDRAWSURFACE	m_lpDDSBitmap;	// Offscreen surface 1
 	LPDIRECTDRAWCLIPPER m_lpClipper;	// clipper for primary
 
 	// holds the timer ID
 	UINT m_nTimerID;
 
-	// sync object for thread synchronization
-	CCriticalSection m_sync;
+	// pointers to recently activated node views
+	CNodeView *m_pRecentActivated[2];
 
-	// flag to indicate we are in wave mode
-	BOOL m_bWaveMode;
+	// the tracker object
+	CTracker *m_pTracker;
 
-	// pointers to recently selected node views
-	CNodeView *m_pRecentClick[2];
-
-	// array of previous mouse movement points
-	CPoint m_ptPrev;
-
-	// arrays for saccade processing
-	CArray<DWORD, DWORD> m_arrTimeStamps;
-	CArray<CPoint, CPoint&> m_arrPoints;
+	// flag to indicate mouse drag is occurring
+	BOOL m_bDragging;
 };
 
 #ifndef _DEBUG  // debug version in SpaceView.cpp
@@ -165,4 +169,4 @@ inline CSpace* CSpaceView::GetDocument()
 //{{AFX_INSERT_LOCATION}}
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.
 
-#endif // !defined(AFX_SPACEVIEW_H__0C8AA65C_F7A7_11D4_9E3E_00B0D0609AB0__INCLUDED_)
+#endif // !defined(SPACEVIEW_H)
