@@ -62,6 +62,10 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 
 		m_nStateDim(80),
 
+		m_k_pos(K_POS),
+		m_k_rep(K_REP),
+		m_tolerance(TOLERANCE),
+
 		m_vInput(CVectorN<>()),
 		m_energy(0.0),
 
@@ -142,7 +146,7 @@ double CSpaceLayoutManager::GetEnergy()
 //////////////////////////////////////////////////////////////////////
 double CSpaceLayoutManager::GetKPos()
 {
-	return K_POS;
+	return m_k_pos;
 
 }	// CSpaceLayoutManager::GetKPos
 
@@ -154,6 +158,8 @@ double CSpaceLayoutManager::GetKPos()
 //////////////////////////////////////////////////////////////////////
 void CSpaceLayoutManager::SetKPos(double k_pos)
 {
+	m_k_pos = k_pos;
+
 }	// CSpaceLayoutManager::SetKPos
 
 
@@ -164,7 +170,7 @@ void CSpaceLayoutManager::SetKPos(double k_pos)
 //////////////////////////////////////////////////////////////////////
 double CSpaceLayoutManager::GetKRep()
 {
-	return K_REP;
+	return m_k_rep;
 
 }	// CSpaceLayoutManager::GetKRep
 
@@ -176,6 +182,8 @@ double CSpaceLayoutManager::GetKRep()
 //////////////////////////////////////////////////////////////////////
 void CSpaceLayoutManager::SetKRep(double k_rep)
 {
+	m_k_rep = k_rep;
+
 }	// CSpaceLayoutManager::SetKRep
 
 
@@ -186,7 +194,7 @@ void CSpaceLayoutManager::SetKRep(double k_rep)
 //////////////////////////////////////////////////////////////////////
 double CSpaceLayoutManager::GetTolerance()
 {
-	return TOLERANCE;
+	return m_tolerance;
 
 }	// CSpaceLayoutManager::GetTolerance
 
@@ -198,6 +206,8 @@ double CSpaceLayoutManager::GetTolerance()
 //////////////////////////////////////////////////////////////////////
 void CSpaceLayoutManager::SetTolerance(double tolerance)
 {
+	m_tolerance = tolerance;
+
 }	// CSpaceLayoutManager::SetTolerance()
 
 
@@ -383,7 +393,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 				// compute the factor controlling the importance of the
 				//		attraction term
-				REAL factor = K_POS * weight * m_act[nAtNodeView];
+				REAL factor = m_k_pos * weight * m_act[nAtNodeView];
 
 				// and add the attraction term to the energy
 				m_energy += factor * dist_error * dist_error;
@@ -419,7 +429,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 					// compute the energy term
 					REAL inv_sq = 1.0 / (x_ratio + y_ratio + 0.1);
-					REAL factor = K_REP * m_act[nAtNodeView];
+					REAL factor = m_k_rep * m_act[nAtNodeView];
 
 					// add to total energy
 					m_energy += factor * inv_sq;
@@ -482,6 +492,7 @@ void CSpaceLayoutManager::LayoutNodes()
 	vNewState.SetDim(m_nStateDim);
 
 	// perform the optimization
+	m_pOptimizer->SetTolerance(GetTolerance());
 	vNewState = m_pOptimizer->Optimize(m_vState);
 
 	// now determine a rotation/translation that minimizes the squared

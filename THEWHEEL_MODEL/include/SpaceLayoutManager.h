@@ -39,6 +39,7 @@ public:
 	// destroys the energy function
 	virtual ~CSpaceLayoutManager();
 
+	// accessors for optimization parameters
 	double GetKPos();
 	void SetKPos(double k_pos);
 
@@ -48,6 +49,7 @@ public:
 	double GetTolerance();
 	void SetTolerance(double tolerance);
 
+	// total energy
 	double GetEnergy();
 
 	// dimension of the state vector
@@ -87,6 +89,11 @@ private:
 
 	// current state dimension
 	int m_nStateDim;
+
+	// stores the objective function parameters
+	REAL m_k_pos;
+	REAL m_k_rep;
+	REAL m_tolerance;
 
 	// caches previous input vector
 	CVectorN<> m_vInput;
