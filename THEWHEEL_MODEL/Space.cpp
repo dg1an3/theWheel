@@ -42,7 +42,7 @@ const REAL PRIM_SEC_RATIO = 1.4;		// primary scale / secondary scale
 CSpace::CSpace()
 	: m_pRootNode(NULL),
 		m_pDS(NULL),
-		m_nSuperNodeCount(20),
+		// m_nSuperNodeCount(20),
 		m_pCluster(NULL),
 		m_pLayoutManager(NULL)
 {
@@ -263,9 +263,10 @@ CNodeCluster *CSpace::GetClusterAt(int nAt)
 // 
 // returns the number of super nodes
 //////////////////////////////////////////////////////////////////////
-int CSpace::GetSuperNodeCount() const
+int CSpace::GetSuperNodeCount()
 {
-	return __min(m_nSuperNodeCount, GetNodeCount());
+	return __min(GetLayoutManager()->GetStateDim() / 2, // m_nSuperNodeCount, 
+		GetNodeCount());
 }
 
 
@@ -276,7 +277,8 @@ int CSpace::GetSuperNodeCount() const
 //////////////////////////////////////////////////////////////////////
 void CSpace::SetMaxSuperNodeCount(int nSuperNodeCount)
 {
-	m_nSuperNodeCount = nSuperNodeCount;
+	// m_nSuperNodeCount = nSuperNodeCount;
+	GetLayoutManager()->SetStateDim(nSuperNodeCount * 2);
 
 	// reconstruct the clusters
 	SetClusterCount(GetClusterCount());
@@ -455,9 +457,9 @@ void CSpace::CrossLinkNodes(int nCount, REAL weight)
 void CSpace::AddNodeToArray(CNode *pNode)
 {
 	m_arrNodes.Add(pNode);
-	for (int nAt = 0; nAt < pNode->GetChildCount(); nAt++)
+	for (int nAt = 0; nAt < pNode->CNode::GetChildCount(); nAt++)
 	{
-		AddNodeToArray(pNode->GetChildAt(nAt));
+		AddNodeToArray(pNode->CNode::GetChildAt(nAt));
 	}
 }
 
@@ -561,6 +563,12 @@ REAL CSpace::GetTotalActivation() const
 	return m_totalActivation;
 }
 
+// returns a pointer to the layout manager
+CSpaceLayoutManager *CSpace::GetLayoutManager()
+{
+	return m_pLayoutManager;
+}
+
 //////////////////////////////////////////////////////////////////////
 // CSpace::LayoutNodes
 // 
@@ -635,7 +643,7 @@ LPDIRECTSOUND CSpace::GetDirectSound()
 // 
 // returns the central moment of the space
 //////////////////////////////////////////////////////////////////////
-CVector<3> CSpace::GetCentralMoment() const
+CVector<3> CSpace::GetCentralMoment()
 {
 	CVector<3> vCenter;
 	REAL total_activation = (REAL) 0.0;
@@ -658,7 +666,7 @@ CVector<3> CSpace::GetCentralMoment() const
 // 
 // returns the inertia tensor for the space
 //////////////////////////////////////////////////////////////////////
-CMatrix<2> CSpace::GetInertiaTensor() const
+CMatrix<2> CSpace::GetInertiaTensor()
 {
 	// get the center
 	CVector<3> vCenter = GetCentralMoment();
