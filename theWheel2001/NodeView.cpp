@@ -80,6 +80,65 @@ CVector<2> CNodeView::GetCenter()
 }
 
 //////////////////////////////////////////////////////////////////////
+// CNodeView::GetSpringCenter
+// 
+// returns the spring-loaded center point of the node view
+//////////////////////////////////////////////////////////////////////
+CVector<2> CNodeView::GetSpringCenter()
+{
+	return m_vSpringCenter;
+}
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::GetPiggybackCenter
+// 
+// returns the piggy-backed center (for sub-threshold node views)
+//////////////////////////////////////////////////////////////////////
+CVector<2> CNodeView::GetPiggybackCenter()
+{
+	CSpaceView *pSpaceView = (CSpaceView *)m_pParent;
+
+	// get the parent rectangle
+	CRect rectParent;
+	ASSERT(::IsWindow(m_pParent->m_hWnd));
+	m_pParent->GetClientRect(&rectParent);
+
+	// initialize the new center to the center of the parent window
+	CVector<2> vNewCenter = rectParent.CenterPoint();
+
+	// find the max activator node that is super-threshold
+	CNode *pMaxActNode = forNode.Get();
+	while (pMaxActNode != NULL)
+	{
+		// get the current max activator
+		pMaxActNode = pMaxActNode->GetMaxActivator();
+
+		// if one is found...
+		if (pMaxActNode != NULL)
+		{
+			// find the view for the max activator node
+			CNodeView *pMaxActView = 
+				pSpaceView->GetViewForNode(pMaxActNode);
+
+			// make sure one is found
+			ASSERT(pMaxActView != NULL);
+
+			// if the max activator's view is super-threshold,
+			if (pMaxActView->GetThresholdedActivation() > 0.0) 
+			{
+				// set the new center to it
+				vNewCenter = pMaxActView->GetCenter();
+
+				// and break the loop
+				break;
+			}
+		} 
+	}
+
+	return vNewCenter;
+}
+
+//////////////////////////////////////////////////////////////////////
 // CNodeView::SetCenter
 // 
 // sets the center point of the node view
@@ -202,37 +261,7 @@ void CNodeView::UpdateSprings(double springConst)
 	//		center
 	if (GetThresholdedActivation() == 0.0)
 	{
-		// initialize the new center to the center of the parent window
-		CVector<2> vNewCenter = rectParent.CenterPoint();
-
-		// find the max activator node that is super-threshold
-		CNode *pMaxActNode = forNode.Get();
-		while (pMaxActNode != NULL)
-		{
-			// get the current max activator
-			pMaxActNode = pMaxActNode->GetMaxActivator();
-
-			// if one is found...
-			if (pMaxActNode != NULL)
-			{
-				// find the view for the max activator node
-				CNodeView *pMaxActView = 
-					pSpaceView->GetViewForNode(pMaxActNode);
-
-				// make sure one is found
-				ASSERT(pMaxActView != NULL);
-
-				// if the max activator's view is super-threshold,
-				if (pMaxActView->GetThresholdedActivation() > 0.0) 
-				{
-					// set the new center to it
-					vNewCenter = pMaxActView->GetCenter();
-
-					// and break the loop
-					break;
-				}
-			} 
-		}
+		CVector<2> vNewCenter = GetPiggybackCenter();
 
 		// set the new center point
 		SetCenter(vNewCenter * (1.0 - springConst)
