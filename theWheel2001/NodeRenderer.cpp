@@ -72,9 +72,9 @@ CMolding CMolding::g_masterMolding;
 
 CNodeRenderer::CNodeRenderer(COpenGLView *pView)
 	: COpenGLRenderer(pView),
-		borderRadius(10.0),
+		borderRadius(2.0),
 		rectangularity(1.0 / sqrt(2.0)),
-		width(50.0),
+		width(25.0),
 		aspectRatio(0.625),
 		activation(0.1)
 		// color(RGB(192, 192, 192))
@@ -152,6 +152,8 @@ void CNodeRenderer::OnRenderScene()
 	double a = max(width.Get(), 10.0);
 	double b = a * aspectRatio.Get();
 	
+	glTranslate(position.Get());
+
 	// draw an image
 /*	void *pBits = m_Image.GetDIBits();
 	CSize bitmapSize = m_Image.GetBitmapSize();
@@ -201,8 +203,8 @@ void CNodeRenderer::OnRenderScene()
 	delete pOld;
 
 	// draw the text for this scene
-	DrawText("Testing Ellipses", CRect(0, 0, (int)(rectangularity.Get() * 2.0 * a), 
-		(int)(rectangularity.Get() * 2.0 * b)));
+//	DrawText("Testing Ellipses", CRect(0, 0, (int)(rectangularity.Get() * 2.0 * a), 
+//		(int)(rectangularity.Get() * 2.0 * b)));
 }
 
 void CNodeRenderer::DrawText(const CString& strText, CRect rect)
@@ -291,6 +293,6 @@ void CNodeRenderer::OnActivationChanged(CObservableObject *pSource, void *pOldVa
 	aspectRatio.Set(0.75 - 0.375 * exp(-8.0 * activation.Get()));
 
 	// set the new border radius
-	borderRadius.Set(8.0 + sqrt(activation.Get()) * 10.0);
+	borderRadius.Set(6.0 + sqrt(activation.Get()) * 5.0);
 }
 
