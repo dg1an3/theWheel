@@ -142,10 +142,6 @@ SOURCE=.\StdAfx.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\TestTreeView.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\theWheel2001.cpp
 # End Source File
 # Begin Source File
@@ -209,10 +205,6 @@ SOURCE=.\SpaceViewEnergyFunction.h
 # Begin Source File
 
 SOURCE=.\StdAfx.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\TestTreeView.h
 # End Source File
 # Begin Source File
 
