@@ -150,6 +150,20 @@ void CSpaceView::AddNodeToSpace(CNode *pNewNode)
 	GetDocument()->UpdateAllViews(this);
 }
 
+CNodeView *CSpaceView::GetViewForNode(CNode *pNode)
+{
+	int nAt = 0;
+	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
+	{
+		CNodeView *pView = nodeViews.Get(nAt);
+
+		if (pView->forNode.Get() == pNode)
+			return pView;
+	}
+
+	return NULL;
+}
+
 void CSpaceView::LayoutNodeViews()
 {
 	// only layout if there are children
@@ -183,7 +197,7 @@ void CSpaceView::NormalizeNodeViews()
 		CNodeView *pView = nodeViews.Get(nAt);
 
 		// only include super-threshold nodes in the normalization sum
-		if (pView->activation.Get() > ACTIVATION_THRESHOLD)
+		if (pView->activation.Get() > CNodeView::activationThreshold)
 			sum += pView->activation.Get();
 	}
 

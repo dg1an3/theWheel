@@ -33,6 +33,7 @@ public:
 
 	// the child node views
 	CCollection<CNodeView> nodeViews;
+	CNodeView *GetViewForNode(CNode *pNode);
 
 // Operations
 public:

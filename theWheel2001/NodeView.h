@@ -11,8 +11,6 @@
 
 #include "Node.h"
 
-#define ACTIVATION_THRESHOLD 0.01
-
 /////////////////////////////////////////////////////////////////////////////
 // CNodeView window
 
@@ -44,6 +42,8 @@ public:
 private:
 	CValue< float > privActivation;
 public:
+
+	static float activationThreshold;
 
 	// helper to compute sigmoidal activation changes
 	static float ActivationCurve(float a, float a_max);

@@ -83,15 +83,18 @@ SPV_STATE_TYPE CenterField(SPV_STATE_TYPE x, SPV_STATE_TYPE y, SPV_STATE_TYPE wi
 
 CVector<SPV_STATE_DIM, SPV_STATE_TYPE> CSpaceViewEnergyFunction::GetStateVector()
 {
+	GetThreshold();
+
 	CVector<SPV_STATE_DIM, SPV_STATE_TYPE> vState;
 	int nAtVectorElement = 0;
 	for (int nAt = 0; nAt < min(SPV_STATE_DIM / 2, m_pView->nodeViews.GetSize()); nAt++)
 	{
 		CNodeView *pView = m_pView->nodeViews.Get(nAt);
-		if (pView->activation.Get() > ACTIVATION_THRESHOLD)
+		if (pView->activation.Get() > CNodeView::activationThreshold)
 		{
-			vState[nAtVectorElement++] = (SPV_STATE_TYPE) pView->center.Get()[0];
-			vState[nAtVectorElement++] = (SPV_STATE_TYPE) pView->center.Get()[1];
+			vState[nAtVectorElement] = (SPV_STATE_TYPE) pView->center.Get()[0];
+			vState[nAtVectorElement+1] = (SPV_STATE_TYPE) pView->center.Get()[1];
+			nAtVectorElement += 2;
 		}
 	}
 	return vState;
@@ -103,14 +106,66 @@ void CSpaceViewEnergyFunction::SetStateVector(const CVector<SPV_STATE_DIM, SPV_S
 	for (int nAt = 0; nAt < min(SPV_STATE_DIM / 2, m_pView->nodeViews.GetSize()); nAt++)
 	{
 		CNodeView *pView = m_pView->nodeViews.Get(nAt);
-		if (pView->activation.Get() > ACTIVATION_THRESHOLD)
+		if (pView->activation.Get() > CNodeView::activationThreshold)
 		{
-			pView->center.Set(CVector<2>(vState[nAtVectorElement++], 
-				vState[nAtVectorElement++]));
+			pView->center.Set(CVector<2>(vState[nAtVectorElement], 
+				vState[nAtVectorElement+1]));
+
+			nAtVectorElement += 2;
 		}
 	}
 }
 
+
+SPV_STATE_TYPE CSpaceViewEnergyFunction::GetThreshold()
+{
+	if (m_pView->nodeViews.GetSize() <= SPV_STATE_DIM / 2)
+	{
+		CNodeView::activationThreshold = 0.0000001f;
+		return 0.0000001f;
+	}
+
+	// set initial threshold greater than the max activation
+	SPV_STATE_TYPE threshold = 2.0;
+	SPV_STATE_TYPE prevThreshold;
+
+	// set initial count to zero
+	int nSuperThresholdViewCount = 0;
+	int nPrevSuperThresholdViewCount;
+
+	while (nSuperThresholdViewCount < SPV_STATE_DIM / 2)
+	{
+		nPrevSuperThresholdViewCount = nSuperThresholdViewCount;
+		prevThreshold = threshold;
+
+		threshold = 0.0;
+		for (int nAt = 0; nAt < m_pView->nodeViews.GetSize(); nAt++)
+		{
+			SPV_STATE_TYPE currActivation = m_pView->nodeViews.Get(nAt)->activation.Get();
+			if (currActivation < prevThreshold)
+			{
+				if (currActivation > threshold)
+				{
+					// set the threshold to the current activation
+					threshold = currActivation;
+
+					// reset count (to disregard previous activations, which
+					//		must have been lower then the new threshold
+					nSuperThresholdViewCount = nPrevSuperThresholdViewCount;
+				}
+				
+				// if we are equal, increment the count
+				if (currActivation == threshold)
+					nSuperThresholdViewCount++;
+			}
+		}
+	}
+
+	ASSERT(nPrevSuperThresholdViewCount < SPV_STATE_DIM / 2);
+
+	CNodeView::activationThreshold = (float) prevThreshold;
+	return prevThreshold;
+}
 
 SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM, SPV_STATE_TYPE>& vInput)
 {

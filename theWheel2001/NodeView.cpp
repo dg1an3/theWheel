@@ -15,12 +15,14 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
+float CNodeView::activationThreshold = 0.000001f;
+
 /////////////////////////////////////////////////////////////////////////////
 // CNodeView
 
 CNodeView::CNodeView(CNode *pNode)
 : forNode(pNode),
-	privActivation(0.0f),
+	privActivation(0.01f),
 	m_ptMouseDown(-1, -1),
 	m_bDragging(FALSE),
 	m_bDragged(FALSE),
@@ -501,11 +503,23 @@ void CNodeView::OnMouseMove(UINT nFlags, CPoint point)
 
 void CNodeView::UpdatePrivates()
 {
-	CVector<2> vNewCenter = center.Get() * 0.125 + privCenter.Get() * 0.875;
+	CSpaceView *pSpaceView = (CSpaceView *)GetParent();
+	CNodeView *pParentView = pSpaceView->GetViewForNode(forNode->parent.Get());
+
+	CVector<2> vNewCenter;
+	if (activation.Get() > activationThreshold)
+	{
+		vNewCenter = center.Get() * 0.125 + privCenter.Get() * 0.875;
+	}
+	else
+	{
+		vNewCenter = pParentView->center.Get();
+		center.Set(vNewCenter);
+	}
 	privCenter.Set(vNewCenter);
 
 	float newActivation;
-	if (activation.Get() > ACTIVATION_THRESHOLD)
+	if (activation.Get() > activationThreshold)
 		newActivation = activation.Get() * 0.25f + privActivation.Get() * 0.75f;
 	else
 		newActivation = privActivation.Get() * 0.75f;
