@@ -122,6 +122,8 @@ int __cdecl CompareNodeViewActDiff(const void *elem1, const void *elem2 )
 const int TIMER_ELAPSED = 30;	// ms per tick
 const int TIMER_ID = 7;			// luck 7
 
+// initialize to the main module state, or to static module state
+AFX_MODULE_STATE *CSpaceView::m_pModuleState = NULL;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -228,7 +230,7 @@ CNodeView *CSpaceView::GetNodeView(int nAt)
 int CSpaceView::GetVisibleNodeCount()
 {
 	int nNumVizNodeViews = __min(m_arrNodeViews.GetSize(), 
-		GetDocument()->GetLayoutManager()->GetStateDim() / 2); 
+		GetDocument()->GetSuperNodeCount()); 
 
 	return nNumVizNodeViews;
 
@@ -273,7 +275,7 @@ CNodeView *CSpaceView::FindNearestNodeView(CPoint pt)
 	double minDistSq = FLT_MAX;
 
 	// search throught the node views
-	for (int nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
+	for (int nAt = 0; nAt < GetVisibleNodeCount() / 2; nAt++)
 	{
 		// get the current node view
 		CNodeView *pNodeView = GetNodeView(nAt);
@@ -655,7 +657,8 @@ void CSpaceView::OnInitialUpdate()
 	for (nAtNodeView = 0; nAtNodeView < GetNodeViewCount(); nAtNodeView++)
 	{
 		CNodeView *pNodeView = GetNodeView(nAtNodeView);
-		pNodeView->UpdateSprings(0.1);
+		pNodeView->UpdateSpringPosition(0.1);
+		pNodeView->UpdateSpringActivation(0.1);
 	}
 
 	// initialize the recent click list
@@ -675,11 +678,15 @@ void CSpaceView::OnInitialUpdate()
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint) 
 {
-	if (pHint != NULL)
+	// cast the hint object to a CNode
+	CNode *pNode = (CNode *)pHint;
+	ASSERT(pNode == NULL || pNode->IsKindOf(RUNTIME_CLASS(CNode)));
+
+	int nAt;
+
+	switch (lHint)
 	{
-		// cast the hint object to a CNode
-		CNode *pNode = (CNode *)pHint;
-		ASSERT(pNode->IsKindOf(RUNTIME_CLASS(CNode)));
+	case EVT_NODE_ADDED :
 
 		if (pNode->GetView() == NULL)
 		{
@@ -694,20 +701,37 @@ void CSpaceView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 			GetDocument()->LayoutNodes();
 			CenterNodeViews();
 		}
-		else if (pNode->GetSpace() == NULL)
+
+		break;
+
+	case EVT_NODE_REMOVED : 
+
+		// find the node view
+		for (nAt = 0; nAt < m_arrNodeViews.GetSize(); nAt++)
 		{
 			// deleting a node
 			CNodeView *pNodeView = (CNodeView *) pNode->GetView();
 
-			// find the node view
-			for (int nAt = 0; nAt < m_arrNodeViews.GetSize(); nAt++)
+			if (m_arrNodeViews[nAt] == pNodeView)
 			{
-				if (m_arrNodeViews[nAt] == pNodeView)
-				{
-					m_arrNodeViews.RemoveAt(nAt);
-				}
+				m_arrNodeViews.RemoveAt(nAt);
 			}
 		}
+
+		break;
+
+	case EVT_NODE_POSITION_CHANGED :
+
+		{
+			// position changed big, so update springs
+			CNodeView *pNodeView = (CNodeView *) pNode->GetView();
+			pNodeView->UpdateSpringPosition(0.3);
+		}
+
+		break;
+
+	default:
+		break;
 	}
 
 }	// CSpaceView::OnUpdate
@@ -789,7 +813,7 @@ BEGIN_MESSAGE_MAP(CSpaceView, CView)
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
 	ON_WM_TIMER()
-// 	ON_COMMAND(ID_EDIT_OPTIONS, OnEditOptions)
+	ON_WM_KEYDOWN()
 	//}}AFX_MSG_MAP
 	// Standard printing commands
 	ON_COMMAND(ID_FILE_PRINT, CView::OnFilePrint)
@@ -808,6 +832,8 @@ END_MESSAGE_MAP()
 //////////////////////////////////////////////////////////////////////
 int CSpaceView::OnCreate(LPCREATESTRUCT lpCreateStruct) 
 {
+	AFX_MANAGE_STATE(m_pModuleState);
+
 	if (CView::OnCreate(lpCreateStruct) == -1)
 		return -1;
 
@@ -821,6 +847,9 @@ int CSpaceView::OnCreate(LPCREATESTRUCT lpCreateStruct)
  	m_nTimerID = SetTimer(TIMER_ID, TIMER_ELAPSED, NULL);
 	ASSERT(m_nTimerID != 0);
 
+	if (!m_dropTarget.Register(this))
+		return -1;
+
 	return 0;
 
 }	// CSpaceView::OnCreate
@@ -833,6 +862,8 @@ int CSpaceView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnSize(UINT nType, int cx, int cy) 
 {
+	AFX_MANAGE_STATE(m_pModuleState);
+
 	CView::OnSize(nType, cx, cy);
 
 	// check for zero size
@@ -871,6 +902,8 @@ void CSpaceView::OnSize(UINT nType, int cx, int cy)
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnPaint() 
 {
+	AFX_MANAGE_STATE(m_pModuleState);
+
 	if (m_lpDDSOne)
 	{
 		// get the inner rectangle for drawing the text
@@ -905,13 +938,18 @@ void CSpaceView::OnPaint()
 
 			// draw the node view links
 			int nAtNodeView;
-			for (nAtNodeView = GetVisibleNodeCount()-1; nAtNodeView >= 0; nAtNodeView--)
+			for (nAtNodeView = __min(GetVisibleNodeCount() * 2, m_arrNodeViews.GetSize() - 1); 
+					nAtNodeView >= 0; nAtNodeView--)
 			{
 				// get the current node view
 				CNodeView *pNodeView = GetNodeView(nAtNodeView);
-
-				// draw the node view
-				pNodeView->DrawLinks(&dc, &m_skin);
+				
+				if (!pNodeView->GetNode()->IsSubThreshold()
+					|| pNodeView->GetNode()->IsPostSuper())
+				{
+					// draw the node view
+					pNodeView->DrawLinks(&dc, &m_skin);
+				}
 			} 
 
 			// now create an array to hold the drawing-order for the nodeviews
@@ -929,18 +967,21 @@ void CSpaceView::OnPaint()
 					nAtNodeView++)
 			{
 				CNodeView *pNodeView = ((CNodeView *)arrNodeViewsToDraw[nAtNodeView]);
+				if (!pNodeView->GetNode()->IsSubThreshold()
+					|| pNodeView->GetNode()->IsPostSuper())
+				{
+					// release the DC
+					RELEASE_DETACH_DC(m_lpDDSOne, dc);
 
-				// release the DC
-				RELEASE_DETACH_DC(m_lpDDSOne, dc);
+					// render the skin
+					m_skin.BltSkin(m_lpDDSOne, pNodeView);
 
-				// render the skin
-				m_skin.BltSkin(m_lpDDSOne, pNodeView);
+					// get a DC for the drawing surface
+					GET_ATTACH_DC(m_lpDDSOne, dc);
 
-				// get a DC for the drawing surface
-				GET_ATTACH_DC(m_lpDDSOne, dc);
-
-				// draw the min_diff node view
-				pNodeView->Draw(&dc);
+					// draw the min_diff node view
+					pNodeView->Draw(&dc);
+				}
 			} 
 
 			// now draw the space
@@ -948,7 +989,6 @@ void CSpaceView::OnPaint()
 
 			// release the DC
 			RELEASE_DETACH_DC(m_lpDDSOne, dc);
-
 		}
 
 		// form the destination (screen) rectangle
@@ -977,6 +1017,8 @@ void CSpaceView::OnPaint()
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnMouseMove(UINT nFlags, CPoint point) 
 {
+	AFX_MANAGE_STATE(m_pModuleState);
+
 	if (NULL != m_pTracker)
 	{
 		if (m_bDragging)
@@ -1002,6 +1044,8 @@ void CSpaceView::OnMouseMove(UINT nFlags, CPoint point)
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnLButtonDown(UINT nFlags, CPoint point) 
 {
+	AFX_MANAGE_STATE(m_pModuleState);
+
 	if (NULL != m_pTracker)
 	{
 		m_pTracker->OnButtonDown(nFlags, point);
@@ -1026,6 +1070,8 @@ void CSpaceView::OnLButtonDown(UINT nFlags, CPoint point)
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnLButtonUp(UINT nFlags, CPoint point) 
 {
+	AFX_MANAGE_STATE(m_pModuleState);
+
 	if (NULL != m_pTracker)
 	{
 		m_pTracker->OnButtonUp(nFlags, point);
@@ -1050,6 +1096,8 @@ void CSpaceView::OnLButtonUp(UINT nFlags, CPoint point)
 //////////////////////////////////////////////////////////////////////
 void CSpaceView::OnTimer(UINT nIDEvent) 
 {
+	AFX_MANAGE_STATE(m_pModuleState);
+
     // check the ID to see if it is the CSpaceView timer
     if (nIDEvent != m_nTimerID)
     {
@@ -1082,7 +1130,8 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 	// update the privates
 	for (int nAt = 0; nAt < GetNodeViewCount(); nAt++)
 	{
-		GetNodeView(nAt)->UpdateSprings(GetDocument()->GetSpringConst());
+		GetNodeView(nAt)->UpdateSpringPosition(GetDocument()->GetSpringConst());
+		GetNodeView(nAt)->UpdateSpringActivation(GetDocument()->GetSpringConst());
 	}
 
 	// redraw the window
@@ -1093,3 +1142,70 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 
 }	// CSpaceView::OnTimer
 
+
+void CSpaceView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) 
+{
+	AFX_MANAGE_STATE(m_pModuleState);
+
+	if (NULL != m_pTracker)
+	{
+		m_pTracker->OnKeyDown(nChar, nFlags);
+	}
+	
+	CView::OnKeyDown(nChar, nRepCnt, nFlags);
+}
+
+BOOL CSpaceView::OnDrop(COleDataObject* pDataObject, DROPEFFECT dropEffect, CPoint point) 
+{
+	if (pDataObject->IsDataAvailable(CF_HDROP))
+	{
+		HGLOBAL hMem = pDataObject->GetGlobalData(CF_HDROP);
+		LPDROPFILES pDropFiles = (LPDROPFILES) ::GlobalLock(hMem);
+
+		USES_CONVERSION;
+		LPWSTR pszWFilePath = 
+			(LPWSTR) ((LPBYTE) pDropFiles + pDropFiles->pFiles);
+		LPCSTR pszFilePath = W2A(pszWFilePath);
+
+
+		SHFILEINFO info;
+		ZeroMemory(&info, sizeof(info));
+
+		SHGetFileInfo(pszFilePath, 0, &info, sizeof(info), SHGFI_DISPLAYNAME);
+
+		CNode *pNewNode = new CNode();
+		pNewNode->SetName(info.szDisplayName);
+		pNewNode->SetUrl(pszFilePath);
+
+		GetDocument()->AddNode(pNewNode, GetDocument()->GetNodeAt(0));
+
+		::GlobalUnlock(hMem);
+	}
+		
+	return FALSE;
+}
+
+DROPEFFECT CSpaceView::OnDragEnter(COleDataObject* pDataObject, DWORD dwKeyState, CPoint point) 
+{
+	return OnDragOver(pDataObject, dwKeyState, point);
+}
+
+void CSpaceView::OnDragLeave() 
+{
+	// TODO: Add your specialized code here and/or call the base class
+	
+	CView::OnDragLeave();
+}
+
+DROPEFFECT CSpaceView::OnDragOver(COleDataObject* pDataObject, DWORD dwKeyState, CPoint point) 
+{
+	DROPEFFECT de = DROPEFFECT_NONE;
+	if (pDataObject->IsDataAvailable(CF_TEXT)
+		|| pDataObject->IsDataAvailable(CF_BITMAP)
+		|| pDataObject->IsDataAvailable(CF_HDROP))
+	{
+		de = DROPEFFECT_COPY;
+	}
+
+	return de;	
+}

@@ -34,7 +34,7 @@
 //////////////////////////////////////////////////////////////////////
 class CSpaceView : public CView
 {
-protected: // create from serialization only
+public:
 	CSpaceView();
 	virtual ~CSpaceView();
 
@@ -69,6 +69,9 @@ public:
 	// sets the background color for the space view
 	void SetBkColor(COLORREF color);
 
+	// initialize if a different module state is needed for context switch
+	static AFX_MODULE_STATE *m_pModuleState;
+
 // Operations
 public:
 	// activates a particular node by a particular scale factor
@@ -79,6 +82,10 @@ public:
 	//{{AFX_VIRTUAL(CSpaceView)
 	public:
 	virtual void OnDraw(CDC* pDC);  // overridden to draw this view
+	virtual BOOL OnDrop(COleDataObject* pDataObject, DROPEFFECT dropEffect, CPoint point);
+	virtual DROPEFFECT OnDragEnter(COleDataObject* pDataObject, DWORD dwKeyState, CPoint point);
+	virtual void OnDragLeave();
+	virtual DROPEFFECT OnDragOver(COleDataObject* pDataObject, DWORD dwKeyState, CPoint point);
 	protected:
 	virtual void OnInitialUpdate(); // called first time after construct
 	virtual void OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint);
@@ -119,6 +126,7 @@ protected:
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnTimer(UINT nIDEvent);
+	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
@@ -152,6 +160,9 @@ private:
 
 	// flag to indicate mouse drag is occurring
 	BOOL m_bDragging;
+
+	// for drag-drop
+	COleDropTarget m_dropTarget;
 };
 
 #ifndef _DEBUG  // debug version in SpaceView.cpp

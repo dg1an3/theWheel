@@ -25,6 +25,8 @@
 #include <afxmt.h>			// MFC support for multithreading
 #include <afxhtml.h>		// MFC support for HTML browser
 
+#include <afxole.h>			// MFC support for OLE
+
 // internet includes for web pages
 #include <wininet.h> 
 #include <urlmon.h> 

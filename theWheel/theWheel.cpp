@@ -68,6 +68,12 @@ BOOL theWheelApp::InitInstance()
 	Enable3dControlsStatic();	// Call this when linking to MFC statically
 #endif
 
+	// initialize OLE
+	if (!::AfxOleInit())
+	{
+		return FALSE;
+	}
+
 	// Change the registry key under which our settings are stored.
 	SetRegistryKey(_T("Quicksilver Methods"));
 
@@ -111,7 +117,7 @@ BOOL theWheelApp::InitInstance()
 	m_pMainWnd->UpdateWindow();
 
 	// Enable drag/drop open
-	m_pMainWnd->DragAcceptFiles();
+	// m_pMainWnd->DragAcceptFiles();
 
 	return TRUE;
 }

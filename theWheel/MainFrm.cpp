@@ -59,6 +59,9 @@ CMainFrame::~CMainFrame()
 
 int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
+	// set the space view to use the application's module state
+	CSpaceView::m_pModuleState = ::AfxGetAppModuleState();
+
 	if (CFrameWnd::OnCreate(lpCreateStruct) == -1)
 		return -1;
 	
