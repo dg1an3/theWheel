@@ -13,6 +13,7 @@
 #include <ddraw.h>
 #include "ddutil.h"
 
+
 /*
  *  DDLoadBitmap
  *

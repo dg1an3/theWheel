@@ -17,15 +17,11 @@
 // parent class
 #include "SpaceView.h"
 
-// #include "NodeViewEnergyFunction.h"
-#include <PowellOptimizer.h>
-
 // the displayed model object
 #include <Node.h>
 
 #include <Eevorg.h>
 
-// #include "resource.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -46,7 +42,7 @@ const COLORREF DEFAULT_TITLE = RGB(149, 205, 208);
 //////////////////////////////////////////////////////////////////////
 CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 : m_pNode(pNode),
-	m_pSkin(NULL),
+	// m_pSkin(NULL),
 	m_springActivation(pNode->GetActivation()),
 	m_ptMouseDown(-1, -1),
 	m_bDragging(FALSE),
@@ -91,7 +87,7 @@ CNode *CNodeView::GetNode()
 // 
 // returns the spring-loaded center point of the node view
 //////////////////////////////////////////////////////////////////////
-CVector<3> CNodeView::GetSpringCenter()
+CVectorD<3> CNodeView::GetSpringCenter()
 {
 	return m_vSpringCenter;
 }
@@ -133,19 +129,25 @@ REAL CNodeView::GetThresholdedActivation()
 	return 0.0f;
 }
 
+//////////////////////////////////////////////////////////////////////
+// CNodeView::GetSpringActivation
+// 
+// returns the thresholded activation value for the node view
+//////////////////////////////////////////////////////////////////////
+REAL CNodeView::GetSpringActivation() 
+{ 
+	return m_springActivation; 
+}
+
+
 /////////////////////////////////////////////////////////////////////////////
 // CNodeView::GetOuterRect
 //
 // returns the outer (bounding) rectangle of the elliptangle
 /////////////////////////////////////////////////////////////////////////////
-CRect CNodeView::GetOuterRect()
+CRect& CNodeView::GetOuterRect()
 {
-	CRect rectOuter;
-	if (m_pSkin)
-		rectOuter = m_pSkin->CalcOuterRect(this);
-	rectOuter.OffsetRect((int) GetSpringCenter()[0], (int) GetSpringCenter()[1]);
-
-	return rectOuter;
+	return m_rectOuter;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -153,14 +155,9 @@ CRect CNodeView::GetOuterRect()
 //
 // returns the inner rectangle of the elliptangle
 /////////////////////////////////////////////////////////////////////////////
-CRect CNodeView::GetInnerRect()
+CRect& CNodeView::GetInnerRect()
 {
-	CRect rectInner;
-	if (m_pSkin)
-		rectInner = m_pSkin->CalcInnerRect(this);
-	rectInner.OffsetRect((int) GetSpringCenter()[0], (int) GetSpringCenter()[1]);
-
-	return rectInner;
+	return m_rectInner;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -168,22 +165,8 @@ CRect CNodeView::GetInnerRect()
 // 
 // returns and computes (if needed) the node view's region (shape)
 //////////////////////////////////////////////////////////////////////
-CRgn& CNodeView::GetShape(int nErode)
+CRgn& CNodeView::GetShape()
 {
-	// no shape if the rectangle is too small
-	if (GetOuterRect().Height() < 5)
-	{
-		m_shape.DeleteObject();
-		return m_shape;
-	}
-
-	// re-compute the region, if needed
-	if (m_shape.GetSafeHandle() == NULL && m_pSkin != NULL)
-	{
-		m_pSkin->CalcShape(this, &m_shape, nErode);
-		m_shape.OffsetRgn((int) GetSpringCenter()[0], (int) GetSpringCenter()[1]);
-	}
-
 	return m_shape;
 }
 
@@ -196,7 +179,7 @@ CRgn& CNodeView::GetShape(int nErode)
 void CNodeView::UpdateSprings(REAL springConst)
 {
 	// update node's spring activation
-	GetNode()->UpdateSpring(springConst);
+	// GetNode()->UpdateSpring(springConst);
 
 	// update spring activation
  	m_springActivation 
@@ -214,20 +197,20 @@ void CNodeView::UpdateSprings(REAL springConst)
 			/ 250.0f;
 
 	// compute the center
-	CVector<3> vCenter(
+	CVectorD<3> vCenter(
 		(REAL) rectParent.Width() / 2, 
 		(REAL) rectParent.Height() / 2,
 		0.0f);
 
 	// compute the scaled position
-	CVector<3> vScaledPos 
+	CVectorD<3> vScaledPos 
 		= scale * (GetNode()->GetPosition() - vCenter) + vCenter;
 
 	// update the center spring
-	CVector<3> vNewSpringCenter 
+	CVectorD<3> vNewSpringCenter 
 		= vScaledPos * (1.0f - springConst)
 			+ m_vSpringCenter * (springConst);
-	CVector<3> vCenterDiff = vNewSpringCenter - m_vSpringCenter;
+	CVectorD<3> vCenterDiff = vNewSpringCenter - m_vSpringCenter;
 	if (vCenterDiff.GetLength() > 500.0)
 	{
 		vCenterDiff *= 500.0 / vCenterDiff.GetLength();
@@ -235,7 +218,7 @@ void CNodeView::UpdateSprings(REAL springConst)
 	m_vSpringCenter += vCenterDiff;
 
 	// trigger re-computing the shape
-	m_shape.DeleteObject();	
+	// m_shape.DeleteObject();	
 
 	// and invalidate the parent window
 	m_pParent->Invalidate(FALSE);
@@ -246,39 +229,17 @@ void CNodeView::UpdateSprings(REAL springConst)
 // 
 // draws the entire node view
 //////////////////////////////////////////////////////////////////////
-void CNodeView::Draw(CDC *pDC, CNodeViewSkin *pSkin)
+void CNodeView::Draw(CDC *pDC)
 {
-	// store the skin
-	m_pSkin = pSkin;
-
 	// get the inner rectangle for drawing the text
 	CRect rectInner = GetInnerRect();
 
 	// only draw if it has a substantial area
 	if (rectInner.Height() > 5)
 	{
-		// draw the links
-		// DrawLinks(pDC);
-
-		// draw the skin
-		pDC->OffsetWindowOrg((int) -GetSpringCenter()[0], 
-			(int) -GetSpringCenter()[1]);
-		pSkin->DrawSkin(pDC, this);
-		pDC->OffsetWindowOrg((int) GetSpringCenter()[0], 
-			(int) GetSpringCenter()[1]);
-
 		rectInner.DeflateRect(5, 5, 5, 5);
 
-		if (GetNode()->IsKindOf(RUNTIME_CLASS(CEevorg)))
-		{
-			CEevorg *pEevorg = (CEevorg *) GetNode();
-			pEevorg->DrawAt(pDC, 
-				rectInner.CenterPoint().x, 
-				rectInner.CenterPoint().y - rectInner.Height() / 2, 
-				rectInner.Height());
-
-			return;
-		}
+		DrawTitleBand(pDC, rectInner);
 
 		// draw the image (if any)
 		if (m_bBackgroundImage)
@@ -287,11 +248,18 @@ void CNodeView::Draw(CDC *pDC, CNodeViewSkin *pSkin)
 			DrawTitle(pDC, rectInner);
 			DrawText(pDC, rectInner);
 		}
-		else
+		else if (rectInner.Height() > 30)
 		{
 			// draw the title first, adjusting the rectangle
 			DrawTitle(pDC, rectInner);
 			DrawImage(pDC, rectInner);
+			DrawText(pDC, rectInner);
+		}
+		else
+		{
+			// draw the image first
+			DrawImage(pDC, rectInner);
+			DrawTitle(pDC, rectInner);
 			DrawText(pDC, rectInner);
 		}
 	}
@@ -302,7 +270,7 @@ void CNodeView::Draw(CDC *pDC, CNodeViewSkin *pSkin)
 // 
 // draws the links for this node view
 //////////////////////////////////////////////////////////////////////
-void CNodeView::DrawLinks(CDC *pDC)
+void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 {
 	pDC->SetBkMode(TRANSPARENT);
 
@@ -315,11 +283,6 @@ void CNodeView::DrawLinks(CDC *pDC)
 			CNodeLink *pLink = GetNode()->GetLinkAt(nAtLink);
 			CNodeView *pLinkedView = (CNodeView *)pLink->GetTarget()->GetView();
 			ASSERT(pLinkedView != NULL);
-
-			// see if its on the array of node views to be drawn
-//			for (int nAtToDraw = 0; nAtToDraw < m_arrNodeViewsToDraw.GetSize(); nAtToDraw++)
-//			{
-//				if (pLinkedView == (CNodeView *) m_arrNodeViewsToDraw[nAtToDraw])
 				
 			// only draw the link to node view's with activations greater than the current
 			if (pLink->GetWeight() > 0.1
@@ -328,13 +291,12 @@ void CNodeView::DrawLinks(CDC *pDC)
 				&& pLinkedView->GetSpringActivation() > GetSpringActivation())
 			{
 				// draw the link
-				CVector<3> vFrom = GetSpringCenter();
-				CVector<3> vTo = pLinkedView->GetSpringCenter();
+				CVectorD<3> vFrom = GetSpringCenter();
+				CVectorD<3> vTo = pLinkedView->GetSpringCenter();
 				
-				m_pSkin->DrawLink(pDC, vFrom, GetSpringActivation(), 
+				pSkin->DrawLink(pDC, vFrom, GetSpringActivation(), 
 					vTo, pLinkedView->GetSpringActivation());
 			}
-//			}
 		}
 	}
 }
@@ -349,8 +311,8 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 	pDC->SetBkMode(TRANSPARENT);
 
 	int nDesiredHeight = __min(rectInner.Height() / 4, 30);
-	nDesiredHeight = __max(nDesiredHeight, 15);
-	int nDesiredWidth = rectInner.Width() / 80;
+	nDesiredHeight = __max(nDesiredHeight, 12);
+	int nDesiredWidth = rectInner.Width() / 100;
 
 	CFont font;
 	BOOL bResult = font.CreateFont(nDesiredHeight, 0, //nDesiredWidth,
@@ -369,41 +331,9 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 	// calculate the height of the drawn text
 	CRect rectText(rectInner);
 	rectText = rectInner;
+	rectText.right += 500;
 	int nHeight = pDC->DrawText(GetNode()->GetName(), rectText, 
 		DT_CALCRECT | DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
-
-	// draw the background for the title
-	CBrush backBrush;
-	if (GetNode()->GetClass() == "Genre")
-	{
-		backBrush.CreateSolidBrush(RGB(174, 220, 154));
-	}
-	else if (GetNode()->GetClass() == "Artist")
-	{
-		backBrush.CreateSolidBrush(RGB(182, 139, 224));
-	}
-	else
-	{
-		backBrush.CreateSolidBrush(DEFAULT_TITLE);
-	}
-
-	CBrush *pOldBrush = pDC->SelectObject(&backBrush);
-	CPen *pOldPen = (CPen *)pDC->SelectStockObject(NULL_PEN);
-	CRect rectTitle = GetOuterRect();
-	rectTitle.top -= 5;
-	if (GetSpringActivation() >= 0.01)
-		rectTitle.bottom = rectText.bottom + 3;
-
-	// clip to the node view
-	pDC->SelectClipRgn(&GetShape(5));
-
-	pDC->Rectangle(rectTitle);
-
-	// unselect clipping to node view
-	pDC->SelectClipRgn(NULL);
-
-	pDC->SelectObject(pOldBrush);
-	pDC->SelectObject(pOldPen);
 
 	for (int nAt = 0; nAt < 4 && rectText.bottom > GetInnerRect().bottom; nAt++)
 	{
@@ -497,13 +427,13 @@ void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
 			nActualWidth = sizeImage.cx * rectImage.Height() / sizeImage.cy;
 			rectImage.right = rectImage.left + nActualWidth;
 
-			if (rectImage.Height() > 20 && rectImage.Width() > 20)
+			if (rectImage.Height() > 10 || rectImage.Width() > 10)
 			{
-				// rectImage.DeflateRect(5, 5, 5, 5);
+				rectImage.InflateRect(2, 2, 2, 2);
 				GetNode()->GetDib()->Draw(*pDC, &rectImage);
 
 				// adjust the rectangle to account for the bitmap
-				rectInner.left += nActualWidth + 5;
+				rectInner.left += nActualWidth + 10;
 			}
 		}
 		else
@@ -528,7 +458,7 @@ void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
 			}
 
 			// clip to the node view
-			pDC->SelectClipRgn(&GetShape(1));
+			pDC->SelectClipRgn(&GetShape());
 
 			GetNode()->GetDib()->Draw(*pDC, &rectImage);
 
@@ -536,4 +466,85 @@ void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
 			pDC->SelectClipRgn(NULL);
 		}
 	}
+}
+
+void CNodeView::DrawTitleBand(CDC *pDC, CRect& rectInner)
+{
+	int nDesiredHeight = __min(rectInner.Height() / 4, 30);
+	nDesiredHeight = __max(nDesiredHeight, 15);
+	int nDesiredWidth = rectInner.Width() / 80;
+
+	CFont font;
+	BOOL bResult = font.CreateFont(nDesiredHeight, 0, //nDesiredWidth,
+		0, 0, FW_BOLD, 
+		FALSE, FALSE, 0,
+		DEFAULT_CHARSET,
+		OUT_DEFAULT_PRECIS,
+		CLIP_DEFAULT_PRECIS,
+		DEFAULT_QUALITY,
+		VARIABLE_PITCH,
+		"Arial");
+	ASSERT(bResult);
+
+	CFont *pOldFont = pDC->SelectObject(&font);
+
+	// calculate the height of the drawn text
+	CRect rectText(rectInner);
+	rectText = rectInner;
+	rectText.right += 500;
+	int nHeight = pDC->DrawText(GetNode()->GetName(), rectText, 
+		DT_CALCRECT | DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
+
+	// draw the background for the title
+	CBrush backBrush;
+	if (GetNode()->GetClass() == "Genre")
+	{
+		backBrush.CreateSolidBrush(RGB(176, 176, 160)); // 174, 220, 154));
+	}
+	else if (GetNode()->GetClass() == "Artist")
+	{
+		backBrush.CreateSolidBrush(RGB(182, 139, 224));
+	}
+	else
+	{
+		backBrush.CreateSolidBrush(DEFAULT_TITLE);
+	}
+
+	CBrush *pOldBrush = pDC->SelectObject(&backBrush);
+	CPen *pOldPen = (CPen *)pDC->SelectStockObject(NULL_PEN);
+	CRect rectTitle = GetOuterRect();
+	rectTitle.top -= 5;
+	if (GetSpringActivation() >= 0.01)
+	{
+		rectTitle.bottom = rectText.bottom + 3;
+	}
+
+	// clip to the node view
+	pDC->SelectClipRgn(&GetShape());
+
+	pDC->Rectangle(rectTitle);
+
+	// unselect clipping to node view
+	pDC->SelectClipRgn(NULL);
+
+	pDC->SelectObject(pOldBrush);
+	pDC->SelectObject(pOldPen);
+
+	pDC->SelectObject(pOldFont);
+	font.DeleteObject();
+}
+
+void CNodeView::AddPendingActivation(double pending)
+{
+	m_pendingActivation += pending;
+}
+
+REAL CNodeView::GetPendingActivation()
+{
+	return m_pendingActivation;
+}
+
+void CNodeView::ResetPendingActivation()
+{
+	m_pendingActivation = (REAL) 0.0;
 }

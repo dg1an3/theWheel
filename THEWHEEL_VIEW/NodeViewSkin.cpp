@@ -3,12 +3,18 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
-// #include "thewheel2001.h"
+
+#include "THEWHEEL_VIEW_resource.h"
+
+#include <math.h>
+
+#include "DDUTIL.h"
+
 #include "NodeViewSkin.h"
 
 #include "NodeView.h"
 
-#include <math.h>
+#include "Molding.h"
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -20,52 +26,137 @@ static char THIS_FILE[]=__FILE__;
 // Constants for the colors of the CNodeView
 //
 /////////////////////////////////////////////////////////////////////////////
-COLORREF BACKGROUND_COLOR = RGB(232, 232, 232);
+const COLORREF BACKGROUND_COLOR = RGB(232, 232, 232);
 
-COLORREF UPPER_DARK_COLOR = RGB(240, 240, 240);
-COLORREF UPPER_LIGHT_COLOR = RGB(255, 255, 255);
+const int THICK_PEN_WIDTH = 4;
+const int THIN_PEN_WIDTH = 2;
 
-COLORREF LOWER_LIGHT_COLOR = RGB(160, 160, 160);
-COLORREF LOWER_DARK_COLOR = RGB(128, 128, 128);
+const COLORREF UPPER_DARK_COLOR = RGB(240, 240, 240);
+const COLORREF UPPER_LIGHT_COLOR = RGB(255, 255, 255);
+
+const COLORREF LOWER_LIGHT_COLOR = RGB(160, 160, 160);
+const COLORREF LOWER_DARK_COLOR = RGB(128, 128, 128);
+
+const COLORREF COLORKEY = RGB(0, 255, 0);
+
+const REAL BORDER_RADIUS = 10.0;
+
+/////////////////////////////////////////////////////////////////////////////
+// ComputeEllipticalness
+//
+// helper function to compute the ellipitcalness given an activation
+/////////////////////////////////////////////////////////////////////////////
+REAL ComputeEllipticalness(REAL activation)
+{
+	// compute the r, which represents the amount of "elliptical-ness"
+	REAL scale = (1.0 - 1.0 / sqrt(2.0));
+	return 1.0 - scale * exp(-8.0 * activation);
+
+}	// ComputeEllipticalness
+
+
+CVectorD<3> EvalElliptangle(double theta, double *p)
+{
+	// compute theta_prime for the ellipse
+	double sign = cos(theta) > 0 ? 1.0 : -1.0;
+	double theta_prime = atan2(sign * p[0] * tan(theta), sign * p[1]);
+
+	return CVectorD<3>(p[0] * cos(theta_prime), p[1] * sin(theta_prime), 0.0);
+
+}
 
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
+/////////////////////////////////////////////////////////////////////////////
+// CNodeViewSkin::CNodeViewSkin
+//
+// returns the outer (bounding) rectangle of the CNodeView
+/////////////////////////////////////////////////////////////////////////////
 CNodeViewSkin::CNodeViewSkin()
 : m_nWidth(0),
-	m_nHeight(0)
+	m_nHeight(0),
+	m_lpDD(NULL),
+	m_lpD3D(NULL),
+	m_colorBk(RGB(192, 192, 192))
 {
-}
+}	// CNodeViewSkin::CNodeViewSkin
 
+
+/////////////////////////////////////////////////////////////////////////////
+// CNodeViewSkin::~CNodeViewSkin
+//
+// destroys the CNodeViewSkin object
+/////////////////////////////////////////////////////////////////////////////
 CNodeViewSkin::~CNodeViewSkin()
 {
+	// sets the client area to 0, 0 (frees surfaces)
+	SetClientArea(0, 0);
 
-}
+}	// CNodeViewSkin::~CNodeViewSkin
 
 
+/////////////////////////////////////////////////////////////////////////////
+// CNodeViewSkin::InitDDraw
+//
+// initialize the DDraw surface
+/////////////////////////////////////////////////////////////////////////////
+BOOL CNodeViewSkin::InitDDraw(LPDIRECTDRAW lpDD)
+{
+	// store a pointer to the main DirectDraw object
+	m_lpDD = lpDD;
+
+	// get the Direct3D2 interface
+	CHECK_HRESULT(m_lpDD->QueryInterface(IID_IDirect3D2, (void**)&m_lpD3D));
+
+	return TRUE;
+
+}	// CNodeViewSkin::InitDDraw
+
+/////////////////////////////////////////////////////////////////////////////
+// CNodeViewSkin::SetClientArea
+//
 // sets the client area for this skin
+/////////////////////////////////////////////////////////////////////////////
 void CNodeViewSkin::SetClientArea(int nWidth, int nHeight)
 {
+	// set the width and height parameters
 	m_nWidth = nWidth;
 	m_nHeight = nHeight;
-}
+
+	// destroy the surfaces
+	for (int nAt = 0; nAt < m_arrlpSkinDDS.GetSize(); nAt++)
+	{
+		if (m_arrlpSkinDDS[nAt] != NULL)
+		{
+			m_arrlpSkinDDS[nAt]->Release();
+		}
+	}
+
+	// remove all elements
+	m_arrlpSkinDDS.RemoveAll();
+
+	// size to max client area
+	m_arrlpSkinDDS.SetSize(m_nWidth);
+
+}	// CNodeViewSkin::SetClientArea
 
 
 /////////////////////////////////////////////////////////////////////////////
-// CNodeView::GetOuterRect
+// CNodeViewSkin::CalcOuterRect
 //
-// returns the outer (bounding) rectangle of the elliptangle
+// calculates the outer (bounding) rectangle of the CNodeView
 /////////////////////////////////////////////////////////////////////////////
-CRect CNodeViewSkin::CalcOuterRect(CNodeView *pNodeView)
+CRect& CNodeViewSkin::CalcOuterRect(CNodeView *pNodeView)
 {
 	// compute the new width and height from the desired area and the desired
 	//		aspect ratio
 	REAL scale = (REAL) sqrt(m_nWidth * m_nHeight);
 
 	// get the size for the node view, given the spring activation
-	CVector<3> vSize = 
+	CVectorD<3> vSize = 
 		pNodeView->GetNode()->GetSize(pNodeView->GetSpringActivation());
 
 	// get the width and height for the node view
@@ -73,49 +164,63 @@ CRect CNodeViewSkin::CalcOuterRect(CNodeView *pNodeView)
 	int nHeight = (int) (vSize[1] * scale);
 
 	// set the width and height of the window, keeping the center constant
-	CRect rect;
-	rect.left =		- nWidth / 2;
-	rect.right =	+ nWidth / 2;
-	rect.top =		- nHeight / 2;
-	rect.bottom =	+ nHeight / 2;
+	CRect& rectOuter = pNodeView->GetOuterRect();
+	rectOuter.left =	- nWidth / 2;
+	rectOuter.right =	+ nWidth / 2;
+	rectOuter.top =		- nHeight / 2;
+	rectOuter.bottom =	+ nHeight / 2;
 
-	return rect;
-}
+	// position the rectangle
+	rectOuter.OffsetRect((int) pNodeView->GetSpringCenter()[0], 
+		(int) pNodeView->GetSpringCenter()[1]);
+
+	return rectOuter;
+
+}	// CNodeViewSkin::CalcOuterRect
+
 
 /////////////////////////////////////////////////////////////////////////////
-// CNodeView::GetInnerRect
+// CNodeViewSkin::CalcInnerRect
 //
-// returns the inner rectangle of the elliptangle
+// calculates the inner rectangle of the CNodView
+// uses the nodeview's existing OuterRect; does not recalc
+//		these
 /////////////////////////////////////////////////////////////////////////////
-CRect CNodeViewSkin::CalcInnerRect(CNodeView *pNodeView)
+CRect& CNodeViewSkin::CalcInnerRect(CNodeView *pNodeView)
 {
-	// compute the r, which represents the amount of "elliptical-ness"
-	REAL r = 1.0f - (1.0f - 1.0f / (REAL) sqrt(2.0f))
-		* (REAL) exp(-8.0f * pNodeView->GetSpringActivation());
+	// get a reference to the outer rectangle
+	const CRect& rectOuter = pNodeView->GetOuterRect();
 
-	CRect rectOuter = CalcOuterRect(pNodeView);
-	CRect rectInner;
-	rectInner.top = (long) ((REAL) (rectOuter.top + rectOuter.Height() / 2) 
-		- r * (REAL) rectOuter.Height() / 2.0f);
-	rectInner.bottom = (long) ((REAL) (rectOuter.top + rectOuter.Height() / 2) 
-		+ r * (REAL) rectOuter.Height() / 2.0f);
-	rectInner.left = (long) ((REAL) (rectOuter.left + rectOuter.Width() / 2) 
-		- r * (REAL) rectOuter.Width() / 2.0f);
-	rectInner.right = (long) ((REAL) (rectOuter.left + rectOuter.Width() / 2) 
-		+ r * (REAL) rectOuter.Width() / 2.0f);
+	// compute the r, which represents the amount of "elliptical-ness"
+	//		(ratio of inner / outer)
+	REAL r = ComputeEllipticalness(pNodeView->GetSpringActivation());
+
+	// initialize the inner rectangle
+	CRect& rectInner = pNodeView->GetInnerRect();
+	rectInner = rectOuter;
+
+	// adjust inner rectangle proportions
+	int ndWidth = (1.0 - r) / 2.0 * rectOuter.Width();
+	int ndHeight = (1.0 - r) / 2.0 * rectOuter.Height();
+	rectInner.DeflateRect(ndWidth, ndHeight, ndWidth, ndHeight);
 
 	return rectInner;
-}
+
+}	// CNodeViewSkin::CalcInnerRect
+
 
 //////////////////////////////////////////////////////////////////////
-// CNodeView::GetShape
+// CNodeViewSkin::CalcShape
 // 
-// returns and computes (if needed) the node view's region (shape)
+// calculates the node view's region (shape)
+// uses the nodeview's existing OuterRect and InnerRect; does not recalc
+//		these
 //////////////////////////////////////////////////////////////////////
-void CNodeViewSkin::CalcShape(CNodeView *pNodeView, CRgn *pRgn, int nErode)
+void CNodeViewSkin::CalcShape(CNodeView *pNodeView, CRgn& rgn, int nErode)
 {
-	// delete the region object
-	pRgn->DeleteObject();
+	// re-create the region object as a rectangle (initially)
+	rgn.DeleteObject();
+	rgn.CreateRectRgnIndirect(pNodeView->GetInnerRect());
 
 	// form the ellipse for top/bottom clipping
 	CRect rectTopBottomEllipse = CalcTopBottomEllipseRect(pNodeView);
@@ -130,24 +235,27 @@ void CNodeViewSkin::CalcShape(CNodeView *pNodeView, CRgn *pRgn, int nErode)
 	ellipseLeftRight.CreateEllipticRgnIndirect(&rectLeftRightEllipse);
 
 	// form the intersection of the two
-	pRgn->CreateRectRgnIndirect(CalcInnerRect(pNodeView));
-	pRgn->CombineRgn(&ellipseTopBottom, &ellipseLeftRight, RGN_AND);
+	rgn.CombineRgn(&ellipseTopBottom, &ellipseLeftRight, RGN_AND);
 
 	// delete the formant regions
 	ellipseTopBottom.DeleteObject();
 	ellipseLeftRight.DeleteObject();
-}
+
+}	// CNodeViewSkin::CalcShape
+
 
 /////////////////////////////////////////////////////////////////////////////
-// CNodeView::GetLeftRightEllipseRect
+// CNodeViewSkin::CalcLeftRightEllipseRect
 //
-// returns the rectangle that bounds the ellipse for the left and right
+// calculates the rectangle that bounds the ellipse for the left and right
 //		sides of the elliptangle
+// uses the nodeview's existing OuterRect and InnerRect; does not recalc
+//		these
 /////////////////////////////////////////////////////////////////////////////
 CRect CNodeViewSkin::CalcLeftRightEllipseRect(CNodeView *pNodeView)
 {
-	CRect rectOuter = CalcOuterRect(pNodeView);
-	CRect rectInner = CalcInnerRect(pNodeView);
+	const CRect& rectOuter = pNodeView->GetOuterRect();
+	const CRect& rectInner = pNodeView->GetInnerRect();
 
 	// compute the ellipse's b
 	REAL rx = ((REAL) rectInner.Width())
@@ -162,18 +270,22 @@ CRect CNodeViewSkin::CalcLeftRightEllipseRect(CNodeView *pNodeView)
 	rectLeftRightEllipse.bottom = (rectOuter.top + rectOuter.Height() / 2) + (long) bx;
 
 	return rectLeftRightEllipse;
-}
+
+}	// CNodeViewSkin::CalcLeftRightEllipseRect
+
 
 /////////////////////////////////////////////////////////////////////////////
-// CNodeView::GetTopBottomEllipseRect
+// CNodeViewSkin::CalcTopBottomEllipseRect
 //
-// returns the rectangle that bounds the ellipse for the top and bottom
+// calculates the rectangle that bounds the ellipse for the top and bottom
 //		sides of the elliptangle
+// uses the nodeview's existing OuterRect and InnerRect; does not recalc
+//		these
 /////////////////////////////////////////////////////////////////////////////
 CRect CNodeViewSkin::CalcTopBottomEllipseRect(CNodeView *pNodeView)
 {
-	CRect rectOuter = CalcOuterRect(pNodeView);
-	CRect rectInner = CalcInnerRect(pNodeView);
+	const CRect& rectOuter = pNodeView->GetOuterRect();
+	const CRect& rectInner = pNodeView->GetInnerRect();
 
 	// compute the ellipse's b
 	REAL ry = ((REAL) rectInner.Height())
@@ -187,17 +299,304 @@ CRect CNodeViewSkin::CalcTopBottomEllipseRect(CNodeView *pNodeView)
 	rectTopBottomEllipse.right = (rectOuter.left + rectOuter.Width() / 2) + (long) by;
 
 	return rectTopBottomEllipse;
+
+}	// CNodeViewSkin::CalcTopBottomEllipseRect
+
+
+BOOL CNodeViewSkin::InitD3DDevice(LPDIRECTDRAWSURFACE lpDDS,
+							LPDIRECT3DDEVICE2 *lppD3DDev)
+{
+    // create a Direct3D device.
+    CHECK_HRESULT(m_lpD3D->CreateDevice(IID_IDirect3DRGBDevice, 
+		lpDDS, lppD3DDev));
+
+    // Set default render state
+    CHECK_HRESULT((*lppD3DDev)->SetRenderState(D3DRENDERSTATE_ZENABLE, 0));
+    CHECK_HRESULT((*lppD3DDev)->SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, 0));
+    CHECK_HRESULT((*lppD3DDev)->SetRenderState(D3DRENDERSTATE_SHADEMODE, D3DSHADE_GOURAUD));
+	CHECK_HRESULT((*lppD3DDev)->SetRenderState(D3DRENDERSTATE_SPECULARENABLE, FALSE));
+	CHECK_HRESULT((*lppD3DDev)->SetRenderState(D3DRENDERSTATE_CULLMODE, D3DCULL_NONE));
+
+	// set up an ambient light source
+	CHECK_HRESULT((*lppD3DDev)->SetLightState(D3DLIGHTSTATE_AMBIENT, 
+		(DWORD) D3DRGB(0.25, 0.25, 0.25)));
+
+	return TRUE;
+}
+
+BOOL CNodeViewSkin::InitViewport(LPDIRECT3DDEVICE2 lpD3DDev, CRect rect,
+						   LPDIRECT3DVIEWPORT2 *lppViewport)
+{
+    // now make a Viewport
+    CHECK_HRESULT(m_lpD3D->CreateViewport(lppViewport, NULL));
+    CHECK_HRESULT(lpD3DDev->AddViewport(*lppViewport));
+
+	// set the current viewport
+    CHECK_HRESULT(lpD3DDev->SetCurrentViewport(*lppViewport));
+
+    // Setup the viewport for a reasonable viewing area
+    D3DVIEWPORT2 viewData;
+    memset(&viewData, 0, sizeof(D3DVIEWPORT2));
+    viewData.dwSize = sizeof(D3DVIEWPORT2);
+    viewData.dwX = 0;
+    viewData.dwY = 0;
+    viewData.dwWidth  = rect.Width();
+    viewData.dwHeight = rect.Height();
+    viewData.dvClipX = -1.0f;
+    viewData.dvClipWidth = 2.0f;
+    viewData.dvClipHeight = (D3DVALUE)(rect.Height() * 2.0 / rect.Width());
+    viewData.dvClipY = viewData.dvClipHeight / 2.0f;
+    viewData.dvMinZ = 0.0f;
+    viewData.dvMaxZ = 1.0f;
+    CHECK_HRESULT((*lppViewport)->SetViewport2(&viewData));
+
+	D3DMATRIX mat;
+	ZeroMemory(&mat, sizeof(D3DMATRIX));
+	mat(0, 0) = (D3DVALUE) 1.0 / rect.Width();
+	mat(1, 1) = (D3DVALUE) 1.0 / rect.Width();
+	mat(2, 2) = (D3DVALUE) 1.0; // 0.0025;
+	mat(3, 3) = (D3DVALUE) 1.0;
+	CHECK_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_VIEW, &mat));
+
+	return TRUE;
+}
+    
+BOOL CNodeViewSkin::InitLights(LPDIRECT3DVIEWPORT2 lpViewport, 
+						 LPDIRECT3DLIGHT *lppLights)
+{
+	D3DLIGHT2 light;
+	ZeroMemory(&light, sizeof(D3DLIGHT2));
+	light.dwSize = sizeof(D3DLIGHT2);
+    light.dltType = D3DLIGHT_DIRECTIONAL;
+    light.dcvColor.r = (D3DVALUE) 0.75;
+    light.dcvColor.g = (D3DVALUE) 0.75;
+    light.dcvColor.b = (D3DVALUE) 0.75;
+    light.dvDirection.x = (D3DVALUE) 1.0;
+    light.dvDirection.y = (D3DVALUE) -1.0;
+    light.dvDirection.z = (D3DVALUE) -0.1;
+	light.dvRange = D3DLIGHT_RANGE_MAX;
+	light.dwFlags = D3DLIGHT_ACTIVE;
+	CHECK_HRESULT(m_lpD3D->CreateLight(&lppLights[0], NULL));
+	CHECK_HRESULT(lppLights[0]->SetLight((LPD3DLIGHT) &light));
+	CHECK_HRESULT(lpViewport->AddLight(lppLights[0]));
+
+    light.dcvColor.r = (D3DVALUE) 0.5;
+    light.dcvColor.g = (D3DVALUE) 0.5;
+    light.dcvColor.b = (D3DVALUE) 0.5;
+    light.dvDirection.x = (D3DVALUE) 0.0;
+    light.dvDirection.y = (D3DVALUE) 0.0;
+    light.dvDirection.z = (D3DVALUE) -1.0;
+	CHECK_HRESULT(m_lpD3D->CreateLight(&lppLights[1], NULL));
+	CHECK_HRESULT(lppLights[1]->SetLight((LPD3DLIGHT) &light));
+	CHECK_HRESULT(lpViewport->AddLight(lppLights[1]));
+
+	return TRUE;
+}
+
+BOOL CNodeViewSkin::InitMaterial(LPDIRECT3DMATERIAL2 *lppD3DMat)
+{
+	// initialize material
+    CHECK_HRESULT(m_lpD3D->CreateMaterial(lppD3DMat, NULL)); 
+
+    D3DMATERIAL mat;
+    memset(&mat, 0, sizeof(D3DMATERIAL));
+    mat.dwSize = sizeof(D3DMATERIAL);
+    mat.diffuse.r = (D3DVALUE)1.0;
+    mat.diffuse.g = (D3DVALUE)1.0;
+    mat.diffuse.b = (D3DVALUE)1.0;
+    mat.ambient.r = (D3DVALUE)1.0;
+    mat.ambient.g = (D3DVALUE)1.0;
+    mat.ambient.b = (D3DVALUE)1.0;
+    mat.specular.r = (D3DVALUE)1.0;
+    mat.specular.g = (D3DVALUE)1.0;
+    mat.specular.b = (D3DVALUE)1.0;
+    mat.power = (float)1.0;
+    mat.hTexture = 0; // TextureHandle;
+    mat.dwRampSize = 1;
+    CHECK_HRESULT((*lppD3DMat)->SetMaterial(&mat));
+
+    return TRUE;
 }
 
 //////////////////////////////////////////////////////////////////////
-// CNodeView::DrawElliptangle
+// CNodeViewSkin::BltSkin
 // 
-// draws the elliptangle for the node
+// blts the skin for the node view from the prepared surface
 //////////////////////////////////////////////////////////////////////
-void CNodeViewSkin::DrawSkin(CDC *pDC, CNodeView *pNodeView)
+void CNodeViewSkin::BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView)
 {
-	// reset the inner rectangle
-	CRect rectInner = CalcInnerRect(pNodeView);
+	// calculate the rectangles
+	const CRect& rectOuter = CalcOuterRect(pNodeView);
+	const CRect& rectInner = CalcInnerRect(pNodeView);
+
+	if (rectOuter.Width() < THICK_PEN_WIDTH)
+	{
+		return;
+	}
+
+	// gets the skin, plus the actual rectangle for the skin
+	CRect rectDest;
+	LPDIRECTDRAWSURFACE lpSkinDDS = GetSkinDDS(pNodeView, rectDest);
+
+	// form the client rectangle
+	CRect rectClient(0, 0, m_nWidth, m_nHeight);
+
+	// form the intersection of the destination and client
+	CRect rectDestIntersect;
+	BOOL bIntersect = rectDestIntersect.IntersectRect(rectClient, rectDest);
+
+	// if the destination is completely within the client,
+	if (rectDestIntersect == rectDest)
+	{
+		// perform a fast blt
+		ASSERT_HRESULT(lpDDS->BltFast(rectDest.left, rectDest.top, 
+			lpSkinDDS, rectDest - rectDest.TopLeft(),
+			DDBLTFAST_SRCCOLORKEY));
+	}
+	// was there at least some intersection?
+	else if (bIntersect)
+	{
+		// perform a slower blt
+		ASSERT_HRESULT(lpDDS->Blt(rectDestIntersect, lpSkinDDS,
+			rectDestIntersect - rectDest.TopLeft(), DDBLT_KEYSRC, NULL));
+	}
+
+	// calculate the node-views shape rgn, for hit-testing
+	CalcShape(pNodeView, pNodeView->GetShape(), THICK_PEN_WIDTH);
+
+}	// CNodeViewSkin::BltSkin
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeViewSkin::GetSkinDDS
+// 
+// blts the skin for the node view from the prepared surface
+// assumes the node view's outer and inner rectangles have been
+//		computed
+//////////////////////////////////////////////////////////////////////
+LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView, 
+											  CRect& rectSrc)
+{
+	// get the skin rectangle
+	rectSrc = pNodeView->GetOuterRect();
+
+	// compute width (= index into cache)
+	int nWidth = rectSrc.Width();
+
+	// stores the new DDS
+	LPDIRECTDRAWSURFACE lpDDS = m_arrlpSkinDDS.GetAt(nWidth);
+
+	// generate it, if needed 
+	if (!lpDDS)
+	{
+		// inflate rectangle to account for margin
+		rectSrc.InflateRect(20, 20, 20, 20); 
+
+		// create a new drawing surface
+		DDSURFACEDESC	ddsd;
+		ZeroMemory(&ddsd, sizeof(ddsd));
+		ddsd.dwSize = sizeof(ddsd);
+		ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT |DDSD_WIDTH;
+		ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_3DDEVICE;
+		ddsd.dwWidth = rectSrc.Width();
+		ddsd.dwHeight = rectSrc.Height();
+		ASSERT_HRESULT(m_lpDD->CreateSurface(&ddsd, &lpDDS, NULL));
+
+		// fill the surface
+		DDBLTFX ddBltFx;
+		ddBltFx.dwSize = sizeof(DDBLTFX);
+		ddBltFx.dwFillColor = (DWORD) COLORKEY; 
+		ASSERT_HRESULT(lpDDS->Blt(rectSrc - rectSrc.TopLeft(), NULL, 
+			rectSrc - rectSrc.TopLeft(), DDBLT_COLORFILL, &ddBltFx));
+
+		// set the color key
+		ASSERT_HRESULT(DDSetColorKey(lpDDS, COLORKEY));
+
+#ifdef USE_GDI
+		// form a CDC for the surface
+		CDC dc;
+		GET_ATTACH_DC(lpDDS, dc);
+
+		// offset to the top of the rectangle
+		dc.OffsetWindowOrg(rectSrc.left, rectSrc.top);
+
+		// draw the skin
+		DrawSkinGDI(&dc, pNodeView);
+
+		// release and detach
+		RELEASE_DETACH_DC(lpDDS, dc);
+
+#else
+		// Direct3D rendering -- initialize the objects first
+		LPDIRECT3DDEVICE2 lpD3DDev = NULL;
+		ASSERT_BOOL(InitD3DDevice(lpDDS, &lpD3DDev));
+
+		LPDIRECT3DVIEWPORT2	lpViewport = NULL;
+		ASSERT_BOOL(InitViewport(lpD3DDev, rectSrc, &lpViewport));
+
+		LPDIRECT3DLIGHT lpLights[2];
+		ASSERT_BOOL(InitLights(lpViewport, lpLights));
+
+		// create the material and attach to the device's state
+		LPDIRECT3DMATERIAL2	lpMaterial = NULL;
+		ASSERT_BOOL(InitMaterial(&lpMaterial));
+
+		D3DTEXTUREHANDLE hMat;
+		ASSERT_HRESULT(lpMaterial->GetHandle(lpD3DDev, &hMat));
+		ASSERT_HRESULT(lpD3DDev->SetLightState(D3DLIGHTSTATE_MATERIAL, hMat));
+
+		// render the skin
+		ASSERT_HRESULT(lpD3DDev->BeginScene());
+		DrawSkinD3D(lpD3DDev, pNodeView);
+		ASSERT_HRESULT(lpD3DDev->EndScene());
+
+		// release the interface
+		ASSERT_HRESULT(lpMaterial->Release());
+		ASSERT_HRESULT(lpLights[0]->Release());
+		ASSERT_HRESULT(lpLights[1]->Release());
+		ASSERT_HRESULT(lpViewport->Release());
+		ASSERT_HRESULT(lpD3DDev->Release());
+
+#endif
+
+		// store the newly-formed DDS
+		m_arrlpSkinDDS.SetAt(nWidth, lpDDS);
+	}
+	else
+	{
+		// make sure rectSrc is the correct size
+		DDSURFACEDESC sd;
+		sd.dwSize = sizeof(DDSURFACEDESC);
+		lpDDS->GetSurfaceDesc(&sd);
+
+		// store the current center point
+		CPoint ptCenter = rectSrc.CenterPoint();
+
+		// initialize to a correctly sized rectangle
+		rectSrc = CRect(0, 0, sd.dwWidth, sd.dwHeight);
+
+		// offset to correct center point
+		rectSrc.OffsetRect(ptCenter - rectSrc.CenterPoint());
+		ASSERT(rectSrc.CenterPoint() == ptCenter);
+	}
+
+	// return the DDS
+	return lpDDS;
+
+}	// CNodeViewSkin::GetSkinDDS
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeViewSkin::DrawSkinGDI
+// 
+// draws the skin for the node view using GDI calls
+// assumes the node view's outer and inner rectangles have been
+//		computed
+//////////////////////////////////////////////////////////////////////
+void CNodeViewSkin::DrawSkinGDI(CDC *pDC, CNodeView *pNodeView)
+{	// calculate the rectangles
+	const CRect& rectOuter = pNodeView->GetOuterRect();
+	const CRect& rectInner = pNodeView->GetInnerRect();
 
 	// get the guide rectangles
 	CRect rectLeftRightEllipse = CalcLeftRightEllipseRect(pNodeView);
@@ -224,15 +623,14 @@ void CNodeViewSkin::DrawSkin(CDC *pDC, CNodeView *pNodeView)
 		rectInner.BottomRight());
 
 	// draw the upper-left half of the outline
-	CPen penUpperLeftThick(PS_SOLID, 4, UPPER_DARK_COLOR);
-	// pOldPen = (CPen *)
-		pDC->SelectObject(&penUpperLeftThick);
+	CPen penUpperLeftThick(PS_SOLID, THICK_PEN_WIDTH, UPPER_DARK_COLOR);
+	pDC->SelectObject(&penUpperLeftThick);
 	pDC->Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
 		CPoint(rectInner.left, rectInner.bottom));
 	pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.right, rectInner.top), 
 		rectInner.TopLeft());
 
-	CPen penUpperLeftThin(PS_SOLID, 2, UPPER_LIGHT_COLOR);
+	CPen penUpperLeftThin(PS_SOLID, THIN_PEN_WIDTH, UPPER_LIGHT_COLOR);
 	pDC->SelectObject(&penUpperLeftThin);
 	pDC->Arc(&rectLeftRightEllipse, rectInner.TopLeft(), 
 		CPoint(rectInner.left, rectInner.bottom));
@@ -240,14 +638,14 @@ void CNodeViewSkin::DrawSkin(CDC *pDC, CNodeView *pNodeView)
 		rectInner.TopLeft());
 
 	// draw the lower-right half of the outline
-	CPen penLowerRightThick(PS_SOLID, 4, LOWER_LIGHT_COLOR);
+	CPen penLowerRightThick(PS_SOLID, THICK_PEN_WIDTH, LOWER_LIGHT_COLOR);
 	pDC->SelectObject(&penLowerRightThick);
 	pDC->Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
 		CPoint(rectInner.right, rectInner.top));
 	pDC->Arc(&rectTopBottomEllipse, CPoint(rectInner.left, rectInner.bottom), 
 		rectInner.BottomRight());
 
-	CPen penLowerRightThin(PS_SOLID, 2, LOWER_DARK_COLOR);
+	CPen penLowerRightThin(PS_SOLID, THIN_PEN_WIDTH, LOWER_DARK_COLOR);
 	pDC->SelectObject(&penLowerRightThin);
 	pDC->Arc(&rectLeftRightEllipse, rectInner.BottomRight(), 
 		CPoint(rectInner.right, rectInner.top));
@@ -257,28 +655,86 @@ void CNodeViewSkin::DrawSkin(CDC *pDC, CNodeView *pNodeView)
 	// restore the old pen 
 	pDC->SelectObject(pOldPen);
 	pDC->SelectObject(pOldBrush);
-}
 
-// draw a link
-void CNodeViewSkin::DrawLink(CDC *pDC, CVector<3>& vFrom, REAL actFrom,
-			  CVector<3>& vTo, REAL actTo)
+}	// CNodeViewSkin::DrawSkinGDI
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeViewSkin::DrawSkinD3D
+// 
+// draws the skin for the node view using Direct3D calls
+// assumes the node view's outer and inner rectangles have been
+//		computed
+//////////////////////////////////////////////////////////////////////
+void CNodeViewSkin::DrawSkinD3D(IDirect3DDevice2 *lpD3DDev, 
+								CNodeView *pNodeView)
 {
-	// grey brush for drawing links
-	static CBrush greyBrushDark(RGB(160, 160, 160));
-	static CBrush greyBrushMid(RGB(172, 172, 172));
-	static CBrush greyBrushLight(RGB(184, 184, 184));
+	// stores the node's aspect ratio
+	const CRect& rectOuter = pNodeView->GetOuterRect();
+
+	// compute the angle dividing the sections of the elliptangle
+	double sectionAngle = atan2(rectOuter.Height(), rectOuter.Width());
+
+	// compute the parameters for the vertical sides
+	CRect rectLR = CalcLeftRightEllipseRect(pNodeView);
+	double pVert[2] = {rectLR.Width(), rectLR.Height()};
+
+	// compute the parameters for the horizontal sides
+	CRect rectTB = CalcTopBottomEllipseRect(pNodeView);
+	double pHoriz[2] = {rectTB.Width(), rectTB.Height()};
+
+	// create a previous molding, to connect to next
+	CMolding* pPrev = new CMolding(2*PI, EvalElliptangle(2*PI, pVert), 
+		BORDER_RADIUS);
+
+	// now render the four sections of the molding
+	pPrev = CMolding::RenderMoldingSection(lpD3DDev, 
+		2*PI, 2*PI + sectionAngle, EvalElliptangle, pVert, pPrev);
+	pPrev = CMolding::RenderMoldingSection(lpD3DDev,        
+		sectionAngle,   PI - sectionAngle, EvalElliptangle, pHoriz, pPrev);
+	pPrev = CMolding::RenderMoldingSection(lpD3DDev, 
+		PI - sectionAngle,   PI + sectionAngle, EvalElliptangle, pVert, pPrev);
+	pPrev = CMolding::RenderMoldingSection(lpD3DDev, 
+		PI + sectionAngle, 2*PI - sectionAngle, EvalElliptangle, pHoriz, pPrev);
+	pPrev = CMolding::RenderMoldingSection(lpD3DDev, 
+		2*PI - sectionAngle, 2*PI + 0.1, EvalElliptangle, pVert, pPrev);
+
+	// delete the connecting molding
+	delete pPrev;
+
+}	// CNodeViewSkin::DrawSkinD3D
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeViewSkin::DrawLink
+// 
+// draw a link
+//////////////////////////////////////////////////////////////////////
+void CNodeViewSkin::DrawLink(CDC *pDC, CVectorD<3>& vFrom, REAL actFrom,
+			  CVectorD<3>& vTo, REAL actTo)
+{
+	// brushes for drawing links
+	CBrush brushDark(RGB(0.85 * GetRValue(m_colorBk),
+		0.85 * GetGValue(m_colorBk),
+		0.85 * GetBValue(m_colorBk)));
+	CBrush brushMid(RGB(0.90 * GetRValue(m_colorBk),
+		0.90 * GetGValue(m_colorBk),
+		0.90 * GetBValue(m_colorBk)));
+	CBrush brushLight(RGB(0.95 * GetRValue(m_colorBk),
+		0.95 * GetGValue(m_colorBk),
+		0.95 * GetBValue(m_colorBk)));
 
 	CBrush *pOldBrush;
 	if (actFrom + actTo < 0.025)
-		pOldBrush = pDC->SelectObject(&greyBrushLight);
+		pOldBrush = pDC->SelectObject(&brushLight);
 	else if (actFrom + actTo < 0.05)
-		pOldBrush = pDC->SelectObject(&greyBrushMid);
+		pOldBrush = pDC->SelectObject(&brushMid);
 	else
-		pOldBrush = pDC->SelectObject(&greyBrushDark);
+		pOldBrush = pDC->SelectObject(&brushDark);
 	CPen *pOldPen = (CPen *)pDC->SelectStockObject(NULL_PEN);
 
-	CVector<3> vOffset = vTo - vFrom;
-	CVector<3> vNormal(vOffset[1], -vOffset[0]);
+	CVectorD<3> vOffset = vTo - vFrom;
+	CVectorD<3> vNormal(vOffset[1], -vOffset[0]);
 	vNormal.Normalize();
 
 	REAL fromSize = (REAL) sqrt(actFrom);
@@ -303,4 +759,12 @@ void CNodeViewSkin::DrawLink(CDC *pDC, CVector<3>& vFrom, REAL actFrom,
 	// unselect the brsuh and pen for drawing the links
 	pDC->SelectObject(pOldPen);
 	pDC->SelectObject(pOldBrush);
+
+}	// CNodeViewSkin::DrawLink
+
+
+
+void CNodeViewSkin::SetBkColor(COLORREF color)
+{
+	m_colorBk = color;
 }
