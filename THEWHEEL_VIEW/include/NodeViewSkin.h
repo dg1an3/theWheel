@@ -34,11 +34,8 @@ public:
 	CNodeViewSkin();
 	virtual ~CNodeViewSkin();
 
-	// sets the background color, for drawing links
-	void SetBkColor(COLORREF color);
-
 	// sets the client area for this skin
-	void SetClientArea(int nWidth, int nHeight);
+	void SetClientArea(int nWidth, int nHeight, COLORREF colorBk);
 
 	// computes the inner and outer rectangles for a node view, 
 	//		given an activation
@@ -89,15 +86,15 @@ private:
 	int m_nWidth;
 	int m_nHeight;
 
+	// holds the background color -- for drawing links
+	COLORREF m_colorBk;
+
 	// stores pointer to the main DirectDraw object
 	LPDIRECTDRAW m_lpDD;
 	LPDIRECT3D2 m_lpD3D;
 
 	// pointer to the skin drawing surface for blt
 	CArray<LPDIRECTDRAWSURFACE, LPDIRECTDRAWSURFACE&> m_arrlpSkinDDS;
-
-	// holds the background color -- for drawing links
-	COLORREF m_colorBk;
 };
 
 #endif // !defined(NODEVIEWSKIN_H)
