@@ -218,7 +218,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::GetThreshold()
 	int nSuperThresholdViewCount = 0;
 	int nPrevSuperThresholdViewCount;
 
-	while (nSuperThresholdViewCount <= SPV_STATE_DIM / 2)
+	while (nSuperThresholdViewCount < SPV_STATE_DIM / 2)
 	{
 		nPrevSuperThresholdViewCount = nSuperThresholdViewCount;
 		prevThreshold = threshold;

@@ -21,6 +21,7 @@ CNewNodeDlg::CNewNodeDlg(CWnd* pParent /*=NULL*/)
 	//{{AFX_DATA_INIT(CNewNodeDlg)
 	m_strName = _T("");
 	m_strDesc = _T("");
+	m_strImageFilename = _T("");
 	//}}AFX_DATA_INIT
 }
 
@@ -31,6 +32,7 @@ void CNewNodeDlg::DoDataExchange(CDataExchange* pDX)
 	//{{AFX_DATA_MAP(CNewNodeDlg)
 	DDX_Text(pDX, IDC_EDITNAME, m_strName);
 	DDX_Text(pDX, IDC_EDITDESC, m_strDesc);
+	DDX_Text(pDX, IDC_EDITIMAGEFILENAME, m_strImageFilename);
 	//}}AFX_DATA_MAP
 }
 

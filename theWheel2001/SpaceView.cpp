@@ -296,8 +296,8 @@ void CSpaceView::PropagateActivation(CNodeView *pSource, float percent, float fa
 			float oldActivation = pMaxDest->activation.Get();
 			if (oldActivation < percent * maxWeight)
 			{
-				float newActivation = CNodeView::ActivationCurve(oldActivation * factor,
-					percent * maxWeight * 1.5);
+				float newActivation = CNodeView::ActivationCurve(oldActivation * factor * 1.1,
+					percent * maxWeight * 1.3);
 				pMaxDest->activation.Set(newActivation);
 				PropagateActivation(pMaxDest, newActivation);
 			}
@@ -716,17 +716,17 @@ void CSpaceView::LearnForNode(CNodeView *pNodeView)
 
 void CSpaceView::OnTimer(UINT nIDEvent) 
 {
-	if (GetQueueStatus(QS_MOUSE) == 0)
-	{
-		// do a layout
-		LayoutNodeViews();
-	}
-
-	// update the privates
-	int nAt;
-	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
-		nodeViews.Get(nAt)->UpdatePrivates();
-
+//	if (GetQueueStatus(QS_MOUSE) == 0)
+//	{
+//		// do a layout
+//		LayoutNodeViews();
+//	}
+//
+//	// update the privates
+//	int nAt;
+//	for (nAt = 0; nAt < nodeViews.GetSize(); nAt++)
+//		nodeViews.Get(nAt)->UpdatePrivates();
+//
 	
 	CView::OnTimer(nIDEvent);
 }

@@ -246,11 +246,34 @@ void CNodeView::OnPaint()
 	// get the inner rectangle for drawing the text
 	CRect rectInner = GetInnerRect();
 
+	if (forNode->GetDib() != NULL && privActivation.Get() < 0.05)
+	{
+		// calculate the bitmap size 
+		float bitmapSize = rectInner.Height() * 0.03 / privActivation.Get();
+		bitmapSize = min(bitmapSize, rectInner.Height());
+		float margin = rectInner.Height() - bitmapSize;
+
+		CRect rectImage = rectInner;
+		rectImage.top += margin/2;
+		rectImage.right = rectImage.left + bitmapSize;
+		rectImage.bottom -= margin/2;
+
+		rectImage.DeflateRect(5, 5, 5, 5);
+
+		// draw the bitmap next to the title
+		forNode->GetDib()->Draw(dc, &rectImage);
+
+		// dc.Ellipse(rectImage);
+
+		// adjust the rectangle to account for the bitmap
+		rectInner.left += bitmapSize;
+	}
+
 	// draw the text
 	dc.SetBkMode(TRANSPARENT);
 
-	int nDesiredHeight = rectClient.Height() / 5;
-	int nDesiredWidth = rectClient.Width() / 100;
+	int nDesiredHeight = min(rectInner.Height() / 3, 20);
+	int nDesiredWidth = rectInner.Width() / 80;
 
 	CFont font;
 	BOOL bResult = font.CreateFont(nDesiredHeight, 0, //nDesiredWidth,
@@ -269,13 +292,13 @@ void CNodeView::OnPaint()
 	CRect rectText(rectInner);
 	rectText.DeflateRect(5, 5, 5, 5);
 	dc.DrawText(forNode->name.Get(), rectText, 
-		DT_CENTER | DT_PATH_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
+		DT_CENTER | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	// now calculate the height of the drawn text
 	rectText = rectInner;
 	rectText.DeflateRect(5, 5, 5, 5);
 	int nHeight = dc.DrawText(forNode->name.Get(), rectText, 
-		DT_CALCRECT | DT_CENTER | DT_PATH_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
+		DT_CALCRECT | DT_CENTER | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	// stores the old pen that was selected into the context
 	CPen *pOldPen;
@@ -283,15 +306,35 @@ void CNodeView::OnPaint()
 	// now draw the description body
 //	CPen penTemp(PS_SOLID, 1, RGB(0, 0, 0));
 //	pOldPen = dc.SelectObject(&penTemp);
-	rectText = rectInner;
-	rectText.DeflateRect(5, 5, 5, 5);
-	rectText.top += nHeight + 5;
+	if (privActivation.Get() >= 0.05)
+	{
+		rectText = rectInner;
+		rectText.DeflateRect(5, 5, 5, 5);
+		rectText.top += nHeight + 5;
+
+		if (forNode->GetDib() != NULL)
+		{
+			CRect rectImage = rectText;
+			rectImage.right = rectImage.left + rectImage.Height();
+			// rectImage.left += rectImage.Height();
+
+			rectImage.DeflateRect(5, 5, 5, 5);
+			forNode->GetDib()->Draw(dc, &rectImage);
+
+			// draw the bitmap next to the title
+			// dc.Ellipse(rectImage);
+
+			// adjust the rectangle to account for the bitmap
+			rectText.left += rectText.Height();
+		}
+//	}
+
 //	dc.Rectangle( rectText );
 
 //	dc.SelectObject(pOldPen);
 
-	if (nDesiredHeight > 12)
-	{
+//	if (nDesiredHeight > 12)
+//	{
 		nDesiredHeight = max(nDesiredHeight / 2, 12);
 		CFont smallFont;
 		bResult = smallFont.CreateFont(nDesiredHeight, 0, //nDesiredWidth,
@@ -316,6 +359,9 @@ void CNodeView::OnPaint()
 		dc.SelectObject(pOldFont);
 
 	font.DeleteObject();
+
+	// reset the inner rectangle
+	rectInner = GetInnerRect();
 
 	// get the guide rectangles
 	CRect rectLeftRightEllipse = GetLeftRightEllipseRect();
@@ -597,11 +643,13 @@ void CNodeView::OnLButtonDblClk(UINT nFlags, CPoint point)
 
 	newDlg.m_strName = forNode->name.Get();
 	newDlg.m_strDesc = forNode->description.Get();
+	newDlg.m_strImageFilename = forNode->imageFilename.Get();
 
 	if (newDlg.DoModal() == IDOK)
 	{
 		forNode->name.Set(newDlg.m_strName);
 		forNode->description.Set(newDlg.m_strDesc);
+		forNode->imageFilename.Set(newDlg.m_strImageFilename);
 		
 		Invalidate();
 	}

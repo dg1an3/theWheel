@@ -165,7 +165,7 @@ BOOL CtheWheelApp::OnIdle(LONG lCount)
 {
 	CWinApp::OnIdle(lCount);
 
-/*	CMainFrame *pFrame = (CMainFrame *)AfxGetMainWnd();
+	CMainFrame *pFrame = (CMainFrame *)AfxGetMainWnd();
 	CSpaceView *pSpaceView = pFrame->GetRightPane();
 	pSpaceView->LayoutNodeViews();
 
@@ -173,6 +173,6 @@ BOOL CtheWheelApp::OnIdle(LONG lCount)
 	int nAt;
 	for (nAt = 0; nAt < pSpaceView->nodeViews.GetSize(); nAt++)
 		pSpaceView->nodeViews.Get(nAt)->UpdatePrivates();
-*/
+
 	return FALSE;
 }

@@ -21,6 +21,7 @@ public:
 	enum { IDD = IDD_NEWNODE };
 	CString	m_strName;
 	CString	m_strDesc;
+	CString	m_strImageFilename;
 	//}}AFX_DATA
 
 

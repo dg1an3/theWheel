@@ -11,6 +11,7 @@
 #define IDB_NODE                        609
 #define IDC_EDITNAME                    1000
 #define IDC_EDITDESC                    1001
+#define IDC_EDITIMAGEFILENAME           1002
 #define ID_NEW_NODE                     32773
 #define ID_VIEW_LAYOUT                  32774
 #define ID_VIEW_PROPAGATE               32775
