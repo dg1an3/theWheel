@@ -53,7 +53,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /machine:I386
-# ADD LINK32 ddraw.lib /nologo /subsystem:windows /machine:I386
+# ADD LINK32 ddraw.lib wininet.lib urlmon.lib /nologo /subsystem:windows /machine:I386
 
 !ELSEIF  "$(CFG)" == "theWheel2001 - Win32 Debug"
 
@@ -79,7 +79,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ddraw.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
+# ADD LINK32 ddraw.lib wininet.lib urlmon.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
 
 !ENDIF 
 
@@ -109,6 +109,22 @@ SOURCE=.\NodeView.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\NodeViewEnergyFunction.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\NodeViewSkin.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\SpaceAndBrowserView.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\SpaceBrowser.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\SpaceTreeView.cpp
 # End Source File
 # Begin Source File
@@ -123,6 +139,10 @@ SOURCE=.\SpaceViewEnergyFunction.cpp
 
 SOURCE=.\StdAfx.cpp
 # ADD CPP /Yc"stdafx.h"
+# End Source File
+# Begin Source File
+
+SOURCE=.\TestTreeView.cpp
 # End Source File
 # Begin Source File
 
@@ -156,7 +176,23 @@ SOURCE=.\NodeView.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\NodeViewEnergyFunction.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\NodeViewSkin.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\Resource.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\SpaceAndBrowserView.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\SpaceBrowser.h
 # End Source File
 # Begin Source File
 
@@ -176,12 +212,20 @@ SOURCE=.\StdAfx.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\TestTreeView.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\theWheel2001.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"
 
 # PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
+# Begin Source File
+
+SOURCE=.\res\dither50.bmp
+# End Source File
 # Begin Source File
 
 SOURCE=.\res\H_point.cur
