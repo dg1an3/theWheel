@@ -249,7 +249,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::GetThreshold()
 	ASSERT(nPrevSuperThresholdViewCount < SPV_STATE_DIM / 2);
 
 	CNodeView::activationThreshold = (float) prevThreshold;
-	return prevThreshold;
+	return threshold; // prevThreshold;
 }
 
 const CArray<int, int>& CSpaceViewEnergyFunction::GetMap()
@@ -316,8 +316,8 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 
 					// retrieve the link weight
 					SPV_STATE_TYPE weight1 = 
-						pAtLinkedNode->GetLinkWeightBoltz(pAtNode, 
-							sqrt(pAtLinkedView->activation.Get())); 
+						pAtLinkedNode->GetLinkWeightBoltz(pAtNode, // sqrt
+							(pAtLinkedView->activation.Get() + 0.1f)); 
 						//pAtLinkedNode->GetLinkWeight(pAtNode); 
 						// 0.0;
 //					if (pLink != NULL)
@@ -325,8 +325,8 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 
 //					pLink = pAtNode->GetLink(pAtLinkedNode);
 					SPV_STATE_TYPE weight2 = 
-						pAtNode->GetLinkWeightBoltz(pAtLinkedNode,
-							sqrt(pAtNodeView->activation.Get()));
+						pAtNode->GetLinkWeightBoltz(pAtLinkedNode, // sqrt
+						(pAtNodeView->activation.Get() + 0.1f));
 						// pAtNode->GetLinkWeight(pAtLinkedNode);
 						// 0.0;
 
@@ -349,7 +349,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 					for (int nX = -1; nX <= 1; nX++)
 						for (int nY = -1; nY <= 1; nY++)
 						{
-							m_energy += 1.0 / 9.0
+							m_energy += 1.0 / 15.0
 								* spacerFunc((x + dx * (SPV_STATE_TYPE) nX) / ssx, 
 									(y + dy * (SPV_STATE_TYPE) nY) / ssy);
 
@@ -368,7 +368,7 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 
 //					m_energy += 0.25 * (1.0 - weight)
 //						* attractFunc(x / (ssx * 2.0), y / (ssy * 2.0));
-					m_energy -= weight * 60.0
+					m_energy -= weight * 50.0
 						* attractFunc(x / (ssx * 6.0), y / (ssy * 6.0));
 
 #ifdef USE_GRAD
@@ -402,15 +402,15 @@ SPV_STATE_TYPE CSpaceViewEnergyFunction::operator()(const CVector<SPV_STATE_DIM,
 //			m_energy += CenterField(x, y,                        width, height, sigma);
 			m_energy += CenterField(x, y + nodeViewHeight / 2.0, width, height, sigma);
 
-			float x_ = 2.0f * ((float) rectSpaceView.Width() / 2.0f - x) 
-				/ (float) rectSpaceView.Width();
+//			float x_ = 2.0f * ((float) rectSpaceView.Width() / 2.0f - x) 
+//				/ (float) rectSpaceView.Width();
+//
+//			float y_ = 2.0f * ((float) rectSpaceView.Height() / 2.0f - y) 
+//				/ (float) rectSpaceView.Height();
 
-			float y_ = 2.0f * ((float) rectSpaceView.Height() / 2.0f - y) 
-				/ (float) rectSpaceView.Height();
-
-			m_energy += 
-				20.0f * pAtNodeView->activation.Get()
-					* (x_ * x_ + y_ * y_);
+//			m_energy += 
+//				10.0f * pAtNodeView->activation.Get()
+//					* (x_ * x_ + y_ * y_);
 
 #ifdef USE_GRAD
 

@@ -296,8 +296,8 @@ void CSpaceView::PropagateActivation(CNodeView *pSource, float percent, float fa
 			float oldActivation = pMaxDest->activation.Get();
 			if (oldActivation < percent * maxWeight)
 			{
-				float newActivation = CNodeView::ActivationCurve(oldActivation * factor * 1.1,
-					percent * maxWeight * 1.3);
+				float newActivation = CNodeView::ActivationCurve(oldActivation * factor * 1.3,
+					percent * maxWeight * 1.5);
 				pMaxDest->activation.Set(newActivation);
 				PropagateActivation(pMaxDest, newActivation);
 			}
@@ -657,6 +657,8 @@ void CSpaceView::OnUpdateViewWave(CCmdUI* pCmdUI)
 
 void CSpaceView::LearnForNode(CNodeView *pNodeView)
 {
+	return;
+
 	// get the rectangle for the target node view
 	CRect rectNodeView;
 	pNodeView->GetWindowRect(&rectNodeView);
