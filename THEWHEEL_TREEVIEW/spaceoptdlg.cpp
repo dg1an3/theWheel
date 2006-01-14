@@ -55,7 +55,7 @@ void CSpaceOptDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_SUPERNODECOUNT, m_nSuperNodeCount);
 	DDV_MinMaxUInt(pDX, m_nSuperNodeCount, 10, 255);
 	DDX_Text(pDX, IDC_TOLERANCE, m_tolerance);
-	DDV_MinMaxDouble(pDX, m_tolerance, 0.001, 10.);
+	DDV_MinMaxDouble(pDX, m_tolerance, 0.0001, 1000.);
 	DDX_Text(pDX, IDC_K_POS, m_kpos);
 	DDV_MinMaxDouble(pDX, m_kpos, 100., 100000.);
 	DDX_Text(pDX, IDC_K_REP, m_krep);
