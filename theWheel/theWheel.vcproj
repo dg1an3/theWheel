@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="7.10"
+	Name="theWheel"
+	SccProjectName=""
+	SccLocalPath=""
+	Keyword="MFCProj">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory=".\Debug"
+			IntermediateDirectory=".\Debug"
+			ConfigurationType="1"
+			UseOfMFC="2"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="..\THEWHEEL_TREEVIEW\include,..\THEWHEEL_VIEW\include,..\THEWHEEL_MODEL\include,..\OptimizeN\include,..\MTL"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="3"
+				PrecompiledHeaderThrough="stdafx.h"
+				PrecompiledHeaderFile=".\Debug/theWheel.pch"
+				AssemblerListingLocation=".\Debug/"
+				ObjectFile=".\Debug/"
+				ProgramDataBaseFileName=".\Debug/"
+				BrowseInformation="1"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				DebugInformationFormat="4"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="optimizer_base.lib thewheel_model.lib opengl32.lib glu32.lib ddraw.lib dsound.lib dxguid.lib winmm.lib wininet.lib urlmon.lib"
+				OutputFile=".\Debug/theWheel.exe"
+				LinkIncremental="1"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\OptimizeN\Debug,..\THEWHEEL_MODEL\Debug"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile=".\Debug/theWheel.pdb"
+				SubSystem="2"
+				TargetMachine="1"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName=".\Debug/theWheel.tlb"
+				HeaderFileName=""/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory=".\Release"
+			IntermediateDirectory=".\Release"
+			ConfigurationType="1"
+			UseOfMFC="2"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE"
+			CharacterSet="2">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="4"
+				GlobalOptimizations="TRUE"
+				EnableIntrinsicFunctions="TRUE"
+				FavorSizeOrSpeed="1"
+				OptimizeForProcessor="3"
+				AdditionalIncludeDirectories="..\THEWHEEL_TREEVIEW\include,..\THEWHEEL_VIEW\include,..\THEWHEEL_MODEL\include,..\OptimizeN\include,..\MTL"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;USE_IPP"
+				RuntimeLibrary="2"
+				UsePrecompiledHeader="3"
+				PrecompiledHeaderThrough="stdafx.h"
+				PrecompiledHeaderFile=".\Release/theWheel.pch"
+				AssemblerListingLocation=".\Release/"
+				ObjectFile=".\Release/"
+				ProgramDataBaseFileName=".\Release/"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="ippsemerged.lib ippsmerged.lib ippmemerged.lib ippmmerged.lib ippiemerged.lib ippimerged.lib ippcorel.lib opengl32.lib glu32.lib ddraw.lib dsound.lib dxguid.lib winmm.lib wininet.lib urlmon.lib"
+				OutputFile=".\Release/theWheel.exe"
+				LinkIncremental="1"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\OptimizeN\Release,..\THEWHEEL_MODEL\Release"
+				ProgramDatabaseFile=".\Release/theWheel.pdb"
+				SubSystem="2"
+				TargetMachine="1"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName=".\Release/theWheel.tlb"
+				HeaderFileName=""/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+	</Configurations>
+	<References>
+		<ProjectReference
+			ReferencedProjectIdentifier="{7BA2EB2C-3C16-471D-8B46-91D4DD4092D9}"
+			Name="OPTIMIZER_BASE"/>
+		<ProjectReference
+			ReferencedProjectIdentifier="{633416FE-999F-414E-ADBF-3288EEABA451}"
+			Name="THEWHEEL_MODEL"/>
+		<ProjectReference
+			ReferencedProjectIdentifier="{FF8F405E-97C9-4534-BFBF-704500CBF12D}"
+			Name="THEWHEEL_TREEVIEW"/>
+		<ProjectReference
+			ReferencedProjectIdentifier="{6423A64B-58F6-4744-A84C-AB4051E2A728}"
+			Name="THEWHEEL_VIEW"/>
+	</References>
+	<Files>
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+			<File
+				RelativePath="MainFrm.cpp">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="StdAfx.cpp">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						UsePrecompiledHeader="1"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						UsePrecompiledHeader="1"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="theWheel.cpp">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						Optimization="0"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+						BasicRuntimeChecks="3"
+						BrowseInformation="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="theWheel.rc">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories="..\THEWHEEL_VIEW;..\THEWHEEL_VIEW\include;..\THEWHEEL_TREEVIEW;..\THEWHEEL_TREEVIEW\include"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCResourceCompilerTool"
+						PreprocessorDefinitions=""
+						AdditionalIncludeDirectories="..\THEWHEEL_VIEW;..\THEWHEEL_VIEW\include;..\THEWHEEL_TREEVIEW;..\THEWHEEL_TREEVIEW\include"/>
+				</FileConfiguration>
+			</File>
+		</Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl">
+			<File
+				RelativePath="MainFrm.h">
+			</File>
+			<File
+				RelativePath="Resource.h">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Making help include file..."
+						CommandLine="echo. &gt;&quot;hlp\$(TargetName).hm&quot;
+echo // Commands (ID_* and IDM_*) &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+makehm ID_,HID_,0x10000 IDM_,HIDM_,0x10000 resource.h &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo. &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo // Prompts (IDP_*) &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+makehm IDP_,HIDP_,0x30000 resource.h &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo. &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo // Resources (IDR_*) &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+makehm IDR_,HIDR_,0x20000 resource.h &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo. &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo // Dialogs (IDD_*) &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+makehm IDD_,HIDD_,0x20000 resource.h &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo. &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo // Frame Controls (IDW_*) &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+makehm IDW_,HIDW_,0x50000 resource.h &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+"
+						Outputs="hlp\$(TargetName).hm"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCustomBuildTool"
+						Description="Making help include file..."
+						CommandLine="echo. &gt;&quot;hlp\$(TargetName).hm&quot;
+echo // Commands (ID_* and IDM_*) &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+makehm ID_,HID_,0x10000 IDM_,HIDM_,0x10000 resource.h &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo. &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo // Prompts (IDP_*) &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+makehm IDP_,HIDP_,0x30000 resource.h &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo. &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo // Resources (IDR_*) &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+makehm IDR_,HIDR_,0x20000 resource.h &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo. &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo // Dialogs (IDD_*) &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+makehm IDD_,HIDD_,0x20000 resource.h &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo. &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+echo // Frame Controls (IDW_*) &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+makehm IDW_,HIDW_,0x50000 resource.h &gt;&gt;&quot;hlp\$(TargetName).hm&quot;
+"
+						Outputs="hlp\$(TargetName).hm"/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="StdAfx.h">
+			</File>
+			<File
+				RelativePath="theWheel.h">
+			</File>
+		</Filter>
+		<Filter
+			Name="Resource Files"
+			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
+			<File
+				RelativePath="res\Space.ico">
+			</File>
+			<File
+				RelativePath="res\theWheel.ico">
+			</File>
+			<File
+				RelativePath="res\theWheel.rc2">
+			</File>
+			<File
+				RelativePath="res\theWheelDoc.ico">
+			</File>
+			<File
+				RelativePath="res\Toolbar.bmp">
+			</File>
+		</Filter>
+		<File
+			RelativePath="ReadMe.txt">
+		</File>
+		<File
+			RelativePath="theWheel.reg">
+		</File>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>
