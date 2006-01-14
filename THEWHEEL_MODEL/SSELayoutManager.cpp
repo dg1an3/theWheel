@@ -787,12 +787,14 @@ REAL CSSELayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 	// compute the weighted center of the nodes, for the center repulsion
 	REAL vCenter[2];
+	vCenter[0] = (REAL) 0.0;
+	vCenter[1] = (REAL) 0.0;
 	REAL totalAct = 0.0;
 	for (int nAt = 0; nAt < nNodeCount; nAt++)
 	{
 		REAL act = m_pSpace->GetNodeAt(nAt)->GetActivation();
-		vCenter[0] = act * m_vState[nAt * 2];
-		vCenter[1] = act * m_vState[nAt * 2 + 1];
+		vCenter[0] += act * m_vState[nAt * 2];
+		vCenter[1] += act * m_vState[nAt * 2 + 1];
 		totalAct += act;
 	}
 

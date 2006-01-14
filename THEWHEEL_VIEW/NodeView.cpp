@@ -38,9 +38,9 @@ const COLORREF DEFAULT_TITLE = RGB(149, 205, 208);
 
 const REAL MAX_SPRING_CONST = 0.99;
 const REAL MIN_POST_SUPER = 0.0014;
-const REAL VIEW_SCALE = 720.0;
+const REAL VIEW_SCALE = 290.0; // 770.0;
 
-const REAL MIN_WEIGHT_TO_DRAW_LINK = 0.1;
+const REAL MIN_WEIGHT_TO_DRAW_LINK = 0.01;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -122,7 +122,7 @@ CVectorD<3> CNodeView::GetScaledNodeCenter()
 	// compute the scale
 	CRect rectParent;
 	m_pParent->GetClientRect(&rectParent);
-	REAL scale = (REAL) sqrt(rectParent.Width() * rectParent.Height()) 
+	REAL scale = (REAL) sqrt((REAL)(rectParent.Width() * rectParent.Height())) 
 			/ VIEW_SCALE;
 
 	// compute the center
@@ -135,9 +135,12 @@ CVectorD<3> CNodeView::GetScaledNodeCenter()
 	{
 		vPos = (REAL) 0.5 * (vPos + GetNode()->GetSpace()->m_vCenter);
 	}
+	vPos -= vCenter;
+	vPos[0] /= 13.0 / 16.0;
+	vPos[1] *= 13.0 / 16.0;
 
 	// compute the scaled position
-	return scale * (vPos - vCenter) + vCenter;
+	return scale * vPos + vCenter;
 
 }	// CNodeView::GetScaledNodeCenter
 
@@ -356,7 +359,7 @@ void CNodeView::SetMaximized(BOOL bMax)
 
 	if (!m_bMaximized)
 	{
-		m_pParent->m_btnGo.MoveWindow(-30, -30, 0, 0, FALSE);
+		// m_pParent->m_btnGo.MoveWindow(-30, -30, 0, 0, FALSE);
 	}
 
 }	// CNodeView::SetMaximized
@@ -370,7 +373,7 @@ void CNodeView::SetMaximized(BOOL bMax)
 void CNodeView::Draw(CDC *pDC)
 {
 	// only draw if it has a substantial area
-	if (GetOuterRect().Height() >= 6)
+	if (GetOuterRect().Height() >= 3)
 	{
 		// get the inner rectangle for drawing 
 		CRect rectInner = GetInnerRect();
@@ -412,17 +415,20 @@ void CNodeView::Draw(CDC *pDC)
 //////////////////////////////////////////////////////////////////////
 void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 {
+	const int WIDTH_MULTIPLIER = 4;
+	// check if node is significantly far from where it should be
 	if ((GetScaledNodeCenter() - GetSpringCenter()).GetLength() > 
-		GetOuterRect().Width() * 4)
+		GetOuterRect().Width() * WIDTH_MULTIPLIER)
 	{
+		// and skip if so
 		return;
 	}
 
 	pDC->SetBkMode(TRANSPARENT);
 
 	// draw the links only if the activation is above 0.0
-	if (!GetNode()->IsSubThreshold()
-		&& GetNode()->GetActivation() > MIN_POST_SUPER)
+	if (!GetNode()->IsSubThreshold())
+		// && GetNode()->GetActivation() > MIN_POST_SUPER)
 	{
 		// for each link
 		for (int nAtLink = 0; nAtLink < GetNode()->GetLinkCount(); nAtLink++)
@@ -430,19 +436,22 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 			CNodeLink *pLink = GetNode()->GetLinkAt(nAtLink);
 			CNodeView *pLinkedView = (CNodeView *)pLink->GetTarget()->GetView();
 
+			// check to see if the node is significantly far from where it should be
 			if ((pLinkedView->GetScaledNodeCenter() - pLinkedView->GetSpringCenter()).GetLength() > 
-				pLinkedView->GetOuterRect().Width() * 2)
+				pLinkedView->GetOuterRect().Width() * WIDTH_MULTIPLIER)
 			{
+				// and skip if so
 				continue;
 			}
 
 			// only draw the link to node view's with activations greater than the current
 			if (!pLink->IsStabilizer()
-				&& pLink->GetWeight() > MIN_WEIGHT_TO_DRAW_LINK
+				// && pLink->GetWeight() > MIN_WEIGHT_TO_DRAW_LINK
 				&& pLinkedView != NULL
-				&& pLinkedView->GetSpringActivation() > GetSpringActivation()
+				// && pLinkedView->GetSpringActivation() >= GetSpringActivation()
 				&& !pLinkedView->GetNode()->IsSubThreshold()
-				&& pLinkedView->GetNode()->GetActivation() > MIN_POST_SUPER)
+				// && pLinkedView->GetNode()->GetActivation() > MIN_POST_SUPER
+				)
 			{
 				// draw the link
 				CVectorD<3> vFrom = GetSpringCenter();
@@ -453,12 +462,24 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 					gain * GetSpringActivation(), 
 					vTo,
 					gain * pLinkedView->GetSpringActivation());
+			}
 
-				PROFILE_FLAG("Display", "Gain")
+			PROFILE_FLAG("Display", "Gain")
+			{
+				if (// pLink->GetWeight() < MIN_WEIGHT_TO_DRAW_LINK
+					// 
+					GetNode()->GetActivation() > pLink->GetTarget()->GetActivation()
+					&& pLinkedView != NULL
+					&& !pLinkedView->GetNode()->IsSubThreshold())
 				{
+					// draw the link
+					CVectorD<3> vFrom = GetSpringCenter();
+					CVectorD<3> vTo = pLinkedView->GetSpringCenter();
+					REAL gain = GetNode()->GetLinkTo(pLinkedView->GetNode())->GetGain();
+
 					CVectorD<3> vMid = (REAL) 0.5 * (vFrom + vTo);
 					CString strGain;
-					strGain.Format("%0.2lf", pLink->GetGain());
+					strGain.Format("%0.2lf", (double) pLink->GetGain());
 					pDC->TextOut(vMid[0], vMid[1], strGain);
 				}
 			}
@@ -552,7 +573,7 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 {
 	pDC->SetBkMode(TRANSPARENT);
 
-	int nDesiredHeight = __min(rectInner.Height() / 4, 30);
+	int nDesiredHeight = __min(rectInner.Height() / 3, 40);
 	nDesiredHeight = __max(nDesiredHeight, 15);
 	int nDesiredWidth = rectInner.Width() / 80;
 

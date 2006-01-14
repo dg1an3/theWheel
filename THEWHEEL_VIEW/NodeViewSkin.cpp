@@ -34,6 +34,7 @@ static char THIS_FILE[]=__FILE__;
 #define new DEBUG_NEW
 #endif
 
+
 /////////////////////////////////////////////////////////////////////////////
 // Constants for the colors of the CNodeView
 //
@@ -206,16 +207,16 @@ CRect& CNodeViewSkin::CalcOuterRect(CNodeView *pNodeView)
 {
 	// compute the new width and height from the desired area and the desired
 	//		aspect ratio
-	REAL scale = (REAL) sqrt(m_nWidth * m_nHeight);
+	REAL scale = (REAL) sqrt((REAL)(m_nWidth * m_nHeight));
 
 	// get the size for the node view, given the spring activation
 	CVectorD<3> vSize = 
 		pNodeView->GetNode()->GetSize(pNodeView->GetSpringActivation());
 
 	// get the width and height for the node view
-	int nWidth = (int) (1.1 * vSize[0] * scale); // * 0.75
+	int nWidth = (int) (1.0 * vSize[0] * scale); // * 0.75
 		// + 0.25 * (REAL) rectOuterOld.Width());
-	int nHeight = (int) (1.1 * vSize[1] * scale); // * 0.75
+	int nHeight = (int) (1.0 * vSize[1] * scale); // * 0.75
 		// + 0.25 * (REAL) rectOuterOld.Height());
 
 	// set the width and height of the window, keeping the center constant
@@ -437,9 +438,16 @@ BOOL CNodeViewSkin::InitLights(LPDIRECT3DVIEWPORT2 lpViewport,
     light.dcvColor.r = (D3DVALUE) 0.8;
     light.dcvColor.g = (D3DVALUE) 0.8;
     light.dcvColor.b = (D3DVALUE) 0.8;
+
+#ifdef HEAD_ON
+    light.dvDirection.x = (D3DVALUE) 0.1;
+    light.dvDirection.y = (D3DVALUE) -0.1;
+    light.dvDirection.z = (D3DVALUE) -1.0;
+#else
     light.dvDirection.x = (D3DVALUE) 1.0;
     light.dvDirection.y = (D3DVALUE) -1.0;
     light.dvDirection.z = (D3DVALUE) -0.1;
+#endif
 	light.dvRange = D3DLIGHT_RANGE_MAX;
 	light.dwFlags = D3DLIGHT_ACTIVE;
 	CHECK_HRESULT(m_lpD3D->CreateLight(&lppLights[0], NULL));
@@ -512,6 +520,53 @@ void CNodeViewSkin::BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView)
 		return;
 	}
 
+// #define RENDER_3D
+#ifdef RENDER_3D
+
+	// Direct3D rendering -- initialize the objects first
+	LPDIRECT3DDEVICE2 lpD3DDev = NULL;
+	ASSERT_BOOL(InitD3DDevice(lpDDS, &lpD3DDev));
+
+	LPDIRECT3DVIEWPORT2	lpViewport = NULL;
+	ASSERT_BOOL(InitViewport(lpD3DDev, rectOuter, &lpViewport));
+
+	// set up the zoom transform, accounting for rectangle
+	//		inflation
+	D3DMATRIX mat;
+	ZeroMemory(&mat, sizeof(D3DMATRIX));
+	mat(0, 0) = (D3DVALUE) 1.0 / (rectOuter.Width() + 10.0);
+	mat(1, 1) = (D3DVALUE) 1.0 / (rectOuter.Width() + 10.0);
+	mat(2, 2) = (D3DVALUE) 1.0;
+	mat(3, 0) = (D3DVALUE) 1.0; // rectOuter.left / (rectOuter.Width() + 10.0);
+	mat(3, 1) = (D3DVALUE) 1.0; // rectOuter.top / (rectOuter.Width() + 10.0);
+	mat(3, 3) = (D3DVALUE) 1.0;
+	ASSERT_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_VIEW, &mat));
+
+	LPDIRECT3DLIGHT lpLights[2];
+	ASSERT_BOOL(InitLights(lpViewport, lpLights));
+
+	// create the material and attach to the device's state
+	LPDIRECT3DMATERIAL2	lpMaterial = NULL;
+	ASSERT_BOOL(InitMaterial(&lpMaterial));
+
+	D3DTEXTUREHANDLE hMat;
+	ASSERT_HRESULT(lpMaterial->GetHandle(lpD3DDev, &hMat));
+	ASSERT_HRESULT(lpD3DDev->SetLightState(D3DLIGHTSTATE_MATERIAL, hMat));
+
+	// render the skin
+	ASSERT_HRESULT(lpD3DDev->BeginScene());
+	DrawSkinD3D(lpD3DDev, pNodeView);
+	ASSERT_HRESULT(lpD3DDev->EndScene());
+
+	// release the interface
+	ASSERT_HRESULT(lpMaterial->Release());
+	ASSERT_HRESULT(lpLights[0]->Release());
+	ASSERT_HRESULT(lpLights[1]->Release());
+	ASSERT_HRESULT(lpViewport->Release());
+	ASSERT_HRESULT(lpD3DDev->Release());
+
+#else
+
 	// gets the skin, plus the actual rectangle for the skin
 	CRect rectDest;
 	LPDIRECTDRAWSURFACE lpSkinDDS = GetSkinDDS(pNodeView, rectDest);
@@ -538,6 +593,7 @@ void CNodeViewSkin::BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView)
 		ASSERT_HRESULT(lpDDS->Blt(rectDestIntersect, lpSkinDDS,
 			rectDestIntersect - rectDest.TopLeft(), DDBLT_KEYSRC, NULL));
 	}
+#endif
 
 }	// CNodeViewSkin::BltSkin
 
@@ -778,7 +834,7 @@ void CNodeViewSkin::DrawSkinD3D(IDirect3DDevice2 *lpD3DDev,
 	const CRect& rectOuter = pNodeView->GetOuterRect();
 
 	// compute the angle dividing the sections of the elliptangle
-	double sectionAngle = atan2(rectOuter.Height(), rectOuter.Width());
+	double sectionAngle = atan2((double) rectOuter.Height(), (double) rectOuter.Width());
 
 	// compute the parameters for the vertical sides
 	CRect rectLR = CalcLeftRightEllipseRect(pNodeView);
@@ -819,6 +875,9 @@ void CNodeViewSkin::DrawSkinD3D(IDirect3DDevice2 *lpD3DDev,
 void CNodeViewSkin::DrawLink(CDC *pDC, CVectorD<3>& vFrom, REAL actFrom,
 			  CVectorD<3>& vTo, REAL actTo)
 {
+	actFrom *= 3.0;
+	actTo *= 3.0;
+
 	// brushes for drawing links
 	CBrush brushDark(RGB(0.85 * GetRValue(m_colorBk),
 		0.85 * GetGValue(m_colorBk),

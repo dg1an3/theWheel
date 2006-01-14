@@ -13,12 +13,14 @@
 // defines the gaussian function
 #include <MathUtil.h>
 
+#ifdef INTEL_MATH
 // intel float math
 #include <mathf.h>
+#endif
 
 // for least-squares
 #include <MatrixNxM.h>
-#include <MatrixBase.inl>
+// #include <MatrixBase.inl>
 
 // optimizer for the layout
 #include <PowellOptimizer.h>
@@ -36,7 +38,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 // constant for the tolerance of the optimization
-const REAL TOLERANCE = (REAL) 0.01;
+const REAL TOLERANCE = (REAL) 1e+3;
 
 // scale for the sizes of the nodes
 const REAL CSpaceLayoutManager::SIZE_SCALE = 100.0;
@@ -60,9 +62,9 @@ const REAL K_POS = 600.0;
 const REAL K_REP = 3200.0;
 
 // constants for center repulsion
-const REAL CSpaceLayoutManager::CENTER_REP_MAX_ACT = 0.15;
+const REAL CSpaceLayoutManager::CENTER_REP_MAX_ACT = 0.01;
 const REAL CSpaceLayoutManager::CENTER_REP_SCALE = SIZE_SCALE / 8.0;
-const REAL CSpaceLayoutManager::CENTER_REP_WEIGHT = 9.0;
+const REAL CSpaceLayoutManager::CENTER_REP_WEIGHT = 4.0;
 
 //////////////////////////////////////////////////////////////////////
 // CSpaceLayoutManager::CSpaceLayoutManager
@@ -118,10 +120,10 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 //////////////////////////////////////////////////////////////////////
 CSpaceLayoutManager::~CSpaceLayoutManager()
 {
-	delete m_mSSX;
-	delete m_mSSY;
-	delete m_mAvgAct;
-	delete m_mLinks;
+	delete [] m_mSSX;
+	delete [] m_mSSY;
+	delete [] m_mAvgAct;
+	delete [] m_mLinks;
 
 	// delete the optimizers
 	delete m_pPowellOptimizer;
@@ -291,13 +293,14 @@ void CSpaceLayoutManager::LoadSizesLinks(int nConstNodes, int nNodeCount)
 		
 			const REAL ssx = (arrSize[nAtNode][0] 
 					+ arrSize[nAtLinkedNode][0]) / (REAL) 2.0;
-			m_mSSX[nAtNode][nAtLinkedNode] = 
-				m_mSSX[nAtLinkedNode][nAtNode] = (ssx * ssx); 
-
 			const REAL ssy = (arrSize[nAtNode][1] 
 					+ arrSize[nAtLinkedNode][1]) / (REAL) 2.0;
+			const REAL ss = (ssx + ssy) / 2.0;
+			m_mSSX[nAtNode][nAtLinkedNode] = 
+				m_mSSX[nAtLinkedNode][nAtNode] = ss * ss; // (ssx * ssx); 
+
 			m_mSSY[nAtNode][nAtLinkedNode] = 
-				m_mSSY[nAtLinkedNode][nAtNode] = (ssy * ssy); 
+				m_mSSY[nAtLinkedNode][nAtNode] = ss * ss; // (ssy * ssy); 
 
 			// retrieve the link weight for layout
 			REAL weight = (REAL) 0.5 *
@@ -355,7 +358,7 @@ void CSpaceLayoutManager::LoadSizesLinks(int nConstNodes, int nNodeCount)
 // evaluates the energy function at the given point
 //////////////////////////////////////////////////////////////////////
 REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
-									 CVectorN<> *pGrad)
+									 CVectorN<> *pGrad) const
 {
 	// reset the energy
 	m_energy = m_energyConst;
@@ -377,18 +380,28 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 	// compute the weighted center of the nodes, for the center repulsion
 	REAL vCenter[2];
+	vCenter[0] = 0.0;
+	vCenter[1] = 0.0;
 	REAL totalAct = 0.0;
 	for (int nAt = 0; nAt < nNodeCount; nAt++)
 	{
 		REAL act = m_pSpace->GetNodeAt(nAt)->GetActivation();
-		vCenter[0] = act * m_vState[nAt * 2];
-		vCenter[1] = act * m_vState[nAt * 2 + 1];
+		vCenter[0] += act * m_vState[nAt * 2];
+		vCenter[1] += act * m_vState[nAt * 2 + 1];
 		totalAct += act;
 	}
 
-	// scale weighted center by total weight
-	vCenter[0] /= totalAct;
-	vCenter[1] /= totalAct;
+	if (totalAct > 1e-6)
+	{
+		// scale weighted center by total weight
+		vCenter[0] /= totalAct;
+		vCenter[1] /= totalAct;
+	}
+	else
+	{
+		vCenter[0] = m_vState[0];
+		vCenter[1] = m_vState[1];
+	}
 
 	// iterate over all current visualized node views
 	int nAtNode;
@@ -498,7 +511,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 				// compute the x- and y-scales for the fields -- average of
 				//		two rectangles
-				const REAL aspect_sq = (13.0 / 16.0) * (13.0 / 16.0);
+				const REAL aspect_sq = 1.0; // (13.0 / 16.0) * (13.0 / 16.0);
 				const REAL ssx_sq =
 					(CENTER_REP_SCALE * CENTER_REP_SCALE / aspect_sq );
 				const REAL ssy_sq = 
@@ -604,14 +617,21 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 		return;
 	}
 
-	REAL tol = 1e-12  * (m_pOptimizer->GetFinalValue() + 1.0);
-	m_pOptimizer->SetTolerance(tol);
+	REAL tol = // for double = 0.001; 
+		0.001; // 1e-12  * (m_pOptimizer->GetFinalValue() + 1.0);
+	m_pOptimizer->SetTolerance(// 10.0); // 
+		tol);
 
 	// set up the interaction matrices
 	LoadSizesLinks(nConstNodes, GetStateDim() / 2);
 
 	// form the state vector
 	pSSV->GetPositionsVector(m_vState, TRUE);
+
+	if (!::_finite(m_vState.GetLength()))
+	{
+		::AfxMessageBox("Invalid Initial State23", MB_OK, 0);
+	}
 
 	// reset evaluation count
 	m_nEvaluations = 0;
@@ -620,17 +640,31 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 	CVectorN<> vPartState;
 	vPartState.SetElements(GetStateDim() - m_nConstNodes * 2,
 		&m_vState[m_nConstNodes * 2], FALSE);
+	if (!::_finite(vPartState.GetLength()))
+	{
+		::AfxMessageBox("Invalid Initial State17", MB_OK, 0);
+	}
 
 	// perform the optimization
 	vPartState = m_pOptimizer->Optimize(vPartState);
 
-	if (m_nConstNodes == 0)
+	if (!::_finite(vPartState.GetLength()))
+	{
+		::AfxMessageBox("Invalid Initial State19", MB_OK, 0);
+	}
+
+	if (	// FALSE) // 
+		m_nConstNodes == 0)
 	{
 		// set the resulting positions, rotate-translating in the process
 		pSSV->RotateTranslateTo(m_vState);
 
 		// retrieve the final state
 		pSSV->GetPositionsVector(m_vState);
+		if (!::_finite(m_vState.GetLength()))
+		{
+			::AfxMessageBox("Invalid Initial State25", MB_OK, 0);
+		}
 	}
 	else
 	{

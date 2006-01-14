@@ -17,7 +17,7 @@
 
 // matrix stuff
 #include <MatrixD.h>
-#include <MatrixBase.inl>
+// #include <MatrixNxM.inl>
 
 
 //////////////////////////////////////////////////////////////////////
@@ -57,8 +57,20 @@ CMolding::CMolding(double theta, CVectorD<3, double> vOffset, double radius)
 	: m_borderRadius(radius)
 {
 	// create the rotation matrix for this molding fragment
-	CMatrixD<4, double> mRotate = 
-		CMatrixD<4, double>(CreateRotate<double>(theta, CVectorD<3, double>(0.0, 0.0, 1.0)));
+	// CMatrixD<4, double> mRotate = 
+	//	CMatrixD<4, double>(CreateRotate<double>(theta, CVectorD<3, double>(0.0, 0.0, 1.0)));
+	CMatrixD<3, double> mRotate_sub = CreateRotate<double>(theta, CVectorD<3, double>(0.0, 0.0, 1.0));
+	CMatrixD<4, double> mRotate;
+	mRotate[0][0] = mRotate_sub[0][0];
+	mRotate[0][1] = mRotate_sub[0][1];
+	mRotate[0][2] = mRotate_sub[0][2];
+	mRotate[1][0] = mRotate_sub[1][0];
+	mRotate[1][1] = mRotate_sub[1][1];
+	mRotate[1][2] = mRotate_sub[1][2];
+	mRotate[2][0] = mRotate_sub[2][0];
+	mRotate[2][1] = mRotate_sub[2][1];
+	mRotate[2][2] = mRotate_sub[2][2];
+
 
 	// steps through the border
 	const double step = (PI / 2) / (NUM_STEPS - 1);

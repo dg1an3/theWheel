@@ -61,7 +61,7 @@ public:
 
 	// evaluates the energy function
 	virtual REAL operator()(const CVectorN<>& vInput, 
-		CVectorN<> *pGrad = NULL);
+		CVectorN<> *pGrad = NULL) const;
 
 	// returns the distance error between two nodes
 	REAL GetDistError(CNode *pFrom, CNode *pTo);
@@ -106,17 +106,17 @@ protected:
 	REAL m_tolerance;
 
 	// caches energy value for the previous input vector
-	REAL m_energy;
-	REAL m_energyConst;
+	mutable REAL m_energy;
+	mutable REAL m_energyConst;
 
 	// flag to indicate that the center repulsion should be calculated
 	BOOL m_bCalcCenterRep;
 
 	// holds the current state
-	CVectorN<> m_vState;
+	mutable CVectorN<> m_vState;
 
 	// caches the gradient for the previous input vector
-	CVectorN<> m_vGrad;
+	mutable CVectorN<> m_vGrad;
 
 	// stores the view sizes for quick access
 	REAL (*m_mSSX)[MAX_STATE_DIM];
@@ -127,7 +127,7 @@ protected:
 	REAL (*m_mAvgAct)[MAX_STATE_DIM];
 
 	// holds the number of evaluations that have been done
-	int m_nEvaluations;
+	mutable int m_nEvaluations;
 
 };	// class CSpaceLayoutManager
 

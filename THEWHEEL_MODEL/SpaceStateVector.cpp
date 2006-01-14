@@ -10,7 +10,9 @@
 #include "stdafx.h"
 
 // included for completness
-#include <MatrixBase.inl>
+#include <CastVectorD.h>
+#include <MatrixNxM_pinv.h>
+// #include <MatrixBase.inl>
 
 // class definition
 #include "SpaceStateVector.h"
@@ -118,21 +120,42 @@ void CSpaceStateVector::GetPositionsVector(CVectorN<>& vPositions, BOOL bPerturb
 			// yes, so get the size of the node
 			REAL size = pNode->GetSize(pNode->GetActivation()).GetLength();
 
+			if (!::_finite(pNode->GetRMSE()))
+			{
+				::AfxMessageBox("Invalid Initial State37", MB_OK, 0);
+			}
+
 			// compute theoretical perturbation amount
 			REAL perturb = 0.75 * size
 				* pNode->GetRMSE() / (size + pNode->GetRMSE());
+			if (!::_finite(perturb))
+			{
+				::AfxMessageBox("Invalid Initial State31", MB_OK, 0);
+			}
 
 			// compute half-height of scaling sigma
 			REAL half = m_pSpace->GetNodeAt(0)->GetActivation() / 10.0;
 
 			// compute scale (proportional to activation
 			REAL scale = half / (pNode->GetActivation() + half); 
+			if (!::_finite(scale))
+			{
+				::AfxMessageBox("Invalid Initial State29", MB_OK, 0);
+			}
 
 			// perturb
 			vPositions[nAt*2 + 0] += perturb * half
 				* (0.5 - (REAL) rand() / (REAL) (RAND_MAX-1));
 			vPositions[nAt*2 + 1] += perturb * half
 				* (0.5 - (REAL) rand() / (REAL) (RAND_MAX-1)); 
+			if (!::_finite(vPositions[nAt*2 + 0]))
+			{
+				::AfxMessageBox("Invalid Initial State27", MB_OK, 0);
+			}
+			if (!::_finite(vPositions[nAt*2 + 0]))
+			{
+				::AfxMessageBox("Invalid Initial State27", MB_OK, 0);
+			}
 
 #ifdef _PERTURB_FIXED
 			Perturb(&vPositions[nAt*2 + 0], perturb);
@@ -162,10 +185,16 @@ void CSpaceStateVector::SetPositionsVector(const CVectorN<>& vPositions)
 		static CVectorD<3> vPosition;
 		vPosition[0] = vPositions[nAt*2 + 0];
 		vPosition[1] = vPositions[nAt*2 + 1];
+		vPosition[2] = 0.0;
+		if (!::_finite(vPosition.GetLength()))
+		{
+			::AfxMessageBox("Invalid Position in Positions Vector", MB_OK, 0);
+		}
 
 		// load positions from nodes
 		m_pSpace->GetNodeAt(nAt)->SetPosition(vPosition);
 	}
+
 }	// CSpaceStateVector::SetPositionsVector
 
 
@@ -216,6 +245,7 @@ void CSpaceStateVector::Serialize(CArchive &ar)
 }	// CSpaceStateVector::Serialize
 
 
+
 //////////////////////////////////////////////////////////////////////
 // CSpaceStateVector::RotateTranslateStateVector
 // 
@@ -224,7 +254,7 @@ void CSpaceStateVector::Serialize(CArchive &ar)
 //////////////////////////////////////////////////////////////////////
 void CSpaceStateVector::RotateTranslateTo(const CVectorN<>& vPositions)
 {
-	if (m_pSpace->GetSuperNodeCount() <= 3)
+	if (TRUE) // m_pSpace->GetSuperNodeCount() <= 3)
 	{
 		SetPositionsVector(vPositions);
 		return;
@@ -249,7 +279,7 @@ void CSpaceStateVector::RotateTranslateTo(const CVectorN<>& vPositions)
 
 	for (int nAt = 0; nAt < mOld.GetCols(); nAt++)
 	{
-		REAL act = vActivations[nAt];
+		REAL act = 1.0 * vActivations[nAt];
 
 		mOld[nAt][0] = act * vOldPositions[nAt * 2 + 0];
 		mOld[nAt][1] = act * vOldPositions[nAt * 2 + 1];
@@ -267,12 +297,13 @@ void CSpaceStateVector::RotateTranslateTo(const CVectorN<>& vPositions)
 	// form the pseudo-inverse of the a coordinates
 	static CMatrixNxM<> mNew_ps;
 	mNew_ps.Reshape(mNew.GetCols(), mNew.GetRows());
+	// mNew_ps = mNew;
 	mNew_ps = mNew;
-	if (mNew_ps.Pseudoinvert())
+	if (FALSE) // Pseudoinvert(mNew, mNew_ps))	// Pseudoinvert(mNew, mNew_ps))
 	{
 		// form the transform matrix
 		static CMatrixNxM<> mTransform;
-		mTransform.Reshape(mOld.GetCols(), mOld.GetRows());
+		mTransform.Reshape(mOld.GetCols(), mNew_ps.GetRows());
 		mTransform = mNew_ps * mOld;
 
 		// un-transpose the matrices
@@ -281,7 +312,8 @@ void CSpaceStateVector::RotateTranslateTo(const CVectorN<>& vPositions)
 		mTransform.Transpose();
 
 		// store the offset part
-		CVectorD<3> offset = (CVectorD<3>) mTransform[2];
+		CVectorD<3> offset = // CCastVectorD<3>(
+			CCastVectorD<3>(mTransform[2]);
 
 		// reshape to isolate upper 2x2
 		mTransform.Reshape(2, 2);
@@ -295,7 +327,7 @@ void CSpaceStateVector::RotateTranslateTo(const CVectorN<>& vPositions)
 		v.SetIdentity();
 
 		// SVD to factor the matrix
-		if (mTransform.SVD(w, v))
+		if (SVD(mTransform, w, v)) // SVD(mTransform, w, v))
 		{
 			// form the orthogonal matrix
 			v.Transpose();

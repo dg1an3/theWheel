@@ -15,8 +15,10 @@
 // include the document class
 #include "Space.h"
 
+#ifdef INTEL_MATH
 // intel math lib
 #include <mathf.h>
+#endif
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -72,7 +74,7 @@ CNode::CNode(CSpace *pSpace,
 		m_pDib(NULL),
 		m_hIcon(NULL), 
 		m_pSoundBuffer(NULL),
-		m_vPosition(CVectorD<3>(0.0, 0.0, 0.0)),
+		// m_vPosition(), // CVectorD<3>(0.0, 0.0, 0.0)),
 
 		m_primaryActivation((REAL) 0.005),		// initialize with a very 
 		m_secondaryActivation((REAL) 0.005),	// small activation
@@ -87,6 +89,20 @@ CNode::CNode(CSpace *pSpace,
 
 		m_pView(NULL)
 {
+	// m_vPosition.SetZero(); // (CVectorD<3>(0.0, 0.0, 0.0)),
+	m_vPosition[0] = 0.0;
+	m_vPosition[1] = 0.0;
+	m_vPosition[2] = 0.0;
+	if (!::_finite(m_vPosition[0]) || !::_finite(m_vPosition[1]))
+	{
+		::AfxMessageBox("Bad init length!!!", MB_OK, 0);
+	}
+
+	if (!::_finite(m_vPosition.GetLength()))
+	{
+		::AfxMessageBox("Bad position init!!!", MB_OK, 0);
+	}
+
 }	// CNode::CNode
 
 
@@ -226,6 +242,11 @@ void CNode::SetParent(CNode *pParent)
 
 			// set the parent as the initial max activator
 			m_pMaxActivator = m_pParent;
+
+			if (!::_finite(m_pParent->GetPosition().GetLength()))
+			{
+				::AfxMessageBox("Invalid parent position", MB_OK, 0);
+			}
 
 			// set the position to the parent's
 			SetPosition(m_pParent->GetPosition());
@@ -578,6 +599,11 @@ void CNode::SetUrl(const CString& strUrl)
 //////////////////////////////////////////////////////////////////////
 const CVectorD<3>& CNode::GetPosition() const
 {
+	if (!::_finite(m_vPosition.GetLength()))
+	{
+		::AfxMessageBox("Bad position read in!!!", MB_OK, 0);
+	}
+
 	return m_vPosition;
 
 }	// CNode::GetPosition
@@ -590,9 +616,18 @@ const CVectorD<3>& CNode::GetPosition() const
 //////////////////////////////////////////////////////////////////////
 void CNode::SetPosition(const CVectorD<3>& vPos, BOOL bFireChange)
 {
+	if (!::_finite(vPos.GetLength()))
+	{
+		::AfxMessageBox("Invalid Initial State47", MB_OK, 0);
+	}
+
 	// update RMSE
 	m_rmse = (REAL) 0.01 * m_rmse
 		+ (REAL) 0.99 * (m_vPosition - vPos).GetLength();
+	if (!::_finite(GetRMSE()))
+	{
+		::AfxMessageBox("Invalid Initial State43", MB_OK, 0);
+	}
 
 	m_vPosition = vPos;
 
@@ -1095,6 +1130,10 @@ void CNode::Serialize(CArchive &ar)
 			m_vPosition[0] = vPosition[0];
 			m_vPosition[1] = vPosition[1];
 			m_vPosition[2] = vPosition[2];
+			if (!::_finite(m_vPosition.GetLength()))
+			{
+				::AfxMessageBox("Bad position read in!!!", MB_OK, 0);
+			}
 
 			ar >> m_pMaxActivator;
 			double maxDeltaActivation;
@@ -1156,6 +1195,17 @@ void CNode::Serialize(CArchive &ar)
 		for (int nAt = 0; nAt < GetChildCount(); nAt++)
 		{
 			GetChildAt(nAt)->m_pParent = this;
+		}
+
+		// remove zero links
+		for (nAt = GetLinkCount()-1; nAt >= 0; nAt--)
+		{
+			CNodeLink *pLink = GetLinkAt(nAt);
+			if (pLink->GetWeight() < 1e-6)
+			{
+				m_arrLinks.RemoveAt(nAt);
+				delete pLink;
+			}
 		}
 
 		// sort the links

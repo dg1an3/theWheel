@@ -15,7 +15,7 @@
 // the class definition
 #include "Space.h"
 
-#include "SSELayoutManager.h"
+// #include "SSELayoutManager.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -78,26 +78,26 @@ REAL GenerateRandom(REAL min, REAL max)
 
 }	// GenerateRandom
 
-
-__declspec(cpu_specific(pentium))
+// __declspec(cpu_specific(pentium))
 BOOL HasMMX()
 {
 	return FALSE;
 }
 
-
-__declspec(cpu_specific(pentium_MMX)) 
+/*
+// __declspec(cpu_specific(pentium_MMX)) 
 BOOL HasMMX()
 {
 	return TRUE;
 }
 
-__declspec(cpu_dispatch(pentium, pentium_MMX))
+// __declspec(cpu_dispatch(pentium, pentium_MMX))
 BOOL HasMMX()
 {
    /* Empty function body informs the compiler to generate the
-   CPU-dispatch function listed in the cpu_dispatch clause. */
+   CPU-dispatch function listed in the cpu_dispatch clause. * /
 }  
+*/
 
 //////////////////////////////////////////////////////////////////////
 // Event Firing
@@ -129,13 +129,13 @@ CSpace::CSpace()
 {
 	m_pStateVector = new CSpaceStateVector(this);
 
-	if (::AfxGetApp()->GetProfileInt("LAYOUT", "RUN_FAST", 0) == 1
-		&& HasMMX())
+	// if (::AfxGetApp()->GetProfileInt("LAYOUT", "RUN_FAST", 0) == 1
+	//	&& HasMMX())
 	{
 		// create the layout manager
-		m_pLayoutManager = new CSSELayoutManager(this);
+	//	m_pLayoutManager = new CSSELayoutManager(this);
 	}
-	else
+	// else
 	{
 		m_pLayoutManager = new CSpaceLayoutManager(this);
 	}
@@ -430,19 +430,28 @@ void CSpace::Relax()
 				const REAL distErrScaled = distErr / pNode->GetActivation();
 
 				// compute the exponential of the distance
-				const REAL exp_dist = 3.0 * exp(0.004 * distErrScaled); //  + 2.0);
+				REAL exp_dist = 3.0 * exp( 0.1 // 0.004 
+					* distErrScaled); //  + 2.0);
+
+				if (pLink->IsStabilizer())
+				{
+					exp_dist = 0.1 * exp(0.1 * distErrScaled);
+				}
 
 				// check that the exponential is finite
 				if (_finite(exp_dist))
 				{
 					// compute the gain and set it
-					REAL new_gain = 1.0 - exp_dist / (exp_dist + 24.0); // 80.0);
+					REAL new_gain = 1.0 - exp_dist / (exp_dist + 
+						// 1.0);  
+						12.0); 
+						// 80.0);
 					pLink->SetGain(new_gain);
 				}
 				else
 				{
 					// getting too far away, need more power
-					pLink->SetGain(1.0);
+					pLink->SetGain(0.01);
 				}
 			}
 		}
@@ -677,6 +686,14 @@ void CSpace::PositionNewSuperNodes()
 			{
 				// the new position -- initially at the max act position
 				CVectorD<3> vNewPosition = pMaxAct->GetPosition();
+				if (!::_finite(vNewPosition[0]))
+				{
+					::AfxMessageBox("Invalid Initial State5", MB_OK, 0);
+				}
+				if (!::_finite(vNewPosition[1]))
+				{
+					::AfxMessageBox("Invalid Initial State5", MB_OK, 0);
+				}
 
 				// find direction by default from center
 				CVectorD<3> vCenter = m_vCenter;
@@ -690,6 +707,11 @@ void CSpace::PositionNewSuperNodes()
 
 				// form the direction
 				CVectorD<3> vDirection = vNewPosition - vCenter;
+				if (vDirection.GetLength() < 1e-6)
+				{
+					// add some random length
+					::RandomVector<REAL>(1.0, &vDirection[0], 3);
+				}
 				vDirection.Normalize();
 
 				// get the size of the max activator
@@ -703,13 +725,20 @@ void CSpace::PositionNewSuperNodes()
 				vNewPosition += vDirection;
 
 				// set the new position
+				if (!::_finite(vNewPosition.GetLength()))
+				{
+					::AfxMessageBox("Invalid New Position", MB_OK, 0);
+				}
 				pNode->SetPosition(vNewPosition);
 			}
 		}
 	}
 
 	// now layout the new supernodes
+	REAL oldTolerance = m_pLayoutManager->GetTolerance();
+	m_pLayoutManager->SetTolerance(oldTolerance / (REAL) 100.0);
 	m_pLayoutManager->LayoutNodes(m_pStateVector, nHighestNewSuper);
+	m_pLayoutManager->SetTolerance(oldTolerance);
 
 	// finish processing by moving the new super-nodes to
 	//		their updated position
@@ -758,6 +787,11 @@ void CSpace::AdjustRunawayNodes()
 		}
 
 		// set newly calculated position
+		CVectorD<3> vNewPosition = m_vCenter + vOffset;
+		if (!::_finite(vNewPosition.GetLength()))
+		{
+			::AfxMessageBox("Invalid Runaway Adjustment", MB_OK, 0);
+		}
 		pNode->SetPosition(m_vCenter + vOffset);
 
 		// ensure we are not subthreshold, for good measure
@@ -800,10 +834,22 @@ void CSpace::PositionSubNodes()
 		// compute the new position
 		CVectorD<3> vNewPosition = 
 			pNode->GetMaxActivator()->GetPosition() - m_vCenter;
+		if (!::_finite(m_vCenter[0]))
+		{
+			::AfxMessageBox("Invalid Initial State13", MB_OK, 0);
+		}
+		if (!::_finite(m_vCenter[1]))
+		{
+			::AfxMessageBox("Invalid Initial State13", MB_OK, 0);
+		}
 
 		// decay towards center
 		vNewPosition *= SUBNODE_DECAY_RATE;
 		vNewPosition += m_vCenter;
+		if (!::_finite(vNewPosition.GetLength()))
+		{
+			::AfxMessageBox("Invalid Subnode Position", MB_OK, 0);
+		}
 
 		// and set the new position
 		pNode->SetPosition(vNewPosition); 
