@@ -4,6 +4,8 @@
 #include "stdafx.h"
 #include "theWheel.h"
 
+#include <ipp.h>
+
 #include <SpaceView.h>
 
 #include "MainFrm.h"
@@ -74,8 +76,16 @@ BOOL theWheelApp::InitInstance()
 		return FALSE;
 	}
 
+	// call static init of IPP library
+	IppStatus ippInitStat = ippStaticInit();
+	if (ippStsNoErr != ippInitStat
+		&& ippStsDllNotFoundBestUsed != ippInitStat)
+	{
+		::AfxMessageBox("Problem initializing IPP");
+	}
+
 	// Change the registry key under which our settings are stored.
-	SetRegistryKey(_T("Quicksilver Methods"));
+	SetRegistryKey(_T("2nd Messenger Systems"));
 
 	LoadStdProfileSettings();  // Load standard INI file options (including MRU)
 
