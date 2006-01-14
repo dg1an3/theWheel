@@ -25,7 +25,7 @@ CFG=theWheel - Win32 Debug
 # PROP AllowPerConfigDependencies 0
 # PROP Scc_ProjName ""
 # PROP Scc_LocalPath ""
-CPP=xicl6.exe
+CPP=cl.exe
 MTL=midl.exe
 RSC=rc.exe
 
@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /c
-# ADD CPP /nologo /G6 /MD /W3 /GX /I "..\THEWHEEL_TREEVIEW\include" /I "..\THEWHEEL_VIEW\include" /I "..\THEWHEEL_MODEL\include" /I "..\OptimizeN\include" /I "..\MTL" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /Yu"stdafx.h" /FD /O3 /QaxK /Qipo /c
+# ADD CPP /nologo /G6 /MD /W3 /GX /I "..\THEWHEEL_TREEVIEW\include" /I "..\THEWHEEL_VIEW\include" /I "..\THEWHEEL_MODEL\include" /I "..\OptimizeN\include" /I "..\MTL" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /D "USE_IPP" /Yu"stdafx.h" /FD /O3 /QaxK /Qipo /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG" /d "_AFXDLL"
@@ -51,9 +51,9 @@ RSC=rc.exe
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
-LINK32=xilink6.exe
+LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /machine:I386
-# ADD LINK32 optimizer_base.lib thewheel_model.lib opengl32.lib glu32.lib ddraw.lib dsound.lib dxguid.lib winmm.lib wininet.lib urlmon.lib /nologo /subsystem:windows /machine:I386 /libpath:"..\OptimizeN\Release" /libpath:"..\THEWHEEL_MODEL\Release" /Qipo
+# ADD LINK32 ipps20.lib ippm20.lib ippi20.lib optimizer_base.lib thewheel_model.lib opengl32.lib glu32.lib ddraw.lib dsound.lib dxguid.lib winmm.lib wininet.lib urlmon.lib /nologo /subsystem:windows /machine:I386 /libpath:"..\OptimizeN\Release" /libpath:"..\THEWHEEL_MODEL\Release" /Qipo
 # SUBTRACT LINK32 /pdb:none
 
 !ELSEIF  "$(CFG)" == "theWheel - Win32 Debug"
@@ -78,7 +78,7 @@ LINK32=xilink6.exe
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
-LINK32=xilink6.exe
+LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
 # ADD LINK32 optimizer_base.lib thewheel_model.lib opengl32.lib glu32.lib ddraw.lib dsound.lib dxguid.lib winmm.lib wininet.lib urlmon.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept /libpath:"..\OptimizeN\Debug" /libpath:"..\THEWHEEL_MODEL\Debug"
 
