@@ -38,6 +38,8 @@
 #include <comdef.h>
 
 // multimedia and sound includes
+#include <ddraw.h>
+#include <d3d.h>
 #include <mmsystem.h>
 #include <mmreg.h>
 #include <msacm.h>

@@ -546,6 +546,10 @@ void CSpaceView::CenterNodeViews()
 	GetClientRect(&rectWnd);
 	CVectorD<3> vOffset = vMeanCenter 
 		- CVectorD<3>(rectWnd.CenterPoint());
+	if (!::_finite(vOffset.GetLength()))
+	{
+		::AfxMessageBox("Invalid Position in Positions Vector", MB_OK, 0);
+	}
 
 	GetDocument()->SetCenter(rectWnd.CenterPoint().x, rectWnd.CenterPoint().y);
 
@@ -554,6 +558,11 @@ void CSpaceView::CenterNodeViews()
 	for (nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
 	{
 		CNodeView *pView = GetNodeView(nAt);
+		if (!::_finite(pView->GetNode()->GetPosition().GetLength()))
+		{
+			::AfxMessageBox("Invalid Position in Positions Vector", MB_OK, 0);
+		}
+
 		pView->GetNode()->SetPosition(pView->GetNode()->GetPosition() - vOffset);
 	}
 
@@ -946,7 +955,8 @@ void CSpaceView::OnSize(UINT nType, int cx, int cy)
     ZeroMemory(&ddsd, sizeof(ddsd));
     ddsd.dwSize = sizeof(ddsd);
     ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT |DDSD_WIDTH;
-    ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;
+    ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN 
+		| /* DGL: adding for direct 3d rendering */ DDSCAPS_3DDEVICE;
     ddsd.dwWidth = cx;
     ddsd.dwHeight = cy;
     ASSERT_HRESULT(m_lpDD->CreateSurface(&ddsd, &m_lpDDSOne, NULL));
