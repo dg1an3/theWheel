@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // NodeView.cpp: implementation of the CNodeView class.
 //
-// Copyright (C) 1996-2003 Derek G Lane
+// Copyright (C) 1996-2006 Derek G Lane
 // $Id$
 // U.S. Patent Pending
 //////////////////////////////////////////////////////////////////////
@@ -12,15 +12,13 @@
 #include <float.h>
 
 // the class definition
-#include "NodeView.h"
+#include <NodeView.h>
 
 // parent class
-#include "SpaceView.h"
+#include <SpaceView.h>
 
 // the displayed model object
 #include <Node.h>
-
-#include <Eevorg.h>
 
 
 #ifdef _DEBUG
@@ -36,11 +34,21 @@ static char THIS_FILE[] = __FILE__;
 
 const COLORREF DEFAULT_TITLE = RGB(149, 205, 208);
 
-const REAL MAX_SPRING_CONST = 0.99;
+const REAL MAX_SPRING_CONST = 4.0; // 0.99;
 const REAL MIN_POST_SUPER = 0.0014;
 const REAL VIEW_SCALE = 290.0; // 770.0;
 
 const REAL MIN_WEIGHT_TO_DRAW_LINK = 0.01;
+
+const int TEXT_WIDTH = 400;
+
+const COLORREF BACK_COLOR = RGB(228, 228, 228);
+
+// statics for storing the font for smooth text
+
+bool CNodeView::m_bStaticInit = false;
+CFont CNodeView::m_font;
+int CNodeView::m_nSrcLineHeight;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -63,8 +71,8 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 	m_bMaximized(FALSE)
 {
 
-	ZeroMemory(m_rectOuter, sizeof(CRect));
-	ZeroMemory(m_rectInner, sizeof(CRect));
+	// ZeroMemory(m_rectOuter, sizeof(CRect));
+	// ZeroMemory(m_rectInner, sizeof(CRect));
 
 	// set the view pointer for the node
 	GetNode()->SetView(this);
@@ -73,6 +81,33 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 	pParent->GetClientRect(&rectParent);
 
 	m_vSpringCenter = GetNode()->GetPosition();
+
+	m_posSpring.m_b = 8.0;
+	m_actSpring.m_b = 6.0;
+
+	if (!m_bStaticInit)
+	{
+		// initialization of font
+		m_nSrcLineHeight = 32;
+		m_font.CreateFont(
+			m_nSrcLineHeight, 
+			0,					// nWidth
+			0,					// nEscapement
+			0,					// nOrientation
+			FW_REGULAR,			// nWeight 
+			0,					// bItalic
+			0,					// bUnderline
+			0,					// bStrikeout
+			DEFAULT_CHARSET,	// nCharSet 
+			OUT_TT_PRECIS,		// nOutPrecision
+			CLIP_DEFAULT_PRECIS,// nClipPrecision
+			PROOF_QUALITY,		// nQuality
+			FF_DONTCARE,		// nPitchAndFamily
+			"Trebeuchet MS"		// lpszFacename
+			);
+
+		m_bStaticInit = true;
+	}
 
 }	// CNodeView::CNodeView
 
@@ -191,10 +226,16 @@ REAL CNodeView::GetThresholdedActivation()
 //////////////////////////////////////////////////////////////////////
 REAL CNodeView::GetSpringActivation() 
 {
-
-	return m_springActivation; 
+	return m_springActivation;
 
 }	// CNodeView::GetSpringActivation
+
+
+void CNodeView::SetActualSizes(const CVectorD<3>& vInner, const CVectorD<3>& vOuter)
+{
+	m_vInnerSize = vInner;
+	m_vOuterSize = vOuter;
+}
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -244,16 +285,20 @@ void CNodeView::UpdateSpringPosition(REAL springConst)
 	// compute the scaled position
 	CVectorD<3> vScaledPos = GetScaledNodeCenter();
 
-	if ((vScaledPos - m_vSpringCenter).GetLength() < 10.0)
-		springConst = 0.999; 
-	else if ((vScaledPos - m_vSpringCenter).GetLength() < 20.0)
-		springConst = 0.99;
-	else if ((vScaledPos - m_vSpringCenter).GetLength() < 30.0)
-		springConst = 0.95;
-
-	// update the center spring
-	m_vSpringCenter = vScaledPos 
-		* ((REAL) 1.0 - springConst) + m_vSpringCenter * (springConst);
+	// check if the node has been completely re-positioned (requiring reset of spring set point)
+	if (GetNode()->IsPositionReset(true))
+	{
+		// just set the node position
+		m_vSpringCenter = vScaledPos;
+	}
+	else
+	{
+		// otherwise, update the sping
+		m_posSpring.m_vPosition = m_vSpringCenter - vScaledPos;
+		m_posSpring.m_mass = GetNode()->GetSize(GetNode()->GetActivation()).GetLength() + 0.5;
+		m_posSpring.UpdateSpring(0.1);
+		m_vSpringCenter = m_posSpring.m_vPosition + vScaledPos;
+	}
 
 	// and invalidate the parent window
 	m_pParent->Invalidate(FALSE);
@@ -294,8 +339,11 @@ void CNodeView::UpdateSpringActivation(REAL springConst)
 		if (m_springActivation < activationThreshold
 			&& GetNode()->IsSubThreshold())
 		{
-			springConst += (MAX_SPRING_CONST - springConst) 
-				* (1.0 - m_springActivation / activationThreshold);
+			// springConst 
+			// m_actSpring.m_b = m_actSpring.m_b * 0.75
+			//	+ 0.25 * 10.0 * m_springActivation / activationThreshold;
+				//(MAX_SPRING_CONST - m_actSpring.m_b) 
+				// * (1.0 - m_springActivation / activationThreshold);
 
 			// set the post-super flag
 			GetNode()->SetPostSuper(m_springActivation > MIN_POST_SUPER);
@@ -303,8 +351,11 @@ void CNodeView::UpdateSpringActivation(REAL springConst)
 	}
 
 	// update spring activation
- 	m_springActivation = GetThresholdedActivation() * (1.0 - springConst)
-			+ m_springActivation * springConst;
+	m_actSpring.m_vPosition[0] = m_springActivation - GetThresholdedActivation();
+	m_actSpring.UpdateSpring(0.1);
+	m_springActivation = m_actSpring.m_vPosition[0] + GetThresholdedActivation();
+ 	// m_springActivation = GetThresholdedActivation() * (1.0 - springConst)
+	//		+ m_springActivation * springConst;
 
 	// and invalidate the parent window
 	m_pParent->Invalidate(FALSE);
@@ -421,7 +472,7 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 		GetOuterRect().Width() * WIDTH_MULTIPLIER)
 	{
 		// and skip if so
-		return;
+		// return;
 	}
 
 	pDC->SetBkMode(TRANSPARENT);
@@ -441,22 +492,19 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 				pLinkedView->GetOuterRect().Width() * WIDTH_MULTIPLIER)
 			{
 				// and skip if so
-				continue;
+				// continue;
 			}
 
 			// only draw the link to node view's with activations greater than the current
 			if (!pLink->IsStabilizer()
-				// && pLink->GetWeight() > MIN_WEIGHT_TO_DRAW_LINK
 				&& pLinkedView != NULL
-				// && pLinkedView->GetSpringActivation() >= GetSpringActivation()
 				&& !pLinkedView->GetNode()->IsSubThreshold()
-				// && pLinkedView->GetNode()->GetActivation() > MIN_POST_SUPER
 				)
 			{
 				// draw the link
 				CVectorD<3> vFrom = GetSpringCenter();
 				CVectorD<3> vTo = pLinkedView->GetSpringCenter();
-				REAL gain = GetNode()->GetLinkTo(pLinkedView->GetNode())->GetGain();
+				REAL gain = 0.01 + sqrt(GetNode()->GetLinkTo(pLinkedView->GetNode())->GetGain());
 
 				pSkin->DrawLink(pDC, vFrom, 
 					gain * GetSpringActivation(), 
@@ -466,9 +514,7 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 
 			PROFILE_FLAG("Display", "Gain")
 			{
-				if (// pLink->GetWeight() < MIN_WEIGHT_TO_DRAW_LINK
-					// 
-					GetNode()->GetActivation() > pLink->GetTarget()->GetActivation()
+				if (GetNode()->GetActivation() > pLink->GetTarget()->GetActivation()
 					&& pLinkedView != NULL
 					&& !pLinkedView->GetNode()->IsSubThreshold())
 				{
@@ -571,6 +617,68 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 //////////////////////////////////////////////////////////////////////
 void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 {
+#define SMOOTH_TEXT
+#ifdef SMOOTH_TEXT
+
+	// set max text width
+	if (rectInner.Width() > TEXT_WIDTH)
+	{
+		rectInner.right = rectInner.left + TEXT_WIDTH;
+	}
+
+	// generates the text surface
+	CDC *pTextDC = GetTextSurface();
+	
+	// now draw smooth text
+	// calculate scale from dest to source
+	double scale = (double)  m_rectFrom.Width() / (double) rectInner.Width();
+
+	// calculate dest rectangle height, in source units
+	double height = scale * (double) rectInner.Height();
+	if (height > m_rectFrom.Height())
+		height = m_rectFrom.Height();
+
+	// calculate full lines to render
+	int nLines = (int) floor(height / (double) m_nSrcLineHeight);
+
+	// compute actual src rectangle
+	CRect actualRectFrom = m_rectFrom;
+	actualRectFrom.bottom = actualRectFrom.top + nLines * m_nSrcLineHeight;
+
+	// compute actual dest rectangle
+	CRect actualRectTo = rectInner;
+	actualRectTo.bottom = actualRectTo.top + 
+		(int) ((double) (nLines * m_nSrcLineHeight) / scale);
+
+	// now blt the first nLines
+	pDC->SetStretchBltMode(HALFTONE);
+	pDC->StretchBlt(
+		actualRectTo.left, actualRectTo.top, actualRectTo.Width(), actualRectTo.Height(), 
+		&m_dcText, 
+		actualRectFrom.left, actualRectFrom.top, actualRectFrom.Width(), actualRectFrom.Height(), 
+		SRCCOPY);
+
+	// move source rectangle to last line
+	actualRectFrom.top = actualRectFrom.bottom;
+	actualRectFrom.bottom += m_nSrcLineHeight;
+
+	// move dest rectangle to last line
+	actualRectTo.top = actualRectTo.bottom;
+	actualRectTo.bottom = rectInner.bottom;
+
+	// compute width and horizontal position of dest rectangle
+	scale = (double)  actualRectFrom.Height() / (double) actualRectTo.Height();
+	int nRectToWidth = (int)((double) actualRectFrom.Width() / scale);
+	actualRectTo.right = actualRectTo.left + nRectToWidth;
+
+	// now blt the last line
+	pDC->StretchBlt(
+		actualRectTo.left, actualRectTo.top, actualRectTo.Width(), actualRectTo.Height(), 
+		&m_dcText, 
+		actualRectFrom.left, actualRectFrom.top, actualRectFrom.Width(), actualRectFrom.Height(), 
+		SRCCOPY);
+
+#else
 	pDC->SetBkMode(TRANSPARENT);
 
 	int nDesiredHeight = __min(rectInner.Height() / 3, 40);
@@ -583,10 +691,11 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 		nDesiredHeight = __max(nDesiredHeight / 2, 14);
 
 		if (rectInner.bottom > GetOuterRect().bottom)
-
+		{
 			// adjust height of rectangle for text
 			rectInner.bottom -= rectInner.Height() -
 				(rectInner.Height() / nDesiredHeight) * nDesiredHeight;
+		}
 
 		CFont smallFont;
 		BOOL bResult = smallFont.CreateFont(nDesiredHeight, 0,
@@ -608,6 +717,7 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 		pDC->SelectObject(pOldFont);
 		smallFont.DeleteObject();
 	}
+#endif
 
 }	// CNodeView::DrawText
 
@@ -785,3 +895,68 @@ void CNodeView::DrawTitleBand(CDC *pDC, CRect& rectInner)
 
 
 
+
+// generates / retrieves pre-rendered text surface as DC
+CDC * CNodeView::GetTextSurface(void)
+{
+	if (m_dcText.m_hDC == NULL)
+	{
+		// get drawing context
+		CDC dcScreen;
+		dcScreen.Attach(::GetDC(NULL));
+
+		// determine initial rectangle
+		m_rectFrom = CRect(0, 0, TEXT_WIDTH, 0);
+
+		// now compute full rectangle
+		int nOptions = DT_WORDBREAK | DT_NOPREFIX | DT_NOCLIP;
+
+		// select the font
+		dcScreen.SelectObject(&m_font);
+
+		// ref to text
+		CString& strText = GetNode()->GetDescription();
+		int nLength = strText.GetLength();
+
+		// draw the text
+		m_rectFrom.bottom = ::DrawTextEx(dcScreen.GetSafeHdc(), 
+			strText.GetBuffer(nLength), nLength,
+			m_rectFrom, nOptions | DT_CALCRECT, NULL);
+		strText.ReleaseBuffer();
+
+		// allocate the ddraw surface
+		m_dcText.CreateCompatibleDC(&dcScreen);
+
+		// creat the bitmap
+		m_bitmapText.CreateCompatibleBitmap(&dcScreen, 
+			m_rectFrom.Width(), m_rectFrom.Height());
+
+		m_dcText.SelectObject(&m_bitmapText);
+
+		// clear the surface
+		CBrush brush(BACK_COLOR);
+		CBrush *pOldBrush = m_dcText.SelectObject(&brush);
+		m_dcText.SelectStockObject(NULL_PEN);
+		m_rectFrom.InflateRect(10, 10, 10, 10);
+		m_dcText.Rectangle(m_rectFrom);
+		m_rectFrom.DeflateRect(10, 10, 10, 10);
+		m_dcText.SelectObject(pOldBrush);
+
+		m_dcText.SetBkMode(OPAQUE);
+		m_dcText.SetBkColor(BACK_COLOR);
+
+		// select the font
+		m_dcText.SelectObject(&m_font);
+
+		// draw the text
+		::DrawTextEx(m_dcText.GetSafeHdc(), 
+			strText.GetBuffer(nLength), nLength,
+			m_rectFrom, nOptions, NULL);
+		strText.ReleaseBuffer();
+
+		// release the screen device context
+		::ReleaseDC(NULL, dcScreen.Detach());
+	}
+
+	return &m_dcText;
+}

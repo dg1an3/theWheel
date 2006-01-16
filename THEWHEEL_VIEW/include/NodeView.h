@@ -22,6 +22,8 @@
 // the skin
 #include "NodeViewSkin.h"
 
+#include <Spring.h>
+
 // the parent window class
 class CSpaceView;
 
@@ -51,7 +53,8 @@ public:
     REAL GetSpringActivation();
 
     // accessors for the node view's rectangles
-    CRect& GetOuterRect();
+	void SetActualSizes(const CVectorD<3>& vInner, const CVectorD<3>& vOuter);
+	CRect& GetOuterRect();
     CRect& GetInnerRect();
 
     // accessor to shape descriptions of the node view
@@ -86,15 +89,20 @@ public:
     void DrawText(CDC *pDC, CRect& rectInner);
     void DrawImage(CDC *pDC, CRect& rectInner);
 
+	// generates / retrieves pre-rendered text surface as DC
+	CDC * GetTextSurface(void);
+
 private:
     // stores the node
     CNode* m_pNode;
 
     // stores the center and spring-connected center of the node view
     CVectorD<3> m_vSpringCenter;
+	CSpring m_posSpring;
 
     // stores the thresholded activation and spring-connected activation
     REAL m_springActivation;
+	CSpring m_actSpring;
 
     // stores the pending activation
     REAL m_pendingActivation;
@@ -102,6 +110,8 @@ private:
     // stores the node view's region (shape)
     CRect m_rectOuter;
     CRect m_rectInner;
+	CVectorD<3> m_vInnerSize;
+	CVectorD<3> m_vOuterSize;
 
     CRgn m_shape;
 
@@ -118,7 +128,25 @@ private:
     // flag to indicate image is to be drawn in background
     BOOL m_bBackgroundImage;
 
+	// flag to indicate the view is currently maximized
 	BOOL m_bMaximized;
+
+	//////////////////////////////////////////////////////////////////
+	// SMOOTH_TEXT variables
+
+	// stores font of text
+	static bool m_bStaticInit;
+	static CFont m_font;
+
+	// stores line height
+	static int m_nSrcLineHeight;
+
+	// stores size of text on bitmap
+	CRect m_rectFrom;
+
+	// stores the dc with 
+	CDC m_dcText;
+	CBitmap m_bitmapText;
 
 };	// class CNodeView
 
