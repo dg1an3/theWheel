@@ -41,7 +41,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="optimizer_base.lib thewheel_model.lib opengl32.lib glu32.lib ddraw.lib dsound.lib dxguid.lib winmm.lib wininet.lib urlmon.lib"
+				AdditionalDependencies="ippsemerged.lib ippsmerged.lib ippmemerged.lib ippmmerged.lib ippiemerged.lib ippimerged.lib ippcorel.lib optimizer_base.lib thewheel_model.lib opengl32.lib glu32.lib ddraw.lib dsound.lib dxguid.lib winmm.lib wininet.lib urlmon.lib"
 				OutputFile=".\Debug/theWheel.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
