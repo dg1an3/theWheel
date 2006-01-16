@@ -190,7 +190,7 @@ CAPTION "About theWheel"
 FONT 12, "Trebuchet MS", 700, 0, 0x0
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,17,7,20,20
-    LTEXT           "theWheel 1.3\nBuild 14.Jan.2006",IDC_STATIC,44,7,66,16,
+    LTEXT           "theWheel 1.3\nBuild 16.Jan.2006",IDC_STATIC,44,7,66,16,
                     SS_NOPREFIX
     LTEXT           "Copyright (C) 1996-2006  2nd Messenger Systems\nU.S. Patent 6,931,604\nAll Rights Reserved",
                     IDC_STATIC,7,26,166,28
