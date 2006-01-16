@@ -67,41 +67,32 @@ int __cdecl CompareLinkWeights(const void *elem1, const void *elem2)
 CNode::CNode(CSpace *pSpace,
 			 const CString& strName, 
 			 const CString& strDesc)
-	: m_pSpace(pSpace),
-		m_pParent(NULL),
-		m_strName(strName),
-		m_strDescription(strDesc),
-		m_pDib(NULL),
-		m_hIcon(NULL), 
-		m_pSoundBuffer(NULL),
-		// m_vPosition(), // CVectorD<3>(0.0, 0.0, 0.0)),
+	: m_pSpace(pSpace)
+		, m_pParent(NULL)
+		, m_strName(strName)
+		, m_strDescription(strDesc)
+		, m_pDib(NULL)
+		, m_hIcon(NULL) 
+		, m_pSoundBuffer(NULL)
+		, m_bPositionReset(false)
 
-		m_primaryActivation((REAL) 0.005),		// initialize with a very 
-		m_secondaryActivation((REAL) 0.005),	// small activation
+		, m_primaryActivation((REAL) 0.005)		// initialize with a very 
+		, m_secondaryActivation((REAL) 0.005)		// small activation
 
-		m_pMaxActivator(NULL),
-		m_maxDeltaActivation((REAL) 0.0),
-		m_bFoundMaxActivator(FALSE),
-		m_bSubThreshold(TRUE),
-		m_rmse(0.0),
+		, m_pMaxActivator(NULL)
+		, m_maxDeltaActivation((REAL) 0.0)
+		, m_bFoundMaxActivator(FALSE)
+		, m_bSubThreshold(TRUE)
+		, m_rmse(0.0)
 
-		m_pOptSSV(NULL),
+		, m_pOptSSV(NULL)
 
-		m_pView(NULL)
+		, m_pView(NULL)
 {
-	// m_vPosition.SetZero(); // (CVectorD<3>(0.0, 0.0, 0.0)),
+	// TODO: fix this (why is this being initialized?)
 	m_vPosition[0] = 0.0;
 	m_vPosition[1] = 0.0;
 	m_vPosition[2] = 0.0;
-	if (!::_finite(m_vPosition[0]) || !::_finite(m_vPosition[1]))
-	{
-		::AfxMessageBox("Bad init length!!!", MB_OK, 0);
-	}
-
-	if (!::_finite(m_vPosition.GetLength()))
-	{
-		::AfxMessageBox("Bad position init!!!", MB_OK, 0);
-	}
 
 }	// CNode::CNode
 
@@ -243,11 +234,6 @@ void CNode::SetParent(CNode *pParent)
 			// set the parent as the initial max activator
 			m_pMaxActivator = m_pParent;
 
-			if (!::_finite(m_pParent->GetPosition().GetLength()))
-			{
-				::AfxMessageBox("Invalid parent position", MB_OK, 0);
-			}
-
 			// set the position to the parent's
 			SetPosition(m_pParent->GetPosition());
 		}
@@ -324,7 +310,7 @@ void CNode::SetName(const CString& strName)
 // 
 // returns the node's description text
 //////////////////////////////////////////////////////////////////////
-const CString& CNode::GetDescription() const
+CString& CNode::GetDescription() 
 {
 	return m_strDescription;
 
@@ -423,7 +409,10 @@ CDib *CNode::GetDib()
 		m_pDib = new CDib();
 
 		// and try to load the image
-		if (!m_pDib->Load("./images/" + GetImageFilename()))
+		const CString& strPath = GetSpace()->GetPathName();
+		int nLastSlash = strPath.ReverseFind('\\');
+		CString strImagePath = strPath.Left(nLastSlash);
+		if (!m_pDib->Load(strImagePath + "/images/" + GetImageFilename()))
 		{
 			// no luck -- delete the DIB and return NULL
 			delete m_pDib;
@@ -599,11 +588,6 @@ void CNode::SetUrl(const CString& strUrl)
 //////////////////////////////////////////////////////////////////////
 const CVectorD<3>& CNode::GetPosition() const
 {
-	if (!::_finite(m_vPosition.GetLength()))
-	{
-		::AfxMessageBox("Bad position read in!!!", MB_OK, 0);
-	}
-
 	return m_vPosition;
 
 }	// CNode::GetPosition
@@ -614,20 +598,12 @@ const CVectorD<3>& CNode::GetPosition() const
 // 
 // sets the position of the node
 //////////////////////////////////////////////////////////////////////
-void CNode::SetPosition(const CVectorD<3>& vPos, BOOL bFireChange)
+void CNode::SetPosition(const CVectorD<3>& vPos, bool bFireChange, bool bResetFlag)
 {
-	if (!::_finite(vPos.GetLength()))
-	{
-		::AfxMessageBox("Invalid Initial State47", MB_OK, 0);
-	}
-
+	// TODO: remove RMSE? stuff
 	// update RMSE
 	m_rmse = (REAL) 0.01 * m_rmse
 		+ (REAL) 0.99 * (m_vPosition - vPos).GetLength();
-	if (!::_finite(GetRMSE()))
-	{
-		::AfxMessageBox("Invalid Initial State43", MB_OK, 0);
-	}
 
 	m_vPosition = vPos;
 
@@ -636,7 +612,31 @@ void CNode::SetPosition(const CVectorD<3>& vPos, BOOL bFireChange)
 		NODE_FIRE_CHANGE(EVT_NODE_POSITION_CHANGED);
 	}
 
+	if (bResetFlag)
+	{
+		m_bPositionReset = true;
+	}
+
 }	// CNode::SetPosition
+
+
+//////////////////////////////////////////////////////////////////////
+// CNode::IsPositionReset
+// 
+// returns flag to indicate if position has been reset; optionally
+//		clears flag
+//////////////////////////////////////////////////////////////////////
+bool CNode::IsPositionReset(bool bClearFlag)
+{
+	bool bFlag = m_bPositionReset;
+	if (bClearFlag)
+	{
+		m_bPositionReset = false;
+	}
+
+	return bFlag;
+
+}	// CNode::IsPositionReset
 
 
 //////////////////////////////////////////////////////////////////////
