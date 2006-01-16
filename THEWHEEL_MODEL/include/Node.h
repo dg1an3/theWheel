@@ -84,7 +84,7 @@ public:
 	void SetName(const CString& strName);
 
 	// the node description
-	const CString& GetDescription() const;
+	CString& GetDescription();
 	void SetDescription(const CString& strDesc);
 
 	// the node class
@@ -114,7 +114,12 @@ public:
 
 	// the node's position
 	const CVectorD<3>& GetPosition() const;
-	void SetPosition(const CVectorD<3>& vPos, BOOL bFireChange = FALSE);
+	void SetPosition(const CVectorD<3>& vPos, bool bFireChange = false, bool bResetFlag = false);
+
+	// reset flag
+	bool IsPositionReset(bool bClearFlag = true);
+
+	// returns the size for a particular activation
 	CVectorD<3> GetSize(REAL activation) const;
 
 	// returns the RMSE for node position
@@ -246,6 +251,9 @@ private:
 
 	// position and size
 	CVectorD<3> m_vPosition;
+
+	// flag to indicate that the nodes position has been reset
+	bool m_bPositionReset;
 
 	// the collection of links
 	CObArray m_arrLinks;
