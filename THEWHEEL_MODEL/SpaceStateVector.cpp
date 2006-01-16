@@ -120,42 +120,21 @@ void CSpaceStateVector::GetPositionsVector(CVectorN<>& vPositions, BOOL bPerturb
 			// yes, so get the size of the node
 			REAL size = pNode->GetSize(pNode->GetActivation()).GetLength();
 
-			if (!::_finite(pNode->GetRMSE()))
-			{
-				::AfxMessageBox("Invalid Initial State37", MB_OK, 0);
-			}
-
 			// compute theoretical perturbation amount
 			REAL perturb = 0.75 * size
 				* pNode->GetRMSE() / (size + pNode->GetRMSE());
-			if (!::_finite(perturb))
-			{
-				::AfxMessageBox("Invalid Initial State31", MB_OK, 0);
-			}
 
 			// compute half-height of scaling sigma
 			REAL half = m_pSpace->GetNodeAt(0)->GetActivation() / 10.0;
 
 			// compute scale (proportional to activation
 			REAL scale = half / (pNode->GetActivation() + half); 
-			if (!::_finite(scale))
-			{
-				::AfxMessageBox("Invalid Initial State29", MB_OK, 0);
-			}
 
 			// perturb
 			vPositions[nAt*2 + 0] += perturb * half
 				* (0.5 - (REAL) rand() / (REAL) (RAND_MAX-1));
 			vPositions[nAt*2 + 1] += perturb * half
 				* (0.5 - (REAL) rand() / (REAL) (RAND_MAX-1)); 
-			if (!::_finite(vPositions[nAt*2 + 0]))
-			{
-				::AfxMessageBox("Invalid Initial State27", MB_OK, 0);
-			}
-			if (!::_finite(vPositions[nAt*2 + 0]))
-			{
-				::AfxMessageBox("Invalid Initial State27", MB_OK, 0);
-			}
 
 #ifdef _PERTURB_FIXED
 			Perturb(&vPositions[nAt*2 + 0], perturb);
@@ -186,10 +165,6 @@ void CSpaceStateVector::SetPositionsVector(const CVectorN<>& vPositions)
 		vPosition[0] = vPositions[nAt*2 + 0];
 		vPosition[1] = vPositions[nAt*2 + 1];
 		vPosition[2] = 0.0;
-		if (!::_finite(vPosition.GetLength()))
-		{
-			::AfxMessageBox("Invalid Position in Positions Vector", MB_OK, 0);
-		}
 
 		// load positions from nodes
 		m_pSpace->GetNodeAt(nAt)->SetPosition(vPosition);
@@ -299,7 +274,8 @@ void CSpaceStateVector::RotateTranslateTo(const CVectorN<>& vPositions)
 	mNew_ps.Reshape(mNew.GetCols(), mNew.GetRows());
 	// mNew_ps = mNew;
 	mNew_ps = mNew;
-	if (FALSE) // Pseudoinvert(mNew, mNew_ps))	// Pseudoinvert(mNew, mNew_ps))
+	if (// FALSE) // 
+		Pseudoinvert(mNew, mNew_ps))	// Pseudoinvert(mNew, mNew_ps))
 	{
 		// form the transform matrix
 		static CMatrixNxM<> mTransform;
@@ -351,7 +327,7 @@ void CSpaceStateVector::RotateTranslateTo(const CVectorN<>& vPositions)
 				vPositions[nAt * 2 + 1] = mNew[nAt][1] / mNew[nAt][2];
 			}
 
-			if (GetPositionsError(vPositions) > 10.0 * vPositions.GetDim())
+			if (FALSE) // GetPositionsError(vPositions) > 10.0 * vPositions.GetDim())
 			{
 				SetPositionsVector(vPositions);
 			}
