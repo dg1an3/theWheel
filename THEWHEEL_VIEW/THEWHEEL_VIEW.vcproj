@@ -260,6 +260,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\Spring.cpp">
+			</File>
+			<File
 				RelativePath="StdAfx.cpp">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -340,6 +343,9 @@
 			</File>
 			<File
 				RelativePath="include\SpaceView.h">
+			</File>
+			<File
+				RelativePath=".\include\Spring.h">
 			</File>
 			<File
 				RelativePath="StdAfx.h">
