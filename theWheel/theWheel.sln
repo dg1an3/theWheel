@@ -33,7 +33,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "theWheel", "theWheel.vcproj
 		{633416FE-999F-414E-ADBF-3288EEABA451} = {633416FE-999F-414E-ADBF-3288EEABA451}
 	EndProjectSection
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "theWheel_Install", "..\theWheel_Install\theWheel_Install.vdproj", "{21ED9772-EF8E-4649-87AC-4E15B328A49E}"
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "theWheel_Install", "theWheel_Install\theWheel_Install.vdproj", "{39100512-065A-4838-9352-3BDE94EE837D}"
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
@@ -71,8 +71,10 @@ Global
 		{C937A2CB-C03E-49FD-BE66-3DE627F9234D}.Debug.Build.0 = Debug|Win32
 		{C937A2CB-C03E-49FD-BE66-3DE627F9234D}.Release.ActiveCfg = Release|Win32
 		{C937A2CB-C03E-49FD-BE66-3DE627F9234D}.Release.Build.0 = Release|Win32
-		{21ED9772-EF8E-4649-87AC-4E15B328A49E}.Debug.ActiveCfg = Debug
-		{21ED9772-EF8E-4649-87AC-4E15B328A49E}.Release.ActiveCfg = Release
+		{39100512-065A-4838-9352-3BDE94EE837D}.Debug.ActiveCfg = Debug
+		{39100512-065A-4838-9352-3BDE94EE837D}.Debug.Build.0 = Debug
+		{39100512-065A-4838-9352-3BDE94EE837D}.Release.ActiveCfg = Release
+		{39100512-065A-4838-9352-3BDE94EE837D}.Release.Build.0 = Release
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection
