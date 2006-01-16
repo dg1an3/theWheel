@@ -39,8 +39,7 @@ public:
 
 	// computes the inner and outer rectangles for a node view, 
 	//		given an activation
-	CRect& CalcOuterRect(CNodeView *pNodeView);
-	CRect& CalcInnerRect(CNodeView *pNodeView);
+	void CalcInnerOuterRect(CNodeView *pNodeView);
 
 	// computes the shape of a node view, given an activation
 	void CalcShape(CNodeView *pNodeView, CRgn& rgn, int nErode = 0);

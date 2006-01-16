@@ -283,8 +283,9 @@ CNodeView *CSpaceView::FindNearestNodeView(CPoint pt)
 	{
 		// get the current node view
 		CNodeView *pNodeView = GetNodeView(nAt);
-		CRect rect = pNodeView->GetInnerRect();
-		CSize sz = rect.CenterPoint() - pt;
+		// CRect rect = pNodeView->GetInnerRect();
+		CSize sz = // rect.CenterPoint()
+			(CPoint) (pNodeView->GetScaledNodeCenter()) - pt;
 		REAL distSq = sz.cx * sz.cx + sz.cy * sz.cy;
 		if (distSq < minDistSq)
 		{
@@ -312,10 +313,10 @@ BOOL CSpaceView::FindLink(CPoint ptFrom, CPoint ptTo,
 
 	for (int nAtNodeView = 0; nAtNodeView < GetNodeViewCount(); nAtNodeView++)
 	{
-		CVectorD<2> vNodeCenter(GetNodeView(nAtNodeView)->GetInnerRect().CenterPoint());
+		CVectorD<2> vNodeCenter(GetNodeView(nAtNodeView)->GetScaledNodeCenter()); // GetInnerRect().CenterPoint());
 		for (int nAtLinkedView = nAtNodeView+1; nAtLinkedView < GetNodeViewCount(); nAtLinkedView++)
 		{
-			CVectorD<2> vLinkedFrom(GetNodeView(nAtLinkedView)->GetInnerRect().CenterPoint());
+			CVectorD<2> vLinkedFrom(GetNodeView(nAtLinkedView)->GetScaledNodeCenter()); // GetInnerRect().CenterPoint());
 			CVectorD<2> vLinkedOffset = vLinkedFrom - vNodeCenter;
 
 			BOOL bIntersect = IntersectLineSegments(vFrom, vOffset, vLinkedFrom, vLinkedOffset)
@@ -718,8 +719,11 @@ void CSpaceView::OnInitialUpdate()
 	for (nAtNodeView = 0; nAtNodeView < GetNodeViewCount(); nAtNodeView++)
 	{
 		CNodeView *pNodeView = GetNodeView(nAtNodeView);
-		pNodeView->UpdateSpringPosition(0.1);
-		pNodeView->UpdateSpringActivation(0.1);
+		for (int nAtCount = 0; nAtCount < 100; nAtCount++)
+		{
+			pNodeView->UpdateSpringPosition(0.1);
+			pNodeView->UpdateSpringActivation(0.1);
+		}
 	}
 
 	// initialize the recent click list
@@ -785,8 +789,8 @@ void CSpaceView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 
 		{
 			// position changed big, so update springs
-			CNodeView *pNodeView = (CNodeView *) pNode->GetView();
-			pNodeView->UpdateSpringPosition(0.5); // 0.3);
+			// CNodeView *pNodeView = (CNodeView *) pNode->GetView();
+			// pNodeView->UpdateSpringPosition(0.5); // 0.3);
 		}
 
 		break;
@@ -914,12 +918,14 @@ int CSpaceView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (!m_dropTarget.Register(this))
 		return -1;
 
-/*	if (!m_btnGo.Create("Go", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, 
+#ifdef USE_GO_BUTTON
+	if (!m_btnGo.Create("Go", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, 
 		CRect(-30, -30, 0, 0), this, IDB_GO))
 		return -1;
 
 	if (!m_btnGo.LoadBitmaps(IDB_GO_BUTTON, IDB_GO_BUTTON_DOWN))
-		return -1; */
+		return -1;
+#endif
 
 	return 0;
 
@@ -1034,9 +1040,11 @@ void CSpaceView::OnPaint()
 			qsort(arrNodeViewsToDraw.GetData(), arrNodeViewsToDraw.GetSize(), 
 				sizeof(CObject *), CompareNodeViewActDiff);
 
-
+			// see if there is a maximized view
 			if (m_pMaximizedView)
+			{
 				arrNodeViewsToDraw.Add(m_pMaximizedView);
+			}
 
 			// draw in sorted order
 			for (nAtNodeView = 0; nAtNodeView < arrNodeViewsToDraw.GetSize(); 
@@ -1215,6 +1223,8 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 
 	// layout the nodes and center them
 	GetDocument()->LayoutNodes();
+
+	// now center based on the new positions
 	CenterNodeViews();
 
 	// update the privates
@@ -1222,6 +1232,9 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 	{
 		GetNodeView(nAt)->UpdateSpringPosition(GetDocument()->GetSpringConst());
 		GetNodeView(nAt)->UpdateSpringActivation(GetDocument()->GetSpringConst());
+
+		// TODO: fix this
+		m_skin.CalcInnerOuterRect(GetNodeView(nAt));
 	}
 
 	// redraw the window

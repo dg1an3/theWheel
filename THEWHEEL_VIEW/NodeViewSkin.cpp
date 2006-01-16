@@ -199,11 +199,11 @@ void CNodeViewSkin::SetClientArea(int nWidth, int nHeight, COLORREF colorBk)
 
 
 /////////////////////////////////////////////////////////////////////////////
-// CNodeViewSkin::CalcOuterRect
+// CNodeViewSkin::CalcInnerOuterRect
 //
 // calculates the outer (bounding) rectangle of the CNodeView
 /////////////////////////////////////////////////////////////////////////////
-CRect& CNodeViewSkin::CalcOuterRect(CNodeView *pNodeView)
+void CNodeViewSkin::CalcInnerOuterRect(CNodeView *pNodeView)
 {
 	// compute the new width and height from the desired area and the desired
 	//		aspect ratio
@@ -214,55 +214,39 @@ CRect& CNodeViewSkin::CalcOuterRect(CNodeView *pNodeView)
 		pNodeView->GetNode()->GetSize(pNodeView->GetSpringActivation());
 
 	// get the width and height for the node view
-	int nWidth = (int) (1.0 * vSize[0] * scale); // * 0.75
-		// + 0.25 * (REAL) rectOuterOld.Width());
-	int nHeight = (int) (1.0 * vSize[1] * scale); // * 0.75
-		// + 0.25 * (REAL) rectOuterOld.Height());
+	REAL width = 1.0 * vSize[0] * scale;
+	REAL height = 1.0 * vSize[1] * scale;
+
+	// get current position
+	const CVectorD<3> vPos = pNodeView->GetSpringCenter();
 
 	// set the width and height of the window, keeping the center constant
 	CRect& rectOuter = pNodeView->GetOuterRect();
-	rectOuter.left =	- nWidth / 2;
-	rectOuter.right =	+ nWidth / 2;
-	rectOuter.top =		- nHeight / 2;
-	rectOuter.bottom =	+ nHeight / 2;
-
-	// position the rectangle
-	rectOuter.OffsetRect((int) pNodeView->GetSpringCenter()[0], 
-		(int) pNodeView->GetSpringCenter()[1]);
-
-	return rectOuter;
-
-}	// CNodeViewSkin::CalcOuterRect
-
-
-/////////////////////////////////////////////////////////////////////////////
-// CNodeViewSkin::CalcInnerRect
-//
-// calculates the inner rectangle of the CNodView
-// uses the nodeview's existing OuterRect; does not recalc
-//		these
-/////////////////////////////////////////////////////////////////////////////
-CRect& CNodeViewSkin::CalcInnerRect(CNodeView *pNodeView)
-{
-	// get a reference to the outer rectangle
-	const CRect& rectOuter = pNodeView->GetOuterRect();
+	rectOuter.left = Round<int>(vPos[0] - width / 2.0);
+	rectOuter.right = Round<int>(vPos[0] + width / 2.0);
+	rectOuter.top = Round<int>(vPos[1] - height / 2.0);
+	rectOuter.bottom = Round<int>(vPos[1] + height / 2.0); 
 
 	// compute the r, which represents the amount of "elliptical-ness"
 	//		(ratio of inner / outer)
 	REAL r = ComputeEllipticalness(pNodeView->GetSpringActivation());
 
+	// adjust inner rectangle proportions
+	REAL innerWidth = width - (1.0 - r) * width;
+	REAL innerHeight = height - (1.0 - r) * height;
+
 	// initialize the inner rectangle
 	CRect& rectInner = pNodeView->GetInnerRect();
-	rectInner = rectOuter;
 
-	// adjust inner rectangle proportions
-	int ndWidth = (1.0 - r) / 2.0 * rectOuter.Width();
-	int ndHeight = (1.0 - r) / 2.0 * rectOuter.Height();
-	rectInner.DeflateRect(ndWidth, ndHeight, ndWidth, ndHeight);
+	rectInner.left = Round<int>(vPos[0] - innerWidth / 2.0);
+	rectInner.right = Round<int>(vPos[0] + innerWidth / 2.0);
+	rectInner.top = Round<int>(vPos[1] - innerHeight / 2.0);
+	rectInner.bottom = Round<int>(vPos[1] + innerHeight / 2.0);
 
-	return rectInner;
+	pNodeView->SetActualSizes(CVectorD<3>(innerWidth, innerHeight),
+		CVectorD<3>(width, height));
 
-}	// CNodeViewSkin::CalcInnerRect
+}	// CNodeViewSkin::CalcInnerOuterRect
 
 
 //////////////////////////////////////////////////////////////////////
@@ -509,8 +493,8 @@ BOOL CNodeViewSkin::InitMaterial(LPDIRECT3DMATERIAL2 *lppD3DMat)
 void CNodeViewSkin::BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView)
 {
 	// calculate the rectangles
-	const CRect& rectOuter = CalcOuterRect(pNodeView);
-	const CRect& rectInner = CalcInnerRect(pNodeView);
+	const CRect& rectOuter = pNodeView->GetOuterRect(); // CalcOuterRect(pNodeView);
+	const CRect& rectInner = pNodeView->GetInnerRect(); // CalcInnerRect(pNodeView);
 
 	// calculate the node-views shape rgn, for hit-testing
 	CalcShape(pNodeView, pNodeView->GetShape(), THICK_PEN_WIDTH);
