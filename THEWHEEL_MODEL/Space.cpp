@@ -686,14 +686,6 @@ void CSpace::PositionNewSuperNodes()
 			{
 				// the new position -- initially at the max act position
 				CVectorD<3> vNewPosition = pMaxAct->GetPosition();
-				if (!::_finite(vNewPosition[0]))
-				{
-					::AfxMessageBox("Invalid Initial State5", MB_OK, 0);
-				}
-				if (!::_finite(vNewPosition[1]))
-				{
-					::AfxMessageBox("Invalid Initial State5", MB_OK, 0);
-				}
 
 				// find direction by default from center
 				CVectorD<3> vCenter = m_vCenter;
@@ -725,11 +717,10 @@ void CSpace::PositionNewSuperNodes()
 				vNewPosition += vDirection;
 
 				// set the new position
-				if (!::_finite(vNewPosition.GetLength()))
-				{
-					::AfxMessageBox("Invalid New Position", MB_OK, 0);
-				}
 				pNode->SetPosition(vNewPosition);
+
+				// set flag to indicate position has been reset
+				pNode->m_bPositionReset = true;
 			}
 		}
 	}
@@ -788,10 +779,6 @@ void CSpace::AdjustRunawayNodes()
 
 		// set newly calculated position
 		CVectorD<3> vNewPosition = m_vCenter + vOffset;
-		if (!::_finite(vNewPosition.GetLength()))
-		{
-			::AfxMessageBox("Invalid Runaway Adjustment", MB_OK, 0);
-		}
 		pNode->SetPosition(m_vCenter + vOffset);
 
 		// ensure we are not subthreshold, for good measure
@@ -834,22 +821,10 @@ void CSpace::PositionSubNodes()
 		// compute the new position
 		CVectorD<3> vNewPosition = 
 			pNode->GetMaxActivator()->GetPosition() - m_vCenter;
-		if (!::_finite(m_vCenter[0]))
-		{
-			::AfxMessageBox("Invalid Initial State13", MB_OK, 0);
-		}
-		if (!::_finite(m_vCenter[1]))
-		{
-			::AfxMessageBox("Invalid Initial State13", MB_OK, 0);
-		}
 
 		// decay towards center
 		vNewPosition *= SUBNODE_DECAY_RATE;
 		vNewPosition += m_vCenter;
-		if (!::_finite(vNewPosition.GetLength()))
-		{
-			::AfxMessageBox("Invalid Subnode Position", MB_OK, 0);
-		}
 
 		// and set the new position
 		pNode->SetPosition(vNewPosition); 
@@ -1124,14 +1099,17 @@ REAL CSpace::GetTotalPrimaryActivation(BOOL bCompute) const
 	if (bCompute)
 	{
 		// reset total
-		m_totalPrimaryActivation = 0.0;
+		REAL totalPrimaryActivation = 0.0;
 
 		// sum all primary activations
 		for (int nAt = 0; nAt < GetNodeCount(); nAt++)
 		{
-			m_totalPrimaryActivation += 
+			totalPrimaryActivation += 
 				GetNodeAt(nAt)->GetPrimaryActivation();
 		}
+
+		m_totalPrimaryActivation = m_totalPrimaryActivation * 0.99 
+			+ totalPrimaryActivation * 0.01;
 	}
 
 	return m_totalPrimaryActivation;
@@ -1150,14 +1128,17 @@ REAL CSpace::GetTotalSecondaryActivation(BOOL bCompute) const
 	if (bCompute)
 	{
 		// reset total
-		m_totalSecondaryActivation = 0.0;
+		REAL totalSecondaryActivation = 0.0;
 
 		// sum all secondary activations
 		for (int nAt = 0; nAt < GetNodeCount(); nAt++)
 		{
-			m_totalSecondaryActivation += 
+			totalSecondaryActivation += 
 				GetNodeAt(nAt)->GetSecondaryActivation();
 		}
+
+		m_totalSecondaryActivation = m_totalSecondaryActivation * 0.99 
+			+ totalSecondaryActivation * 0.01;
 	}
 
 	return m_totalSecondaryActivation;
