@@ -83,8 +83,8 @@ int __cdecl CompareNodeViewActivation(const void *elem1, const void *elem2 )
 	CNodeView *pNodeView2 = *(CNodeView **) elem2;
 
 	// return difference in activation; > 0 if act2 > act1
-	return 1e+5 * (pNodeView2->GetNode()->GetActivation() 
-		- pNodeView1->GetNode()->GetActivation());
+	return Round<int>(1e+5 * (pNodeView2->GetNode()->GetActivation() 
+		- pNodeView1->GetNode()->GetActivation()));
 
 }	// CompareNodeViewActivation
 
@@ -111,7 +111,7 @@ int __cdecl CompareNodeViewActDiff(const void *elem1, const void *elem2 )
 				- pNodeView2->GetSpringActivation());
 
 	// return difference in factors; > 0 if factor1 > factor2
-	return 1e+5 * (factor1 - factor2);
+	return Round<int>(1e+5 * (factor1 - factor2));
 
 }	// CompareNodeViewActDiff
 
@@ -135,13 +135,14 @@ AFX_MODULE_STATE *CSpaceView::m_pModuleState = NULL;
 // constructs a new CSpaceView object 
 //////////////////////////////////////////////////////////////////////
 CSpaceView::CSpaceView()
-	: m_lpDD(NULL),			// DirectDraw object
-		m_lpDDSPrimary(NULL),	// DirectDraw primary surface
-		m_lpDDSOne(NULL),		// Offscreen surface 1
-		m_lpClipper(NULL),		// clipper for primary
-		m_pTracker(NULL),
-		m_pMaximizedView(NULL),
-		m_bDragging(FALSE)
+	: m_lpDD(NULL)				// DirectDraw object
+		, m_lpDDSPrimary(NULL)	// DirectDraw primary surface
+		, m_lpDDSOne(NULL)		// Offscreen surface 1
+		, m_lpClipper(NULL)		// clipper for primary
+		, m_pTracker(NULL)
+		, m_pMaximizedView(NULL)
+		, m_bDragging(FALSE)
+		, m_pNLM(NULL)
 {
 	DWORD dwBkColor = ::AfxGetApp()->GetProfileInt("Settings", "BkColor", 
 		(DWORD) RGB(115, 158, 206));
@@ -255,7 +256,7 @@ CNodeView *CSpaceView::FindNodeViewAt(CPoint pt)
 		CNodeView *pNodeView = GetNodeView(nAt);
 
 		// see if the mouse-click was within it
-		const CRgn& rgnShape = pNodeView->GetShape();
+		const CRgn& rgnShape = pNodeView->m_shapeHit;
 		if (rgnShape.m_hObject && rgnShape.PtInRegion(pt))
 		{
 			return pNodeView;
@@ -285,7 +286,7 @@ CNodeView *CSpaceView::FindNearestNodeView(CPoint pt)
 		CNodeView *pNodeView = GetNodeView(nAt);
 		// CRect rect = pNodeView->GetInnerRect();
 		CSize sz = // rect.CenterPoint()
-			(CPoint) (pNodeView->GetScaledNodeCenter()) - pt;
+			(CPoint) (pNodeView->GetSpringCenter()) - pt;
 		REAL distSq = sz.cx * sz.cx + sz.cy * sz.cy;
 		if (distSq < minDistSq)
 		{
@@ -313,10 +314,10 @@ BOOL CSpaceView::FindLink(CPoint ptFrom, CPoint ptTo,
 
 	for (int nAtNodeView = 0; nAtNodeView < GetNodeViewCount(); nAtNodeView++)
 	{
-		CVectorD<2> vNodeCenter(GetNodeView(nAtNodeView)->GetScaledNodeCenter()); // GetInnerRect().CenterPoint());
+		CVectorD<2> vNodeCenter(GetNodeView(nAtNodeView)->GetSpringCenter()); // GetInnerRect().CenterPoint());
 		for (int nAtLinkedView = nAtNodeView+1; nAtLinkedView < GetNodeViewCount(); nAtLinkedView++)
 		{
-			CVectorD<2> vLinkedFrom(GetNodeView(nAtLinkedView)->GetScaledNodeCenter()); // GetInnerRect().CenterPoint());
+			CVectorD<2> vLinkedFrom(GetNodeView(nAtLinkedView)->GetSpringCenter()); // GetInnerRect().CenterPoint());
 			CVectorD<2> vLinkedOffset = vLinkedFrom - vNodeCenter;
 
 			BOOL bIntersect = IntersectLineSegments(vFrom, vOffset, vLinkedFrom, vLinkedOffset)
@@ -455,6 +456,7 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt)
 	// construct a new node view for this node
 	CNodeView *pNewNodeView = new CNodeView(pParentNode, this);
 	pParentNode->SetView(pNewNodeView);
+	m_skin.CalcInnerOuterRect(pNewNodeView);
 
 	// trigger loading of the DIB
 	pParentNode->GetDib();
@@ -626,7 +628,7 @@ void CSpaceView::ActivatePending()
 			ActivateNodeView(m_pRecentActivated[0], 0.0);
 
 		if (m_pRecentActivated[1])
-			ActivateNodeView(m_pRecentActivated[1], 0.0); 
+			ActivateNodeView(m_pRecentActivated[1], 0.0);
 
 		// normalize the nodes
 		GetDocument()->NormalizeNodes();
@@ -911,6 +913,33 @@ int CSpaceView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	// initialze the direct-draw for the skin
 	m_skin.InitDDraw(m_lpDD);
 
+	// initialize CNodeLayoutManager for large layout
+	m_pNLM = new CNodeLayoutManager();
+	m_pNLM->m_minLayoutSelection = 60.0;
+	m_pNLM->m_bImageBesideTitle = true; // false;
+	m_pNLM->m_bShowDescription = true;
+	m_pNLM->m_maxTitleHeight = 30.0;
+	m_pNLM->m_titleLogWeight = 5.0;
+	m_pNLM->m_imageLogWeight = 3.0;
+	m_pNLM->m_maxImageWidth = 200.0;
+	m_pNLM->m_maxDescWidth = 400.0;  // TODO: synch with TEXT_WIDTH in CNodeView
+
+	// set up medium layout
+	CNodeLayoutManager *pNLM = m_pNLM->GetNextLayoutManager();
+	pNLM->m_minLayoutSelection = 25.0;
+	pNLM->m_bImageBesideTitle = true;
+	pNLM->m_imageLogWeight = 1.0;
+
+	// set up small layout
+	pNLM = pNLM->GetNextLayoutManager();
+	pNLM->m_minLayoutSelection = 15.0;
+	pNLM->m_imageLogWeight = 0.0;
+	// pNLM->m_bShowDescription = false;
+
+	// set up small layout
+	pNLM = pNLM->GetNextLayoutManager();
+	pNLM->m_maxImageWidth = 0.0;
+
 	// create a timer
  	m_nTimerID = SetTimer(TIMER_ID, TIMER_ELAPSED, NULL);
 	ASSERT(m_nTimerID != 0);
@@ -1028,7 +1057,10 @@ void CSpaceView::OnPaint()
 					// draw the node view
 					pNodeView->DrawLinks(&dc, &m_skin);
 				}
-			} 
+			}
+
+			// release the DC
+			RELEASE_DETACH_DC(m_lpDDSOne, dc);
 
 			// now create an array to hold the drawing-order for the nodeviews
 			CObArray arrNodeViewsToDraw;
@@ -1046,6 +1078,92 @@ void CSpaceView::OnPaint()
 				arrNodeViewsToDraw.Add(m_pMaximizedView);
 			}
 
+#ifdef SKIN_RENDER_3D
+			///////////////////////////////////////////////////////////////
+			// 3D rendering
+			///////////////////////////////////////////////////////////////
+
+			// create context
+
+			// Direct3D rendering -- initialize the objects first
+			LPDIRECT3DDEVICE2 lpD3DDev = NULL;
+			ASSERT_BOOL(m_skin.InitD3DDevice(m_lpDDSOne, &lpD3DDev));
+
+			CRect rectClient;
+			GetClientRect(rectClient);
+			LPDIRECT3DVIEWPORT2	lpViewport = NULL;
+			ASSERT_BOOL(m_skin.InitViewport(lpD3DDev, rectClient, &lpViewport));
+
+			// set up the zoom transform, accounting for rectangle
+			//		inflation
+			D3DMATRIX mat;
+			ZeroMemory(&mat, sizeof(D3DMATRIX));
+			mat(0, 0) = (D3DVALUE) (1.0 / (rectClient.Width())); //  + 10.0));
+			mat(1, 1) = (D3DVALUE) (1.0 / (rectClient.Width())); // + 10.0));
+			mat(2, 2) = (D3DVALUE) 1.0; 
+			mat(3, 3) = (D3DVALUE) 1.0;
+			ASSERT_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_VIEW, &mat));
+
+			LPDIRECT3DLIGHT lpLights[2];
+			ASSERT_BOOL(m_skin.InitLights(lpViewport, lpLights));
+
+			// create the material and attach to the device's state
+			LPDIRECT3DMATERIAL2	lpMaterial = NULL;
+			ASSERT_BOOL(m_skin.InitMaterial(&lpMaterial));
+
+			D3DTEXTUREHANDLE hMat;
+			ASSERT_HRESULT(lpMaterial->GetHandle(lpD3DDev, &hMat));
+			ASSERT_HRESULT(lpD3DDev->SetLightState(D3DLIGHTSTATE_MATERIAL, hMat));
+
+			// render the skin
+			ASSERT_HRESULT(lpD3DDev->BeginScene());
+
+			// render in sorted order
+			for (nAtNodeView = 0; nAtNodeView < arrNodeViewsToDraw.GetSize(); 
+					nAtNodeView++)
+			{
+				CNodeView *pNodeView = ((CNodeView *)arrNodeViewsToDraw[nAtNodeView]);
+				if (!pNodeView->GetNode()->IsSubThreshold()
+					|| pNodeView->GetNode()->IsPostSuper())
+				{
+					// draw the min_diff node view
+					// TODO: fix this
+					const int THICK_PEN_WIDTH = 4;
+					m_skin.CalcShape(pNodeView, pNodeView->GetShape(), THICK_PEN_WIDTH);
+
+					if (pNodeView->m_extOuter // GetOuterRect()
+						.Height() > 1)
+					{
+						mat(0, 0) = (D3DVALUE) 1.0;
+						mat(1, 1) = (D3DVALUE) 1.0;
+						mat(2, 2) = (D3DVALUE) 1.0;
+						mat(3, 3) = (D3DVALUE) 1.0;
+
+						mat(3, 0) = (D3DVALUE) (pNodeView->GetSpringCenter()[0] * 2.0 - rectClient.Width());
+						mat(3, 1) = (D3DVALUE) (-pNodeView->GetSpringCenter()[1] * 2.0 + rectClient.Height());
+
+						ASSERT_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_WORLD, &mat));
+
+						m_skin.DrawSkinD3D(lpD3DDev, pNodeView);
+					}
+
+					// pNodeView->Draw3D(m_lpDDSOne);
+				}
+			} 
+
+			ASSERT_HRESULT(lpD3DDev->EndScene());
+
+			// release the interface
+			ASSERT_HRESULT(lpMaterial->Release());
+			ASSERT_HRESULT(lpLights[0]->Release());
+			ASSERT_HRESULT(lpLights[1]->Release());
+			ASSERT_HRESULT(lpViewport->Release());
+#endif
+
+			///////////////////////////////////////////////////////////////
+			// directdraw rendering
+			///////////////////////////////////////////////////////////////
+
 			// draw in sorted order
 			for (nAtNodeView = 0; nAtNodeView < arrNodeViewsToDraw.GetSize(); 
 					nAtNodeView++)
@@ -1054,19 +1172,13 @@ void CSpaceView::OnPaint()
 				if (!pNodeView->GetNode()->IsSubThreshold()
 					|| pNodeView->GetNode()->IsPostSuper())
 				{
-					// release the DC
-					RELEASE_DETACH_DC(m_lpDDSOne, dc);
-
-					// render the skin
-					m_skin.BltSkin(m_lpDDSOne, pNodeView);
-
-					// get a DC for the drawing surface
-					GET_ATTACH_DC(m_lpDDSOne, dc);
-
 					// draw the min_diff node view
-					pNodeView->Draw(&dc);
+					pNodeView->Draw(m_lpDDSOne);
 				}
 			} 
+
+			// get a DC for the drawing surface
+			GET_ATTACH_DC(m_lpDDSOne, dc);
 
 			// now draw the space
 			OnDraw(&dc);
@@ -1074,7 +1186,6 @@ void CSpaceView::OnPaint()
 			// release the DC
 			RELEASE_DETACH_DC(m_lpDDSOne, dc);
 		}
-
 
 		// form the destination (screen) rectangle
 		CRect rectDest = rectClient;
@@ -1186,6 +1297,7 @@ void CSpaceView::OnLButtonDblClk(UINT nFlags, CPoint point)
 	CView::OnLButtonDblClk(nFlags, point);
 }
 
+static bLayout = true;
 
 //////////////////////////////////////////////////////////////////////
 // CSpaceView::OnTimer
@@ -1220,12 +1332,16 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 
 	// perform any pending activation
 	ActivatePending();
+	
+	if (bLayout)
+	{
+		// layout the nodes and center them
+		GetDocument()->LayoutNodes();
 
-	// layout the nodes and center them
-	GetDocument()->LayoutNodes();
-
-	// now center based on the new positions
-	CenterNodeViews();
+		// now center based on the new positions
+		CenterNodeViews();
+	}
+	// bLayout = ~bLayout;
 
 	// update the privates
 	for (int nAt = 0; nAt < GetNodeViewCount(); nAt++)

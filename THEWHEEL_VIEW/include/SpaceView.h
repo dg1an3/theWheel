@@ -23,6 +23,7 @@
 // subordinate classes
 #include "NodeView.h"
 #include "NodeViewSkin.h"
+#include "NodeLayoutManager.h"
 #include "Tracker.h"
 
 
@@ -137,12 +138,19 @@ protected:
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
+protected:
+	friend CNodeView;
+
+	// TODO: make this pointed to by each CNodeView
+	// the skin for the node views
+	CNodeViewSkin m_skin;
+
+	// stores reference to the top-level node layout manager
+	CNodeLayoutManager *m_pNLM;
+
 private:
 	// the child node views
 	CObArray m_arrNodeViews;
-
-	// the skin for the node views
-	CNodeViewSkin m_skin;
 
 	// the global UID for direct draw
 	LPGUID m_lpGuid;
