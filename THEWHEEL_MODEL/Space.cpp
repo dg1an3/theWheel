@@ -59,7 +59,7 @@ int __cdecl CompareNodeActivations(const void *elem1, const void *elem2)
 	CNode *pNode1 = *(CNode**) elem1;
 	CNode *pNode2 = *(CNode**) elem2;
 
-	return 1000.0 * (pNode2->GetActivation() - pNode1->GetActivation());
+	return Round<int>(1000.0 * (pNode2->GetActivation() - pNode1->GetActivation()));
 
 }	// CompareNodeActivations
 
@@ -143,7 +143,7 @@ CSpace::CSpace()
 	// set the spring constant (from the profile)
 	SetSpringConst( 1.0 / 100.0 * 
 		(REAL) ::AfxGetApp()->GetProfileInt("LAYOUT", "SPRING_CONST", 
-			100.0 * GetSpringConst()));
+			Round<int>(100.0 * GetSpringConst())));
 
 }	// CSpace::CSpace
 
@@ -1108,8 +1108,8 @@ REAL CSpace::GetTotalPrimaryActivation(BOOL bCompute) const
 				GetNodeAt(nAt)->GetPrimaryActivation();
 		}
 
-		m_totalPrimaryActivation = m_totalPrimaryActivation * 0.99 
-			+ totalPrimaryActivation * 0.01;
+		m_totalPrimaryActivation = // m_totalPrimaryActivation * 0.99 
+			totalPrimaryActivation; // * 0.01;
 	}
 
 	return m_totalPrimaryActivation;
@@ -1137,8 +1137,8 @@ REAL CSpace::GetTotalSecondaryActivation(BOOL bCompute) const
 				GetNodeAt(nAt)->GetSecondaryActivation();
 		}
 
-		m_totalSecondaryActivation = m_totalSecondaryActivation * 0.99 
-			+ totalSecondaryActivation * 0.01;
+		m_totalSecondaryActivation = // m_totalSecondaryActivation * 0.99 
+			totalSecondaryActivation; //  * 0.01;
 	}
 
 	return m_totalSecondaryActivation;
