@@ -16,7 +16,7 @@ static char THIS_FILE[] = __FILE__;
 
 
 CActivationControlBar::CActivationControlBar(CWnd* pParent /*=NULL*/)
-: m_pRenderer(NULL)
+: m_pNode(NULL)
 //	: CDialog(CActivationControlBar::IDD, pParent)
 {
 	//{{AFX_DATA_INIT(CActivationControlBar)
@@ -48,8 +48,8 @@ void CActivationControlBar::OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScro
 	if (nSBCode == TB_THUMBTRACK)
 	{
 		TRACE1("Slider position = %i\n", nPos);
-		m_activation = (double) nPos / 100.0;
-		m_pRenderer->SetActivation(m_activation);
+		m_activation = (double) nPos / 200.0;
+		m_pNode->SetActivation(m_activation);
 	}
 		
 	CDialogBar::OnVScroll(nSBCode, nPos, pScrollBar);

@@ -6,8 +6,8 @@
 
 #include "MainFrm.h"
 
-#include <RotateTracker.h>
-#include <ZoomTracker.h>
+// #include <RotateTracker.h>
+// #include <ZoomTracker.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -41,6 +41,7 @@ static UINT indicators[] =
 // CMainFrame construction/destruction
 
 CMainFrame::CMainFrame()
+	: m_pWndView(NULL)
 {
 	// TODO: add member initialization code here	
 }
@@ -53,33 +54,19 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
 	if (CFrameWnd::OnCreate(lpCreateStruct) == -1)
 		return -1;
+
 	// create a view to occupy the client area of the frame
-	if (!m_wndView.Create(NULL, NULL, AFX_WS_DEFAULT_VIEW,
+	m_pWndView = new CSpaceView();
+	if (!m_pWndView->Create(NULL, NULL, AFX_WS_DEFAULT_VIEW,
 		CRect(0, 0, 0, 0), this, AFX_IDW_PANE_FIRST, NULL))
 	{
 		TRACE0("Failed to create view window\n");
 		return -1;
 	}
-	m_pNodeRenderer = new CNodeRenderer(&m_wndView);
-	m_wndView.AddRenderer(m_pNodeRenderer);
 
-	// m_wndView.camera.direction.Set(CVector<3>(0.0, 0.0, -1.0));
-	m_wndView.GetCamera().SetDistance(700.0);
-	m_wndView.GetCamera().SetClippingPlanes(650.0, 750.0);
-	m_wndView.GetCamera().SetFieldOfView(100.0);
-
-	m_wndView.SetBackgroundColor(RGB(48, 0, 64));
-
-	m_wndView.RemoveAllLights();
-	COpenGLLight *pLight = new COpenGLLight();
-	pLight->SetPosition(CVector<3>(-500.0, 500.0, 500.0));
-	m_wndView.AddLight(pLight);
-
-	CRotateTracker *pRotateTracker = new CRotateTracker(&m_wndView);
-	m_wndView.AddLeftTracker(pRotateTracker);
-
-	CZoomTracker *pZoomTracker = new CZoomTracker(&m_wndView);
-	m_wndView.AddMiddleTracker(pZoomTracker);
+	m_space.OnNewDocument();
+	m_space.m_bAutoDelete = false;
+	m_space.AddView(m_pWndView);
 
 	if (!m_wndToolBar.CreateEx(this, TBSTYLE_FLAT, WS_CHILD | WS_VISIBLE | CBRS_TOP
 		| CBRS_GRIPPER | CBRS_TOOLTIPS | CBRS_FLYBY | CBRS_SIZE_DYNAMIC) ||
@@ -108,7 +95,12 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	}
 	// m_pNodeRenderer->activation.SyncTo(&m_wndActivationBar.activation);
 	// m_pNodeRenderer->activation.Set(90.0);
-	m_wndActivationBar.m_pRenderer = m_pNodeRenderer;
+
+	// get test node
+	CNode *pNode = m_pWndView->GetDocument()->GetNodeAt(1);
+	pNode->SetName("Hello Node");
+	pNode->SetDescription("This is a Hello node; thanks for visiting though you may consider staying for a while as it is a pretty long road back to the way things were before we first met, on that fateful rainy day");
+	m_wndActivationBar.m_pNode = pNode;
 
 	// TODO: Delete these three lines if you don't want the toolbar to
 	//  be dockable
@@ -152,14 +144,18 @@ void CMainFrame::Dump(CDumpContext& dc) const
 void CMainFrame::OnSetFocus(CWnd* pOldWnd)
 {
 	// forward focus to the view window
+#ifdef NO_WNDVIEW
 	m_wndView.SetFocus();
+#endif
 }
 
 BOOL CMainFrame::OnCmdMsg(UINT nID, int nCode, void* pExtra, AFX_CMDHANDLERINFO* pHandlerInfo)
 {
+#ifdef NO_WNDVIEW
 	// let the view have first crack at the command
 	if (m_wndView.OnCmdMsg(nID, nCode, pExtra, pHandlerInfo))
 		return TRUE;
+#endif
 
 	// otherwise, do default handling
 	return CFrameWnd::OnCmdMsg(nID, nCode, pExtra, pHandlerInfo);

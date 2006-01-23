@@ -9,12 +9,10 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include <OpenGLView.h>
-#include "..\NodeRenderer.h"
+#include <Space.h>
+#include <SpaceView.h>
 
 #include "ActivationControlBar.h"
-
-// #include "ChildView.h"
 
 class CMainFrame : public CFrameWnd
 {
@@ -48,8 +46,9 @@ public:
 protected:  // control bar embedded members
 	CStatusBar  m_wndStatusBar;
 	CToolBar    m_wndToolBar;
-	COpenGLView m_wndView;
-	CNodeRenderer * m_pNodeRenderer;
+
+	CSpace		 m_space;
+	CSpaceView * m_pWndView;
 
 	CActivationControlBar m_wndActivationBar;
 
@@ -62,6 +61,7 @@ protected:
 		//    DO NOT EDIT what you see in these blocks of generated code!
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
+
 };
 
 /////////////////////////////////////////////////////////////////////////////

@@ -7,7 +7,7 @@
 // ActivationControlBar.h : header file
 //
 
-#include <NodeRenderer.h>
+#include <NodeView.h>
 
 /////////////////////////////////////////////////////////////////////////////
 // CActivationControlBar dialog
@@ -27,7 +27,7 @@ public:
 	// holds the current activation value (0.0 -> 1.0)
 	double m_activation;
 
-	CNodeRenderer *m_pRenderer;
+	CNode *m_pNode;
 
 // Overrides
 	// ClassWizard generated virtual function overrides
