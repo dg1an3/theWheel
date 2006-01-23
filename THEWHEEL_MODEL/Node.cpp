@@ -1300,9 +1300,6 @@ void CNode::PropagateActivation(REAL scale)
 		// only propagate through the link if we have not already done so
 		if (!pLink->HasPropagated())
 		{
-			// mark this link as having propagated
-			pLink->SetHasPropagated(TRUE);
-
 			// get the link target
 			CNode *pTarget = pLink->GetTarget();
 
@@ -1330,8 +1327,11 @@ void CNode::PropagateActivation(REAL scale)
 			// set the new actual activation
 			pTarget->SetActivation(newActivation, this, pLink->GetGainWeight());
 
+			// mark this link as having propagated
+			pLink->SetHasPropagated(TRUE);
+
 			// propagate to linked nodes
-			pTarget->PropagateActivation(scale * (REAL) 0.999);
+			pTarget->PropagateActivation(scale * (REAL) 0.9999);
 		}
 	}
 
