@@ -20,6 +20,8 @@
 // vector class for position calculations
 #include <VectorD.h>
 
+#include <Extent.h>
+
 // forward-declare CNodeView
 class CNodeView;
 
@@ -66,10 +68,13 @@ public:
 	BOOL InitDDraw(LPDIRECTDRAW lpDD);
 
 // Implementation
-protected:
+public:
 	// accessors for the left-right and top-bottom ellipse rectangles
-	CRect CalcTopBottomEllipseRect(CNodeView *pNodeView);
-	CRect CalcLeftRightEllipseRect(CNodeView *pNodeView);
+	// CRect CalcTopBottomEllipseRect(CNodeView *pNodeView);
+	// CRect CalcLeftRightEllipseRect(CNodeView *pNodeView);
+
+	CExtent<REAL> CalcTopBottomEllipseExtent(CNodeView *pNodeView);
+	CExtent<REAL> CalcLeftRightEllipseExtent(CNodeView *pNodeView);
 
 	// Direct3D initialization
 	BOOL InitD3DDevice(LPDIRECTDRAWSURFACE lpDDS, 

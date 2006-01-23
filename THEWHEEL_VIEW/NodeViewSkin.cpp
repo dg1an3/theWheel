@@ -55,7 +55,7 @@ const COLORREF COLORKEY = RGB(0, 255, 0);
 const REAL BORDER_RADIUS = 10.0;
 
 const int MIN_HEIGHT_ELLIPTANGLE = 15;
-const int MAX_HEIGHT_GDI = MIN_HEIGHT_ELLIPTANGLE + 40;
+const int MAX_HEIGHT_GDI = 1; // MIN_HEIGHT_ELLIPTANGLE + 40;
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -221,11 +221,10 @@ void CNodeViewSkin::CalcInnerOuterRect(CNodeView *pNodeView)
 	const CVectorD<3> vPos = pNodeView->GetSpringCenter();
 
 	// set the width and height of the window, keeping the center constant
-	CRect& rectOuter = pNodeView->GetOuterRect();
-	rectOuter.left = Round<int>(vPos[0] - width / 2.0);
-	rectOuter.right = Round<int>(vPos[0] + width / 2.0);
-	rectOuter.top = Round<int>(vPos[1] - height / 2.0);
-	rectOuter.bottom = Round<int>(vPos[1] + height / 2.0); 
+	pNodeView->m_extOuter.SetLeft(vPos[0] - width / 2.0);
+	pNodeView->m_extOuter.SetWidth(width);
+	pNodeView->m_extOuter.SetTop(vPos[1] - height / 2.0);
+	pNodeView->m_extOuter.SetHeight(height);
 
 	// compute the r, which represents the amount of "elliptical-ness"
 	//		(ratio of inner / outer)
@@ -235,16 +234,10 @@ void CNodeViewSkin::CalcInnerOuterRect(CNodeView *pNodeView)
 	REAL innerWidth = width - (1.0 - r) * width;
 	REAL innerHeight = height - (1.0 - r) * height;
 
-	// initialize the inner rectangle
-	CRect& rectInner = pNodeView->GetInnerRect();
-
-	rectInner.left = Round<int>(vPos[0] - innerWidth / 2.0);
-	rectInner.right = Round<int>(vPos[0] + innerWidth / 2.0);
-	rectInner.top = Round<int>(vPos[1] - innerHeight / 2.0);
-	rectInner.bottom = Round<int>(vPos[1] + innerHeight / 2.0);
-
-	pNodeView->SetActualSizes(CVectorD<3>(innerWidth, innerHeight),
-		CVectorD<3>(width, height));
+	pNodeView->m_extInner.SetLeft(vPos[0] - innerWidth / 2.0);
+	pNodeView->m_extInner.SetWidth(innerWidth);
+	pNodeView->m_extInner.SetTop(vPos[1] - innerHeight / 2.0);
+	pNodeView->m_extInner.SetHeight(innerHeight); 
 
 }	// CNodeViewSkin::CalcInnerOuterRect
 
@@ -260,16 +253,16 @@ void CNodeViewSkin::CalcShape(CNodeView *pNodeView, CRgn& rgn, int nErode)
 {
 	// re-create the region object as a rectangle (initially)
 	rgn.DeleteObject();
-	rgn.CreateRectRgnIndirect(pNodeView->GetInnerRect());
-
+	rgn.CreateRectRgnIndirect((CRect) pNodeView->m_extInner); // GetInnerRect());
+		
 	// form the ellipse for top/bottom clipping
-	CRect rectTopBottomEllipse = CalcTopBottomEllipseRect(pNodeView);
+	CRect rectTopBottomEllipse = (CRect) CalcTopBottomEllipseExtent(pNodeView);
 	rectTopBottomEllipse.DeflateRect(nErode, nErode, nErode, nErode);
 	CRgn ellipseTopBottom;
 	ellipseTopBottom.CreateEllipticRgnIndirect(&rectTopBottomEllipse);
 
 	// form the ellipse for left/right clipping
-	CRect rectLeftRightEllipse = CalcLeftRightEllipseRect(pNodeView);
+	CRect rectLeftRightEllipse = (CRect) CalcLeftRightEllipseExtent(pNodeView);
 	rectLeftRightEllipse.DeflateRect(nErode, nErode, nErode, nErode);
 	CRgn ellipseLeftRight;
 	ellipseLeftRight.CreateEllipticRgnIndirect(&rectLeftRightEllipse);
@@ -285,62 +278,62 @@ void CNodeViewSkin::CalcShape(CNodeView *pNodeView, CRgn& rgn, int nErode)
 
 
 /////////////////////////////////////////////////////////////////////////////
-// CNodeViewSkin::CalcLeftRightEllipseRect
+// CNodeViewSkin::CalcLeftRightEllipseExtent
 //
 // calculates the rectangle that bounds the ellipse for the left and right
 //		sides of the elliptangle
 // uses the nodeview's existing OuterRect and InnerRect; does not recalc
 //		these
 /////////////////////////////////////////////////////////////////////////////
-CRect CNodeViewSkin::CalcLeftRightEllipseRect(CNodeView *pNodeView)
+CExtent<REAL> CNodeViewSkin::CalcLeftRightEllipseExtent(CNodeView *pNodeView)
 {
-	const CRect& rectOuter = pNodeView->GetOuterRect();
-	const CRect& rectInner = pNodeView->GetInnerRect();
+	const CExtent<REAL>& extOuter = pNodeView->m_extOuter;
+	const CExtent<REAL>& extInner = pNodeView->m_extInner;
 
 	// compute the ellipse's b
-	REAL rx = ((REAL) rectInner.Width())
-			/ ((REAL) rectOuter.Width()); 
-	REAL bx = (REAL) sqrt((REAL) (rectInner.Height() 
-		* rectInner.Height()) * 0.25f
+	REAL rx = ((REAL) extInner.Width())
+			/ ((REAL) extOuter.Width()); 
+	REAL bx = (REAL) sqrt((REAL) (extInner.Height() 
+		* extInner.Height()) * 0.25f
 			/ (1.0f - rx * rx));
 
 	// now compute the ellipse's rectangle
-	CRect rectLeftRightEllipse = rectOuter;
-	rectLeftRightEllipse.top = (rectOuter.top + rectOuter.Height() / 2) - (long) bx;
-	rectLeftRightEllipse.bottom = (rectOuter.top + rectOuter.Height() / 2) + (long) bx;
+	CExtent<REAL> extLeftRightEllipse = extOuter;
+	extLeftRightEllipse.SetTop((extOuter.Top() + extOuter.Height() / 2.0) - bx);
+	extLeftRightEllipse.SetBottom((extOuter.Top() + extOuter.Height() / 2.0) + bx);
 
-	return rectLeftRightEllipse;
+	return extLeftRightEllipse;
 
-}	// CNodeViewSkin::CalcLeftRightEllipseRect
+}	// CNodeViewSkin::CalcLeftRightEllipseExtent
 
 
 /////////////////////////////////////////////////////////////////////////////
-// CNodeViewSkin::CalcTopBottomEllipseRect
+// CNodeViewSkin::CalcTopBottomEllipseExtent
 //
 // calculates the rectangle that bounds the ellipse for the top and bottom
 //		sides of the elliptangle
 // uses the nodeview's existing OuterRect and InnerRect; does not recalc
 //		these
 /////////////////////////////////////////////////////////////////////////////
-CRect CNodeViewSkin::CalcTopBottomEllipseRect(CNodeView *pNodeView)
+CExtent<REAL> CNodeViewSkin::CalcTopBottomEllipseExtent(CNodeView *pNodeView)
 {
-	const CRect& rectOuter = pNodeView->GetOuterRect();
-	const CRect& rectInner = pNodeView->GetInnerRect();
+	const CExtent<REAL>& extOuter = pNodeView->m_extOuter;
+	const CExtent<REAL>& extInner = pNodeView->m_extInner;
 
 	// compute the ellipse's b
-	REAL ry = ((REAL) rectInner.Height())
-			/ ((REAL) rectOuter.Height()); 
-	REAL by = (REAL) sqrt((REAL) (rectInner.Width() * rectInner.Width()) * 0.25f
+	REAL ry = ((REAL) extInner.Height())
+			/ ((REAL) extOuter.Height()); 
+	REAL by = (REAL) sqrt((REAL) (extInner.Width() * extInner.Width()) * 0.25f
 			/ (1.0f - ry * ry));
 
 	// now compute the ellipse's rectangle
-	CRect rectTopBottomEllipse = rectOuter;
-	rectTopBottomEllipse.left = (rectOuter.left + rectOuter.Width() / 2) - (long) by;
-	rectTopBottomEllipse.right = (rectOuter.left + rectOuter.Width() / 2) + (long) by;
+	CExtent<REAL> extTopBottomEllipse = extOuter;
+	extTopBottomEllipse.SetLeft((extOuter.Left() + extOuter.Width() / 2.0) - by);
+	extTopBottomEllipse.SetRight((extOuter.Left() + extOuter.Width() / 2.0) + by);
 
-	return rectTopBottomEllipse;
+	return extTopBottomEllipse;
 
-}	// CNodeViewSkin::CalcTopBottomEllipseRect
+}	// CNodeViewSkin::CalcTopBottomEllipseExtent
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -493,12 +486,13 @@ BOOL CNodeViewSkin::InitMaterial(LPDIRECT3DMATERIAL2 *lppD3DMat)
 void CNodeViewSkin::BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView)
 {
 	// calculate the rectangles
-	const CRect& rectOuter = pNodeView->GetOuterRect(); // CalcOuterRect(pNodeView);
-	const CRect& rectInner = pNodeView->GetInnerRect(); // CalcInnerRect(pNodeView);
+	CRect rectOuter = (CRect) pNodeView->m_extOuter; // GetOuterRect(); // CalcOuterRect(pNodeView);
+	CRect rectInner = (CRect) pNodeView->m_extInner; // GetInnerRect(); // CalcInnerRect(pNodeView);
 
 	// calculate the node-views shape rgn, for hit-testing
 	CalcShape(pNodeView, pNodeView->GetShape(), THICK_PEN_WIDTH);
-
+	CalcShape(pNodeView, pNodeView->m_shapeHit, -10);
+	
 	if (rectOuter.Height() < 6)
 	{
 		return;
@@ -593,7 +587,7 @@ LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView,
 											  CRect& rectSrc)
 {
 	// get the skin rectangle
-	rectSrc = pNodeView->GetOuterRect();
+	rectSrc = (CRect) pNodeView->m_extOuter; // GetOuterRect();
 
 	// compute width (= index into cache)
 	int nWidth = rectSrc.Width();
@@ -656,8 +650,8 @@ LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView,
 			//		inflation
 			D3DMATRIX mat;
 			ZeroMemory(&mat, sizeof(D3DMATRIX));
-			mat(0, 0) = (D3DVALUE) 1.0 / (rectSrc.Width() + 10.0);
-			mat(1, 1) = (D3DVALUE) 1.0 / (rectSrc.Width() + 10.0);
+			mat(0, 0) = (D3DVALUE) (1.0 / (rectSrc.Width() + 10.0));
+			mat(1, 1) = (D3DVALUE) (1.0 / (rectSrc.Width() + 10.0));
 			mat(2, 2) = (D3DVALUE) 1.0; 
 			mat(3, 3) = (D3DVALUE) 1.0;
 			CHECK_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_VIEW, &mat));
@@ -704,7 +698,7 @@ LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView,
 
 		// offset to correct center point
 		rectSrc.OffsetRect(ptCenter - rectSrc.CenterPoint());
-		ASSERT(rectSrc.CenterPoint() == ptCenter);
+		// ASSERT(rectSrc.CenterPoint() == ptCenter);
 	}
 
 	// return the DDS
@@ -723,12 +717,12 @@ LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView,
 void CNodeViewSkin::DrawSkinGDI(CDC *pDC, CNodeView *pNodeView)
 {	
 	// calculate the rectangles
-	const CRect& rectOuter = pNodeView->GetOuterRect();
-	const CRect& rectInner = pNodeView->GetInnerRect();
+	CRect rectOuter = (CRect) pNodeView->m_extOuter; // GetOuterRect();
+	CRect rectInner = (CRect) pNodeView->m_extInner; // GetInnerRect();
 
 	// get the guide rectangles
-	CRect rectLeftRightEllipse = CalcLeftRightEllipseRect(pNodeView);
-	CRect rectTopBottomEllipse = CalcTopBottomEllipseRect(pNodeView);
+	CRect rectLeftRightEllipse = (CRect) CalcLeftRightEllipseExtent(pNodeView);
+	CRect rectTopBottomEllipse = (CRect) CalcTopBottomEllipseExtent(pNodeView);
 
 	// store the old pen and brush
 	CPen *pOldPen = NULL;
@@ -815,23 +809,23 @@ void CNodeViewSkin::DrawSkinD3D(IDirect3DDevice2 *lpD3DDev,
 								CNodeView *pNodeView)
 {
 	// stores the node's aspect ratio
-	const CRect& rectOuter = pNodeView->GetOuterRect();
+	const CExtent<REAL>& extOuter = pNodeView->m_extOuter;
 
 	// compute the angle dividing the sections of the elliptangle
-	double sectionAngle = atan2((double) rectOuter.Height(), (double) rectOuter.Width());
+	double sectionAngle = atan2(extOuter.Height(), extOuter.Width());
 
 	// compute the parameters for the vertical sides
-	CRect rectLR = CalcLeftRightEllipseRect(pNodeView);
-	double pVert[2] = {rectLR.Width(), rectLR.Height()};
+	CExtent<REAL> extLR = CalcLeftRightEllipseExtent(pNodeView);
+	double pVert[2] = {extLR.Width(), extLR.Height()};
 
 	// compute the parameters for the horizontal sides
-	CRect rectTB = CalcTopBottomEllipseRect(pNodeView);
-	double pHoriz[2] = {rectTB.Width(), rectTB.Height()};
+	CExtent<REAL> extTB = CalcTopBottomEllipseExtent(pNodeView);
+	double pHoriz[2] = {extTB.Width(), extTB.Height()};
 
 	// create a previous molding, to connect to next
-	CMolding* pPrev = new CMolding(2*PI, EvalElliptangle(2*PI, pVert), 
-		(rectOuter.Height() > BORDER_RADIUS * 4) ? BORDER_RADIUS 
-			: rectOuter.Height() / 4);
+	CMolding* pPrev = new CMolding(2.0 * PI, EvalElliptangle(2.0 * PI, pVert), 
+		(extOuter.Height() > BORDER_RADIUS * 4.0) ? BORDER_RADIUS 
+			: extOuter.Height() / 4.0);
 
 	// now render the four sections of the molding
 	pPrev = CMolding::RenderMoldingSection(lpD3DDev, 

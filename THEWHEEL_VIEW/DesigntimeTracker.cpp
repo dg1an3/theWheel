@@ -69,7 +69,7 @@ void CDesigntimeTracker::OnButtonDown(UINT nFlags, CPoint point)
 		// start a link
 		m_pLinkingView = pSelectedView;
 		m_ptStart = point 
-			- m_pLinkingView->GetOuterRect().CenterPoint();
+			- (CPoint) (m_pLinkingView->GetSpringCenter()); // GetOuterRect().CenterPoint();
 	}
 	else
 	{
@@ -232,7 +232,9 @@ void CDesigntimeTracker::OnDraw(CDC *pDC)
 
 		if (NULL != m_pLinkingView)
 		{
-			pDC->MoveTo(m_ptStart + m_pLinkingView->GetOuterRect().CenterPoint());
+			CRect rectOuter = (CRect) m_pLinkingView->m_extOuter;
+			pDC->MoveTo(m_ptStart + //  m_pLinkingView->GetOuterRect()
+				rectOuter.CenterPoint());
 		}
 		else
 		{
