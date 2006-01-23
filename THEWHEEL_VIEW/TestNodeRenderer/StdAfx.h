@@ -12,6 +12,7 @@
 
 #define VC_EXTRALEAN		// Exclude rarely-used stuff from Windows headers
 
+
 #include <afxwin.h>         // MFC core and standard components
 #include <afxext.h>         // MFC extensions
 #include <afxdisp.h>        // MFC Automation classes
@@ -21,6 +22,14 @@
 #endif // _AFX_NO_AFXCMN_SUPPORT
 
 #include <afxtempl.h>
+
+#include <afxole.h>			// MFC support for OLE
+
+// multimedia and sound includes
+#include <mmsystem.h>
+#include <mmreg.h>
+#include <msacm.h>
+#include <dsound.h>
 
 //{{AFX_INSERT_LOCATION}}
 // Microsoft Visual C++ will insert additional declarations immediately before the previous line.
