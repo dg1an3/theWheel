@@ -162,6 +162,13 @@ public:
 	REAL GetPrimaryActivation() const;
 	REAL GetSecondaryActivation() const;
 
+	// set accessor sets either the primary or the secondary activation, based
+	//		on whether the activator is NULL
+	// over-rides can perform special functions, for instance when the
+	//		activation reaches a threshold
+	void SetActivation(REAL newActivation, 
+		CNode *pActivator = NULL, REAL weight = 0.0);
+
 	// returns the number of descendants of this node
 	int GetDescendantCount() const;
 
@@ -200,13 +207,6 @@ protected:
 
 	//////////////////////////////////////////////////////////////////
 	// activation helper functions
-
-	// set accessor sets either the primary or the secondary activation, based
-	//		on whether the activator is NULL
-	// over-rides can perform special functions, for instance when the
-	//		activation reaches a threshold
-	virtual void SetActivation(REAL newActivation, 
-		CNode *pActivator = NULL, REAL weight = 0.0);
 
 	// propagation management
 	void ResetForPropagation();
