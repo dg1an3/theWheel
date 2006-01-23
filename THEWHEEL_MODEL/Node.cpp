@@ -44,7 +44,7 @@ int __cdecl CompareLinkWeights(const void *elem1, const void *elem2)
 	CNodeLink *pLink1 = *(CNodeLink**) elem1;
 	CNodeLink *pLink2 = *(CNodeLink**) elem2;
 
-	return 1000.0 * (pLink2->GetWeight() - pLink1->GetWeight());
+	return Round<int>(1000.0 * (pLink2->GetWeight() - pLink1->GetWeight()));
 
 }	// CompareLinkWeights
 
@@ -663,7 +663,7 @@ CVectorD<3> CNode::GetSize(REAL activation) const
 
 	// compute the desired aspect ratio (maintain the current aspect ratio)
 	REAL aspectRatio = max - scale 
-		* (REAL) expf((REAL) -6.0 * activation);
+		* (REAL) exp((REAL) -6.0 * activation);
 
 	// compute the new width and height from the desired area and the desired
 	//		aspect ratio
