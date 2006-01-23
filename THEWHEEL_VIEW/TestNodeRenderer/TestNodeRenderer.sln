@@ -1,0 +1,66 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestNodeRenderer", "TestNodeRenderer.vcproj", "{173A9328-385E-4AB4-B56F-2EFAD4C64369}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A55F1807-92A3-40BA-A93F-09A72EDAB7C9} = {A55F1807-92A3-40BA-A93F-09A72EDAB7C9}
+		{03214C2F-2423-4EDB-B713-C84F746950D1} = {03214C2F-2423-4EDB-B713-C84F746950D1}
+		{EA575145-B3A6-4FD0-AE0D-C7B1EC7CD2F7} = {EA575145-B3A6-4FD0-AE0D-C7B1EC7CD2F7}
+		{C1731CD4-0F4D-49BE-9A5A-1AC5C19391A7} = {C1731CD4-0F4D-49BE-9A5A-1AC5C19391A7}
+		{ABEB75F5-3124-498B-8F1A-9B574CA42815} = {ABEB75F5-3124-498B-8F1A-9B574CA42815}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MTL", "..\..\MTL\MTL.vcproj", "{ABEB75F5-3124-498B-8F1A-9B574CA42815}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OPTIMIZER_BASE", "..\..\OptimizeN\OPTIMIZER_BASE.vcproj", "{EA575145-B3A6-4FD0-AE0D-C7B1EC7CD2F7}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "THEWHEEL_MODEL", "..\..\THEWHEEL_MODEL\THEWHEEL_MODEL.vcproj", "{03214C2F-2423-4EDB-B713-C84F746950D1}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "THEWHEEL_VIEW", "..\THEWHEEL_VIEW.vcproj", "{C1731CD4-0F4D-49BE-9A5A-1AC5C19391A7}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XMLLogging", "..\..\XMLLogging\XMLLogging.vcproj", "{A55F1807-92A3-40BA-A93F-09A72EDAB7C9}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Release = Release
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{173A9328-385E-4AB4-B56F-2EFAD4C64369}.Debug.ActiveCfg = Debug|Win32
+		{173A9328-385E-4AB4-B56F-2EFAD4C64369}.Debug.Build.0 = Debug|Win32
+		{173A9328-385E-4AB4-B56F-2EFAD4C64369}.Release.ActiveCfg = Release|Win32
+		{173A9328-385E-4AB4-B56F-2EFAD4C64369}.Release.Build.0 = Release|Win32
+		{ABEB75F5-3124-498B-8F1A-9B574CA42815}.Debug.ActiveCfg = Debug|Win32
+		{ABEB75F5-3124-498B-8F1A-9B574CA42815}.Debug.Build.0 = Debug|Win32
+		{ABEB75F5-3124-498B-8F1A-9B574CA42815}.Release.ActiveCfg = Release|Win32
+		{ABEB75F5-3124-498B-8F1A-9B574CA42815}.Release.Build.0 = Release|Win32
+		{EA575145-B3A6-4FD0-AE0D-C7B1EC7CD2F7}.Debug.ActiveCfg = Debug|Win32
+		{EA575145-B3A6-4FD0-AE0D-C7B1EC7CD2F7}.Debug.Build.0 = Debug|Win32
+		{EA575145-B3A6-4FD0-AE0D-C7B1EC7CD2F7}.Release.ActiveCfg = Release|Win32
+		{EA575145-B3A6-4FD0-AE0D-C7B1EC7CD2F7}.Release.Build.0 = Release|Win32
+		{03214C2F-2423-4EDB-B713-C84F746950D1}.Debug.ActiveCfg = Debug|Win32
+		{03214C2F-2423-4EDB-B713-C84F746950D1}.Debug.Build.0 = Debug|Win32
+		{03214C2F-2423-4EDB-B713-C84F746950D1}.Release.ActiveCfg = Release|Win32
+		{03214C2F-2423-4EDB-B713-C84F746950D1}.Release.Build.0 = Release|Win32
+		{C1731CD4-0F4D-49BE-9A5A-1AC5C19391A7}.Debug.ActiveCfg = Debug|Win32
+		{C1731CD4-0F4D-49BE-9A5A-1AC5C19391A7}.Debug.Build.0 = Debug|Win32
+		{C1731CD4-0F4D-49BE-9A5A-1AC5C19391A7}.Release.ActiveCfg = Release|Win32
+		{C1731CD4-0F4D-49BE-9A5A-1AC5C19391A7}.Release.Build.0 = Release|Win32
+		{A55F1807-92A3-40BA-A93F-09A72EDAB7C9}.Debug.ActiveCfg = Debug|Win32
+		{A55F1807-92A3-40BA-A93F-09A72EDAB7C9}.Debug.Build.0 = Debug|Win32
+		{A55F1807-92A3-40BA-A93F-09A72EDAB7C9}.Release.ActiveCfg = Release|Win32
+		{A55F1807-92A3-40BA-A93F-09A72EDAB7C9}.Release.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal
