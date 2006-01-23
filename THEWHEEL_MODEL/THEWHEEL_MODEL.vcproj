@@ -3,6 +3,7 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="THEWHEEL_MODEL"
+	ProjectGUID="{03214C2F-2423-4EDB-B713-C84F746950D1}"
 	SccProjectName=""
 	SccLocalPath=""
 	Keyword="MFCProj">
