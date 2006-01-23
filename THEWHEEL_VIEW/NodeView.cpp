@@ -19,6 +19,7 @@
 
 // the displayed model object
 #include <Node.h>
+#include ".\include\nodeview.h"
 
 
 #ifdef _DEBUG
@@ -50,6 +51,9 @@ bool CNodeView::m_bStaticInit = false;
 CFont CNodeView::m_font;
 int CNodeView::m_nSrcLineHeight;
 
+CArray<CFont *, CFont *> CNodeView::m_arrTitleFont;
+
+
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -62,6 +66,7 @@ int CNodeView::m_nSrcLineHeight;
 CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 : m_pNode(pNode),
 	m_springActivation(pNode->GetActivation()),
+	m_layoutSelect(0),
 	m_ptMouseDown(-1, -1),
 	m_bDragging(FALSE),
 	m_bDragged(FALSE),
@@ -70,10 +75,6 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 	m_pendingActivation(0.0f),
 	m_bMaximized(FALSE)
 {
-
-	// ZeroMemory(m_rectOuter, sizeof(CRect));
-	// ZeroMemory(m_rectInner, sizeof(CRect));
-
 	// set the view pointer for the node
 	GetNode()->SetView(this);
 
@@ -84,6 +85,7 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 
 	m_posSpring.m_b = 8.0;
 	m_actSpring.m_b = 6.0;
+	m_layoutSelectSpring.m_b = 7.0;
 
 	if (!m_bStaticInit)
 	{
@@ -231,37 +233,6 @@ REAL CNodeView::GetSpringActivation()
 }	// CNodeView::GetSpringActivation
 
 
-void CNodeView::SetActualSizes(const CVectorD<3>& vInner, const CVectorD<3>& vOuter)
-{
-	m_vInnerSize = vInner;
-	m_vOuterSize = vOuter;
-}
-
-
-/////////////////////////////////////////////////////////////////////////////
-// CNodeView::GetOuterRect
-//
-// returns the outer (bounding) rectangle of the elliptangle
-/////////////////////////////////////////////////////////////////////////////
-CRect& CNodeView::GetOuterRect()
-{
-	return m_rectOuter;
-
-}	// CNodeView::GetOuterRect
-
-
-/////////////////////////////////////////////////////////////////////////////
-// CNodeView::GetInnerRect
-//
-// returns the inner rectangle of the elliptangle
-/////////////////////////////////////////////////////////////////////////////
-CRect& CNodeView::GetInnerRect()
-{
-	return m_rectInner;
-
-}	// CNodeView::GetInnerRect
-
-
 //////////////////////////////////////////////////////////////////////
 // CNodeView::GetShape
 // 
@@ -357,6 +328,27 @@ void CNodeView::UpdateSpringActivation(REAL springConst)
  	// m_springActivation = GetThresholdedActivation() * (1.0 - springConst)
 	//		+ m_springActivation * springConst;
 
+	// update layout selection spring
+
+	// first, update extInner
+	m_pParent->m_skin.CalcInnerOuterRect(this);
+
+	// now, determine integer layout selection (set point), based on m_extCurrent
+	REAL layoutSelectInt = __max(m_extInner.Height() - 10.0, 0.0);		// SYNCH with Draw code
+
+	// now determine the integer layout selection (where it should be at) 
+	CNodeLayoutManager *pNLM = m_pParent->m_pNLM;
+	while (layoutSelectInt < pNLM->GetNextLayoutManager()->GetMinLayoutSelection())
+	{
+		pNLM = pNLM->GetNextLayoutManager();
+	}
+	layoutSelectInt = pNLM->GetMinLayoutSelection();
+
+	// now update spring
+	m_layoutSelectSpring.m_vPosition[0] = m_layoutSelect - layoutSelectInt;
+	m_layoutSelectSpring.UpdateSpring(0.1);
+	m_layoutSelect = m_layoutSelectSpring.m_vPosition[0] + layoutSelectInt;
+
 	// and invalidate the parent window
 	m_pParent->Invalidate(FALSE);
 
@@ -421,40 +413,117 @@ void CNodeView::SetMaximized(BOOL bMax)
 // 
 // draws the entire node view
 //////////////////////////////////////////////////////////////////////
-void CNodeView::Draw(CDC *pDC)
+void CNodeView::Draw(LPDIRECTDRAWSURFACE lpDDS)
 {
+	// render the skin
+	m_pParent->m_skin.BltSkin(lpDDS, this);
+
+	// get a DC for the drawing surface
+	CDC dc;
+	GET_ATTACH_DC(lpDDS, dc);
+
 	// only draw if it has a substantial area
-	if (GetOuterRect().Height() >= 3)
+	if (m_extOuter.Height() >= 3)
 	{
 		// get the inner rectangle for drawing 
-		CRect rectInner = GetInnerRect();
-		rectInner.DeflateRect(5, 5, 5, 5);
+		CExtent<REAL> extCurrent = m_extInner;
+
+#ifdef NOTHING
+		extCurrent.Deflate(5, 5, 5, 5);
 
 		// draw the title band first
-		DrawTitleBand(pDC, rectInner);
+		DrawTitleBand(&dc, extCurrent);
 
 		// draw the image (if any)
 		if (m_bBackgroundImage)
 		{
-			DrawImage(pDC, rectInner);
-			DrawTitle(pDC, rectInner);
-			DrawText(pDC, rectInner);
+			DrawImage(&dc, extCurrent);
+			DrawTitle(&dc, extCurrent);
+			DrawText(&dc, extCurrent);
 		}
-		else if (rectInner.Height() > 30)
+		else if (extCurrent.Height() > 30)
 		{
 			// draw the title first, adjusting the rectangle
-			DrawTitle(pDC, rectInner);
-			DrawImage(pDC, rectInner);
-			DrawText(pDC, rectInner);
+			DrawTitle(&dc, extCurrent);
+			DrawImage(&dc, extCurrent);
+			DrawText(&dc, extCurrent);
 		}
 		else
 		{
 			// draw the image first
-			DrawImage(pDC, rectInner);
-			DrawTitle(pDC, rectInner);
-			DrawText(pDC, rectInner);
+			DrawImage(&dc, extCurrent);
+			DrawTitle(&dc, extCurrent);
+			DrawText(&dc, extCurrent);
+		}
+#endif
+
+		///////////////////////////////////////////////////////////////////
+
+		// TESTING NLM
+
+		extCurrent = m_extInner;
+		extCurrent.Deflate(5, 5, 5, 5);
+
+		if (extCurrent.Height() >= 0.0)
+		{
+			// now set up layout
+			CNodeLayoutManager *pNLM = m_pParent->m_pNLM;
+/*			while (extCurrent.Height() < pNLM->GetMinLayoutSelection())
+			{
+				pNLM = pNLM->GetNextLayoutManager();
+			} */
+
+			CExtent<REAL> extTitle;
+			CExtent<REAL> extImage;
+			CExtent<REAL> extDesc;
+
+			REAL layoutSelection = extCurrent.Height();
+			pNLM->CalcExtent(extCurrent, this, 
+				m_layoutSelect > 0.0 ? m_layoutSelect : 0.0, 
+					// layoutSelection,		
+					// layout selection -- use 10000.0 to trigger for now
+				extTitle,
+				extImage,
+				extDesc);
+
+			// draw the title band first
+			DrawTitleBand(&dc, extTitle);
+			DrawImage(&dc, extImage);
+			DrawTitle(&dc, extTitle);
+			DrawText(&dc, extDesc);
+
+/*
+			dc.SelectStockObject(NULL_BRUSH);
+
+			CPen penRed(PS_SOLID, 2, RGB(255, 0, 0));
+			CPen *pOldPen = dc.SelectObject(&penRed);
+			dc.Rectangle((CRect) extTitle);
+			dc.SelectObject(pOldPen);
+			penRed.DeleteObject();
+
+			if (extImage.Width() > 0.0)
+			{
+				CPen penGreen(PS_SOLID, 2, RGB(0, 255, 0));
+				pOldPen = dc.SelectObject(&penGreen);
+				dc.Rectangle((CRect) extImage);
+				dc.SelectObject(pOldPen);
+				penGreen.DeleteObject();
+			}
+
+			if (extDesc.Width() > 0.0)
+			{
+				CPen penBlue(PS_SOLID, 2, RGB(0, 0, 255));
+				pOldPen = dc.SelectObject(&penBlue);
+				dc.Rectangle((CRect) extDesc);
+				dc.SelectObject(pOldPen);
+				penBlue.DeleteObject(); 
+			}
+			*/
 		}
 	}
+
+	// release the DC
+	RELEASE_DETACH_DC(lpDDS, dc);
 
 }	// CNodeView::Draw
 
@@ -466,15 +535,6 @@ void CNodeView::Draw(CDC *pDC)
 //////////////////////////////////////////////////////////////////////
 void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 {
-	const int WIDTH_MULTIPLIER = 4;
-	// check if node is significantly far from where it should be
-	if ((GetScaledNodeCenter() - GetSpringCenter()).GetLength() > 
-		GetOuterRect().Width() * WIDTH_MULTIPLIER)
-	{
-		// and skip if so
-		// return;
-	}
-
 	pDC->SetBkMode(TRANSPARENT);
 
 	// draw the links only if the activation is above 0.0
@@ -486,14 +546,6 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 		{
 			CNodeLink *pLink = GetNode()->GetLinkAt(nAtLink);
 			CNodeView *pLinkedView = (CNodeView *)pLink->GetTarget()->GetView();
-
-			// check to see if the node is significantly far from where it should be
-			if ((pLinkedView->GetScaledNodeCenter() - pLinkedView->GetSpringCenter()).GetLength() > 
-				pLinkedView->GetOuterRect().Width() * WIDTH_MULTIPLIER)
-			{
-				// and skip if so
-				// continue;
-			}
 
 			// only draw the link to node view's with activations greater than the current
 			if (!pLink->IsStabilizer()
@@ -526,7 +578,7 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 					CVectorD<3> vMid = (REAL) 0.5 * (vFrom + vTo);
 					CString strGain;
 					strGain.Format("%0.2lf", (double) pLink->GetGain());
-					pDC->TextOut(vMid[0], vMid[1], strGain);
+					pDC->TextOut(Round<int>(vMid[0]), Round<int>(vMid[1]), strGain);
 				}
 			}
 		}
@@ -540,36 +592,26 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 // 
 // draws the node's title in the given rectangle
 //////////////////////////////////////////////////////////////////////
-void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
+void CNodeView::DrawTitle(CDC *pDC, CExtent<REAL>& rectInner)
 {
 	pDC->SetBkMode(TRANSPARENT);
 
-	int nDesiredHeight = __min(rectInner.Height() / 4, 30);
-	nDesiredHeight = __max(nDesiredHeight, 12);
-	int nDesiredWidth = rectInner.Width() / 100;
+	REAL desiredHeight = rectInner.Height(); // __min(rectInner.Height() / 4.0, 30.0);
+	desiredHeight = __max(desiredHeight, 9.0);
+	REAL desiredWidth = rectInner.Width() / 80.0;
 
-	CFont font;
-	BOOL bResult = font.CreateFont(nDesiredHeight, 0, //nDesiredWidth,
-		0, 0, FW_BOLD, 
-		FALSE, FALSE, 0,
-		DEFAULT_CHARSET,
-		OUT_DEFAULT_PRECIS,
-		CLIP_DEFAULT_PRECIS,
-		DEFAULT_QUALITY,
-		VARIABLE_PITCH,
-		"Arial");
-	ASSERT(bResult);
-
-	CFont *pOldFont = pDC->SelectObject(&font);
+	CFont *pFont = GetTitleFont(Round<int>(desiredHeight));
+	CFont *pOldFont = pDC->SelectObject(pFont);
 
 	// calculate the height of the drawn text
-	CRect rectText(rectInner);
-	rectText = rectInner;
-	rectText.right += 500;
+	CRect rectText = (CRect) rectInner;
+	rectText.right = rectText.right + 500;
 
 	CString strName = GetNode()->GetName();
 	if (GetNode()->GetOptimalStateVector() != NULL)
+	{
 		strName += "*";
+	}
 
 	PROFILE_FLAG("Display", "Activation")
 	{
@@ -583,16 +625,18 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 	int nHeight = pDC->DrawText(strName, rectText, 
 		DT_CALCRECT | DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
-	for (int nAt = 0; nAt < 4 && rectText.bottom > GetInnerRect().bottom; nAt++)
+	// TODO: does this handle wrapping of title (title shouldn't wrap)
+/*	for (int nAt = 0; nAt < 4 
+			&& rectText.bottom > m_extInner.Bottom(); nAt++)
 	{
 		rectText.bottom = rectText.top +
-			(rectText.Height() / nDesiredHeight - 1) * nDesiredHeight;
-	}
+			(rectText.Height() / desiredHeight - 1) * desiredHeight;
+	} */
 	pDC->DrawText(strName, rectText, 
 		DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
 
 	// now draw the description body
-	if (GetSpringActivation() >= 0.01)
+	if (m_extInner.Height() > 25.0) // GetSpringActivation() >= 0.01)
 	{
 		rectText = rectInner;
 		rectText.top += nHeight + 5;
@@ -605,9 +649,203 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 	rectInner = rectText;
 
 	pDC->SelectObject(pOldFont);
-	font.DeleteObject();
 
 }	// CNodeView::DrawText
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::DrawTitleBand
+// 
+// draws the band upon which the title is displayed
+//////////////////////////////////////////////////////////////////////
+void CNodeView::DrawTitleBand(CDC *pDC, const CExtent<REAL>& rectInner)
+{
+	REAL desiredHeight = rectInner.Height(); // 	REAL desiredHeight = __min(rectInner.Height() / 4.0, 30.0);
+	desiredHeight = __max(desiredHeight, 15.0);
+	REAL desiredWidth = rectInner.Width() / 80.0;
+
+	CFont *pFont = GetTitleFont(Round<int>(desiredHeight));
+	CFont *pOldFont = pDC->SelectObject(pFont);
+
+	// calculate the height of the drawn text
+	CRect rectText = (CRect) rectInner;
+	rectText.right += 500;
+	int nHeight = pDC->DrawText(GetNode()->GetName(), rectText, 
+		DT_CALCRECT | DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
+
+	// draw the background for the title
+	COLORREF backColor = DEFAULT_TITLE;
+	if (GetNode()->GetSpace() != NULL)
+	{
+		GetNode()->GetSpace()->GetClassColorMap().Lookup(
+			GetNode()->GetClass(), backColor);
+	}
+
+	CBrush backBrush;
+	backBrush.CreateSolidBrush(backColor);
+
+	CBrush *pOldBrush = pDC->SelectObject(&backBrush);
+	CPen *pOldPen = (CPen *)pDC->SelectStockObject(NULL_PEN);
+	CExtent<REAL> rectTitle = m_extOuter; 
+	rectTitle.SetTop(rectTitle.Top() - 5.0);
+
+	if (m_extInner.Height() > 25.0) // GetSpringActivation() >= 0.01)
+	{
+		rectTitle.SetBottom(rectText.top + nHeight + 3.0);
+	}
+
+	// clip to the node view
+	pDC->SelectClipRgn(&GetShape());
+
+	pDC->Rectangle((CRect) rectTitle);
+
+	// unselect clipping to node view
+	pDC->SelectClipRgn(NULL);
+
+	pDC->SelectObject(pOldBrush);
+	pDC->SelectObject(pOldPen);
+
+	pDC->SelectObject(pOldFont);
+
+	// TODO: clean memory leak in m_arrTitleFont
+	// font.DeleteObject();
+
+}	// CNodeView::DrawTitleBand
+
+
+// returns cached title font
+CFont * CNodeView::GetTitleFont(int nDesiredHeight)
+{
+	if (m_arrTitleFont.GetSize() <= nDesiredHeight
+			|| m_arrTitleFont[nDesiredHeight] == NULL)
+	{
+		CFont * pFont = new CFont();
+		BOOL bResult = pFont->CreateFont(
+			Round<int>(nDesiredHeight), 
+			0, //nDesiredWidth,
+			0, 0, FW_BOLD, 
+			FALSE, FALSE, 0,
+			DEFAULT_CHARSET,
+			OUT_DEFAULT_PRECIS,
+			CLIP_DEFAULT_PRECIS,
+			DEFAULT_QUALITY,
+			VARIABLE_PITCH,
+			"Trebeuchet MS" /* "Arial" */);
+		ASSERT(bResult);
+
+		m_arrTitleFont.SetAtGrow(nDesiredHeight, pFont);
+	}
+
+	return m_arrTitleFont[nDesiredHeight];
+}
+
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::DrawImage
+// 
+// draws the image in the given rectangle, updating the rectangle
+//		to reflect the actual image size
+//////////////////////////////////////////////////////////////////////
+void CNodeView::DrawImage(CDC *pDC, CExtent<REAL>& rectInner)
+{
+	if (GetNode()->GetDib() != NULL 
+		|| GetNode()->GetIcon() != NULL)
+	{
+		CSize sizeImage;
+		if (GetNode()->GetDib())
+		{
+			sizeImage = GetNode()->GetDib()->GetSize();
+		}
+		else 
+		{
+			sizeImage = CSize(48, 48);
+		}
+
+		if (!m_bBackgroundImage)
+		{
+			CRect rectImage = (CRect) rectInner;
+			int nDeflate = Round<int>(
+				0.5 * 
+					(rectImage.Height() - (REAL) sizeImage.cy * rectImage.Width() 
+						/ (REAL) sizeImage.cx));
+
+			rectImage.DeflateRect(0, 0, 0, 2 * nDeflate);
+			// rectImage.right = rectImage.left + nActualWidth;
+
+			if (rectImage.Height() > 2 || rectImage.Width() > 2)
+			{
+				// rectImage.InflateRect(2, 2, 2, 2);
+				if (GetNode()->GetDib())
+				{
+					GetNode()->GetDib()->Draw(*pDC, &rectImage);
+				}
+				else
+				{
+					::DrawIconEx(*pDC, rectImage.left, rectImage.top,
+							GetNode()->GetIcon(), 
+							rectImage.Width(), rectImage.Height(), 
+							0, NULL, DI_NORMAL);
+				}
+
+/*				if (m_bMaximized)
+				{
+					CRect rectBtn(rectImage);
+					rectBtn.top = rectBtn.bottom + 5;
+					rectBtn.bottom = rectBtn.top + 30;
+					m_pParent->m_btnGo.MoveWindow(&rectBtn, FALSE);
+					CPoint ptOrig = pDC->SetViewportOrg(rectBtn.TopLeft());
+					m_pParent->m_btnGo.PrintClient(pDC, PRF_CLIENT);
+					pDC->SetViewportOrg(ptOrig);
+				}
+*/
+				// adjust the rectangle to account for the bitmap
+				// rectInner.SetLeft(rectInner.Left() + nActualWidth + 10);
+			}
+		}
+		else
+		{
+			CRect rectImage(m_extOuter); // GetOuterRect());
+
+			BOOL m_bPreserveWidth = FALSE;
+			if (m_bPreserveWidth)
+			{
+				int nHeight = rectImage.Width() * sizeImage.cy / sizeImage.cx;
+				int nMidHeight = rectImage.CenterPoint().y;
+				rectImage.top = nMidHeight - nHeight / 2;
+				rectImage.bottom = nMidHeight + nHeight / 2;
+			}
+			else
+			{
+				int nWidth = rectImage.Height() * sizeImage.cx / sizeImage.cy;
+				int nMidWidth = rectImage.CenterPoint().x;
+				rectImage.left = nMidWidth - nWidth / 2;
+				rectImage.right = nMidWidth + nWidth / 2;
+			}
+
+			// clip to the node view
+			pDC->SelectClipRgn(&GetShape());
+
+			if (GetNode()->GetDib())
+			{
+				GetNode()->GetDib()->Draw(*pDC, &rectImage);
+			}
+			else
+			{
+				::DrawIconEx(*pDC, rectImage.left, rectImage.top,
+						GetNode()->GetIcon(), 
+						rectImage.Width(), rectImage.Height(), 
+						0, NULL, DI_NORMAL);
+			}
+
+			// unselect clipping to node view
+			pDC->SelectClipRgn(NULL);
+		}
+	}
+
+}	// CNodeView::DrawImage
+
+
 
 
 //////////////////////////////////////////////////////////////////////
@@ -615,15 +853,20 @@ void CNodeView::DrawTitle(CDC *pDC, CRect& rectInner)
 // 
 // draws the node's text in the given rectangle
 //////////////////////////////////////////////////////////////////////
-void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
+void CNodeView::DrawText(CDC *pDC, CExtent<REAL>& rectInner)
 {
 #define SMOOTH_TEXT
 #ifdef SMOOTH_TEXT
 
+	if (rectInner.Bottom() < rectInner.Top())
+	{
+		return;
+	}
+
 	// set max text width
 	if (rectInner.Width() > TEXT_WIDTH)
 	{
-		rectInner.right = rectInner.left + TEXT_WIDTH;
+		rectInner.SetRight(rectInner.Left() + TEXT_WIDTH);
 	}
 
 	// generates the text surface
@@ -646,7 +889,7 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 	actualRectFrom.bottom = actualRectFrom.top + nLines * m_nSrcLineHeight;
 
 	// compute actual dest rectangle
-	CRect actualRectTo = rectInner;
+	CRect actualRectTo = (CRect) rectInner;
 	actualRectTo.bottom = actualRectTo.top + 
 		(int) ((double) (nLines * m_nSrcLineHeight) / scale);
 
@@ -664,7 +907,7 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 
 	// move dest rectangle to last line
 	actualRectTo.top = actualRectTo.bottom;
-	actualRectTo.bottom = rectInner.bottom;
+	actualRectTo.bottom = Round<int>(rectInner.Bottom());
 
 	// compute width and horizontal position of dest rectangle
 	scale = (double)  actualRectFrom.Height() / (double) actualRectTo.Height();
@@ -720,179 +963,6 @@ void CNodeView::DrawText(CDC *pDC, CRect& rectInner)
 #endif
 
 }	// CNodeView::DrawText
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeView::DrawImage
-// 
-// draws the image in the given rectangle, updating the rectangle
-//		to reflect the actual image size
-//////////////////////////////////////////////////////////////////////
-void CNodeView::DrawImage(CDC *pDC, CRect& rectInner)
-{
-	if (GetNode()->GetDib() != NULL 
-		|| GetNode()->GetIcon() != NULL)
-	{
-		CSize sizeImage;
-		if (GetNode()->GetDib())
-		{
-			sizeImage = GetNode()->GetDib()->GetSize();
-		}
-		else 
-		{
-			sizeImage = CSize(48, 48);
-		}
-
-		if (!m_bBackgroundImage)
-		{
-			CRect rectImage = rectInner;
-			rectImage.bottom = rectImage.top + __min(rectImage.Height(), 64);
-
-			int nActualWidth;
-			nActualWidth = sizeImage.cx * rectImage.Height() / sizeImage.cy;
-			rectImage.right = rectImage.left + nActualWidth;
-
-			if (rectImage.Height() > 10 || rectImage.Width() > 10)
-			{
-				rectImage.InflateRect(2, 2, 2, 2);
-				if (GetNode()->GetDib())
-				{
-					GetNode()->GetDib()->Draw(*pDC, &rectImage);
-				}
-				else
-				{
-					::DrawIconEx(*pDC, rectImage.left, rectImage.top,
-							GetNode()->GetIcon(), 
-							rectImage.Width(), rectImage.Height(), 
-							0, NULL, DI_NORMAL);
-				}
-
-/*				if (m_bMaximized)
-				{
-					CRect rectBtn(rectImage);
-					rectBtn.top = rectBtn.bottom + 5;
-					rectBtn.bottom = rectBtn.top + 30;
-					m_pParent->m_btnGo.MoveWindow(&rectBtn, FALSE);
-					CPoint ptOrig = pDC->SetViewportOrg(rectBtn.TopLeft());
-					m_pParent->m_btnGo.PrintClient(pDC, PRF_CLIENT);
-					pDC->SetViewportOrg(ptOrig);
-				}
-*/
-				// adjust the rectangle to account for the bitmap
-				rectInner.left += nActualWidth + 10;
-			}
-		}
-		else
-		{
-			CRect rectImage(GetOuterRect());
-
-			BOOL m_bPreserveWidth = FALSE;
-			if (m_bPreserveWidth)
-			{
-				int nHeight = rectImage.Width() * sizeImage.cy / sizeImage.cx;
-				int nMidHeight = rectImage.CenterPoint().y;
-				rectImage.top = nMidHeight - nHeight / 2;
-				rectImage.bottom = nMidHeight + nHeight / 2;
-			}
-			else
-			{
-				int nWidth = rectImage.Height() * sizeImage.cx / sizeImage.cy;
-				int nMidWidth = rectImage.CenterPoint().x;
-				rectImage.left = nMidWidth - nWidth / 2;
-				rectImage.right = nMidWidth + nWidth / 2;
-			}
-
-			// clip to the node view
-			pDC->SelectClipRgn(&GetShape());
-
-			if (GetNode()->GetDib())
-			{
-				GetNode()->GetDib()->Draw(*pDC, &rectImage);
-			}
-			else
-			{
-				::DrawIconEx(*pDC, rectImage.left, rectImage.top,
-						GetNode()->GetIcon(), 
-						rectImage.Width(), rectImage.Height(), 
-						0, NULL, DI_NORMAL);
-			}
-
-			// unselect clipping to node view
-			pDC->SelectClipRgn(NULL);
-		}
-	}
-
-}	// CNodeView::DrawImage
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeView::DrawTitleBand
-// 
-// draws the band upon which the title is displayed
-//////////////////////////////////////////////////////////////////////
-void CNodeView::DrawTitleBand(CDC *pDC, CRect& rectInner)
-{
-	int nDesiredHeight = __min(rectInner.Height() / 4, 30);
-	nDesiredHeight = __max(nDesiredHeight, 15);
-	int nDesiredWidth = rectInner.Width() / 80;
-
-	CFont font;
-	BOOL bResult = font.CreateFont(nDesiredHeight, 0, //nDesiredWidth,
-		0, 0, FW_BOLD, 
-		FALSE, FALSE, 0,
-		DEFAULT_CHARSET,
-		OUT_DEFAULT_PRECIS,
-		CLIP_DEFAULT_PRECIS,
-		DEFAULT_QUALITY,
-		VARIABLE_PITCH,
-		"Arial");
-	ASSERT(bResult);
-
-	CFont *pOldFont = pDC->SelectObject(&font);
-
-	// calculate the height of the drawn text
-	CRect rectText(rectInner);
-	rectText = rectInner;
-	rectText.right += 500;
-	int nHeight = pDC->DrawText(GetNode()->GetName(), rectText, 
-		DT_CALCRECT | DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
-
-	// draw the background for the title
-	COLORREF backColor = DEFAULT_TITLE;
-	if (GetNode()->GetSpace() != NULL)
-	{
-		GetNode()->GetSpace()->GetClassColorMap().Lookup(
-			GetNode()->GetClass(), backColor);
-	}
-
-	CBrush backBrush;
-	backBrush.CreateSolidBrush(backColor);
-
-	CBrush *pOldBrush = pDC->SelectObject(&backBrush);
-	CPen *pOldPen = (CPen *)pDC->SelectStockObject(NULL_PEN);
-	CRect rectTitle = GetOuterRect();
-	rectTitle.top -= 5;
-	if (GetSpringActivation() >= 0.01)
-	{
-		rectTitle.bottom = rectText.bottom + 3;
-	}
-
-	// clip to the node view
-	pDC->SelectClipRgn(&GetShape());
-
-	pDC->Rectangle(rectTitle);
-
-	// unselect clipping to node view
-	pDC->SelectClipRgn(NULL);
-
-	pDC->SelectObject(pOldBrush);
-	pDC->SelectObject(pOldPen);
-
-	pDC->SelectObject(pOldFont);
-	font.DeleteObject();
-
-}	// CNodeView::DrawTitleBand
-
 
 
 
@@ -960,3 +1030,4 @@ CDC * CNodeView::GetTextSurface(void)
 
 	return &m_dcText;
 }
+
