@@ -591,9 +591,9 @@ void CSpaceView::ActivatePending()
 	{
 		CNodeView *pNodeView = GetNodeView(nAt);
 
-		if (pNodeView->GetPendingActivation() > 0.0f)
+		if (pNodeView->GetPendingActivation() > 1e-6)
 		{
-			ActivateNodeView(pNodeView, pNodeView->GetPendingActivation());
+			ActivateNodeView(pNodeView, pNodeView->GetPendingActivation() / 2.0);
 			if (pNodeView->GetPendingActivation() > maxPending)
 			{
 				secMaxPending = maxPending;
@@ -607,7 +607,8 @@ void CSpaceView::ActivatePending()
 				pSecMaxPending = pNodeView;
 			}
 			
-			pNodeView->ResetPendingActivation();
+			pNodeView->m_pendingActivation /= 2.0;
+			// pNodeView->ResetPendingActivation();
 		}
 
 /*		if (NULL != pMaxPending)
