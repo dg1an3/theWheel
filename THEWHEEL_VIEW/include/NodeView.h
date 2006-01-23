@@ -22,6 +22,7 @@
 // the skin
 #include "NodeViewSkin.h"
 
+#include <Extent.h>
 #include <Spring.h>
 
 // the parent window class
@@ -52,11 +53,6 @@ public:
     REAL GetThresholdedActivation();
     REAL GetSpringActivation();
 
-    // accessors for the node view's rectangles
-	void SetActualSizes(const CVectorD<3>& vInner, const CVectorD<3>& vOuter);
-	CRect& GetOuterRect();
-    CRect& GetInnerRect();
-
     // accessor to shape descriptions of the node view
     CRgn& GetShape();
 
@@ -67,7 +63,7 @@ public:
 	void UpdateSpringActivation(REAL springConst = 0.95);
 
     // draws the node view
-    void Draw(CDC *pDC);
+    void Draw(LPDIRECTDRAWSURFACE lpDDS);
 
     // draws the links for this nodeview
     void DrawLinks(CDC *pDC, CNodeViewSkin *pSkin);
@@ -84,12 +80,16 @@ public:
     REAL GetPendingActivation();
 
     // drawing helper functions
-    void DrawTitleBand(CDC *pDC, CRect& rectInner);
-    void DrawTitle(CDC *pDC, CRect& rectInner);
-    void DrawText(CDC *pDC, CRect& rectInner);
-    void DrawImage(CDC *pDC, CRect& rectInner);
+    void DrawTitle(CDC *pDC, CExtent<REAL>& rectInner);
+    void DrawTitleBand(CDC *pDC, const CExtent<REAL>& rectInner);
+
+	// returns cached title font
+	CFont * GetTitleFont(int nDesiredHeight);
+
+    void DrawImage(CDC *pDC, CExtent<REAL>& rectInner);
 
 	// generates / retrieves pre-rendered text surface as DC
+    void DrawText(CDC *pDC, CExtent<REAL>& rectInner);
 	CDC * GetTextSurface(void);
 
 private:
@@ -104,16 +104,20 @@ private:
     REAL m_springActivation;
 	CSpring m_actSpring;
 
+	REAL m_layoutSelect;
+	CSpring m_layoutSelectSpring;
+
+
     // stores the pending activation
     REAL m_pendingActivation;
 
+public:
     // stores the node view's region (shape)
-    CRect m_rectOuter;
-    CRect m_rectInner;
-	CVectorD<3> m_vInnerSize;
-	CVectorD<3> m_vOuterSize;
+	CExtent<REAL> m_extOuter;
+	CExtent<REAL> m_extInner;
 
     CRgn m_shape;
+	CRgn m_shapeHit;
 
     // flags to indicate dragging state
     BOOL m_bDragging;
@@ -147,6 +151,9 @@ private:
 	// stores the dc with 
 	CDC m_dcText;
 	CBitmap m_bitmapText;
+
+	// array of cached title fonts
+	static CArray<CFont *, CFont *> m_arrTitleFont;
 
 };	// class CNodeView
 
