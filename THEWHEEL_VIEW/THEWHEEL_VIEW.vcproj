@@ -3,6 +3,7 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="THEWHEEL_VIEW"
+	ProjectGUID="{C1731CD4-0F4D-49BE-9A5A-1AC5C19391A7}"
 	SccProjectName=""
 	SccLocalPath=""
 	Keyword="MFCProj">
@@ -184,6 +185,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\NodeLayoutManager.cpp">
+			</File>
+			<File
 				RelativePath="NodeView.cpp">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -330,7 +334,13 @@
 				RelativePath="include\DesigntimeTracker.h">
 			</File>
 			<File
+				RelativePath=".\include\Extent.h">
+			</File>
+			<File
 				RelativePath="include\Molding.h">
+			</File>
+			<File
+				RelativePath=".\include\NodeLayoutManager.h">
 			</File>
 			<File
 				RelativePath="include\NodeView.h">
