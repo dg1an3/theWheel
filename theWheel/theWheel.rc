@@ -144,6 +144,13 @@ BEGIN
         MENUITEM "&Toolbar",                    ID_VIEW_TOOLBAR
         MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
     END
+    POPUP "Space"
+    BEGIN
+        MENUITEM "&Perturb Links",              ID_SPACE_PERTURBLINKS
+        MENUITEM "&Scale Links",                ID_SPACE_SCALELINKS
+        MENUITEM SEPARATOR
+        MENUITEM "&Design Mode",                ID_SPACE_DESIGNMODE, CHECKED
+    END
     POPUP "&Help"
     BEGIN
         MENUITEM "&Help Topics",                ID_HELP_FINDER
@@ -208,6 +215,20 @@ BEGIN
     EDITTEXT        IDC_EDIT_AMOUNT,103,16,66,13,ES_AUTOHSCROLL
 END
 
+IDD_SCALEDIALOG DIALOGEX 0, 0, 164, 90
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Scale Links"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,25,69,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,89,69,50,14
+    EDITTEXT        IDC_EDIT1,77,37,80,13,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT2,77,17,80,14,ES_AUTOHSCROLL
+    RTEXT           "Max Link Weight:",IDC_STATIC,12,18,57,13
+    RTEXT           "New Max:",IDC_STATIC,24,38,45,13
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -269,6 +290,14 @@ BEGIN
         RIGHTMARGIN, 179
         TOPMARGIN, 7
         BOTTOMMARGIN, 58
+    END
+
+    IDD_SCALEDIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 157
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 83
     END
 END
 #endif    // APSTUDIO_INVOKED
