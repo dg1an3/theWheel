@@ -207,7 +207,7 @@ void CNodeViewSkin::CalcInnerOuterRect(CNodeView *pNodeView)
 {
 	// compute the new width and height from the desired area and the desired
 	//		aspect ratio
-	REAL scale = (REAL) sqrt((REAL)(m_nWidth * m_nHeight));
+	REAL scale = 1.2 * (REAL) sqrt((REAL)(m_nWidth * m_nHeight));
 
 	// get the size for the node view, given the spring activation
 	CVectorD<3> vSize = 
