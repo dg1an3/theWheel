@@ -18,6 +18,7 @@
 #ifdef INTEL_MATH
 // intel math lib
 #include <mathf.h>
+#include ".\include\node.h"
 #endif
 
 #ifdef _DEBUG
@@ -88,6 +89,8 @@ CNode::CNode(CSpace *pSpace,
 		, m_pOptSSV(NULL)
 
 		, m_pView(NULL)
+
+		, m_nDegSep(UNKNOWN_DEGSEP)
 {
 	// TODO: fix this (why is this being initialized?)
 	m_vPosition[0] = 0.0;
@@ -1277,13 +1280,162 @@ void CNode::SetActivation(REAL newActivation, CNode *pActivator, REAL weight)
 }	// CNode::SetActivation
 
 
+
+int CompareTargetActivation(const void *elemL, const void *elemR)
+{
+	CNodeLink * pLinkL = (CNodeLink *) elemL;
+	REAL targetActL = pLinkL->m_targetActivation;
+
+	CNodeLink * pLinkR = (CNodeLink *) elemR;
+	REAL targetActR = pLinkR->m_targetActivation;
+
+	return Round<int>(1e+5 * (targetActR - targetActL));
+}
+
+
+
+// updates activation of node at given degree of separation
+void CNode::UpdateActivation(REAL scale, int nDegSep, 
+							 CArray<CNode *, CNode *>& arrNextDegSep)
+{
+	// set my nDoS
+	m_nDegSep = nDegSep;
+
+	// list of nodes < my nDoS
+	static CNodeLink * arrLessDegSep_Links[255];
+	int nLength = 0;
+	// arrLessDegSep_Links.RemoveAll();
+
+	// iterate over linked nodes
+	for (int nAtLinked = 0; nAtLinked < GetLinkCount(); nAtLinked++)
+	{
+		CNode *pLinkedTo = GetLinkAt(nAtLinked)->GetTarget();
+
+		// see if the link has not yet set the deg sep
+		if (UNKNOWN_DEGSEP == pLinkedTo->m_nDegSep)	
+		{
+			// add to list of next nDoS
+			arrNextDegSep.Add(pLinkedTo);
+		}
+		// are we < my DoS?
+		else if (pLinkedTo->m_nDegSep < m_nDegSep)
+		{
+			// get the link
+			CNodeLink *pLink = pLinkedTo->GetLinkTo(this);
+			if (pLink)
+			{
+				pLink->m_targetActivation =  pLinkedTo->GetActivation() 
+					* pLink->GetWeight();
+				pLink->m_pFrom = pLinkedTo;
+
+				// add to list
+				arrLessDegSep_Links[nLength] = pLink;
+				nLength++;
+			}
+		}
+	}
+
+	if (// arrLessDegSep_Links.GetSize() 
+			nLength > 0)
+	{
+		// sort the list by activation
+		qsort((void *) arrLessDegSep_Links, 
+			(size_t) nLength, // arrLessDegSep_Links.GetSize(), 
+				sizeof(CNodeLink *),
+			CompareTargetActivation);
+	}
+
+	// iterate over sorted list
+	for (int nAt = 0; nAt < __min(nLength, 1); // arrLessDegSep_Links.GetSize(), 1); 
+		nAt++)
+	{
+		CNodeLink *pLink = arrLessDegSep_Links[nAt];
+
+		// get target activation for this link
+		// REAL targetActivation = pLink->GetTargetActivation();
+
+		// compute the desired new activation = this activation * weight
+		REAL targetActivation = pLink->m_pFrom->GetActivation() 
+			* pLink->GetWeight();
+
+		// attenuate if the link is a stabilizer
+		if (pLink->IsStabilizer())
+		{
+			targetActivation *= (REAL) 0.25;
+		}
+
+		// the new activation defaults to the original activation
+		REAL newActivation = GetActivation();
+
+		// now change it if the current target activation is less than the target
+		if (GetActivation() < targetActivation)
+		{
+			// compute the new actual activation
+			newActivation = GetActivation() + 
+				(targetActivation - GetActivation()) * scale;
+		}
+
+		// set the new actual activation
+		SetActivation(newActivation, pLink->m_pFrom, pLink->GetGainWeight());
+	}
+
+	if (// arrLessDegSep_Links.GetSize() 
+		nLength > 0)
+	{
+		// store max activator
+		m_pMaxActivator = arrLessDegSep_Links[nLength-1]->m_pFrom;
+
+		// set the flag to indicate we have found a max activator 
+		//		for this round
+		m_bFoundMaxActivator = TRUE;
+	}
+}
+
+
+#ifdef PROP_PULL_MODEL
+#error PROP_PULL_MODEL
+// updates activation of node at given degree of separation
+void CNode::PropagateActivation(REAL initScale, REAL alpha)
+{
+	// list of nodes at current nDoS
+	CArray<CNode *, CNode *> arrCurrDegSep;
+	arrCurrDegSep.RemoveAll();
+	arrCurrDegSep.Add(this);
+
+	// list of nodes at > current nDoS
+	CArray<CNode *, CNode *> arrNextDegSep;
+
+	// iterate over current DoS nodes, as long as there are some
+	REAL scale = initScale;
+	for (int nDegSep = 0; arrCurrDegSep.GetSize() > 0; nDegSep++)
+	{
+		// empty next list
+		arrNextDegSep.RemoveAll();
+
+		// iterate over current DegSep nodes
+		for (int nAt = 0; nAt < arrCurrDegSep.GetSize(); nAt++)
+		{
+			// update the activation for the current node
+			arrCurrDegSep[nAt]->UpdateActivation(scale, nDegSep, arrNextDegSep);
+		}
+
+		// update scale for alpha decay
+		scale *= alpha;
+
+		// copy the next DoS list to current
+		arrCurrDegSep.Copy(arrNextDegSep);
+	} 
+}
+
+#else // PROP_PULL_MODEL
+
 //////////////////////////////////////////////////////////////////////
 // CNode::PropagateActivation
 // 
 // propagates the activation of this node through the other nodes
 //		in the space
 //////////////////////////////////////////////////////////////////////
-void CNode::PropagateActivation(REAL scale)
+void CNode::PropagateActivation(REAL initScale, REAL alpha)
 {
 	// iterate through the links from highest to lowest activation
 	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
@@ -1313,30 +1465,66 @@ void CNode::PropagateActivation(REAL scale)
 				targetActivation *= (REAL) 0.25;
 			}
 
-			// the new activation defaults to the original activation
-			REAL newActivation = pTarget->GetActivation();
-
 			// now change it if the current target activation is less than the target
 			if (pTarget->GetActivation() < targetActivation)
 			{
 				// compute the new actual activation
-				newActivation = pTarget->GetActivation() + 
-					(targetActivation - pTarget->GetActivation()) * scale;
+				REAL deltaActivation = 
+					(targetActivation - pTarget->GetActivation()) 
+						* initScale
+						* pLink->GetWeight()
+						* pLink->GetWeight()
+						* pLink->GetWeight();
+
+				pTarget->m_newActivation += deltaActivation;
+
+				if (!pLink->IsStabilizer()
+					&& deltaActivation > pTarget->m_maxDeltaActivation)
+				{
+					pTarget->m_pMaxActivator = this;
+					pTarget->m_maxDeltaActivation = deltaActivation;
+
+					// set the flag to indicate we have found a max activator 
+					//		for this round
+					pTarget->m_bFoundMaxActivator = TRUE;
+				}
 			}
 
 			// set the new actual activation
-			pTarget->SetActivation(newActivation, this, pLink->GetGainWeight());
+			// pTarget->SetActivation(newActivation, this, pLink->GetGainWeight());
+
+			// mark this link as having propagated
+			// pLink->SetHasPropagated(TRUE);
+		}
+	}
+
+	// iterate through the links from highest to lowest activation
+	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
+	{
+		// get the link
+		CNodeLink *pLink = GetLinkAt(nAt);
+
+		// stop propagating if its below the link weight threshold
+		if (pLink->GetWeight() < PROPAGATE_THRESHOLD_WEIGHT)
+		{
+			break;
+		}
+
+		// only propagate through the link if we have not already done so
+		if (!pLink->HasPropagated())
+		{
+			// get the link target
+			CNode *pTarget = pLink->GetTarget();
 
 			// mark this link as having propagated
 			pLink->SetHasPropagated(TRUE);
 
 			// propagate to linked nodes
-			pTarget->PropagateActivation(scale * (REAL) 0.9999);
+			pTarget->PropagateActivation(initScale * alpha, alpha);
 		}
 	}
-
 }	// CNode::PropagateActivation
-
+#endif
 
 //////////////////////////////////////////////////////////////////////
 // CNode::ResetForPropagation
@@ -1374,6 +1562,18 @@ void CNode::ResetForPropagation()
 		pLink->SetHasPropagated(FALSE);
 	}
 
+	// reset degrees of separation
+	m_nDegSep = UNKNOWN_DEGSEP;
+
+	// reset new activation
+	m_newActivation = m_secondaryActivation;
+
+	// reset max delta & max activator
+	m_maxDeltaActivation = 0.0;
+
+	// TODO: figure this out (has to do with no max activator in PositionSubNodes
+	// m_pMaxActivator = NULL;
+
 	// now do the same for all children
 	for (nAt = 0; nAt < GetChildCount(); nAt++)
 	{
@@ -1386,3 +1586,76 @@ void CNode::ResetForPropagation()
 
 }	// CNode::ResetForPropagation
 
+
+// transfers new_activation (from Propagate) to current activation for all child nodes
+void CNode::UpdateFromNewActivation(void)
+{
+	// update the total activation value
+	if (m_pSpace)
+	{
+		m_pSpace->m_totalSecondaryActivation += 
+			(m_newActivation - m_secondaryActivation);
+	}
+
+	// check this
+	m_secondaryActivation = m_newActivation;
+
+	// now do the same for all children
+	for (int nAt = 0; nAt < GetChildCount(); nAt++)
+	{
+		// for each child,
+		CNode *pChildNode = GetChildAt(nAt);
+
+		// now recursively reset the children
+		pChildNode->UpdateFromNewActivation();
+	}
+}
+
+// returns max link weight for this and all child nodes
+REAL CNode::GetMaxLinkWeight(void)
+{
+	REAL maxWeight = 0.0;
+
+	// find the max of my link weights
+	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
+	{
+		CNodeLink *pLink = GetLinkAt(nAt);
+		maxWeight = __max(maxWeight,
+			pLink->GetWeight());
+	}
+
+	// now do the same for all children
+	for (nAt = 0; nAt < GetChildCount(); nAt++)
+	{
+		// for each child,
+		CNode *pChildNode = GetChildAt(nAt);
+
+		// recursively compare max to current
+		maxWeight = __max(maxWeight,
+			pChildNode->GetMaxLinkWeight());
+	}
+
+	return maxWeight;
+}
+
+// scales all link weights by scale factor
+void CNode::ScaleLinkWeights(REAL scale)
+{
+	// scale each of the node's links
+	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
+	{
+		CNodeLink *pLink = GetLinkAt(nAt);
+		pLink->SetWeight(pLink->GetWeight()
+			* scale);
+	}
+
+	// now do the same for all children
+	for (nAt = 0; nAt < GetChildCount(); nAt++)
+	{
+		// for each child,
+		CNode *pChildNode = GetChildAt(nAt);
+
+		// now recursively scale the child's link sweight
+		pChildNode->ScaleLinkWeights(scale);
+	}
+}

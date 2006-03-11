@@ -14,6 +14,7 @@
 
 // the CNode
 #include "Node.h"
+#include ".\include\nodelink.h"
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -38,6 +39,9 @@ CNodeLink::CNodeLink(CNode *pToNode, REAL weight)
 		m_bHasPropagated(TRUE)
 		// initialize to HasPropagated to prevent immediate 
 		//		propagation
+
+		, m_targetActivation(0.0)
+		, m_pFrom(NULL)
 {
 }	// CNodeLink::CNodeLink
 
@@ -250,3 +254,13 @@ void CNodeLink::Serialize(CArchive &ar)
 }	// CNodeLink::Serialize
 
 
+
+// returns target activation w.r.t. source node
+REAL CNodeLink::GetTargetActivation(void)
+{
+	// compute the desired new activation = this activation * weight
+	// REAL targetActivation = GetNode()->GetActivation() 
+	//	* pLink->GetWeight();
+
+	return m_targetActivation;
+}

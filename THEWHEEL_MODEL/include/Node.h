@@ -42,6 +42,8 @@ const LPARAM EVT_NODE_LINKWGT_CHANGED =	2006;
 const LPARAM EVT_NODE_POSITION_CHANGED =2007;
 
 
+const int UNKNOWN_DEGSEP = -1;
+
 //////////////////////////////////////////////////////////////////////
 // class CNode
 // 
@@ -210,7 +212,10 @@ protected:
 
 	// propagation management
 	void ResetForPropagation();
-	void PropagateActivation(REAL scale);
+	void PropagateActivation(REAL initScale, REAL alpha); // REAL scale);
+
+	void UpdateActivation(REAL scale, int nDegSep, 
+							 CArray<CNode *, CNode *>& arrNextDegSep);
 
 private:
 	// pointer to the space that contains this node
@@ -263,6 +268,9 @@ private:
 	REAL m_primaryActivation;
 	REAL m_secondaryActivation;
 
+	// stores the new activation value for the node during propagation
+	REAL m_newActivation;	// TODO: this should be m_newSecondaryActivation
+
 	// maximum activation delta
 	REAL m_maxDeltaActivation;
 
@@ -289,6 +297,15 @@ private:
 	// convenience pointer to a view object
 	CObject *m_pView;
 
+public:
+	// stores degree of separation from initiator of propagation
+	int m_nDegSep;
+	// transfers new_activation (from Propagate) to current activation for all child nodes
+	void UpdateFromNewActivation(void);
+	// returns max link weight for this and all child nodes
+	REAL GetMaxLinkWeight(void);
+	// scales all link weights by scale factor
+	void ScaleLinkWeights(REAL scale);
 };	// class CNode
 
 #endif // !defined(NODE_H)

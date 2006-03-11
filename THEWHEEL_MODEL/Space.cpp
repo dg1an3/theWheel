@@ -337,7 +337,7 @@ void CSpace::SetCurrentNode(CNode *pNode)
 //////////////////////////////////////////////////////////////////////
 void CSpace::ActivateNode(CNode *pNode, REAL scale)
 {
-	scale = _cpp_min<REAL>(scale, 0.5);
+	// scale = _cpp_min<REAL>(scale, 0.5);
 
 	// first, compute the new activation of the node up to the max
 	REAL oldActivation = pNode->GetActivation();
@@ -350,7 +350,14 @@ void CSpace::ActivateNode(CNode *pNode, REAL scale)
 
 	// now, propagate the activation
 	m_pRootNode->ResetForPropagation();
-	pNode->PropagateActivation((REAL) 0.4);
+
+	// now propagate
+	pNode->PropagateActivation(
+		(REAL) 0.2,		// 0.4,
+		(REAL) 0.7); // 0.999);
+
+	// now update the activation for all nodes
+	m_pRootNode->UpdateFromNewActivation();
 
 	// normalize the nodes
 	NormalizeNodes();
@@ -370,13 +377,13 @@ void CSpace::NormalizeNodes(REAL sum)
 {
 	// scale for secondary
 	REAL scale_2 = sum 
-		/ (GetTotalPrimaryActivation() 
-			+ m_primSecRatio * GetTotalSecondaryActivation() + 0.0001); 
+		/ (GetTotalPrimaryActivation(true) 
+			+ m_primSecRatio * GetTotalSecondaryActivation(true) + 0.0001); 
 
 	// scale for primary
 	REAL scale_1 = sum 
-		 / (GetTotalPrimaryActivation() / m_primSecRatio 
-			+ GetTotalSecondaryActivation() + 0.0001); 
+		 / (GetTotalPrimaryActivation(true) / m_primSecRatio 
+			+ GetTotalSecondaryActivation(true) + 0.0001); 
 
 	// scale the nodes
 	for (int nAt = 0; nAt < GetNodeCount(); nAt++)
@@ -611,7 +618,8 @@ BOOL CSpace::OnNewDocument()
 	// initialize the node activations from the root node
 	pMainNode->SetActivation((REAL) 0.5);
 	pMainNode->ResetForPropagation();
-	pMainNode->PropagateActivation((REAL) 0.5);
+	pMainNode->PropagateActivation((REAL) 0.2, // (REAL) 0.5, 
+		(REAL) 0.9);
 
 	SortNodes();
 	NormalizeNodes();
@@ -687,6 +695,7 @@ void CSpace::PositionNewSuperNodes()
 				// the new position -- initially at the max act position
 				CVectorD<3> vNewPosition = pMaxAct->GetPosition();
 
+#ifdef SHOOT
 				// find direction by default from center
 				CVectorD<3> vCenter = m_vCenter;
 
@@ -715,9 +724,20 @@ void CSpace::PositionNewSuperNodes()
 
 				// set position to it's position
 				vNewPosition += vDirection;
+#endif
 
 				// set the new position
-				pNode->SetPosition(vNewPosition);
+				pNode->SetPosition(vNewPosition, TRUE);		// BEFORE was FALSE
+
+				// NEW: set gain for max activator link
+				for (int nAtLink = 0; nAtLink < pNode->GetLinkCount(); nAtLink++)
+				{
+					pNode->GetLinkAt(nAtLink)->SetGain(0.1);
+				}
+				if (pNode->GetLinkTo(pMaxAct) != NULL)
+				{
+					pNode->GetLinkTo(pMaxAct)->SetGain(1.0);
+				}
 
 				// set flag to indicate position has been reset
 				pNode->m_bPositionReset = true;
@@ -725,11 +745,13 @@ void CSpace::PositionNewSuperNodes()
 		}
 	}
 
+// #ifdef LAYOUT_AFTER
 	// now layout the new supernodes
-	REAL oldTolerance = m_pLayoutManager->GetTolerance();
-	m_pLayoutManager->SetTolerance(oldTolerance / (REAL) 100.0);
-	m_pLayoutManager->LayoutNodes(m_pStateVector, nHighestNewSuper);
-	m_pLayoutManager->SetTolerance(oldTolerance);
+	// REAL oldTolerance = m_pLayoutManager->GetTolerance();
+	// m_pLayoutManager->SetTolerance(oldTolerance / (REAL) 100.0);
+	// m_pLayoutManager->LayoutNodes(m_pStateVector, nHighestNewSuper);
+	// m_pLayoutManager->SetTolerance(oldTolerance);
+// #endif
 
 	// finish processing by moving the new super-nodes to
 	//		their updated position
@@ -747,6 +769,9 @@ void CSpace::PositionNewSuperNodes()
 
 			// set the new position, triggering a change event
 			pNode->SetPosition(pNode->GetPosition(), TRUE);
+
+			// set flag to indicate position has been reset
+			pNode->m_bPositionReset = true;
 		}
 	}
 
@@ -992,6 +1017,15 @@ void CSpace::Serialize(CArchive& ar)
 			ar << (double) GetLayoutManager()->GetKRep();
 		}
 	}
+
+// #define NORMALIZE_LINK_WEIGHTS
+#ifdef NORMALIZE_LINK_WEIGHTS
+	// get max link weight for all nodes
+	REAL maxWeight = m_pRootNode->GetMaxLinkWeight();
+
+	// adjust max to 0.80
+	m_pRootNode->ScaleLinkWeights(0.70 / maxWeight);
+#endif
 
 	// remove modified flag
 	SetModifiedFlag(FALSE);

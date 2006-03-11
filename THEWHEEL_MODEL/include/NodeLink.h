@@ -90,6 +90,11 @@ private:
 	// flag to indicate that propagation has already occurred
 	BOOL m_bHasPropagated;
 
+public:
+	// returns target activation w.r.t. source node
+	REAL GetTargetActivation(void);
+	REAL m_targetActivation;
+	CNode *m_pFrom;
 };	// class CNodeLink
 
 
