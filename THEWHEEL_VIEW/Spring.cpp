@@ -30,28 +30,28 @@ void CSpring::UpdateSpring(REAL h)
 
 	CVectorD<3> k1 = f (xn,   vn);
 	CVectorD<3> j1 = g (xn,   vn);
-	CVectorD<3> k2 = f (xn + h / 2.0 * k1,   vn + h / 2.0 * j1);
-	CVectorD<3> j2 = g (xn + h / 2.0 * k1,   vn + h / 2.0 * j1);
-	CVectorD<3> k3 = f (xn + h / 2.0 * k2,   vn + h / 2.0 * j2);
-	CVectorD<3> j3 = g (xn + h / 2.0 * k2,   vn + h / 2.0 *  j2);
+	CVectorD<3> k2 = f (xn + h / R(2.0) * k1,   vn + h / R(2.0) * j1);
+	CVectorD<3> j2 = g (xn + h / R(2.0) * k1,   vn + h / R(2.0) * j1);
+	CVectorD<3> k3 = f (xn + h / R(2.0) * k2,   vn + h / R(2.0) * j2);
+	CVectorD<3> j3 = g (xn + h / R(2.0) * k2,   vn + h / R(2.0) *  j2);
 	CVectorD<3> k4 = f (xn + h * k3,   vn + h * j3);
 	CVectorD<3> j4 = g (xn + h * k3,   vn + h * j3);
 
-	xn += h / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
-	vn += h / 6.0 * (j1 + 2.0 * j2 + 2.0 * j3 + j4);
+	xn += h / R(6.0) * (k1 + R(2.0) * k2 + R(2.0) * k3 + k4);
+	vn += h / R(6.0) * (j1 + R(2.0) * j2 + R(2.0) * j3 + j4);
 	
 	// compute pure accel
 	REAL old_m_b = m_b;
 	m_b = 0.0;
 	j1 = g (xn,   vn);
-	k2 = f (xn + h / 2.0 * k1,   vn + h / 2.0 * j1);
-	j2 = g (xn + h / 2.0 * k1,   vn + h / 2.0 * j1);
-	k3 = f (xn + h / 2.0 * k2,   vn + h / 2.0 * j2);
-	j3 = g (xn + h / 2.0 * k2,   vn + h / 2.0 *  j2);
+	k2 = f (xn + h / R(2.0) * k1,   vn + h / R(2.0) * j1);
+	j2 = g (xn + h / R(2.0) * k1,   vn + h / R(2.0) * j1);
+	k3 = f (xn + h / R(2.0) * k2,   vn + h / R(2.0) * j2);
+	j3 = g (xn + h / R(2.0) * k2,   vn + h / R(2.0) *  j2);
 	k4 = f (xn + h * k3,   vn + h * j3);
 	j4 = g (xn + h * k3,   vn + h * j3);
 
-	m_vAccel = 1.0 / 6.0 * (j1 + 2.0 * j2 + 2.0 * j3 + j4);
+	m_vAccel = R(1.0) / R(6.0) * (j1 + R(2.0) * j2 + R(2.0) * j3 + j4);
 
 	m_b = old_m_b;
 }

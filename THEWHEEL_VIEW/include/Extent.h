@@ -158,6 +158,6 @@ void CExtent<TYPE>::Deflate(TYPE left, TYPE top, TYPE right, TYPE bottom)
 template<class TYPE>
 void CExtent<TYPE>::Interpolate(const CExtent<TYPE>& with, TYPE frac)
 {
-	m_vMin = frac * m_vMin + (1.0 - frac) * with.m_vMin;
-	m_vMax = frac * m_vMax + (1.0 - frac) * with.m_vMax;
+	m_vMin = frac * m_vMin + (R(1.0) - frac) * with.m_vMin;
+	m_vMax = frac * m_vMax + (R(1.0) - frac) * with.m_vMax;
 }
