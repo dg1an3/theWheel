@@ -10,6 +10,7 @@
 #include <RuntimeTracker.h>
 
 #include "MainFrm.h"
+#include "ScaleDialog.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -35,6 +36,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_COMMAND(ID_HELP, CFrameWnd::OnHelp)
 	ON_COMMAND(ID_CONTEXT_HELP, CFrameWnd::OnContextHelp)
 	ON_COMMAND(ID_DEFAULT_HELP, CFrameWnd::OnHelpFinder)
+	ON_COMMAND(ID_SPACE_SCALELINKS, OnSpaceScalelinks)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -238,4 +240,10 @@ void CMainFrame::OnPerturb()
 			}
 		}
 	}
+}
+
+void CMainFrame::OnSpaceScalelinks()
+{
+	CScaleDialog dlg;
+	// dlg.m_pSpace = ::GetCurrent
 }
