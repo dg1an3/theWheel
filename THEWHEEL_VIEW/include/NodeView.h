@@ -107,11 +107,10 @@ private:
 	REAL m_layoutSelect;
 	CSpring m_layoutSelectSpring;
 
-
+public:
     // stores the pending activation
     REAL m_pendingActivation;
 
-public:
     // stores the node view's region (shape)
 	CExtent<REAL> m_extOuter;
 	CExtent<REAL> m_extInner;
