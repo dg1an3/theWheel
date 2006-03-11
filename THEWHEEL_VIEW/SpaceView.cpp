@@ -593,7 +593,7 @@ void CSpaceView::ActivatePending()
 
 		if (pNodeView->GetPendingActivation() > 1e-6)
 		{
-			ActivateNodeView(pNodeView, pNodeView->GetPendingActivation() / 2.0);
+			ActivateNodeView(pNodeView, pNodeView->GetPendingActivation() / 8.0);
 			if (pNodeView->GetPendingActivation() > maxPending)
 			{
 				secMaxPending = maxPending;
