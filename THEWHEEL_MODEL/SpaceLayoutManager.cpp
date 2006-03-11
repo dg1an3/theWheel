@@ -26,6 +26,8 @@
 #include <PowellOptimizer.h>
 #include <ConjGradOptimizer.h>
 #include <GradDescOptimizer.h>
+#include <DFPOptimizer.h>
+
 
 // header file for the CSpace object
 #include "Space.h"
@@ -107,8 +109,13 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 	m_pGradDescOptimizer = new CGradDescOptimizer(this);
 	m_pGradDescOptimizer->SetTolerance(TOLERANCE);
 
+	// create and initialize the dfp optimizer
+	m_pDFPOptimizer = new CDFPOptimizer(this);
+	m_pDFPOptimizer->SetTolerance(TOLERANCE);
+
 	// set the optimizer to be used
-	m_pOptimizer = m_pConjGradOptimizer;
+	m_pOptimizer = // m_pDFPOptimizer; // 
+		m_pConjGradOptimizer;
 
 }	// CSpaceLayoutManager::CSpaceLayoutManager
 
@@ -618,7 +625,7 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 	}
 
 	REAL tol = // for double = 0.001; 
-		0.001; // 1e-12  * (m_pOptimizer->GetFinalValue() + 1.0);
+		0.0001; // 0.001; // 1e-12  * (m_pOptimizer->GetFinalValue() + 1.0);
 	m_pOptimizer->SetTolerance(// 10.0); // 
 		tol);
 

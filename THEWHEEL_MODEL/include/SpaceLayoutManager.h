@@ -96,6 +96,7 @@ protected:
 	COptimizer *m_pPowellOptimizer;
 	COptimizer *m_pConjGradOptimizer;
 	COptimizer *m_pGradDescOptimizer;
+	COptimizer *m_pDFPOptimizer;
 
 	// pointer to the optimizer to be used
 	COptimizer *m_pOptimizer;
