@@ -41,6 +41,7 @@ CSpaceTreeView::CSpaceTreeView()
 	: m_bPropertyPagesEnabled(TRUE),
 		m_bDragging(FALSE),
 		m_pDragImageList(NULL)
+		, m_pSpace(NULL)
 {
 }	// CSpaceTreeView::CSpaceTreeView
 
@@ -58,7 +59,7 @@ CSpaceTreeView::~CSpaceTreeView()
 //////////////////////////////////////////////////////////////////////
 // implements the dynamic creation mechanism for the CSpaceView
 //////////////////////////////////////////////////////////////////////
-IMPLEMENT_DYNCREATE(CSpaceTreeView, CView)
+IMPLEMENT_DYNCREATE(CSpaceTreeView, CWnd)
 
 
 //////////////////////////////////////////////////////////////////////
@@ -98,21 +99,87 @@ void CSpaceTreeView::EnablePropertyPage(BOOL bEnable)
 
 }	// CSpaceTreeView::EnablePropertyPage
 
-
-/////////////////////////////////////////////////////////////////////////////
-// CSpaceTreeView drawing
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceTreeView::OnDraw
-// 
-// special drawing for the tree view
-//////////////////////////////////////////////////////////////////////
-void CSpaceTreeView::OnDraw(CDC* pDC)
+// called when a new node is added to the space
+void CSpaceTreeView::OnNodeAdded(CObservableEvent * pEvent, void * pParam)
 {
-	CSpace* pDoc = GetDocument();
-	ASSERT_VALID(pDoc);
+	CNode *pNode = (CNode *) pParam;
+	ASSERT(pNode->IsKindOf(RUNTIME_CLASS(CNode)));
 
-}	// CSpaceTreeView::OnDraw
+	AddNodeItem(pNode);
+}
+
+// called when a node is removed from the space
+void CSpaceTreeView::OnNodeRemoved(CObservableEvent * pEvent, void * pParam)
+{
+	CNode *pNode = (CNode *) pParam;
+	ASSERT(pNode->IsKindOf(RUNTIME_CLASS(CNode)));
+
+	RemoveNodeItem(pNode);
+}
+
+
+// called when a node is removed from the space
+void CSpaceTreeView::OnCurrentNodeChanged(CObservableEvent * pEvent, void * pParam)
+{
+	CNode *pNode = (CNode *) pParam;
+	ASSERT(pNode == NULL || pNode->IsKindOf(RUNTIME_CLASS(CNode)));
+
+	HTREEITEM hItem = NULL;
+	m_mapItemHandles.Lookup(pNode, hItem);
+	if (hItem != NULL)
+	{
+		// set the current node as selected
+		m_wndTree.SelectItem(hItem);
+	}
+
+	if (m_bPropertyPagesEnabled)
+	{
+		// set the property pages based on the class of node
+		if (pNode && pNode != GetSpace()->GetRootNode())
+		{
+			m_wndSpaceProperties.ShowWindow(SW_HIDE);
+			m_wndNodeProperties.ShowWindow(SW_SHOW);
+		}
+		else
+		{
+			m_wndSpaceProperties.ShowWindow(SW_SHOW);
+			m_wndNodeProperties.ShowWindow(SW_HIDE);
+		}
+
+		if (pNode)
+		{
+			// now set the property dialogs to the selected node
+			m_dlgNodeProp.SetCurNode(pNode);
+			m_dlgLinkProp.SetCurNode(pNode);
+			m_dlgImageProp.SetCurNode(pNode);
+		}
+	}
+}
+
+
+// called when a node is removed from the space
+void CSpaceTreeView::OnNodeAttributeChanged(CObservableEvent * pEvent, void * pParam)
+{
+	CNode *pNode = (CNode *) pParam;
+	ASSERT(pNode->IsKindOf(RUNTIME_CLASS(CNode)));
+
+	HTREEITEM hItem = NULL;
+	m_mapItemHandles.Lookup(pNode, hItem);
+
+	// the item is present, so now check the label
+	if (m_wndTree.GetItemText(hItem) != pNode->GetName())
+	{
+		// change text
+		m_wndTree.SetItemText(hItem, pNode->GetName());
+	}
+
+	if (pNode == GetSpace()->GetCurrentNode()
+		&& m_dlgNodeProp.m_strName != pNode->GetName())
+	{
+		// now set the property dialogs to the selected node
+		m_dlgNodeProp.UpdateData(FALSE);
+	}	
+}
 
 
 //////////////////////////////////////////////////////////////////////
@@ -120,185 +187,48 @@ void CSpaceTreeView::OnDraw(CDC* pDC)
 // 
 // initialization of the tree view
 //////////////////////////////////////////////////////////////////////
-void CSpaceTreeView::OnInitialUpdate() 
+void CSpaceTreeView::SetSpace(CSpace *pSpace) 
 {
-	CView::OnInitialUpdate();
-	
+	// CWnd::OnInitialUpdate();
+	m_pSpace = pSpace;
+
 	// clear out all items to re-populate the tree
 	m_wndTree.DeleteAllItems();
 	m_mapItemHandles.RemoveAll();
 
 	// re-populate the tree
-	AddNodeItem(GetDocument()->GetRootNode());
+	AddNodeItem(GetSpace()->GetRootNode());
 
 	// set the pointer to the space in the properties
-	m_dlgSpaceProp.m_pSpace = GetDocument();
+	m_dlgSpaceProp.m_pSpace = GetSpace();
 	m_dlgSpaceProp.UpdateData(FALSE);
 
-	m_dlgSpaceOpt.m_pSpace = GetDocument();
+	m_dlgSpaceOpt.m_pSpace = GetSpace();
 	m_dlgSpaceOpt.UpdateData(FALSE);
 
-	m_dlgSpaceClass.m_pSpace = GetDocument();
+	m_dlgSpaceClass.m_pSpace = GetSpace();
 	m_dlgSpaceClass.UpdateData(FALSE);
 	m_dlgSpaceClass.PopulateClassList();
 
+	// now add event listeners
+	GetSpace()->NodeAddedEvent.AddObserver(this, 
+		(ListenerFunction) &CSpaceTreeView::OnNodeAdded);
+	GetSpace()->NodeRemovedEvent.AddObserver(this, 
+		(ListenerFunction) &CSpaceTreeView::OnNodeRemoved);
+	GetSpace()->CurrentNodeChangedEvent.AddObserver(this, 
+		(ListenerFunction) &CSpaceTreeView::OnCurrentNodeChanged);
+	GetSpace()->NodeAttributeChangedEvent.AddObserver(this, 
+		(ListenerFunction) &CSpaceTreeView::OnNodeAttributeChanged);
+
 	// make sure the root node (Space) is selected
-	GetDocument()->SetCurrentNode(NULL);
+	GetSpace()->SetCurrentNode(NULL);
 
 }	// CSpaceTreeView::OnInitialUpdate
 
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceTreeView::OnUpdate
-// 
-// updates the tree view when an update occurs
-//////////////////////////////////////////////////////////////////////
-void CSpaceTreeView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint) 
+CSpace* CSpaceTreeView::GetSpace() // non-debug version is inline
 {
-	// cast the hint object to a CNode
-	CNode *pNode = (CNode *)pHint;
-	ASSERT(pNode == NULL || pNode->IsKindOf(RUNTIME_CLASS(CNode)));
-
-	HTREEITEM hItem = NULL;
-	m_mapItemHandles.Lookup(pNode, hItem);
-
-	switch (lHint)
-	{
-	case EVT_NODE_SELCHANGED :
-
-		if (hItem != NULL)
-		{
-			// set the current node as selected
-			m_wndTree.SelectItem(hItem);
-		}
-
-		if (m_bPropertyPagesEnabled)
-		{
-			// set the property pages based on the class of node
-			if (pNode && pNode != GetDocument()->GetRootNode())
-			{
-				m_wndSpaceProperties.ShowWindow(SW_HIDE);
-				m_wndNodeProperties.ShowWindow(SW_SHOW);
-			}
-			else
-			{
-				m_wndSpaceProperties.ShowWindow(SW_SHOW);
-				m_wndNodeProperties.ShowWindow(SW_HIDE);
-			}
-
-			if (pNode)
-			{
-				// now set the property dialogs to the selected node
-				m_dlgNodeProp.SetCurNode(pNode);
-				m_dlgLinkProp.SetCurNode(pNode);
-				m_dlgImageProp.SetCurNode(pNode);
-			}
-		}
-
-		break;
-
-	case EVT_NODE_ADDED :
-
-		// add the node to the tree ctrl
-		AddNodeItem(pNode);
-		break;
-
-	case EVT_NODE_REMOVED :
-
-		// remove the node item from the tree
-		RemoveNodeItem(pNode);
-		break;
-
-	case EVT_NODE_REPARENTED :
-
-		// move the node
-		RemoveNodeItem(pNode);
-		AddNodeItem(pNode);
-
-		// select, if needed
-		if (pNode == GetDocument()->GetCurrentNode())
-		{
-			HTREEITEM hSelItem = NULL;
-			if (m_mapItemHandles.Lookup(pNode, hSelItem))
-			{
-				// set the current node as selected
-				m_wndTree.SelectItem(hSelItem);
-			}
-		}
-
-		break;
-
-	case EVT_NODE_NAMED_CHANGED :
-
-		// the item is present, so now check the label
-		if (m_wndTree.GetItemText(hItem) != pNode->GetName())
-		{
-			// change text
-			m_wndTree.SetItemText(hItem, pNode->GetName());
-		}
-
-		if (pNode == GetDocument()->GetCurrentNode()
-			&& m_dlgNodeProp.m_strName != pNode->GetName())
-		{
-			// now set the property dialogs to the selected node
-			m_dlgNodeProp.UpdateData(FALSE);
-		}
-		
-		break;
-
-	case EVT_NODE_DESC_CHANGED :
-
-		if (pNode == GetDocument()->GetCurrentNode()
-			&& m_dlgNodeProp.m_strDesc != pNode->GetDescription())
-		{
-			// now set the property dialogs to the selected node
-			m_dlgNodeProp.UpdateData(FALSE);
-		}
-		
-		break;
-	}
-
-}	// CSpaceTreeView::OnUpdate
-
-
-/////////////////////////////////////////////////////////////////////////////
-// CSpaceTreeView printing
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceTreeView::OnPreparePrinting
-// 
-// prepares for printing the CSpaceTreeView
-//////////////////////////////////////////////////////////////////////
-BOOL CSpaceTreeView::OnPreparePrinting(CPrintInfo* pInfo)
-{
-	// default preparation
-	return DoPreparePrinting(pInfo);
-
-}	// CSpaceTreeView::OnPreparePrinting
-
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceTreeView::OnBeginPrinting
-// 
-// begins printing the CSpaceTreeView
-//////////////////////////////////////////////////////////////////////
-void CSpaceTreeView::OnBeginPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
-{
-	// TODO: add extra initialization before printing
-
-}	// CSpaceTreeView::OnBeginPrinting
-
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceTreeView::OnEndPrinting
-// 
-// finishes printing the CSpaceTreeView
-//////////////////////////////////////////////////////////////////////
-void CSpaceTreeView::OnEndPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
-{
-	// TODO: add cleanup after printing
-
-}	// CSpaceTreeView::OnEndPrinting
+	return m_pSpace;
+}
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -307,19 +237,14 @@ void CSpaceTreeView::OnEndPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
 #ifdef _DEBUG
 void CSpaceTreeView::AssertValid() const
 {
-	CView::AssertValid();
+	CWnd::AssertValid();
 }
 
 void CSpaceTreeView::Dump(CDumpContext& dc) const
 {
-	CView::Dump(dc);
+	CWnd::Dump(dc);
 }
 
-CSpace* CSpaceTreeView::GetDocument() // non-debug version is inline
-{
-	ASSERT(m_pDocument->IsKindOf(RUNTIME_CLASS(CSpace)));
-	return (CSpace*)m_pDocument;
-}
 #endif //_DEBUG
 
 
@@ -363,7 +288,7 @@ void CSpaceTreeView::AddNodeItem(CNode *pNode, HTREEITEM hParentItem)
     // create the tree control
     HTREEITEM hTreeItem = m_wndTree.InsertItem(
 		TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_STATE | TVIF_PARAM,
-		hParentItem == TVI_ROOT ? GetDocument()->GetTitle() : pNode->GetName(), 
+		hParentItem == TVI_ROOT ? "Space" /* GetSpace()->GetTitle() */ : pNode->GetName(), 
 		hParentItem == TVI_ROOT ? m_nSpaceImageIndex : m_nNodeImageIndex,
 		hParentItem == TVI_ROOT ? m_nSpaceImageIndex : m_nNodeImageIndex,
     	INDEXTOSTATEIMAGEMASK(1) | TVIS_EXPANDED,	// nState, 
@@ -424,7 +349,7 @@ void CSpaceTreeView::RemoveNodeItem(CNode *pNode)
 // CSpaceTreeView Message Map
 /////////////////////////////////////////////////////////////////////////////
 
-BEGIN_MESSAGE_MAP(CSpaceTreeView, CView)
+BEGIN_MESSAGE_MAP(CSpaceTreeView, CWnd)
 	//{{AFX_MSG_MAP(CSpaceTreeView)
 	ON_WM_CREATE()
 	ON_WM_SIZE()
@@ -439,10 +364,6 @@ BEGIN_MESSAGE_MAP(CSpaceTreeView, CView)
 	ON_COMMAND(ID_NEW_NODE, OnNewNode)
 	ON_COMMAND(ID_DELETENODE, OnDeletenode)
 	//}}AFX_MSG_MAP
-	// Standard printing commands
-	ON_COMMAND(ID_FILE_PRINT, CView::OnFilePrint)
-	ON_COMMAND(ID_FILE_PRINT_DIRECT, CView::OnFilePrint)
-	ON_COMMAND(ID_FILE_PRINT_PREVIEW, CView::OnFilePrintPreview)
 END_MESSAGE_MAP()
 
 
@@ -456,7 +377,7 @@ END_MESSAGE_MAP()
 //////////////////////////////////////////////////////////////////////
 int CSpaceTreeView::OnCreate(LPCREATESTRUCT lpCreateStruct) 
 {
-	if (CView::OnCreate(lpCreateStruct) == -1)
+	if (CWnd::OnCreate(lpCreateStruct) == -1)
 		return -1;
 	
 	// create the tree control
@@ -597,7 +518,7 @@ void CSpaceTreeView::OnSelChanged(NMHDR* pNMHDR, LRESULT* pResult)
 	m_wndTree.SelectDropTarget(NULL);
 
 	// set the current node
-	GetDocument()->SetCurrentNode(pSelNode);
+	GetSpace()->SetCurrentNode(pSelNode);
 
 	*pResult = 0;
 
@@ -735,7 +656,7 @@ void CSpaceTreeView::OnMouseMove(UINT nFlags, CPoint point)
     	
     }
 	
-	CView::OnMouseMove(nFlags, point);
+	CWnd::OnMouseMove(nFlags, point);
 
 }	// CSpaceTreeView::OnMouseMove
 
@@ -789,7 +710,7 @@ void CSpaceTreeView::OnLButtonUp(UINT nFlags, CPoint point)
     	KillTimer(m_nScrollTimerID);
     }
     	
-	CView::OnLButtonUp(nFlags, point);
+	CWnd::OnLButtonUp(nFlags, point);
 
 }	// CSpaceTreeView::OnLButtonUp
 
@@ -804,7 +725,7 @@ void CSpaceTreeView::OnTimer(UINT nIDEvent)
     // check the ID to see if it is the scrolling timer
     if (nIDEvent != m_nScrollTimerID)
     {
-    	CView::OnTimer(nIDEvent);
+    	CWnd::OnTimer(nIDEvent);
     	return;
     }
 
@@ -857,7 +778,7 @@ void CSpaceTreeView::OnTimer(UINT nIDEvent)
     }
     else
     {
-    	CView::OnTimer(nIDEvent);
+    	CWnd::OnTimer(nIDEvent);
     	return;
     }
 
@@ -871,7 +792,7 @@ void CSpaceTreeView::OnTimer(UINT nIDEvent)
     m_pDragImageList->DragEnter(this, ptMouse);
     
 	// base class handler
-	CView::OnTimer(nIDEvent);
+	CWnd::OnTimer(nIDEvent);
 
 }	// CSpaceTreeView::OnTimer
 
@@ -932,7 +853,7 @@ void CSpaceTreeView::OnNewNode()
 		pNewNode->SetName("NewNode");
 
 		// add the node to the space, with the given parent
-		GetDocument()->AddNode(pNewNode, pParentNode);
+		GetSpace()->AddNode(pNewNode, pParentNode);
 	}
 
 }	// CSpaceTreeView::OnNewNode
@@ -959,11 +880,12 @@ void CSpaceTreeView::OnDeletenode()
 		}
 
 		// remove the node from the space
-		GetDocument()->RemoveNode(pMarkedNode);
+		GetSpace()->RemoveNode(pMarkedNode);
 
 		// and remove from the tree control
 		m_wndTree.DeleteItem(hSelItem);
 	}	
 
 }	// CSpaceTreeView::OnDeletenode
+
 

@@ -34,9 +34,9 @@
 //
 // manages hierarchical navigation and editing of the space
 //////////////////////////////////////////////////////////////////////
-class CSpaceTreeView : public CView
+class CSpaceTreeView : public CWnd
 {
-protected: // create from serialization only
+public:
 	CSpaceTreeView();
 	virtual ~CSpaceTreeView();
 
@@ -46,7 +46,7 @@ protected: // create from serialization only
 // Attributes
 public:
 	// returns the CSpace with is being displayed
-	CSpace* GetDocument();
+	CSpace* GetSpace();
 
 // Operations
 public:
@@ -57,17 +57,17 @@ public:
 	// enables property pages
 	void EnablePropertyPage(BOOL bEnable = TRUE);
 
+	// called when a new node is added to the space
+	void OnNodeAdded(CObservableEvent * pEvent, void * pParam);
+	void OnNodeRemoved(CObservableEvent * pEvent, void * pParam);
+	void OnCurrentNodeChanged(CObservableEvent * pEvent, void * pParam);
+	void OnNodeAttributeChanged(CObservableEvent * pEvent, void * pParam);
+
+	virtual void SetSpace(CSpace *pSpace);
+
 // Overrides
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(CSpaceTreeView)
-	public:
-	virtual void OnDraw(CDC* pDC);  // overridden to draw this view
-	virtual void OnInitialUpdate();
-	protected:
-	virtual void OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint);
-	virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
-	virtual void OnBeginPrinting(CDC* pDC, CPrintInfo* pInfo);
-	virtual void OnEndPrinting(CDC* pDC, CPrintInfo* pInfo);
 	//}}AFX_VIRTUAL
 
 // Implementation
@@ -155,12 +155,10 @@ private:
 
     // handles auto-scrolling when the user drags off the end of the control
     UINT m_nScrollTimerID;
-};
 
-#ifndef _DEBUG  // debug version in SpaceTreeView.cpp
-inline CSpace* CSpaceTreeView::GetDocument()
-   { return (CSpace*)m_pDocument; }
-#endif
+	// pointer to the space
+	CSpace *m_pSpace;
+};
 
 /////////////////////////////////////////////////////////////////////////////
 
