@@ -102,7 +102,7 @@ void CDesigntimeTracker::OnButtonUp(UINT nFlags, CPoint point)
 			if (pLinkedView == m_pLinkingView)
 			{
 				// if so, activate it
-				m_pLinkingView->AddPendingActivation((REAL) 0.45);
+				m_pLinkingView->AddPendingActivation((REAL) 0.75);
 
 				// set the new pending node
 				CNode *pNode = m_pLinkingView->GetNode();
@@ -159,7 +159,7 @@ void CDesigntimeTracker::OnButtonUp(UINT nFlags, CPoint point)
 	if (m_pLinkingView)
 	{
 		// notify views of the change in the node
-		m_pView->GetDocument()->UpdateAllViews(m_pView, 0L, 
+		m_pView->GetSpace()->NodeAttributeChangedEvent.Fire(
 			m_pLinkingView->GetNode());
 
 		// clear the linking view
@@ -170,7 +170,7 @@ void CDesigntimeTracker::OnButtonUp(UINT nFlags, CPoint point)
 	if (pLinkedView)
 	{
 		// notify views of the change in the node
-		m_pView->GetDocument()->UpdateAllViews(m_pView, 0L, 
+		m_pView->GetSpace()->NodeAttributeChangedEvent.Fire( 
 			pLinkedView->GetNode());
 	}
 
