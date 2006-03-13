@@ -21,7 +21,7 @@ class CSpace;
 // declaration for the dimensionality of the energy function state
 //		vector
 //////////////////////////////////////////////////////////////////////
-const int MAX_STATE_DIM = 256;
+const int MAX_STATE_DIM = 100;
 
 //////////////////////////////////////////////////////////////////////
 // class CSpaceLayoutManager
@@ -40,21 +40,18 @@ public:
 	virtual ~CSpaceLayoutManager();
 
 	// accessors for optimization parameters
-	REAL GetKPos();
-	void SetKPos(REAL k_pos);
-
-	REAL GetKRep();
-	void SetKRep(REAL k_rep);
-
-	REAL GetTolerance();
-	void SetTolerance(REAL tolerance);
-
-	// total energy
-	REAL GetEnergy();
+	DECLARE_ATTRIBUTE(KPos, REAL);
+	DECLARE_ATTRIBUTE(KRep, REAL);
+	DECLARE_ATTRIBUTE(Tolerance, REAL);
 
 	// dimension of the state vector
-	int GetStateDim() const;
-	void SetStateDim(int nStateDim);
+	DECLARE_ATTRIBUTE_GI(StateDim, int);
+
+	// total energy for current configuration
+	REAL GetEnergy();
+
+	// returns the distance error between two nodes
+	REAL GetDistError(CNode *pFrom, CNode *pTo);
 
 	// loads the links and sizes for quick access
 	virtual void LoadSizesLinks(int nConstNodes, int nNodeCount);
@@ -62,9 +59,6 @@ public:
 	// evaluates the energy function
 	virtual REAL operator()(const CVectorN<>& vInput, 
 		CVectorN<> *pGrad = NULL) const;
-
-	// returns the distance error between two nodes
-	REAL GetDistError(CNode *pFrom, CNode *pTo);
 
 	// performs the layout
 	void LayoutNodes(CSpaceStateVector *pSSV, int nConstNodes);
@@ -82,14 +76,10 @@ protected:
 	static const REAL CENTER_REP_SCALE;
 	static const REAL CENTER_REP_WEIGHT;
 
-	// pointer to the energy function's spaceview
+	// pointer to the energy function's space
 	CSpace *m_pSpace;
 
-	// current state dimension
-	int m_nStateDim;
-
-	// vector holding the const positions
-	// CVectorN<> m_vConstPositions;
+	// number of const positions
 	int m_nConstNodes;
 
 	// the optimizer for the layout
@@ -100,11 +90,6 @@ protected:
 
 	// pointer to the optimizer to be used
 	COptimizer *m_pOptimizer;
-
-	// stores the objective function parameters
-	REAL m_k_pos;
-	REAL m_k_rep;
-	REAL m_tolerance;
 
 	// caches energy value for the previous input vector
 	mutable REAL m_energy;

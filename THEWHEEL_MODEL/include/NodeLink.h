@@ -15,6 +15,8 @@
 
 #include <MathUtil.h>
 
+#include "Attributes.h"
+
 // forward declaration of CNode
 class CNode;
 
@@ -41,18 +43,16 @@ public:
 	REAL GetWeight() const;
 
 	// accessors for gain setting
-	REAL GetGain();
-	void SetGain(REAL gain);
+	DECLARE_ATTRIBUTE(Gain, REAL);
+
+	// gets the weight adjusted for gain
 	REAL GetGainWeight() const;
 
 	// accessors for stabilizer flag
-	BOOL IsStabilizer() const;
-	void SetStabilizer(BOOL bIsStabilizer = TRUE);
+	DECLARE_ATTRIBUTE(IsStabilizer, BOOL);
 
 	// node target
-	CNode *GetTarget();
-	const CNode *GetTarget() const;
-	void SetTarget(CNode *pTarget);
+	DECLARE_ATTRIBUTE_PTR(Target, CNode);
 
 	//////////////////////////////////////////////////////////////////
 	// serialization
@@ -65,36 +65,24 @@ protected:
 	// declares CSpace as a friend class, to access the helper functions
 	friend CNode;
 
+	// protected, because the CNode needs to update the link map if changed
 	void SetWeight(REAL weight);
 
 	//////////////////////////////////////////////////////////////////
 	// propagation helpers
 
 	// flag to indicate that propagation has occurred through the link
-	BOOL HasPropagated() const;
-	void SetHasPropagated(BOOL bPropagated = TRUE);
+	DECLARE_ATTRIBUTE(HasPropagated, BOOL);
 
 private:
 	// weight of this link
 	REAL m_weight;
 
-	// link's gain
-	REAL m_gain;
-
-	// target of this link
-	CNode *m_pTarget;
-
-	// flag to indicate this is a stabilizer link
-	BOOL m_bIsStabilizer;
-
-	// flag to indicate that propagation has already occurred
-	BOOL m_bHasPropagated;
-
-public:
 	// returns target activation w.r.t. source node
 	REAL GetTargetActivation(void);
 	REAL m_targetActivation;
 	CNode *m_pFrom;
+
 };	// class CNodeLink
 
 

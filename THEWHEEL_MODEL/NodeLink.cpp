@@ -14,7 +14,6 @@
 
 // the CNode
 #include "Node.h"
-#include ".\include\nodelink.h"
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -34,9 +33,9 @@ static char THIS_FILE[]=__FILE__;
 CNodeLink::CNodeLink(CNode *pToNode, REAL weight)
 	: m_pTarget(pToNode),
 		m_weight(weight),
-		m_gain((REAL) 1.0),
-		m_bIsStabilizer(FALSE),
-		m_bHasPropagated(TRUE)
+		m_Gain((REAL) 1.0),
+		m_IsStabilizer(FALSE),
+		m_HasPropagated(TRUE)
 		// initialize to HasPropagated to prevent immediate 
 		//		propagation
 
@@ -94,124 +93,9 @@ void CNodeLink::SetWeight(REAL newWeight)
 //////////////////////////////////////////////////////////////////////
 REAL CNodeLink::GetGainWeight() const
 {
-	return 0.99 * m_gain * GetWeight() + 0.01 * GetWeight();
+	return 0.99 * GetGain() * GetWeight() + 0.01 * GetWeight();
 
 }	// CNodeLink::GetGainWeight
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeLink::GetGain
-// 
-// returns the gain for the link weight
-//////////////////////////////////////////////////////////////////////
-REAL CNodeLink::GetGain()
-{
-	return m_gain;
-
-}	// CNodeLink::GetGain
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeLink::SetGain
-// 
-// sets the gain for the link weight
-//////////////////////////////////////////////////////////////////////
-void CNodeLink::SetGain(REAL gain)
-{
-	// ensure the gain is finite
-	ASSERT(_finite(m_gain));
-
-	// set by filtering with the currrent gain
-	m_gain = gain;
-
-	// ensure still finite
-	ASSERT(_finite(m_gain));
-
-}	// CNodeLink::SetGain
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeLink::IsStabilizer
-// 
-// returns TRUE if this link is a stabilizer link
-//////////////////////////////////////////////////////////////////////
-BOOL CNodeLink::IsStabilizer() const
-{
-	return m_bIsStabilizer;
-
-}	// CNode::IsStabilizer
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeLink::SetStabilizer
-// 
-// links the node to the target node (creating a CNodeLink in the
-// proces, if necessary).
-//////////////////////////////////////////////////////////////////////
-void CNodeLink::SetStabilizer(BOOL bIsStabilizer)
-{
-	m_bIsStabilizer = bIsStabilizer;
-}
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeLink::GetTarget
-// 
-// returns the target of this link
-//////////////////////////////////////////////////////////////////////
-CNode *CNodeLink::GetTarget()
-{
-	return m_pTarget;
-
-}	// CNodeLink::GetTarget
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeLink::GetTarget const
-// 
-// returns the target of this link as a const pointer
-//////////////////////////////////////////////////////////////////////
-const CNode *CNodeLink::GetTarget() const
-{
-	return m_pTarget;
-
-}	// CNodeLink::GetTarget const
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeLink::SetTarget
-// 
-// sets the target of this link
-//////////////////////////////////////////////////////////////////////
-void CNodeLink::SetTarget(CNode *pTarget)
-{
-	m_pTarget = pTarget;
-
-}	// CNodeLink::SetTarget
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeLink::HasPropagated
-// 
-// flag to indicate that propagation has occurred through the link
-//////////////////////////////////////////////////////////////////////
-BOOL CNodeLink::HasPropagated() const
-{
-	return m_bHasPropagated;
-
-}	// CNodeLink::HasPropagated
-
-
-//////////////////////////////////////////////////////////////////////
-// CNodeLink::SetHasPropagated
-// 
-// sets/clears flag to indicate propagation
-//////////////////////////////////////////////////////////////////////
-void CNodeLink::SetHasPropagated(BOOL bPropagated)
-{
-	m_bHasPropagated = bPropagated;
-
-}	// CNodeLink::SetHasPropagated
 
 
 //////////////////////////////////////////////////////////////////////
@@ -233,7 +117,7 @@ void CNodeLink::Serialize(CArchive &ar)
 
 		if (nSchema >= 2)
 		{
-			ar >> m_bIsStabilizer;
+			ar >> m_IsStabilizer;
 		}
 
 		if (m_weight < 0.01)
@@ -247,7 +131,7 @@ void CNodeLink::Serialize(CArchive &ar)
 
 		if (nSchema >= 2)
 		{
-			ar << m_bIsStabilizer;
+			ar << m_IsStabilizer;
 		}
 	}
 
