@@ -78,9 +78,9 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 	: CObjectiveFunction(TRUE),
 		m_pSpace(pSpace),
 
-		m_k_pos(K_POS),
-		m_k_rep(K_REP),
-		m_tolerance(TOLERANCE),
+		m_KPos(K_POS),
+		m_KRep(K_REP),
+		m_Tolerance(TOLERANCE),
 
 		m_energy(0.0),
 		m_energyConst(0.0),
@@ -141,25 +141,13 @@ CSpaceLayoutManager::~CSpaceLayoutManager()
 
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceLayoutManager::GetStateDim
-// 
-// returns the state dimension
-//////////////////////////////////////////////////////////////////////
-int CSpaceLayoutManager::GetStateDim() const
-{
-	return m_nStateDim;
-
-}	// CSpaceLayoutManager::GetStateDim
-
-
-//////////////////////////////////////////////////////////////////////
 // CSpaceLayoutManager::SetStateDim
 // 
 // sets the state dimension
 //////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::SetStateDim(int nStateDim)
+void CSpaceLayoutManager::SetStateDim(const int& nStateDim)
 {
-	m_nStateDim = nStateDim;
+	m_StateDim = nStateDim;
 
 	// re-initialize the state vector
 	m_vState.SetDim(GetStateDim());
@@ -180,75 +168,38 @@ REAL CSpaceLayoutManager::GetEnergy()
 
 
 //////////////////////////////////////////////////////////////////////
-// CSpaceLayoutManager::GetKPos
+// CSpaceLayoutManager::GetDistError
 // 
-// returns the k_pos (positional) parameter
+// returns the distance error between two nodes
 //////////////////////////////////////////////////////////////////////
-REAL CSpaceLayoutManager::GetKPos()
+REAL CSpaceLayoutManager::GetDistError(CNode *pFrom, CNode *pTo)
 {
-	return m_k_pos;
+	// store the size -- add 10 to ensure non-zero sizes
+	CVectorD<3> vSizeFrom = pFrom->GetSize(pFrom->GetActivation());
+	vSizeFrom *= SIZE_SCALE;
+	vSizeFrom += CVectorD<3>(10.0, 10.0, 0.0);
 
-}	// CSpaceLayoutManager::GetKPos
+	CVectorD<3> vSizeTo = pTo->GetSize(pTo->GetActivation());
+	vSizeTo *= SIZE_SCALE;
+	vSizeTo += CVectorD<3>(10.0, 10.0, 0.0);
 
+	CVectorD<3> vSizeAvg = (REAL) 0.5 * (vSizeFrom + vSizeTo);
 
-//////////////////////////////////////////////////////////////////////
-// CSpaceLayoutManager::SetKPos
-// 
-// sets the positional paramater
-//////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::SetKPos(REAL k_pos)
-{
-	m_k_pos = k_pos;
+	CVectorD<3> vOffset = pFrom->GetPosition() - pTo->GetPosition();
 
-}	// CSpaceLayoutManager::SetKPos
+	// compute the relative actual distance
+	const REAL act_dist = (REAL) sqrt(vOffset[0] * vOffset[0] 
+											/ (vSizeAvg[0] * vSizeAvg[0])
+		+ vOffset[1] * vOffset[1] 
+				/ (vSizeAvg[1] * vSizeAvg[1])) + 0.001;
 
+	// compute the distance error
+	const REAL dist_error = act_dist - OPT_DIST;
 
-//////////////////////////////////////////////////////////////////////
-// CSpaceLayoutManager::GetKRep
-// 
-// returns the repulsion parameter
-//////////////////////////////////////////////////////////////////////
-REAL CSpaceLayoutManager::GetKRep()
-{
-	return m_k_rep;
+	return dist_error;
 
-}	// CSpaceLayoutManager::GetKRep
+}	// CSpaceLayoutManager::GetDistError
 
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceLayoutManager::SetKRep
-// 
-// sets the repulsion parameter
-//////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::SetKRep(REAL k_rep)
-{
-	m_k_rep = k_rep;
-
-}	// CSpaceLayoutManager::SetKRep
-
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceLayoutManager::GetTolerance
-// 
-// returns the tolerance parameter
-//////////////////////////////////////////////////////////////////////
-REAL CSpaceLayoutManager::GetTolerance()
-{
-	return m_tolerance;
-
-}	// CSpaceLayoutManager::GetTolerance
-
-
-//////////////////////////////////////////////////////////////////////
-// CSpaceLayoutManager::SetTolerance()
-// 
-// sets the tolerance parameter
-//////////////////////////////////////////////////////////////////////
-void CSpaceLayoutManager::SetTolerance(REAL tolerance)
-{
-	m_tolerance = tolerance;
-
-}	// CSpaceLayoutManager::SetTolerance()
 
 
 //////////////////////////////////////////////////////////////////////
@@ -340,7 +291,7 @@ void CSpaceLayoutManager::LoadSizesLinks(int nConstNodes, int nNodeCount)
 		int nOldStateDim = GetStateDim();
 
 		// set new state dimension to only constant nodes
-		m_nStateDim = nConstNodes * 2;
+		m_StateDim = nConstNodes * 2;
 
 		// make sure no constant nodes
 		m_nConstNodes = 0;
@@ -351,7 +302,7 @@ void CSpaceLayoutManager::LoadSizesLinks(int nConstNodes, int nNodeCount)
 		m_bCalcCenterRep = TRUE;
 
 		// restore old state dimension
-		m_nStateDim = nOldStateDim;
+		m_StateDim = nOldStateDim;
 	}
 
 	m_nConstNodes = nConstNodes;
@@ -455,7 +406,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 			// compute the factor controlling the importance of the
 			//		attraction term
-			const REAL factor = m_k_pos * weight;
+			const REAL factor = GetKPos() * weight;
 
 			// and add the attraction term to the energy
 			m_energy += factor * dist_error * dist_error;
@@ -482,7 +433,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 			// compute the energy term
 			const REAL inv_sq = ((REAL) 1.0) / (x_ratio + y_ratio + ((REAL) 3.0));
-			const REAL factor_rep = m_k_rep * m_mAvgAct[nAtNode][nAtLinked];
+			const REAL factor_rep = GetKRep() * m_mAvgAct[nAtNode][nAtLinked];
 
 			// add to total energy
 			m_energy += factor_rep * inv_sq;
@@ -532,7 +483,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 				// compute the energy term
 				const REAL inv_sq = ((REAL) 1.0) / (x_ratio + y_ratio + ((REAL) 3.0));
-				const REAL factor_rep = m_k_rep * CENTER_REP_WEIGHT
+				const REAL factor_rep = GetKRep() * CENTER_REP_WEIGHT
 					* (CENTER_REP_MAX_ACT - abs(act)) 
 					* (CENTER_REP_MAX_ACT - abs(act));
 
@@ -573,39 +524,6 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 }	// CSpaceLayoutManager::operator()
 
 
-//////////////////////////////////////////////////////////////////////
-// CSpaceLayoutManager::GetDistError
-// 
-// returns the distance error between two nodes
-//////////////////////////////////////////////////////////////////////
-REAL CSpaceLayoutManager::GetDistError(CNode *pFrom, CNode *pTo)
-{
-	// store the size -- add 10 to ensure non-zero sizes
-	CVectorD<3> vSizeFrom = pFrom->GetSize(pFrom->GetActivation());
-	vSizeFrom *= SIZE_SCALE;
-	vSizeFrom += CVectorD<3>(10.0, 10.0, 0.0);
-
-	CVectorD<3> vSizeTo = pTo->GetSize(pTo->GetActivation());
-	vSizeTo *= SIZE_SCALE;
-	vSizeTo += CVectorD<3>(10.0, 10.0, 0.0);
-
-	CVectorD<3> vSizeAvg = (REAL) 0.5 * (vSizeFrom + vSizeTo);
-
-	CVectorD<3> vOffset = pFrom->GetPosition() - pTo->GetPosition();
-
-	// compute the relative actual distance
-	const REAL act_dist = (REAL) sqrt(vOffset[0] * vOffset[0] 
-											/ (vSizeAvg[0] * vSizeAvg[0])
-		+ vOffset[1] * vOffset[1] 
-				/ (vSizeAvg[1] * vSizeAvg[1])) + 0.001;
-
-	// compute the distance error
-	const REAL dist_error = act_dist - OPT_DIST;
-
-	return dist_error;
-
-}	// CSpaceLayoutManager::GetDistError
-
 
 //////////////////////////////////////////////////////////////////////
 // CSpaceLayoutManager::LayoutNodes
@@ -633,8 +551,8 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 	LoadSizesLinks(nConstNodes, GetStateDim() / 2);
 
 	// form the state vector
-	pSSV->GetPositionsVector(m_vState, TRUE);
-
+	// TODO: trying fix on 3/12/2006 DGL
+	pSSV->GetPositionsVector(m_vState, false);
 	if (!::_finite(m_vState.GetLength()))
 	{
 		::AfxMessageBox("Invalid Initial State23", MB_OK, 0);
@@ -647,18 +565,9 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 	CVectorN<> vPartState;
 	vPartState.SetElements(GetStateDim() - m_nConstNodes * 2,
 		&m_vState[m_nConstNodes * 2], FALSE);
-	if (!::_finite(vPartState.GetLength()))
-	{
-		::AfxMessageBox("Invalid Initial State17", MB_OK, 0);
-	}
 
 	// perform the optimization
 	vPartState = m_pOptimizer->Optimize(vPartState);
-
-	if (!::_finite(vPartState.GetLength()))
-	{
-		::AfxMessageBox("Invalid Initial State19", MB_OK, 0);
-	}
 
 	if (	// FALSE) // 
 		m_nConstNodes == 0)
@@ -668,10 +577,6 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 
 		// retrieve the final state
 		pSSV->GetPositionsVector(m_vState);
-		if (!::_finite(m_vState.GetLength()))
-		{
-			::AfxMessageBox("Invalid Initial State25", MB_OK, 0);
-		}
 	}
 	else
 	{
@@ -679,5 +584,3 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 	}
 
 }	// CSpaceLayoutManager::LayoutNodes
-
-
