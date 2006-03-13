@@ -1,51 +1,32 @@
-// theWheel.h : main header file for the THEWHEEL application
+// theWheel.h : main header file for the theWheel application
 //
-
-#if !defined(AFX_THEWHEEL_H__EF3C7A67_A96A_46D7_85B1_EE95EE95BDF5__INCLUDED_)
-#define AFX_THEWHEEL_H__EF3C7A67_A96A_46D7_85B1_EE95EE95BDF5__INCLUDED_
-
-#if _MSC_VER > 1000
 #pragma once
-#endif // _MSC_VER > 1000
 
 #ifndef __AFXWIN_H__
-	#error include 'stdafx.h' before including this file for PCH
+	#error "include 'stdafx.h' before including this file for PCH"
 #endif
 
 #include "resource.h"       // main symbols
 #include "THEWHEEL_VIEW_resource.h"
 #include "THEWHEEL_TREEVIEW_resource.h"
 
-/////////////////////////////////////////////////////////////////////////////
-// theWheelApp:
+// CtheWheelApp:
 // See theWheel.cpp for the implementation of this class
 //
 
-class theWheelApp : public CWinApp
+class CtheWheelApp : public CWinApp
 {
 public:
-	theWheelApp();
+	CtheWheelApp();
+
 
 // Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(theWheelApp)
-	public:
+public:
 	virtual BOOL InitInstance();
-	//}}AFX_VIRTUAL
 
 // Implementation
-	//{{AFX_MSG(theWheelApp)
 	afx_msg void OnAppAbout();
-		// NOTE - the ClassWizard will add and remove member functions here.
-		//    DO NOT EDIT what you see in these blocks of generated code !
-	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };
 
-
-/////////////////////////////////////////////////////////////////////////////
-
-//{{AFX_INSERT_LOCATION}}
-// Microsoft Visual C++ will insert additional declarations immediately before the previous line.
-
-#endif // !defined(AFX_THEWHEEL_H__EF3C7A67_A96A_46D7_85B1_EE95EE95BDF5__INCLUDED_)
+extern CtheWheelApp theApp;
