@@ -1,3 +1,4 @@
+#include "include\Space.h"
 //////////////////////////////////////////////////////////////////////
 // Space.cpp: implementation of the CSpace class.
 //
@@ -114,31 +115,24 @@ BOOL HasMMX()
 // constructs an empty CSpace object.  use OnNewDocument to initialize
 //////////////////////////////////////////////////////////////////////
 CSpace::CSpace()
-	: m_pRootNode(NULL),
-		m_pDS(NULL),
-		m_bNodesSorted(FALSE),
+	: m_pRootNode(NULL)
+	, m_pDS(NULL)
+	, m_bNodesSorted(FALSE)
 
-		m_pStateVector(NULL),
-		m_pLayoutManager(NULL),
-		m_nLastPostSuper(0),
+	, m_pStateVector(NULL)
+	, m_pLayoutManager(NULL)
+	, m_nLastPostSuper(0)
 
-		m_totalPrimaryActivation(0.0),
-		m_totalSecondaryActivation(0.0),
-		m_primSecRatio(PRIM_SEC_RATIO),
-		m_springConst(0.95)
+	, m_pCurrentNode(NULL)
+
+	, m_totalPrimaryActivation(0.0)
+	, m_totalSecondaryActivation(0.0)
+	, m_PrimSecRatio(PRIM_SEC_RATIO)
+	, m_SpringConst(0.95)
 {
 	m_pStateVector = new CSpaceStateVector(this);
 
-	// if (::AfxGetApp()->GetProfileInt("LAYOUT", "RUN_FAST", 0) == 1
-	//	&& HasMMX())
-	{
-		// create the layout manager
-	//	m_pLayoutManager = new CSSELayoutManager(this);
-	}
-	// else
-	{
-		m_pLayoutManager = new CSpaceLayoutManager(this);
-	}
+	m_pLayoutManager = new CSpaceLayoutManager(this);
 
 	// set the spring constant (from the profile)
 	SetSpringConst( 1.0 / 100.0 * 
@@ -242,11 +236,8 @@ void CSpace::AddNode(CNode *pNewNode, CNode *pParentNode)
 	//		the array (because it will update the total activation)
 	pNewNode->SetActivation(actWeight * 0.1);
 
-	// set dirty flag
-	SetModifiedFlag(TRUE);
-
 	// update all the views, passing the new node as a hint
-	SPACE_FIRE_CHANGE(EVT_NODE_ADDED, pNewNode);
+	NodeAddedEvent.Fire(pNewNode);
 
 }	// CSpace::AddNode
 
@@ -281,7 +272,7 @@ void CSpace::RemoveNode(CNode *pMarkedNode)
 	pMarkedNode->SetActivation(0.00001);
 
 	// find and remove the node from the array
-	for (nAt = 0; nAt < GetNodeCount(); nAt++)
+	for (int nAt = 0; nAt < GetNodeCount(); nAt++)
 	{
 		// get the other node
 		CNode *pNode = (CNode *) m_arrNodes.GetAt(nAt);
@@ -298,11 +289,11 @@ void CSpace::RemoveNode(CNode *pMarkedNode)
 	}
 
 	// update all the views, passing the removed node as a hint
-	SPACE_FIRE_CHANGE(EVT_NODE_REMOVED, pMarkedNode);
+	NodeRemovedEvent.Fire(pMarkedNode);
 
 }	// CSpace::RemoveNode
 
-
+/*
 //////////////////////////////////////////////////////////////////////
 // CSpace::GetCurrentNode
 // 
@@ -313,7 +304,7 @@ CNode *CSpace::GetCurrentNode()
 	return m_pCurrentNode;
 
 }	// CSpace::GetCurrentNode
-
+*/
 
 //////////////////////////////////////////////////////////////////////
 // CSpace::SetCurrentNode
@@ -325,7 +316,7 @@ void CSpace::SetCurrentNode(CNode *pNode)
 	m_pCurrentNode = pNode;
 
 	// update all views for the new current node
-	SPACE_FIRE_CHANGE(EVT_NODE_SELCHANGED, m_pCurrentNode);
+	CurrentNodeChangedEvent.Fire(m_pCurrentNode);
 
 }	// CSpace::SetCurrentNode
 
@@ -353,8 +344,8 @@ void CSpace::ActivateNode(CNode *pNode, REAL scale)
 
 	// now propagate
 	pNode->PropagateActivation(
-		(REAL) 0.2,		// 0.4,
-		(REAL) 0.7); // 0.999);
+		(REAL) 0.7,		// 0.4,
+		(REAL) 0.1); // 0.7); // 0.999);
 
 	// now update the activation for all nodes
 	m_pRootNode->UpdateFromNewActivation();
@@ -378,12 +369,12 @@ void CSpace::NormalizeNodes(REAL sum)
 	// scale for secondary
 	REAL scale_2 = sum 
 		/ (GetTotalPrimaryActivation(true) 
-			+ m_primSecRatio * GetTotalSecondaryActivation(true) + 0.0001); 
+			+ GetPrimSecRatio() * GetTotalSecondaryActivation(true) + 0.0001); 
 
 	// scale for primary
 	REAL scale_1 = sum 
-		 / (GetTotalPrimaryActivation(true) / m_primSecRatio 
-			+ GetTotalSecondaryActivation(true) + 0.0001); 
+		 / (GetTotalPrimaryActivation(false) / GetPrimSecRatio()
+			+ GetTotalSecondaryActivation(false) + 0.0001); 
 
 	// scale the nodes
 	for (int nAt = 0; nAt < GetNodeCount(); nAt++)
@@ -440,7 +431,7 @@ void CSpace::Relax()
 				REAL exp_dist = 3.0 * exp( 0.1 // 0.004 
 					* distErrScaled); //  + 2.0);
 
-				if (pLink->IsStabilizer())
+				if (pLink->GetIsStabilizer())
 				{
 					exp_dist = 0.1 * exp(0.1 * distErrScaled);
 				}
@@ -491,15 +482,13 @@ void CSpace::SetMaxSuperNodeCount(int nSuperNodeCount)
 	GetLayoutManager()->SetStateDim(nSuperNodeCount * 2);
 
 	// flag to indicate dirty doc
-	SetModifiedFlag(TRUE);
-
-	// update all the views
-	SPACE_FIRE_CHANGE(EVT_SUPERNODECOUNT_CHANGED, NULL);
+	// SetModifiedFlag(TRUE);
+	// TODO: need to fire a change so that modified flag
 
 }	// CSpace::SetMaxSuperNodeCount
 
 
-
+/*
 //////////////////////////////////////////////////////////////////////
 // CSpace::GetPrimSecRatio
 // 
@@ -522,43 +511,11 @@ void CSpace::SetPrimSecRatio(REAL primSecRatio)
 	m_primSecRatio = primSecRatio;
 
 	// flag to indicate dirty doc
-	SetModifiedFlag(TRUE);
-
-	// update all the views
-	SPACE_FIRE_CHANGE(EVT_LAYOUTPARAMS_CHANGED, NULL);
+	// SetModifiedFlag(TRUE);
+	// TODO: need to fire a change so that modified flag
 
 }	// CSpace::SetPrimSecRatio
-
-
-//////////////////////////////////////////////////////////////////////
-// CSpace::GetSpringConst
-// 
-// gets the spring constant for node position updates
-//////////////////////////////////////////////////////////////////////
-REAL CSpace::GetSpringConst()
-{
-	return m_springConst;
-
-}	// CSpace::GetSpringConst
-
-
-//////////////////////////////////////////////////////////////////////
-// CSpace::SetSpringConst
-// 
-// sets the primary/secondary ratio
-//////////////////////////////////////////////////////////////////////
-void CSpace::SetSpringConst(REAL springConst)
-{
-	m_springConst = springConst;
-
-	// flag to indicate dirty doc
-	SetModifiedFlag(TRUE);
-
-	// update all the views
-	SPACE_FIRE_CHANGE(EVT_LAYOUTPARAMS_CHANGED, NULL);
-
-}	// CSpace::SetSpringConst
-
+*/
 
 //////////////////////////////////////////////////////////////////////
 // CSpace::GetClassColorMap
@@ -572,29 +529,13 @@ CMap<CString, LPCSTR, COLORREF, COLORREF>& CSpace::GetClassColorMap()
 }	// CSpace::GetClassColorMap
 
 
-/////////////////////////////////////////////////////////////////////////////
-// CSpace message map
-/////////////////////////////////////////////////////////////////////////////
-BEGIN_MESSAGE_MAP(CSpace, CDocument)
-	//{{AFX_MSG_MAP(CSpace)
-		// NOTE - the ClassWizard will add and remove mapping macros here.
-		//    DO NOT EDIT what you see in these blocks of generated code!
-	//}}AFX_MSG_MAP
-END_MESSAGE_MAP()
-
-
 //////////////////////////////////////////////////////////////////////
 // CSpace::OnNewDocument
 // 
 // initializes a new document
 //////////////////////////////////////////////////////////////////////
-BOOL CSpace::OnNewDocument()
+BOOL CSpace::CreateSimpleSpace()
 {
-	if (!CDocument::OnNewDocument())
-	{
-		return FALSE;
-	}
-
 	DeleteContents();
 
 	// clear the array
@@ -624,9 +565,6 @@ BOOL CSpace::OnNewDocument()
 	SortNodes();
 	NormalizeNodes();
 
-	// remove modified flag
-	SetModifiedFlag(FALSE);
-
 	// everything OK, return TRUE
 	return TRUE;
 
@@ -652,7 +590,7 @@ void CSpace::SortNodes()
 		for (int nAt = GetSuperNodeCount(); nAt < GetNodeCount(); nAt++)
 		{
 			CNode *pNode = GetNodeAt(nAt);
-			if (pNode->IsPostSuper())
+			if (pNode->GetIsPostSuper())
 			{
 				m_arrNodes[nAt] = m_arrNodes[m_nLastPostSuper];
 				m_arrNodes[m_nLastPostSuper] = pNode;
@@ -683,7 +621,7 @@ void CSpace::PositionNewSuperNodes()
 		// get the node
 		CNode *pNode = GetNodeAt(nAt);
 
-		if (pNode->IsSubThreshold())
+		if (pNode->GetIsSubThreshold())
 		{
 			// we have a new highest
 			nHighestNewSuper = nAt;
@@ -695,9 +633,10 @@ void CSpace::PositionNewSuperNodes()
 				// the new position -- initially at the max act position
 				CVectorD<3> vNewPosition = pMaxAct->GetPosition();
 
+#define SHOOT
 #ifdef SHOOT
 				// find direction by default from center
-				CVectorD<3> vCenter = m_vCenter;
+				CVectorD<3> vCenter = GetCenter(); // m_vCenter;
 
 				// see if IT has a max activator
 				if (pMaxAct->GetMaxActivator() != NULL)
@@ -727,7 +666,9 @@ void CSpace::PositionNewSuperNodes()
 #endif
 
 				// set the new position
-				pNode->SetPosition(vNewPosition, TRUE);		// BEFORE was FALSE
+				pNode->SetPosition(vNewPosition, true);		// BEFORE was FALSE
+				// set flag to indicate position has been reset
+				// pNode->m_bPositionReset = true;
 
 				// NEW: set gain for max activator link
 				for (int nAtLink = 0; nAtLink < pNode->GetLinkCount(); nAtLink++)
@@ -738,9 +679,6 @@ void CSpace::PositionNewSuperNodes()
 				{
 					pNode->GetLinkTo(pMaxAct)->SetGain(1.0);
 				}
-
-				// set flag to indicate position has been reset
-				pNode->m_bPositionReset = true;
 			}
 		}
 	}
@@ -755,20 +693,20 @@ void CSpace::PositionNewSuperNodes()
 
 	// finish processing by moving the new super-nodes to
 	//		their updated position
-	for (nAt = 0; nAt < GetSuperNodeCount(); nAt++)
+	for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
 	{
 		// get the node
 		CNode *pNode = GetNodeAt(nAt);
 
 		// adjust the sub-threshold nodes
-		if (pNode->IsSubThreshold())
+		if (pNode->GetIsSubThreshold())
 		{
 			// and flag as no longer sub threshold
-			pNode->SetSubThreshold(FALSE);
-			pNode->SetPostSuper(FALSE);
+			pNode->SetIsSubThreshold(FALSE);
+			pNode->SetIsPostSuper(FALSE);
 
-			// set the new position, triggering a change event
-			pNode->SetPosition(pNode->GetPosition(), TRUE);
+			// set the new position, triggering a reset
+			pNode->SetPosition(pNode->GetPosition(), true);
 
 			// set flag to indicate position has been reset
 			pNode->m_bPositionReset = true;
@@ -792,7 +730,7 @@ void CSpace::AdjustRunawayNodes()
 		CNode *pNode = GetNodeAt(nAt);
 
 		// compute the position, offset from the current center point
-		CVectorD<3> vOffset = pNode->GetPosition() - m_vCenter;
+		CVectorD<3> vOffset = pNode->GetPosition() - GetCenter();
 
 		// are we too far away?
 		if (vOffset.GetLength() > MAX_RUNAWAY_RADIUS)
@@ -803,11 +741,10 @@ void CSpace::AdjustRunawayNodes()
 		}
 
 		// set newly calculated position
-		CVectorD<3> vNewPosition = m_vCenter + vOffset;
-		pNode->SetPosition(m_vCenter + vOffset);
+		pNode->SetPosition(GetCenter() + vOffset);
 
 		// ensure we are not subthreshold, for good measure
-		pNode->SetSubThreshold(FALSE);
+		pNode->SetIsSubThreshold(FALSE);
 	}
 
 }	// CSpace::AdjustRunawayNodes
@@ -841,15 +778,15 @@ void CSpace::PositionSubNodes()
 		CNode *pNode = GetNodeAt(nAt);
 
 		// mark node as sub-threshold
-		pNode->m_bSubThreshold = TRUE;
+		pNode->SetIsSubThreshold(TRUE);
 
 		// compute the new position
 		CVectorD<3> vNewPosition = 
-			pNode->GetMaxActivator()->GetPosition() - m_vCenter;
+			pNode->GetMaxActivator()->GetPosition() - GetCenter();
 
 		// decay towards center
 		vNewPosition *= SUBNODE_DECAY_RATE;
-		vNewPosition += m_vCenter;
+		vNewPosition += GetCenter();
 
 		// and set the new position
 		pNode->SetPosition(vNewPosition); 
@@ -894,9 +831,6 @@ void CSpace::AddNodeToArray(CNode *pNode)
 //////////////////////////////////////////////////////////////////////
 void CSpace::Serialize(CArchive& ar)
 {
-	// serialize base class
-	CDocument::Serialize(ar);
-
 	// set up the schema
 	DWORD dwSchema = SPACE_SCHEMA;
 
@@ -944,9 +878,9 @@ void CSpace::Serialize(CArchive& ar)
 		NormalizeNodes();
 
 		// mark super-threshold nodes
-		for (nAt = 0; nAt < GetSuperNodeCount(); nAt++)
+		for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
 		{
-			GetNodeAt(nAt)->SetSubThreshold(FALSE);
+			GetNodeAt(nAt)->SetIsSubThreshold(FALSE);
 		}
 
 		// set the total activation
@@ -980,7 +914,7 @@ void CSpace::Serialize(CArchive& ar)
 			// primary/secondary ratio
 			double primSecRatio;
 			ar >> primSecRatio;
-			m_primSecRatio = primSecRatio;
+			SetPrimSecRatio(primSecRatio);
 
 			// super node count
 			int nSuperNodeCount;
@@ -1024,11 +958,8 @@ void CSpace::Serialize(CArchive& ar)
 	REAL maxWeight = m_pRootNode->GetMaxLinkWeight();
 
 	// adjust max to 0.80
-	m_pRootNode->ScaleLinkWeights(0.70 / maxWeight);
+	m_pRootNode->ScaleLinkWeights(0.40 / maxWeight);
 #endif
-
-	// remove modified flag
-	SetModifiedFlag(FALSE);
 
 }	// CSpace::Serialize
 
@@ -1073,7 +1004,7 @@ void CSpace::AssertValid() const
 	}
 #endif
 
-	CDocument::AssertValid();
+	CObject::AssertValid();
 
 }	// CSpace::AssertValid
 
@@ -1085,7 +1016,7 @@ void CSpace::AssertValid() const
 //////////////////////////////////////////////////////////////////////
 void CSpace::Dump(CDumpContext& dc) const
 {
-	CDocument::Dump(dc);
+	CObject::Dump(dc);
 
 	for (int nAt = 0; nAt < m_pRootNode->GetChildCount(); nAt++)
 	{
@@ -1142,8 +1073,8 @@ REAL CSpace::GetTotalPrimaryActivation(BOOL bCompute) const
 				GetNodeAt(nAt)->GetPrimaryActivation();
 		}
 
-		m_totalPrimaryActivation = // m_totalPrimaryActivation * 0.99 
-			totalPrimaryActivation; // * 0.01;
+		m_totalPrimaryActivation = m_totalPrimaryActivation * 0.99 
+			+ totalPrimaryActivation * 0.01;
 	}
 
 	return m_totalPrimaryActivation;
@@ -1171,8 +1102,8 @@ REAL CSpace::GetTotalSecondaryActivation(BOOL bCompute) const
 				GetNodeAt(nAt)->GetSecondaryActivation();
 		}
 
-		m_totalSecondaryActivation = // m_totalSecondaryActivation * 0.99 
-			totalSecondaryActivation; //  * 0.01;
+		m_totalSecondaryActivation = m_totalSecondaryActivation * 0.99
+			+ totalSecondaryActivation * 0.01;
 	}
 
 	return m_totalSecondaryActivation;
@@ -1225,7 +1156,7 @@ void CSpace::LayoutNodes()
 
 }	// CSpace::LayoutNodes
 
-
+/*
 //////////////////////////////////////////////////////////////////////
 // CSpace::SetCenter
 // 
@@ -1237,7 +1168,7 @@ void CSpace::SetCenter(REAL x, REAL y)
 	m_vCenter[1] = y;
 
 }	// CSpace::SetCenter
-
+*/
 
 //////////////////////////////////////////////////////////////////////
 // CSpace::GetDirectSound
