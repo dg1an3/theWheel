@@ -83,7 +83,7 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 
 	m_vSpringCenter = GetNode()->GetPosition();
 
-	m_posSpring.m_b = 8.0;
+	m_posSpring.m_b = 10.0; // 8.0;
 	m_actSpring.m_b = 6.0;
 	m_layoutSelectSpring.m_b = 7.0;
 
@@ -170,7 +170,7 @@ CVectorD<3> CNodeView::GetScaledNodeCenter()
 	CVectorD<3> vPos = GetNode()->GetPosition();
 	if (m_bMaximized)
 	{
-		vPos = (REAL) 0.5 * (vPos + GetNode()->GetSpace()->m_vCenter);
+		vPos = (REAL) 0.5 * (vPos + GetNode()->GetSpace()->GetCenter());
 	}
 	vPos -= vCenter;
 	vPos[0] /= 13.0 / 16.0;
@@ -191,17 +191,17 @@ REAL CNodeView::GetThresholdedActivation()
 {
 	// compute the threshold
 	int nSuperNodeCount = 
-		m_pParent->GetDocument()->GetSuperNodeCount();
+		m_pParent->GetSpace()->GetSuperNodeCount();
 	
 	if (nSuperNodeCount > 0)
 	{
 		CNode *pLastSuperNode = 
-			m_pParent->GetDocument()->GetNodeAt(nSuperNodeCount-1);
+			m_pParent->GetSpace()->GetNodeAt(nSuperNodeCount-1);
 		REAL activationThreshold = pLastSuperNode->GetActivation();
 
 		// compute the normalization factor for super-threshold node views
 		REAL superThresholdScale = TOTAL_ACTIVATION // * 1.1
-			/ m_pParent->GetDocument()->GetTotalActivation();
+			/ m_pParent->GetSpace()->GetTotalActivation();
 
 		// get this node's activation
 		REAL activation = GetNode()->GetActivation();
@@ -297,18 +297,18 @@ void CNodeView::UpdateSpringActivation(REAL springConst)
 	// see if the activation is below threshold
 	// compute the threshold
 	int nSuperNodeCount = 
-		m_pParent->GetDocument()->GetSuperNodeCount();
+		m_pParent->GetSpace()->GetSuperNodeCount();
 	
 	if (nSuperNodeCount > 0)
 	{
 		CNode *pLastSuperNode = 
-			m_pParent->GetDocument()->GetNodeAt(nSuperNodeCount-1);
+			m_pParent->GetSpace()->GetNodeAt(nSuperNodeCount-1);
 		REAL activationThreshold = pLastSuperNode->GetActivation();
 
 		// linearly scale the spring constant if we are below
 		//		the activation threshold
 		if (m_springActivation < activationThreshold
-			&& GetNode()->IsSubThreshold())
+			&& GetNode()->GetIsSubThreshold())
 		{
 			// springConst 
 			// m_actSpring.m_b = m_actSpring.m_b * 0.75
@@ -317,7 +317,7 @@ void CNodeView::UpdateSpringActivation(REAL springConst)
 				// * (1.0 - m_springActivation / activationThreshold);
 
 			// set the post-super flag
-			GetNode()->SetPostSuper(m_springActivation > MIN_POST_SUPER);
+			GetNode()->SetIsPostSuper(m_springActivation > MIN_POST_SUPER);
 		}
 	}
 
@@ -538,7 +538,7 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 	pDC->SetBkMode(TRANSPARENT);
 
 	// draw the links only if the activation is above 0.0
-	if (!GetNode()->IsSubThreshold())
+	if (!GetNode()->GetIsSubThreshold())
 		// && GetNode()->GetActivation() > MIN_POST_SUPER)
 	{
 		// for each link
@@ -548,9 +548,9 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 			CNodeView *pLinkedView = (CNodeView *)pLink->GetTarget()->GetView();
 
 			// only draw the link to node view's with activations greater than the current
-			if (!pLink->IsStabilizer()
+			if (!pLink->GetIsStabilizer()
 				&& pLinkedView != NULL
-				&& !pLinkedView->GetNode()->IsSubThreshold()
+				&& !pLinkedView->GetNode()->GetIsSubThreshold()
 				)
 			{
 				// draw the link
@@ -568,7 +568,7 @@ void CNodeView::DrawLinks(CDC *pDC, CNodeViewSkin *pSkin)
 			{
 				if (GetNode()->GetActivation() > pLink->GetTarget()->GetActivation()
 					&& pLinkedView != NULL
-					&& !pLinkedView->GetNode()->IsSubThreshold())
+					&& !pLinkedView->GetNode()->GetIsSubThreshold())
 				{
 					// draw the link
 					CVectorD<3> vFrom = GetSpringCenter();
@@ -608,10 +608,11 @@ void CNodeView::DrawTitle(CDC *pDC, CExtent<REAL>& rectInner)
 	rectText.right = rectText.right + 500;
 
 	CString strName = GetNode()->GetName();
-	if (GetNode()->GetOptimalStateVector() != NULL)
+/*	if (GetNode()->GetOptimalStateVector() != NULL)
 	{
 		strName += "*";
 	}
+*/
 
 	PROFILE_FLAG("Display", "Activation")
 	{
@@ -985,7 +986,7 @@ CDC * CNodeView::GetTextSurface(void)
 		dcScreen.SelectObject(&m_font);
 
 		// ref to text
-		CString& strText = GetNode()->GetDescription();
+		CString& strText = const_cast<CString&>(GetNode()->GetDescription());
 		int nLength = strText.GetLength();
 
 		// draw the text
