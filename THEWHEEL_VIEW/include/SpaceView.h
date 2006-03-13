@@ -33,7 +33,7 @@
 // manages the dynamic layout of the space; contains a node view
 //		for each node in the spcce
 //////////////////////////////////////////////////////////////////////
-class CSpaceView : public CView
+class CSpaceView : public CWnd
 {
 public:
 	CSpaceView();
@@ -45,7 +45,7 @@ public:
 // Attributes
 public:
 	// returns the CSpace that is being displayed
-	CSpace* GetDocument();
+	CSpace* GetSpace();
 
 	// accessors for the child node views
 	int GetNodeViewCount();
@@ -80,6 +80,12 @@ public:
 
 	CNodeView *m_pMaximizedView;
 
+	// called when a new node is added to the space
+	void OnNodeAdded(CObservableEvent * pEvent, void * pParam);
+
+	// called when a new node is added to the space
+	void OnNodeRemoved(CObservableEvent * pEvent, void * pParam);
+
 // Overrides
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(CSpaceView)
@@ -90,12 +96,7 @@ public:
 	virtual void OnDragLeave();
 	virtual DROPEFFECT OnDragOver(COleDataObject* pDataObject, DWORD dwKeyState, CPoint point);
 	afx_msg void OnGoClicked();
-	protected:
-	virtual void OnInitialUpdate(); // called first time after construct
-	virtual void OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint);
-	virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
-	virtual void OnBeginPrinting(CDC* pDC, CPrintInfo* pInfo);
-	virtual void OnEndPrinting(CDC* pDC, CPrintInfo* pInfo);
+	virtual void SetSpace(CSpace *pSpace); // called first time after construct
 	//}}AFX_VIRTUAL
 
 // Implementation
@@ -149,6 +150,9 @@ protected:
 	CNodeLayoutManager *m_pNLM;
 
 private:
+	// space to be viewed
+	CSpace *m_pSpace;
+
 	// the child node views
 	CObArray m_arrNodeViews;
 
@@ -181,10 +185,8 @@ private:
 
 };	// class CSpaceView
 
-#ifndef _DEBUG  // debug version in SpaceView.cpp
-inline CSpace* CSpaceView::GetDocument()
-   { return (CSpace*)m_pDocument; }
-#endif
+inline CSpace* CSpaceView::GetSpace()
+   { return m_pSpace; }
 
 /////////////////////////////////////////////////////////////////////////////
 
