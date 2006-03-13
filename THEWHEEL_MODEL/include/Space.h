@@ -15,23 +15,19 @@
 
 #include <MatrixD.h>
 
+#include <Observer.h>
+
+#include "Attributes.h"
 #include "Node.h"
 #include "SpaceLayoutManager.h"
 #include "SpaceStateVector.h"
+
 
 //////////////////////////////////////////////////////////////////////
 // constant for total allowed activation of nodes
 //////////////////////////////////////////////////////////////////////
 const REAL TOTAL_ACTIVATION = (REAL) 0.55;
 
-//////////////////////////////////////////////////////////////////////
-// Event Tags
-//////////////////////////////////////////////////////////////////////
-const LPARAM EVT_NODE_ADDED				= 1001;
-const LPARAM EVT_NODE_REMOVED			= 1002;
-const LPARAM EVT_NODE_SELCHANGED		= 1003;
-const LPARAM EVT_SUPERNODECOUNT_CHANGED	= 1004;
-const LPARAM EVT_LAYOUTPARAMS_CHANGED	= 1005;
 
 //////////////////////////////////////////////////////////////////////
 // class CSpace
@@ -39,7 +35,7 @@ const LPARAM EVT_LAYOUTPARAMS_CHANGED	= 1005;
 // a space object has a collection of CNodes arranged as a containment
 // hierarchy.  the CNodes are linked together.
 //////////////////////////////////////////////////////////////////////
-class CSpace : public CDocument
+class CSpace : public CObject
 {
 public:
 	CSpace();
@@ -62,14 +58,22 @@ public:
 
 	// adds a new node to the space as a child of the parent
 	void AddNode(CNode *pNewNode, CNode *pParentNode);
+	CObservableEvent NodeAddedEvent;
 
 	// removes a node from the space
 	void RemoveNode(CNode *pMarkedNode);
+	CObservableEvent NodeRemovedEvent;
 
 	// accessors for current node
-	CNode *GetCurrentNode();
-	void SetCurrentNode(CNode *pNode);
+	DECLARE_ATTRIBUTE_PTR_GI(CurrentNode, CNode);
+	CObservableEvent CurrentNodeChangedEvent;
 
+	// node-level change events
+	CObservableEvent NodeAttributeChangedEvent;
+
+	// base path for space
+	DECLARE_ATTRIBUTE(PathName, CString)
+	
 	///////////////////////////////////////////////////////////////////
 	// operations
 
@@ -91,27 +95,39 @@ public:
 	int GetSuperNodeCount();
 	void SetMaxSuperNodeCount(int nSuperNodeCount);
 
-	// accessors for primary/secondary ratio
-	REAL GetPrimSecRatio() const;
-	void SetPrimSecRatio(REAL primSecRatio);
+	// layout parameters
 
-	// accessors for spring constant
-	REAL GetSpringConst();
-	void SetSpringConst(REAL springConst);
+	// sets the center of the nodes
+	DECLARE_ATTRIBUTE(Center, CVectorD<3>);
+
+	// primary/secondary ratio: used for decay
+	DECLARE_ATTRIBUTE(PrimSecRatio, REAL);
+
+	// spring constant: used for adjusting layout
+	DECLARE_ATTRIBUTE(SpringConst, REAL);
+
+	// event for layout parameter change
+	CObservableEvent LayoutParamsChangedEvent;
 
 	// class description accessors
 	CMap<CString, LPCSTR, COLORREF, COLORREF>& GetClassColorMap();
+
+	// get the master DirectSound object
+	LPDIRECTSOUND GetDirectSound();
 
 // Overrides
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(CSpace)
 	public:
-	virtual BOOL OnNewDocument();
 	virtual void Serialize(CArchive& ar);
 	//}}AFX_VIRTUAL
 
 // Implementation
 public:
+
+	// sets up a simple space
+	virtual BOOL CreateSimpleSpace();
+
 	// deletes all content
 	virtual void DeleteContents();
 
@@ -123,12 +139,6 @@ public:
 
 	// layout the nodes
 	void LayoutNodes();
-
-	// sets the center of the node views
-	void SetCenter(REAL x, REAL y);
-
-	// get the master DirectSound object
-	LPDIRECTSOUND GetDirectSound();
 
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -147,14 +157,6 @@ protected:
 	void PositionSubNodes();
 	void AdjustRunawayNodes();
 	void PositionNewSuperNodes();
-	
-// Generated message map functions
-protected:
-	//{{AFX_MSG(CSpace)
-		// NOTE - the ClassWizard will add and remove member functions here.
-		//    DO NOT EDIT what you see in these blocks of generated code !
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
 
 	// allow CNode access to the total activation
 	friend CNode;
@@ -171,36 +173,23 @@ private:
 	// the array of nodes
 	CObArray m_arrNodes;
 
-	// stores the last post-super node index
-	int m_nLastPostSuper;
-
-	// flag to indicate sorting
-	BOOL m_bNodesSorted;
-
-	// the currently selected node
-	CNode *m_pCurrentNode;
-
-	// the direct sound interface
-	LPDIRECTSOUND m_pDS;
-
 	// the state vector for the space 
 	CSpaceStateVector *m_pStateVector;
 
 	// the manager for laying out the nodes
 	CSpaceLayoutManager *m_pLayoutManager;
 
-	// the center of the node views
-public:
-	CVectorD<3> m_vCenter;
+	// stores the last post-super node index
+	int m_nLastPostSuper;
 
-	// primary/secondary ratio for the space
-	REAL m_primSecRatio;
-
-	// spring constant for node views
-	REAL m_springConst;
+	// flag to indicate sorting
+	BOOL m_bNodesSorted;
 
 	// the mapping from classes to colors
 	CMap<CString, LPCSTR, COLORREF, COLORREF> m_mapClassColors;
+
+	// the direct sound interface
+	LPDIRECTSOUND m_pDS;
 
 };	// class CSpace
 

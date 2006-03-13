@@ -21,6 +21,9 @@
 // the image utilities
 #include "Dib.h"
 
+// attribute helpers
+#include "Attributes.h"
+
 // the links
 #include "NodeLink.h"
 
@@ -29,18 +32,6 @@ class CSpace;
 
 // forward declaration of state vector
 class CSpaceStateVector;
-
-//////////////////////////////////////////////////////////////////////
-// Event Tags
-//////////////////////////////////////////////////////////////////////
-const LPARAM EVT_NODE_REPARENTED =		2001;
-const LPARAM EVT_NODE_NAMED_CHANGED =	2002;
-const LPARAM EVT_NODE_DESC_CHANGED =	2003;
-const LPARAM EVT_NODE_CLASS_CHANGED =	2004;
-const LPARAM EVT_NODE_IMAGE_CHANGED =	2005;
-const LPARAM EVT_NODE_LINKWGT_CHANGED =	2006;
-const LPARAM EVT_NODE_POSITION_CHANGED =2007;
-
 
 const int UNKNOWN_DEGSEP = -1;
 
@@ -69,33 +60,24 @@ public:
 	CSpace *GetSpace();
 
 	// the node's parent
-	CNode *GetParent();
-	const CNode *GetParent() const;
-	void SetParent(CNode *pParent);
+	DECLARE_ATTRIBUTE_PTR_GI(Parent, CNode);
 
 	// the node's children
 	int GetChildCount() const;
 	CNode *GetChildAt(int nAt);
 	const CNode *GetChildAt(int nAt) const;
 
+	// returns the number of descendants of this node
+	int GetDescendantCount() const;
+
 	//////////////////////////////////////////////////////////////////
 	// attribute accessors
 
-	// the node's name
-	const CString& GetName() const;
-	void SetName(const CString& strName);
-
-	// the node description
-	CString& GetDescription();
-	void SetDescription(const CString& strDesc);
-
-	// the node class
-	const CString& GetClass() const;
-	void SetClass(const CString& strClass);
-
-	// an image filename, if present
-	const CString& GetImageFilename() const;
-	void SetImageFilename(const CString& strImageFilename);
+	// the node's primary attributes
+	DECLARE_ATTRIBUTE_GI(Name, CString);
+	DECLARE_ATTRIBUTE_GI(Description, CString);
+	DECLARE_ATTRIBUTE_GI(Class, CString);
+	DECLARE_ATTRIBUTE_GI(ImageFilename, CString);
 
 	// loads the image file, if necessary
 	CDib *GetDib();
@@ -103,22 +85,18 @@ public:
 	// gets a Windows icon for the node (instead of DIB, if applicable)
 	HICON GetIcon();
 
-	// a sound filename, if present
-	const CString& GetSoundFilename() const;
-	void SetSoundFilename(const CString& strSoundFilename);
-
-	// loads the sound file, if necessary
-	LPDIRECTSOUNDBUFFER GetSoundBuffer();
-
 	// the node description
-	const CString& GetUrl() const;
-	void SetUrl(const CString& strUrl);
+	DECLARE_ATTRIBUTE(Url, CString);
+
+	// sound accessors, if present
+	DECLARE_ATTRIBUTE(SoundFilename, CString);
+	LPDIRECTSOUNDBUFFER GetSoundBuffer();
 
 	// the node's position
 	const CVectorD<3>& GetPosition() const;
-	void SetPosition(const CVectorD<3>& vPos, bool bFireChange = false, bool bResetFlag = false);
+	void SetPosition(const CVectorD<3>& vPos, bool bResetFlag = false);
 
-	// reset flag
+	// read reset flag
 	bool IsPositionReset(bool bClearFlag = true);
 
 	// returns the size for a particular activation
@@ -156,13 +134,17 @@ public:
 	//		changing link weights
 	void SortLinks();
 
+	// returns max link weight for this and all child nodes
+	REAL GetMaxLinkWeight(void);
+
+	// scales all link weights by scale factor
+	void ScaleLinkWeights(REAL scale);
+
 	//////////////////////////////////////////////////////////////////
 	// activation accessors
 
 	// accessors for the node's activation
 	REAL GetActivation() const;
-	REAL GetPrimaryActivation() const;
-	REAL GetSecondaryActivation() const;
 
 	// set accessor sets either the primary or the secondary activation, based
 	//		on whether the activator is NULL
@@ -171,29 +153,21 @@ public:
 	void SetActivation(REAL newActivation, 
 		CNode *pActivator = NULL, REAL weight = 0.0);
 
-	// returns the number of descendants of this node
-	int GetDescendantCount() const;
+	// primary vs. secondary activation
+	REAL GetPrimaryActivation() const;
+	REAL GetSecondaryActivation() const;
 
 	// returns the current maximum activator
 	CNode *GetMaxActivator();
 
 	// flag for sub-threshold nodes
-	BOOL IsSubThreshold();
-	void SetSubThreshold(BOOL bIs = TRUE);
+	DECLARE_ATTRIBUTE(IsSubThreshold, BOOL);
 
 	// flag for post-super threshold
-	BOOL IsPostSuper();
-	void SetPostSuper(BOOL bIs = TRUE);
-
-	// optimal state vector (for interpolated layout)
-	CSpaceStateVector *GetOptimalStateVector();
-
-	//////////////////////////////////////////////////////////////////
-	// view object
+	DECLARE_ATTRIBUTE(IsPostSuper, BOOL);
 
 	// convenience pointer to a view object
-	CObject *GetView();
-	void SetView(CObject *pView);
+	DECLARE_ATTRIBUTE_PTR(View, CObject);
 
 	//////////////////////////////////////////////////////////////////
 	// serialization
@@ -211,33 +185,24 @@ protected:
 	// activation helper functions
 
 	// propagation management
-	void ResetForPropagation();
 	void PropagateActivation(REAL initScale, REAL alpha); // REAL scale);
+	void ResetForPropagation();
 
+	// transfers new_activation (from Propagate) to current activation for all child nodes
+	void UpdateFromNewActivation(void);
+
+#ifdef PROP_PULL_MODEL
+	// updates the current activation
 	void UpdateActivation(REAL scale, int nDegSep, 
 							 CArray<CNode *, CNode *>& arrNextDegSep);
+#endif
 
 private:
 	// pointer to the space that contains this node
 	CSpace *m_pSpace;
 
-	// pointer to the node's parent
-	CNode *m_pParent;
-
 	// the collection of children
 	CObArray m_arrChildren;
-
-	// the node's name
-	CString m_strName;
-
-	// the node's description
-	CString m_strDescription;
-
-	// the node's class
-	CString m_strClass;
-
-	// the node's image filename
-	CString m_strImageFilename;
 
 	// pointer to the DIB, if it is loaded
 	CDib *m_pDib;
@@ -245,20 +210,17 @@ private:
 	// alternatively, an icon
 	HICON m_hIcon;
 
-	// the node's sound filename
-	CString m_strSoundFilename;
-
 	// pointer to the DIB, if it is loaded
 	LPDIRECTSOUNDBUFFER m_pSoundBuffer;
-
-	// url
-	CString m_strUrl;
 
 	// position and size
 	CVectorD<3> m_vPosition;
 
 	// flag to indicate that the nodes position has been reset
 	bool m_bPositionReset;
+
+	// stores rmse for positions
+	REAL m_rmse;
 
 	// the collection of links
 	CObArray m_arrLinks;
@@ -282,30 +244,9 @@ private:
 	//		the previous propagation
 	BOOL m_bFoundMaxActivator;
 
-	// flag to indicate that the node is sub-threshold
-	BOOL m_bSubThreshold;
-
-	// flag to indicate that the node is post-super
-	BOOL m_bPostSuper;
-
-	// optimal SSV
-	CSpaceStateVector *m_pOptSSV;
-
-	// stores rmse for positions
-	REAL m_rmse;
-
-	// convenience pointer to a view object
-	CObject *m_pView;
-
-public:
 	// stores degree of separation from initiator of propagation
 	int m_nDegSep;
-	// transfers new_activation (from Propagate) to current activation for all child nodes
-	void UpdateFromNewActivation(void);
-	// returns max link weight for this and all child nodes
-	REAL GetMaxLinkWeight(void);
-	// scales all link weights by scale factor
-	void ScaleLinkWeights(REAL scale);
+
 };	// class CNode
 
 #endif // !defined(NODE_H)
