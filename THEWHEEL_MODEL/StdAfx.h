@@ -12,6 +12,9 @@
 
 #define VC_EXTRALEAN		// Exclude rarely-used stuff from Windows headers
 
+// use this to suppress warning for deprecated CRT calls (i.e. sscanf is replaced by sscanf_s)
+#define _CRT_SECURE_NO_DEPRECATE
+
 #include <afx.h>
 #include <afxwin.h>
 

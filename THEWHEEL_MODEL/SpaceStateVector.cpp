@@ -195,7 +195,7 @@ void CSpaceStateVector::Serialize(CArchive &ar)
 		CVectorN<double> vPositions;
 		ar >> vPositions;
 		CVectorN<> vPosReal;
-		for (nAt = 0; nAt < vActivations.GetDim(); nAt++)
+		for (int nAt = 0; nAt < vActivations.GetDim(); nAt++)
 			vPosReal[nAt] = vActivations[nAt];
 		SetPositionsVector(vPosReal);
 
@@ -213,7 +213,7 @@ void CSpaceStateVector::Serialize(CArchive &ar)
 		CVectorN<> vPosReal;
 		GetPositionsVector(vPosReal);
 		CVectorN<double> vPositions;
-		for (nAt = 0; nAt < vPosReal.GetDim(); nAt++)
+		for (int nAt = 0; nAt < vPosReal.GetDim(); nAt++)
 			vPositions[nAt] = vPosReal[nAt];
 		ar << vPositions;
 	}
@@ -321,7 +321,7 @@ void CSpaceStateVector::RotateTranslateTo(const CVectorN<>& vPositions)
 			// now repopulate
 			static CVectorN<> vPositions;
 			vPositions.SetDim(m_pSpace->GetSuperNodeCount() * 2);
-			for (nAt = 0; nAt < mNew.GetCols(); nAt++)
+			for (int nAt = 0; nAt < mNew.GetCols(); nAt++)
 			{
 				vPositions[nAt * 2 + 0] = mNew[nAt][0] / mNew[nAt][2];
 				vPositions[nAt * 2 + 1] = mNew[nAt][1] / mNew[nAt][2];

@@ -46,12 +46,12 @@ private:
 };
 
 template<class TYPE>
-CExtent<TYPE>::CExtent<TYPE>(void)
+CExtent<TYPE>::CExtent(void)
 {
 }
 
 template<class TYPE>
-CExtent<TYPE>::CExtent<TYPE>(const CRect& rect)
+CExtent<TYPE>::CExtent(const CRect& rect)
 {
 	m_vMin[0] = rect.left;
 	m_vMin[1] = rect.top;
@@ -61,7 +61,7 @@ CExtent<TYPE>::CExtent<TYPE>(const CRect& rect)
 
 
 template<class TYPE>
-CExtent<TYPE>::~CExtent<TYPE>(void)
+CExtent<TYPE>::~CExtent(void)
 {
 }
 
