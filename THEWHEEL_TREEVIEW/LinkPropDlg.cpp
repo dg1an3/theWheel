@@ -136,7 +136,7 @@ void CLinkPropDlg::UpdateLinkList(CNode *pOtherNode, int nLevels)
 			// now insert the subitem for the stabilizer flag
 			lvitem.mask = LVIF_TEXT;
 			lvitem.iSubItem = 2;
-			lvitem.pszText = pLink->IsStabilizer() ? "X" : " ";
+			lvitem.pszText = pLink->GetIsStabilizer() ? "X" : " ";
 			bResult = m_LinkList.SetItem(&lvitem); 
 
 			// flag for re-sorting
@@ -268,17 +268,17 @@ void CLinkPropDlg::OnClickLinklist(NMHDR* pNMHDR, LRESULT* pResult)
 			if (pLink != NULL)
 			{
 				// flip-flop flag
-				pLink->SetStabilizer(!pLink->IsStabilizer());
+				pLink->SetIsStabilizer(!pLink->GetIsStabilizer());
 				
 				// set item text
 				m_LinkList.SetItemText(htinfo.iItem, 2, 
-					pLink->IsStabilizer() ? "X" : " ");
+					pLink->GetIsStabilizer() ? "X" : " ");
 
 				// flip-flop reverse link
 				CNodeLink *pRevLink = pLinkedNode->GetLinkTo(m_pCurNode);
 				if (pRevLink)
 				{
-					pRevLink->SetStabilizer(pLink->IsStabilizer());
+					pRevLink->SetIsStabilizer(pLink->GetIsStabilizer());
 				}
 			}
 		}
