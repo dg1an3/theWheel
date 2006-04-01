@@ -166,6 +166,9 @@ public:
 	// flag for post-super threshold
 	DECLARE_ATTRIBUTE(IsPostSuper, BOOL);
 
+	// count for how long i am post super
+	DECLARE_ATTRIBUTE(PostSuperCount, int);
+
 	// convenience pointer to a view object
 	DECLARE_ATTRIBUTE_PTR(View, CObject);
 
