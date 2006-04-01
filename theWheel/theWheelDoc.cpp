@@ -9,6 +9,8 @@
 #include "SpacePropagationPropPage.h"
 #include "SpaceLayoutPropPage.h"
 
+#include "SpaceScaleLinkWeightsDlg.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -103,7 +105,18 @@ void CtheWheelDoc::OnSpaceProperties()
 
 void CtheWheelDoc::OnSpaceScalelinkweights()
 {
-	// TODO: Add your command handler code here
+	static CSpaceScaleLinkWeightsDlg dlg;
+	dlg.m_pSpace = &m_space;
+	if (!::IsWindow(dlg.m_hWnd))
+	{
+		dlg.Create(CSpaceScaleLinkWeightsDlg::IDD, ::AfxGetMainWnd());
+	}
+	else
+	{
+		// make sure data is up-to-date
+		dlg.UpdateData(FALSE);
+	}
+	dlg.ShowWindow(SW_SHOW);
 }
 
 void CtheWheelDoc::OnSpacePerturblinkweights()

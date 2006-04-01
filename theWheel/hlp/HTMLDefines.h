@@ -20,6 +20,7 @@
 #define HIDD_ABOUTBOX                           0x20064
 #define HIDD_SPACE_PROP                         0x20082
 #define HIDD_SPACE_LAYOUT                       0x20083
+#define HIDD_SPACE_SCALELINKWEIGHTS             0x20084
  
 // Frame Controls (IDW_*) 
 // This is a part of the Microsoft Foundation Classes C++ library.
