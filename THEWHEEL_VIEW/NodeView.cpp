@@ -83,7 +83,8 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 
 	m_vSpringCenter = GetNode()->GetPosition();
 
-	m_posSpring.m_b = 10.0; // 8.0;
+	m_posSpring.m_b = // 10.0; 
+		8.0;
 	m_actSpring.m_b = 6.0;
 	m_layoutSelectSpring.m_b = 7.0;
 
@@ -673,6 +674,7 @@ void CNodeView::DrawTitleBand(CDC *pDC, const CExtent<REAL>& rectInner)
 	rectText.right += 500;
 	int nHeight = pDC->DrawText(GetNode()->GetName(), rectText, 
 		DT_CALCRECT | DT_LEFT | DT_END_ELLIPSIS | DT_VCENTER | DT_WORDBREAK);
+	nHeight = __max(nHeight, desiredHeight);
 
 	// draw the background for the title
 	COLORREF backColor = DEFAULT_TITLE;
