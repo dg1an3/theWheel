@@ -84,7 +84,7 @@ public:
 	void NormalizeNodes(REAL sum = 1.0);
 
 	// relaxes the node link weights
-	void Relax();
+	void Relax(bool bSubThreshold = false);
 
 	// returns the total activation of the space
 	REAL GetTotalActivation(BOOL bCompute = FALSE) const;
