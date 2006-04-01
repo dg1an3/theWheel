@@ -56,18 +56,17 @@ int __cdecl CompareLinkWeights(const void *elem1, const void *elem2)
 #define NODE_FIRE_CHANGE() \
 	if (m_pSpace) m_pSpace->NodeAttributeChangedEvent.Fire(this);
 
+const REAL PRIM_FRAC = 0.5;
+
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-//////////////////////////////////////////////////////////////////////
-// CNode::CNode
-// 
-// constructs a CNode object with the given name and description
-//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////	
 CNode::CNode(CSpace *pSpace,
 			 const CString& strName, 
 			 const CString& strDesc)
+	// constructs a CNode object with the given name and description
 	: m_pSpace(pSpace)
 		, m_pParent(NULL)
 
@@ -84,6 +83,7 @@ CNode::CNode(CSpace *pSpace,
 
 		, m_IsSubThreshold(TRUE)
 		, m_IsPostSuper(FALSE)
+		, m_PostSuperCount(0)
 		, m_bPositionReset(false)
 
 		, m_rmse(0.0)
@@ -104,11 +104,8 @@ CNode::CNode(CSpace *pSpace,
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::~CNode
-// 
-// constructs a CNode object with the given name and description
-//////////////////////////////////////////////////////////////////////
-CNode::~CNode()
+CNode::~CNode()		
+	// constructs a CNode object with the given name and description
 {
 	// delete the links
 	for (int nAt = 0; nAt < m_arrChildren.GetSize(); nAt++)
@@ -134,20 +131,17 @@ CNode::~CNode()
 
 
 //////////////////////////////////////////////////////////////////////
-// implements CNode's dynamic serialization
-//////////////////////////////////////////////////////////////////////
 IMPLEMENT_SERIAL(CNode, CObject, VERSIONABLE_SCHEMA|8);
+// implements CNode's dynamic serialization
 //		8 -- added optimal SSV
 //		7 -- added activation and position
 //		6 -- added class description
 //		5 -- added URL
 
-//////////////////////////////////////////////////////////////////////
-// CNode::GetSpace
-// 
-// returns a pointer to the space containing the node
+
 //////////////////////////////////////////////////////////////////////
 CSpace *CNode::GetSpace()
+	// returns a pointer to the space containing the node
 {
 	return m_pSpace;
 
@@ -155,11 +149,8 @@ CSpace *CNode::GetSpace()
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::SetParent
-// 
-// sets a pointer to the node's parent
-//////////////////////////////////////////////////////////////////////
 void CNode::SetParent(CNode *pParent)
+	// sets a pointer to the node's parent
 {
 	// if this currently has a parent
 	if (m_pParent)
@@ -212,11 +203,8 @@ void CNode::SetParent(CNode *pParent)
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::GetChildCount
-// 
-// returns the number of child nodes for this node
-//////////////////////////////////////////////////////////////////////
 int CNode::GetChildCount() const
+	// returns the number of child nodes for this node
 {
 	return m_arrChildren.GetSize();
 
@@ -224,23 +212,17 @@ int CNode::GetChildCount() const
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::GetChildAt
-// 
-// returns the child node at the given index
-//////////////////////////////////////////////////////////////////////
 CNode *CNode::GetChildAt(int nAt)
+	// returns the child node at the given index
 {
 	return (CNode *) m_arrChildren.GetAt(nAt);
 
 }	// CNode::GetChildAt
 
 
-//////////////////////////////////////////////////////////////////////
-// CNode::GetChildAt const
-// 
-// returns the child node at the given index
 //////////////////////////////////////////////////////////////////////
 const CNode *CNode::GetChildAt(int nAt) const
+	// returns the child node at the given index	
 {
 	return (CNode *) m_arrChildren.GetAt(nAt);
 
@@ -248,11 +230,8 @@ const CNode *CNode::GetChildAt(int nAt) const
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::GetDescendantCount
-// 
-// returns the number of descendants
-//////////////////////////////////////////////////////////////////////
 int CNode::GetDescendantCount() const
+	// returns the number of descendants
 {
 	int nCount = 0;
 	for (int nAt = 0; nAt < GetChildCount(); nAt++)
@@ -267,11 +246,8 @@ int CNode::GetDescendantCount() const
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::SetName
-// 
-// sets the name of the node
-//////////////////////////////////////////////////////////////////////
 void CNode::SetName(const CString& strName)
+	// sets the name of the node
 {
 	m_Name = strName;
 
@@ -282,11 +258,8 @@ void CNode::SetName(const CString& strName)
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::SetDescription
-// 
-// sets the node's description text
-//////////////////////////////////////////////////////////////////////
 void CNode::SetDescription(const CString& strDesc)
+	// sets the node's description text
 {
 	m_Description = strDesc;
 
@@ -297,11 +270,8 @@ void CNode::SetDescription(const CString& strDesc)
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::SetClass
-// 
-// the node class
-//////////////////////////////////////////////////////////////////////
 void CNode::SetClass(const CString& strClass)
+	// sets the node class	
 {
 	m_Class = strClass;
 
@@ -313,11 +283,8 @@ void CNode::SetClass(const CString& strClass)
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::SetImageFilename
-// 
-// sets the name of the node's image file
-//////////////////////////////////////////////////////////////////////
 void CNode::SetImageFilename(const CString& strImageFilename)
+	// sets the name of the node's image file
 {
 	m_ImageFilename = strImageFilename;
 
@@ -334,14 +301,10 @@ void CNode::SetImageFilename(const CString& strImageFilename)
 }	// CNode::SetImageFilename
 
 
-
-//////////////////////////////////////////////////////////////////////
-// CNode::GetDib
-// 
-// returns a pointer to the node's image as a CDib.  loads the image
-// if it is not already present
 //////////////////////////////////////////////////////////////////////
 CDib *CNode::GetDib()
+	// returns a pointer to the node's image as a CDib.  loads the image
+	// if it is not already present
 {
 	// if we have not loaded the image,
 	if (m_pDib == NULL && GetImageFilename() != "")
@@ -367,11 +330,8 @@ CDib *CNode::GetDib()
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::GetIcon
-// 
-// gets a handle to the node's icon, instead of a DIB
-//////////////////////////////////////////////////////////////////////
 HICON CNode::GetIcon()
+	// gets a handle to the node's icon, instead of a DIB
 {
 	// retrieve if no icon exists and there is a URL
 	if (m_hIcon == NULL 
@@ -393,11 +353,8 @@ HICON CNode::GetIcon()
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::GetSoundBuffer
-// 
-// returns interface to sound buffer, loading if necessary
-//////////////////////////////////////////////////////////////////////
 LPDIRECTSOUNDBUFFER CNode::GetSoundBuffer()
+	// returns interface to sound buffer, loading if necessary
 {
 	if (NULL != m_pSoundBuffer)
 	{
@@ -475,11 +432,8 @@ CLEANUP:
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::GetPosition
-// 
-// returns the position of the node
-//////////////////////////////////////////////////////////////////////
 const CVectorD<3>& CNode::GetPosition() const
+	// returns the position of the node
 {
 	return m_vPosition;
 
@@ -487,11 +441,8 @@ const CVectorD<3>& CNode::GetPosition() const
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::SetPosition
-// 
-// sets the position of the node
-//////////////////////////////////////////////////////////////////////
 void CNode::SetPosition(const CVectorD<3>& vPos, bool bResetFlag)
+	// sets the position of the node
 {
 	// TODO: remove RMSE? stuff
 	// update RMSE
@@ -509,12 +460,9 @@ void CNode::SetPosition(const CVectorD<3>& vPos, bool bResetFlag)
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::IsPositionReset
-// 
-// returns flag to indicate if position has been reset; optionally
-//		clears flag
-//////////////////////////////////////////////////////////////////////
 bool CNode::IsPositionReset(bool bClearFlag)
+	// returns flag to indicate if position has been reset; optionally
+	//		clears flag
 {
 	bool bFlag = m_bPositionReset;
 	if (bClearFlag)
@@ -528,11 +476,8 @@ bool CNode::IsPositionReset(bool bClearFlag)
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::GetRMSE
-// 
-// returns positional RMSE
-//////////////////////////////////////////////////////////////////////
 REAL CNode::GetRMSE()
+	// returns positional RMSE
 {
 	return m_rmse;
 
@@ -540,11 +485,8 @@ REAL CNode::GetRMSE()
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::GetSize
-// 
-// returns the size of the node (width & height)
-//////////////////////////////////////////////////////////////////////
 CVectorD<3> CNode::GetSize(REAL activation) const
+	// returns the size of the node (width & height)
 {
 	const REAL max = 13.0 / 16.0;
 	const REAL scale = 6.0 / 16.0;
@@ -566,20 +508,14 @@ CVectorD<3> CNode::GetSize(REAL activation) const
 
 
 //////////////////////////////////////////////////////////////////////
-// CNode::GetLinkCount
-// 
-// returns the number of links for this node
-//////////////////////////////////////////////////////////////////////
 int CNode::GetLinkCount() const
+	// returns the number of links for this node
 {
 	return m_arrLinks.GetSize();
 
 }	// CNode::GetLinkCount
 
 
-//////////////////////////////////////////////////////////////////////
-// CNode::GetLinkAt
-// 
 // finds a link at the given index position.
 //////////////////////////////////////////////////////////////////////
 CNodeLink *CNode::GetLinkAt(int nAt)
@@ -589,9 +525,6 @@ CNodeLink *CNode::GetLinkAt(int nAt)
 }	// CNode::GetLinkAt
 
 
-//////////////////////////////////////////////////////////////////////
-// CNode::GetLinkAt const
-// 
 // finds a link at the given index position.
 //////////////////////////////////////////////////////////////////////
 const CNodeLink *CNode::GetLinkAt(int nAt) const
@@ -601,9 +534,6 @@ const CNodeLink *CNode::GetLinkAt(int nAt) const
 }	// CNode::GetLinkAt const
 
 
-//////////////////////////////////////////////////////////////////////
-// CNode::GetLinkTo
-// 
 // finds a link to the given target, if it exists.
 // otherwise returns NULL.
 //////////////////////////////////////////////////////////////////////
@@ -627,9 +557,6 @@ CNodeLink * CNode::GetLinkTo(CNode * pToNode)
 }	// CNode::GetLinkTo
 
 
-//////////////////////////////////////////////////////////////////////
-// CNode::GetLinkTo const
-// 
 // finds a link to the given target, if it exists.
 // otherwise returns NULL.
 //////////////////////////////////////////////////////////////////////
@@ -653,9 +580,6 @@ const CNodeLink * CNode::GetLinkTo(CNode * pToNode) const
 }	// CNode::GetLinkTo const
 
 
-//////////////////////////////////////////////////////////////////////
-// CNode::GetLinkWeight
-// 
 // finds a link to the given target, if it exists.
 // otherwise returns NULL.
 //////////////////////////////////////////////////////////////////////
@@ -675,9 +599,6 @@ REAL CNode::GetLinkWeight(CNode * pToNode) const
 }	// CNode::GetLinkWeight
 
 
-//////////////////////////////////////////////////////////////////////
-// CNode::GetLinkGainWeight
-// 
 // returns the gained weight for the given link
 //////////////////////////////////////////////////////////////////////
 REAL CNode::GetLinkGainWeight(CNode *pToNode)
@@ -694,9 +615,6 @@ REAL CNode::GetLinkGainWeight(CNode *pToNode)
 }	// CNode::GetLinkGainWeight
 
 
-//////////////////////////////////////////////////////////////////////
-// CNode::LinkTo
-// 
 // links the node to the target node (creating a CNodeLink in the
 // proces, if necessary).
 //////////////////////////////////////////////////////////////////////
@@ -754,9 +672,6 @@ void CNode::LinkTo(CNode *pToNode, REAL weight, BOOL bReciprocalLink)
 }	// CNode::LinkTo
 
 
-//////////////////////////////////////////////////////////////////////
-// CNode::Unlink
-// 
 // removes a link
 //////////////////////////////////////////////////////////////////////
 void CNode::Unlink(CNode *pNode, BOOL bReciprocalLink)
@@ -793,9 +708,6 @@ void CNode::Unlink(CNode *pNode, BOOL bReciprocalLink)
 	NODE_FIRE_CHANGE();
 }
 
-//////////////////////////////////////////////////////////////////////
-// CNode::RemoveAllLinks
-// 
 // removes all the links for the node
 //////////////////////////////////////////////////////////////////////
 void CNode::RemoveAllLinks()
@@ -813,9 +725,6 @@ void CNode::RemoveAllLinks()
 }	// CNode::RemoveAllLinks
 
 
-//////////////////////////////////////////////////////////////////////
-// CNode::SortLinks
-// 
 // sorts the links from greatest to least weight.
 //////////////////////////////////////////////////////////////////////
 void CNode::SortLinks()
@@ -826,8 +735,9 @@ void CNode::SortLinks()
 }	// CNode::SortLinks
 
 
-// returns max link weight for this and all child nodes
+//////////////////////////////////////////////////////////////////////
 REAL CNode::GetMaxLinkWeight(void)
+	// returns max link weight for this and all child nodes
 {
 	REAL maxWeight = 0.0;
 
@@ -854,8 +764,9 @@ REAL CNode::GetMaxLinkWeight(void)
 }
 
 
-// scales all link weights by scale factor
+//////////////////////////////////////////////////////////////////////
 void CNode::ScaleLinkWeights(REAL scale)
+	// scales all link weights by scale factor
 {
 	// scale each of the node's links
 	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
@@ -884,9 +795,7 @@ void CNode::ScaleLinkWeights(REAL scale)
 	}
 }
 
-//////////////////////////////////////////////////////////////////////
-// CNode::GetActivation
-// 
+
 // returns the node's activation
 //////////////////////////////////////////////////////////////////////
 REAL CNode::GetActivation() const
@@ -896,9 +805,6 @@ REAL CNode::GetActivation() const
 }	// CNode::GetActivation
 
 
-//////////////////////////////////////////////////////////////////////
-// CNode::SetActivation
-// 
 // sets the node's activation.  if an activator is passed, it is
 //		compared to the current Max Activator
 //////////////////////////////////////////////////////////////////////
@@ -910,12 +816,14 @@ void CNode::SetActivation(REAL newActivation, CNode *pActivator, REAL weight)
 	// set the activation, based on whether primary or secondary
 	if (pActivator == NULL)
 	{
-		m_primaryActivation += deltaActivation;
+		m_primaryActivation += PRIM_FRAC * deltaActivation;
+		m_secondaryActivation += (1.0 - PRIM_FRAC) * deltaActivation;
 
 		// update the total activation value
 		if (m_pSpace)
 		{
-			m_pSpace->m_totalPrimaryActivation += deltaActivation;
+			m_pSpace->m_totalPrimaryActivation += PRIM_FRAC * deltaActivation;
+			m_pSpace->m_totalSecondaryActivation += (1.0 - PRIM_FRAC) * deltaActivation;
 		}
 	}
 	else
@@ -933,19 +841,20 @@ void CNode::SetActivation(REAL newActivation, CNode *pActivator, REAL weight)
 	if (pActivator != NULL)
 	{
 		// set the new max if this is the first found
-		if (!m_bFoundMaxActivator 
+		if ( // !m_bFoundMaxActivator 
 
 			// or update the max if greater than current max
-			|| pActivator->GetActivation() * weight > m_maxDeltaActivation)
+			deltaActivation /* pActivator->GetActivation() * weight */ > m_maxDeltaActivation)
 		{
 			m_pMaxActivator = pActivator;
-			m_maxDeltaActivation = pActivator->GetActivation() * weight;
+			m_maxDeltaActivation = deltaActivation; /* pActivator->GetActivation() * weight */
+				// pActivator->GetActivation() * weight;
 
 			// set the flag to indicate we have found a max activator 
 			//		for this round
 			m_bFoundMaxActivator = TRUE;
 		}
-	}
+	} 
 
 }	// CNode::SetActivation
 
@@ -1171,8 +1080,8 @@ void CNode::PropagateActivation(REAL initScale, REAL alpha)
 					(targetActivation - pTarget->GetActivation()) 
 						* initScale
 						* pLink->GetWeight()		// TODO: check this
-						* pLink->GetWeight()
-						* pLink->GetWeight();
+						; // * pLink->GetWeight()
+						; // * pLink->GetWeight();
 
 				pTarget->m_newActivation += deltaActivation;
 
@@ -1259,28 +1168,25 @@ void CNode::PropagateActivation(REAL initScale, REAL alpha)
 //////////////////////////////////////////////////////////////////////
 void CNode::ResetForPropagation()
 {
-	// if a max activator was not found during previous propagation,
+/*	// if a max activator was not found during previous propagation,
 	if (!m_bFoundMaxActivator)
 	{
-		// cut the activation in half
-		m_primaryActivation /= (REAL) 2.0;
-
-		// cut the secondary activation in half as well
-		m_secondaryActivation /= (REAL) 2.0;
-
 		// adjust the space's total count
 		if (m_pSpace)
 		{
 			m_pSpace->m_totalPrimaryActivation -= 
-				m_primaryActivation;
+				m_primaryActivation * 0.99;
 			m_pSpace->m_totalSecondaryActivation -= 
-				m_secondaryActivation;
+				m_secondaryActivation * 0.99;
 		} 
+
+		// cut the activation in half
+		m_primaryActivation *= (REAL) 0.99;
+
+		// cut the secondary activation in half as well
+		m_secondaryActivation *= (REAL) 0.99;
 	}
-
-	// reset the max delta activation
-	m_bFoundMaxActivator = FALSE;
-
+*/
 	// reset each of the node's links
 	for (int nAt = 0; nAt < GetLinkCount(); nAt++)
 	{
@@ -1294,8 +1200,11 @@ void CNode::ResetForPropagation()
 	// reset new activation
 	m_newActivation = m_secondaryActivation;
 
+	// reset the max delta activation
+	// m_bFoundMaxActivator = FALSE;
+
 	// reset max delta & max activator
-	m_maxDeltaActivation = 0.0;
+	// m_maxDeltaActivation = 0.0;
 
 	// TODO: figure this out (has to do with no max activator in PositionSubNodes
 	// m_pMaxActivator = NULL;
