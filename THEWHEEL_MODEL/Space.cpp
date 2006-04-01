@@ -333,7 +333,7 @@ void CSpace::ActivateNode(CNode *pNode, REAL scale)
 	// first, compute the new activation of the node up to the max
 	REAL oldActivation = pNode->GetActivation();
 	REAL newActivation = 
-		oldActivation + (TOTAL_ACTIVATION * (REAL) 0.60 - oldActivation) 
+		oldActivation + (TOTAL_ACTIVATION * (REAL) 0.40 - oldActivation) 
 			* scale;
 
 	// set the node's new activation
@@ -344,8 +344,8 @@ void CSpace::ActivateNode(CNode *pNode, REAL scale)
 
 	// now propagate
 	pNode->PropagateActivation(
-		(REAL) 0.7,		// 0.4,
-		(REAL) 0.1); // 0.7); // 0.999);
+		(REAL) 1.0,		// 0.4,
+		(REAL) 0.98); // 0.7); // 0.999);
 
 	// now update the activation for all nodes
 	m_pRootNode->UpdateFromNewActivation();
@@ -369,12 +369,12 @@ void CSpace::NormalizeNodes(REAL sum)
 	// scale for secondary
 	REAL scale_2 = sum 
 		/ (GetTotalPrimaryActivation(true) 
-			+ GetPrimSecRatio() * GetTotalSecondaryActivation(true) + 0.0001); 
+			+ GetPrimSecRatio() * GetTotalSecondaryActivation(true) + 1e-6); 
 
 	// scale for primary
 	REAL scale_1 = sum 
 		 / (GetTotalPrimaryActivation(false) / GetPrimSecRatio()
-			+ GetTotalSecondaryActivation(false) + 0.0001); 
+			+ GetTotalSecondaryActivation(false) + 1e-6); 
 
 	// scale the nodes
 	for (int nAt = 0; nAt < GetNodeCount(); nAt++)
@@ -399,7 +399,7 @@ void CSpace::NormalizeNodes(REAL sum)
 // 
 // relaxes the link weights (adjusts gain based on dist error)
 //////////////////////////////////////////////////////////////////////
-void CSpace::Relax()
+void CSpace::Relax(bool bSubThreshold)
 {
 	// iterate over all super nodes
 	for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
@@ -419,6 +419,15 @@ void CSpace::Relax()
 			// get the target and link
 			CNode *pTarget = GetNodeAt(nAtLinked);
 
+			if (bSubThreshold 
+				&& !pTarget->GetIsSubThreshold()
+				&& !pNode->GetIsSubThreshold()
+				&& !(pTarget->GetPostSuperCount() > 0)
+				&& !(pNode->GetPostSuperCount() > 0))
+			{
+				continue;
+			}
+
 			// get the link, if there is one
 			CNodeLink *pLink = pNode->GetLinkTo(pTarget);
 			if (pLink != NULL)
@@ -428,22 +437,21 @@ void CSpace::Relax()
 				const REAL distErrScaled = distErr / pNode->GetActivation();
 
 				// compute the exponential of the distance
-				REAL exp_dist = 3.0 * exp( 0.1 // 0.004 
+				REAL exp_dist = 1.0 * exp( 0.02 // 0.004 
 					* distErrScaled); //  + 2.0);
 
 				if (pLink->GetIsStabilizer())
 				{
-					exp_dist = 0.1 * exp(0.1 * distErrScaled);
+					exp_dist = 0.1 * exp(0.2 * distErrScaled);
 				}
 
 				// check that the exponential is finite
 				if (_finite(exp_dist))
 				{
 					// compute the gain and set it
-					REAL new_gain = 1.0 - exp_dist / (exp_dist + 
-						// 1.0);  
-						12.0); 
-						// 80.0);
+					REAL new_gain = 1.0 - Sigmoid(distErr - 6.0, 8.0);
+					// exp_dist / (exp_dist + 
+					//	20.0); // 12.0); 
 					pLink->SetGain(new_gain);
 				}
 				else
@@ -615,16 +623,28 @@ void CSpace::PositionNewSuperNodes()
 	// stores the highest new supernode
 	int nHighestNewSuper = GetSuperNodeCount();
 
+	// TODO: static this
+	// CArray arrNewSuper;
+
 	// check super-nodes for distance from center
-	for (int nAt = GetSuperNodeCount()-1; nAt >= 0; nAt--)
+	for (int nAt = 0; nAt < nHighestNewSuper /* GetSuperNodeCount() */; nAt++)  
+		// GetSuperNodeCount()-1; nAt >= 0; nAt--)
 	{
 		// get the node
 		CNode *pNode = GetNodeAt(nAt);
 
 		if (pNode->GetIsSubThreshold())
 		{
+			// add to the list
+			// arrNewSuper.Add(pNode);
+			m_arrNodes.RemoveAt(nAt);
+			nAt--;		// repeat, since we moved the current
+
+			m_arrNodes.InsertAt(GetSuperNodeCount()-1, pNode);
+
 			// we have a new highest
-			nHighestNewSuper = nAt;
+			//nHighestNewSuper = nAt;
+			nHighestNewSuper--;
 
 			// set its position based on max activator, if it has one
 			CNode *pMaxAct = pNode->GetMaxActivator();
@@ -633,7 +653,7 @@ void CSpace::PositionNewSuperNodes()
 				// the new position -- initially at the max act position
 				CVectorD<3> vNewPosition = pMaxAct->GetPosition();
 
-#define SHOOT
+// #define SHOOT
 #ifdef SHOOT
 				// find direction by default from center
 				CVectorD<3> vCenter = GetCenter(); // m_vCenter;
@@ -673,23 +693,83 @@ void CSpace::PositionNewSuperNodes()
 				// NEW: set gain for max activator link
 				for (int nAtLink = 0; nAtLink < pNode->GetLinkCount(); nAtLink++)
 				{
-					pNode->GetLinkAt(nAtLink)->SetGain(0.1);
+					pNode->GetLinkAt(nAtLink)->SetGain(1.0);
+					CNode *pLinkTo = pNode->GetLinkAt(nAtLink)->GetTarget();
+					CNodeLink *pLinkToLink = pLinkTo->GetLinkTo(pNode);
+					if (pLinkToLink != NULL)
+					{
+						pLinkToLink->SetGain(1.0);
+					}
+
+/*					if (pLinkTo->GetIsSubThreshold())
+					{
+						pNode->GetLinkAt(nAtLink)->SetGain(1.0);
+						pLinkTo->GetLinkTo(pNode)->SetGain(1.0);
+					}
+					else
+					{
+						pNode->GetLinkAt(nAtLink)->SetGain(1.0);
+						pLinkTo->GetLinkTo(pNode)->SetGain(1.0);
+					} */
 				}
-				if (pNode->GetLinkTo(pMaxAct) != NULL)
+/*				if (pNode->GetLinkTo(pMaxAct) != NULL)
 				{
 					pNode->GetLinkTo(pMaxAct)->SetGain(1.0);
-				}
+					pMaxAct->GetLinkTo(pNode)->SetGain(1.0);
+				}  */
 			}
 		}
 	}
 
-// #ifdef LAYOUT_AFTER
+	// now find any sub-threshold new post-super nodes
+	for (int nAt = GetSuperNodeCount(); nAt < GetNodeCount(); nAt++)
+	{
+		// get the node
+		CNode *pNode = GetNodeAt(nAt);
+		if (pNode->GetPostSuperCount() > 0)
+		{
+			// delete from array
+			m_arrNodes.RemoveAt(nAt);
+
+			// move to last position
+			m_arrNodes.InsertAt(nHighestNewSuper, pNode);
+		}
+	}
+
+	// now move remaining new post-super nodes to bottom
+	for (int nAt = 0; nAt < nHighestNewSuper; nAt++)
+	{
+		// get the node
+		CNode *pNode = GetNodeAt(nAt);
+		if (pNode->GetPostSuperCount() > 0)
+		{
+			// delete from array
+			m_arrNodes.RemoveAt(nAt);
+			nAt--;
+
+			// move to last position
+			nHighestNewSuper--;
+			m_arrNodes.InsertAt(nHighestNewSuper, pNode);
+		}
+	}
+
+#define LAYOUT_AFTER
+#ifdef LAYOUT_AFTER
 	// now layout the new supernodes
 	// REAL oldTolerance = m_pLayoutManager->GetTolerance();
 	// m_pLayoutManager->SetTolerance(oldTolerance / (REAL) 100.0);
-	// m_pLayoutManager->LayoutNodes(m_pStateVector, nHighestNewSuper);
+
+	for (int nRep = 0; nRep < 3; nRep++)
+	{
+		// TODO: load state vector
+		m_pLayoutManager->LayoutNodes(m_pStateVector, nHighestNewSuper);
+
+		// now relax the new super nodes
+		Relax(true);
+	}
+
 	// m_pLayoutManager->SetTolerance(oldTolerance);
-// #endif
+#endif
 
 	// finish processing by moving the new super-nodes to
 	//		their updated position
@@ -698,6 +778,11 @@ void CSpace::PositionNewSuperNodes()
 		// get the node
 		CNode *pNode = GetNodeAt(nAt);
 
+		// reset max activator shit
+		pNode->m_maxDeltaActivation = 0.0;
+		pNode->m_pMaxActivator = NULL;
+		pNode->m_bFoundMaxActivator = FALSE;
+
 		// adjust the sub-threshold nodes
 		if (pNode->GetIsSubThreshold())
 		{
@@ -705,12 +790,21 @@ void CSpace::PositionNewSuperNodes()
 			pNode->SetIsSubThreshold(FALSE);
 			pNode->SetIsPostSuper(FALSE);
 
+			// set the post super count
+			pNode->SetPostSuperCount(40);
+
 			// set the new position, triggering a reset
 			pNode->SetPosition(pNode->GetPosition(), true);
 
 			// set flag to indicate position has been reset
-			pNode->m_bPositionReset = true;
+			// pNode->m_bPositionReset = true;
 		}
+		else if (pNode->GetPostSuperCount() > 0)
+		{
+			// decrement post super count
+			pNode->SetPostSuperCount(pNode->GetPostSuperCount()-1);
+		}
+
 	}
 
 }	// CSpace::PositionNewSuperNodes
@@ -780,16 +874,19 @@ void CSpace::PositionSubNodes()
 		// mark node as sub-threshold
 		pNode->SetIsSubThreshold(TRUE);
 
-		// compute the new position
-		CVectorD<3> vNewPosition = 
-			pNode->GetMaxActivator()->GetPosition() - GetCenter();
+		if (pNode->GetMaxActivator() != NULL)
+		{
+			// compute the new position
+			CVectorD<3> vNewPosition = 
+				pNode->GetMaxActivator()->GetPosition() - GetCenter();
 
-		// decay towards center
-		vNewPosition *= SUBNODE_DECAY_RATE;
-		vNewPosition += GetCenter();
+			// decay towards center
+			vNewPosition *= SUBNODE_DECAY_RATE;
+			vNewPosition += GetCenter();
 
-		// and set the new position
-		pNode->SetPosition(vNewPosition); 
+			// and set the new position
+			pNode->SetPosition(vNewPosition); 
+		}
 	}
 
 }	// CSpace::PositionSubNodes
@@ -1073,8 +1170,8 @@ REAL CSpace::GetTotalPrimaryActivation(BOOL bCompute) const
 				GetNodeAt(nAt)->GetPrimaryActivation();
 		}
 
-		m_totalPrimaryActivation = m_totalPrimaryActivation * 0.99 
-			+ totalPrimaryActivation * 0.01;
+		m_totalPrimaryActivation = m_totalPrimaryActivation * 0.01 
+			+ totalPrimaryActivation * 0.99;
 	}
 
 	return m_totalPrimaryActivation;
@@ -1102,8 +1199,8 @@ REAL CSpace::GetTotalSecondaryActivation(BOOL bCompute) const
 				GetNodeAt(nAt)->GetSecondaryActivation();
 		}
 
-		m_totalSecondaryActivation = m_totalSecondaryActivation * 0.99
-			+ totalSecondaryActivation * 0.01;
+		m_totalSecondaryActivation = m_totalSecondaryActivation * 0.01
+			+ totalSecondaryActivation * 0.99;
 	}
 
 	return m_totalSecondaryActivation;
