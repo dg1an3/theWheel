@@ -86,8 +86,8 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 		m_energyConst(0.0),
 		m_bCalcCenterRep(TRUE),
 
-		m_mSSX(NULL),
-		m_mSSY(NULL),
+		m_mSS(NULL),
+		// m_mSSY(NULL),
 		m_mAvgAct(NULL),
 		m_mLinks(NULL),
 
@@ -127,8 +127,8 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 //////////////////////////////////////////////////////////////////////
 CSpaceLayoutManager::~CSpaceLayoutManager()
 {
-	delete [] m_mSSX;
-	delete [] m_mSSY;
+	delete [] m_mSS;
+	// delete [] m_mSSY;
 	delete [] m_mAvgAct;
 	delete [] m_mLinks;
 
@@ -216,10 +216,10 @@ void CSpaceLayoutManager::LoadSizesLinks(int nConstNodes, int nNodeCount)
 	// stores the sizes of the nodes
 	static REAL arrSize[MAX_STATE_DIM][2];
 
-	if (NULL == m_mSSX)
+	if (NULL == m_mSS)
 	{
-		m_mSSX = new REAL[MAX_STATE_DIM][MAX_STATE_DIM];
-		m_mSSY = new REAL[MAX_STATE_DIM][MAX_STATE_DIM];
+		m_mSS = new REAL[MAX_STATE_DIM][MAX_STATE_DIM];
+		// m_mSSY = new REAL[MAX_STATE_DIM][MAX_STATE_DIM];
 		m_mAvgAct = new REAL[MAX_STATE_DIM][MAX_STATE_DIM];
 		m_mLinks = new REAL[MAX_STATE_DIM][MAX_STATE_DIM];
 	}
@@ -237,8 +237,8 @@ void CSpaceLayoutManager::LoadSizesLinks(int nConstNodes, int nNodeCount)
 		arrSize[nAtNode][0] = SIZE_SCALE * vSize[0] + (REAL) 10.0;
 		arrSize[nAtNode][1] = SIZE_SCALE * vSize[1] + (REAL) 10.0;
 
-		m_mSSX[nAtNode][nAtNode] = 1.0;
-		m_mSSY[nAtNode][nAtNode] = 1.0;
+		m_mSS[nAtNode][nAtNode] = 1.0;
+		// m_mSSY[nAtNode][nAtNode] = 1.0;
 		m_mAvgAct[nAtNode][nAtNode] = 0.0;
 		m_mLinks[nAtNode][nAtNode] = 0.0;
 
@@ -254,23 +254,23 @@ void CSpaceLayoutManager::LoadSizesLinks(int nConstNodes, int nNodeCount)
 			const REAL ssy = (arrSize[nAtNode][1] 
 					+ arrSize[nAtLinkedNode][1]) / (REAL) 2.0;
 			const REAL ss = (ssx + ssy) / 2.0;
-			m_mSSX[nAtNode][nAtLinkedNode] = 
-				m_mSSX[nAtLinkedNode][nAtNode] = ss * ss; // (ssx * ssx); 
+			// m_mSS[nAtNode][nAtLinkedNode] = 
+				m_mSS[nAtLinkedNode][nAtNode] = ss * ss; // (ssx * ssx); 
 
-			m_mSSY[nAtNode][nAtLinkedNode] = 
-				m_mSSY[nAtLinkedNode][nAtNode] = ss * ss; // (ssy * ssy); 
+			// m_mSSY[nAtNode][nAtLinkedNode] = 
+			// 	m_mSSY[nAtLinkedNode][nAtNode] = ss * ss; // (ssy * ssy); 
 
 			// retrieve the link weight for layout
 			REAL weight = (REAL) 0.5 *
 				(pAtNode->GetLinkWeight(pAtLinkedNode)
 					+ pAtLinkedNode->GetLinkWeight(pAtNode)) + (REAL) 1e-6;
 
-			m_mAvgAct[nAtNode][nAtLinkedNode] = 0.0;
+			// m_mAvgAct[nAtNode][nAtLinkedNode] = 0.0;
 			m_mAvgAct[nAtLinkedNode][nAtNode] =
 				(pAtNode->GetActivation() + pAtLinkedNode->GetActivation());
 
 			// store the link weight
-			m_mLinks[nAtNode][nAtLinkedNode] = 0.0;
+			// m_mLinks[nAtNode][nAtLinkedNode] = 0.0;
 			m_mLinks[nAtLinkedNode][nAtNode] =
 				weight * m_mAvgAct[nAtLinkedNode][nAtNode];
 
@@ -383,8 +383,8 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 
 			// compute the x- and y-scales for the fields -- average of
 			//		two rectangles
-			const REAL& ssx_sq = m_mSSX[nAtNode][nAtLinked];
-			const REAL& ssy_sq = m_mSSY[nAtNode][nAtLinked];
+			const REAL& ssx_sq = m_mSS[nAtNode][nAtLinked];
+			const REAL& ssy_sq = m_mSS[nAtNode][nAtLinked];
 
 			//////////////////////////////////////////////////////////////
 			// compute the attraction field
@@ -454,7 +454,7 @@ REAL CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
 		}
 	}
 	
-	if (m_bCalcCenterRep)
+	if (false) // m_bCalcCenterRep)
 	{
 		for (nAtNode = nNodeCount-1; nAtNode >= 0; nAtNode--)
 		{
