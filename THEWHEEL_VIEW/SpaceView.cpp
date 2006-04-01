@@ -525,11 +525,11 @@ void CSpaceView::CenterNodeViews()
 		// weight recently activated node views more than others
 		if (pView == m_pRecentActivated[0])
 		{
-			scaleFactor *= 3.0;
+			scaleFactor *= 6.0;
 		}
 		else if (pView == m_pRecentActivated[1])
 		{
-			scaleFactor *= 1.5; 
+			scaleFactor *= 3.0; 
 		}
 
 		// add to the mean center
@@ -584,7 +584,8 @@ void CSpaceView::ActivatePending()
 
 		if (pNodeView->GetPendingActivation() > 1e-6)
 		{
-			ActivateNodeView(pNodeView, pNodeView->GetPendingActivation() / 8.0);
+			const REAL frac_act = 1.0 / 2.0;
+			ActivateNodeView(pNodeView, pNodeView->GetPendingActivation() * frac_act);
 			if (pNodeView->GetPendingActivation() > maxPending)
 			{
 				secMaxPending = maxPending;
@@ -598,7 +599,7 @@ void CSpaceView::ActivatePending()
 				pSecMaxPending = pNodeView;
 			}
 			
-			pNodeView->m_pendingActivation /= 2.0;
+			pNodeView->m_pendingActivation *= (1.0 - frac_act);
 		}
 	}
 
