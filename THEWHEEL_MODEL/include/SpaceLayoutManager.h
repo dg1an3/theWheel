@@ -105,8 +105,8 @@ protected:
 	mutable CVectorN<> m_vGrad;
 
 	// stores the view sizes for quick access
-	REAL (*m_mSSX)[MAX_STATE_DIM];
-	REAL (*m_mSSY)[MAX_STATE_DIM];
+	REAL (*m_mSS)[MAX_STATE_DIM];
+	// REAL (*m_mSSY)[MAX_STATE_DIM];
 
 	// stores the link weights for quick access
 	REAL (*m_mLinks)[MAX_STATE_DIM];
