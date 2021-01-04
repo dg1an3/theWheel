@@ -1,0 +1,20 @@
+// AxWheel.idl : IDL source for AxWheel
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (AxWheel.tlb) and marshalling code.
+
+#include "olectl.h"
+#include "olectl.h"
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+	uuid(EEB23191-CFE6-4CBE-A421-5128E99A1DCE),
+	version(1.0),
+	helpstring("AxWheel 1.0 Type Library")
+]
+library AxWheelLib
+{
+	importlib("stdole2.tlb");
+};
