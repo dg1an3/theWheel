@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Font Name="Tahoma" Size="9.75" />
+  <Class Name="AxWheelServer.Node">
+    <Position X="3" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <FileName>Node.cs</FileName>
+      <HashCode>AAACAAAAAAACAAAAAAABACQBEAAAAAAACAAAAAAAAEA=</HashCode>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="AxWheelServer.NodeService">
+    <Position X="7.5" Y="0.75" Width="1.5" />
+    <TypeIdentifier>
+      <FileName>NodeService.asmx.cs</FileName>
+      <HashCode>IAAEAAAAAAAAAAQAACAAAAAAAAAAAAAAAAAAAAAAEAA=</HashCode>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="AxWheelServer.Link">
+    <Position X="1" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <FileName>Link.cs</FileName>
+      <HashCode>AAAAAAAAAAAAAEAAAAAAAAAAACAAAgAAAAAABAAAAAA=</HashCode>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="AxWheelServer.Space">
+    <Position X="5.5" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <FileName>Space.cs</FileName>
+      <HashCode>ABAwAAAAAAAAAAAAACAAAAAAAAAIAAAAEAAAAAAIAAA=</HashCode>
+    </TypeIdentifier>
+  </Class>
+</ClassDiagram>

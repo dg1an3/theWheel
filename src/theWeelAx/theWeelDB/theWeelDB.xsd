@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:mstns="http://tempuri.org/theWeelDB.xsd" xmlns="http://tempuri.org/theWeelDB.xsd" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://tempuri.org/theWeelDB.xsd" id="theWeelDB" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element msdata:IsDataSet="true" msdata:UseCurrentLocale="true" name="theWeelDB">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="SortEvent">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element msdata:ReadOnly="true" msdata:AutoIncrement="true" name="SortEventId" type="xs:int" />
+              <xs:element minOccurs="0" name="ResponseAt" type="xs:dateTime" />
+              <xs:element name="AxisName">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="128" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="MatchObjectId" type="xs:int" />
+              <xs:element name="RejectObjectId" type="xs:int" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Object">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element msdata:ReadOnly="true" msdata:AutoIncrement="true" name="ObjectId" type="xs:int" />
+              <xs:element name="ObjectName">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="128" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element minOccurs="0" name="Description">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="2147483647" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element minOccurs="0" name="Tags">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="255" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element minOccurs="0" name="When" type="xs:dateTime" />
+              <xs:element minOccurs="0" name="Modified" type="xs:dateTime" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Axis">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="AxisName">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="128" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element minOccurs="0" name="Description">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="2147483647" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="AxisWeight">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="MatchObjectId" type="xs:int" />
+              <xs:element name="ObjectName">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="128" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="AxisName">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:maxLength value="128" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element msdata:ReadOnly="true" minOccurs="0" name="Weight" type="xs:float" />
+              <xs:element msdata:ReadOnly="true" minOccurs="0" name="TotalSortEvents" type="xs:int" />
+              <xs:element msdata:ReadOnly="true" minOccurs="0" name="SortCoverage" type="xs:float" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:choice>
+    </xs:complexType>
+    <xs:unique msdata:PrimaryKey="true" name="Constraint1">
+      <xs:selector xpath=".//mstns:SortEvent" />
+      <xs:field xpath="mstns:SortEventId" />
+    </xs:unique>
+    <xs:unique msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true" name="Object_Constraint1">
+      <xs:selector xpath=".//mstns:Object" />
+      <xs:field xpath="mstns:ObjectId" />
+    </xs:unique>
+    <xs:unique msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true" name="Axis_Constraint1">
+      <xs:selector xpath=".//mstns:Axis" />
+      <xs:field xpath="mstns:AxisName" />
+    </xs:unique>
+  </xs:element>
+  <xs:annotation>
+    <xs:appinfo>
+      <msdata:Relationship name="FK_ActivationEvent_Object" msdata:parent="Object" msdata:child="SortEvent" msdata:parentkey="ObjectId" msdata:childkey="MatchObjectId" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" />
+      <msdata:Relationship name="FK_ActivationEvent_Object1" msdata:parent="Object" msdata:child="SortEvent" msdata:parentkey="ObjectId" msdata:childkey="RejectObjectId" />
+      <msdata:Relationship name="FK_ActivationEvent_Axis" msdata:parent="Axis" msdata:child="SortEvent" msdata:parentkey="AxisName" msdata:childkey="AxisName" />
+      <msdata:Relationship name="Link_Object" msdata:parent="AxisWeight" msdata:child="Object" msdata:parentkey="MatchObjectId" msdata:childkey="ObjectId" />
+      <msdata:Relationship name="Link_Axis" msdata:parent="AxisWeight" msdata:child="Axis" msdata:parentkey="AxisName" msdata:childkey="AxisName" />
+    </xs:appinfo>
+  </xs:annotation>
+</xs:schema>

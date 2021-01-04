@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://tempuri.org/" xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" targetNamespace="http://tempuri.org/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="http://tempuri.org/">
+      <s:element name="GetRootNode">
+        <s:complexType />
+      </s:element>
+      <s:element name="GetRootNodeResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetRootNodeResult" type="tns:Node" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:complexType name="Node">
+        <s:sequence>
+          <s:element minOccurs="1" maxOccurs="1" name="Id" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="Name" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Body" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="Links" type="tns:ArrayOfLink" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="ArrayOfLink">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="Link" nillable="true" type="tns:Link" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="Link">
+        <s:sequence>
+          <s:element minOccurs="1" maxOccurs="1" name="ToNodeId" type="s:int" />
+          <s:element minOccurs="1" maxOccurs="1" name="Weight" type="s:float" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetNodeById">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="Id" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetNodeByIdResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetNodeByIdResult" type="tns:Node" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetImageBufferForNodeId">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="1" maxOccurs="1" name="Id" type="s:int" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetImageBufferForNodeIdResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetImageBufferForNodeIdResult" type="s:base64Binary" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+    </s:schema>
+  </wsdl:types>
+  <wsdl:message name="GetRootNodeSoapIn">
+    <wsdl:part name="parameters" element="tns:GetRootNode" />
+  </wsdl:message>
+  <wsdl:message name="GetRootNodeSoapOut">
+    <wsdl:part name="parameters" element="tns:GetRootNodeResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetNodeByIdSoapIn">
+    <wsdl:part name="parameters" element="tns:GetNodeById" />
+  </wsdl:message>
+  <wsdl:message name="GetNodeByIdSoapOut">
+    <wsdl:part name="parameters" element="tns:GetNodeByIdResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetImageBufferForNodeIdSoapIn">
+    <wsdl:part name="parameters" element="tns:GetImageBufferForNodeId" />
+  </wsdl:message>
+  <wsdl:message name="GetImageBufferForNodeIdSoapOut">
+    <wsdl:part name="parameters" element="tns:GetImageBufferForNodeIdResponse" />
+  </wsdl:message>
+  <wsdl:portType name="NodeServiceSoap">
+    <wsdl:operation name="GetRootNode">
+      <wsdl:input message="tns:GetRootNodeSoapIn" />
+      <wsdl:output message="tns:GetRootNodeSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetNodeById">
+      <wsdl:input message="tns:GetNodeByIdSoapIn" />
+      <wsdl:output message="tns:GetNodeByIdSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetImageBufferForNodeId">
+      <wsdl:input message="tns:GetImageBufferForNodeIdSoapIn" />
+      <wsdl:output message="tns:GetImageBufferForNodeIdSoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="NodeServiceSoap" type="tns:NodeServiceSoap">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetRootNode">
+      <soap:operation soapAction="http://tempuri.org/GetRootNode" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetNodeById">
+      <soap:operation soapAction="http://tempuri.org/GetNodeById" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetImageBufferForNodeId">
+      <soap:operation soapAction="http://tempuri.org/GetImageBufferForNodeId" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="NodeServiceSoap12" type="tns:NodeServiceSoap">
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetRootNode">
+      <soap12:operation soapAction="http://tempuri.org/GetRootNode" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetNodeById">
+      <soap12:operation soapAction="http://tempuri.org/GetNodeById" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetImageBufferForNodeId">
+      <soap12:operation soapAction="http://tempuri.org/GetImageBufferForNodeId" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="NodeService">
+    <wsdl:port name="NodeServiceSoap" binding="tns:NodeServiceSoap">
+      <soap:address location="http://localhost:4017/NodeService.asmx" />
+    </wsdl:port>
+    <wsdl:port name="NodeServiceSoap12" binding="tns:NodeServiceSoap12">
+      <soap12:address location="http://localhost:4017/NodeService.asmx" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

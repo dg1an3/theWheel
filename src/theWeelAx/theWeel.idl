@@ -1,0 +1,40 @@
+// theWeel.idl : IDL source for theWeel
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (theWeel.tlb) and marshalling code.
+
+#include "olectl.h"
+#include "olectl.h"
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+	object,
+	uuid(C42EEF60-98B7-4AFE-9610-60F7A55DF5CB),
+	dual,
+	nonextensible,
+	helpstring("IWeelView Interface"),
+	pointer_default(unique)
+]
+interface IWeelView : IDispatch{
+};
+
+[
+	uuid(9F46A357-2738-4301-93D2-C6176558B2B8),
+	version(1.0),
+	helpstring("theWeel 1.0 Type Library")
+]
+library theWeelLib
+{
+	importlib("stdole2.tlb");
+	[
+		uuid(1F8D3E0E-C95F-49DE-AD11-1D812794F111),
+		control,
+		helpstring("theWeelView Class")
+	]
+	coclass theWeelView
+	{
+		[default] interface IWeelView;
+	};
+};

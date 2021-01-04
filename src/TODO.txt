@@ -1,0 +1,24 @@
+*) Get rid of XMLLogging (move XMLLogging.h and UtilMacro.h to OptimizeN???)
+
+*) Get rid of ModelObject 
+
+*) Get rid of GradDescOptimizer and DFPOptimizer in OptimizeN
+
+*) Move Observer.h to theWheelModel (used in Space.h)
+
+*) Move CExtent to theWheelView
+
+*) CMatrixNxM --> used in SpaceStateVector (to perform SVD rotation)
+	--> used for hessian in ObjectiveFunction (don't need for tW)
+	--> change to vxl_matrix (see if vxl_matrix has SVD routine)
+
+*) CMatrixD --> used for CMolding 
+	--> is CMolding used anymore with Plaque?
+	--> see if D3DMATRIX can be used instead
+
+*) Move MathUtil.h, VectorD.h, VectorN.h, VectorOps.h to OptimizeN/include
+
+*) Get rid of MTL
+
+*) MTL --> use vxl_vector as base class for CVectorD/N
+

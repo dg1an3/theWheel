@@ -1,0 +1,36 @@
+HKCR
+{
+	theWeel.theWeelView.1 = s 'theWeelView Class'
+	{
+		CLSID = s '{1F8D3E0E-C95F-49DE-AD11-1D812794F111}'
+		'Insertable'
+	}
+	theWeel.theWeelView = s 'theWeelView Class'
+	{
+		CLSID = s '{1F8D3E0E-C95F-49DE-AD11-1D812794F111}'
+		CurVer = s 'theWeel.theWeelView.1'
+	}
+	NoRemove CLSID
+	{
+		ForceRemove {1F8D3E0E-C95F-49DE-AD11-1D812794F111} = s 'theWeelView Class'
+		{
+			ProgID = s 'theWeel.theWeelView.1'
+			VersionIndependentProgID = s 'theWeel.theWeelView'
+			ForceRemove 'Programmable'
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Apartment'
+			}
+			val AppID = s '%APPID%'
+			ForceRemove 'Control'
+			ForceRemove 'Insertable'
+			ForceRemove 'ToolboxBitmap32' = s '%MODULE%, 105'
+			'MiscStatus' = s '0'
+			{
+			    '1' = s '%OLEMISC%'
+			}
+			'TypeLib' = s '{9F46A357-2738-4301-93D2-C6176558B2B8}'
+			'Version' = s '1.0'
+		}
+	}
+}
