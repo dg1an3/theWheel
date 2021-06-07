@@ -495,8 +495,8 @@ void CNodeView::Draw(LPDIRECT3DDEVICE9 lpDDS)
 	D3DXMATRIX mat;
 	D3DXMatrixTranslation(&mat, 
 		-m_extInner.GetCenter()[0], 
-		-m_extInner.GetCenter()[1], 0.0);
-		// m_extInner.GetCenter()[2]);
+		-m_extInner.GetCenter()[1],
+		 m_extInner.GetCenter()[2]);
 	ASSERT_HRESULT(lpDDS->SetTransform(D3DTS_WORLD, &mat));
 
 	// render the skin
@@ -1023,18 +1023,24 @@ bool
 	// comparison function for two CNodeView pointers, based on 
 	//		the activation factor value of both
 {
-	CNodeView *pNodeView1 = (CNodeView *) pNode1->GetView();
-
-	// factor for assessing the drawing order
-	REAL factor1 = exp(pNodeView1->GetNode()->GetPrimaryActivation())
-			* (pNodeView1->GetThresholdedActivation() 
+	REAL factor1 = 0.0;
+	auto pNodeView1 = (CNodeView *) pNode1->GetView();
+	if (pNodeView1 != NULL)
+	{
+		// factor for assessing the drawing order
+		factor1 = exp(pNodeView1->GetNode()->GetPrimaryActivation())
+			* (pNodeView1->GetThresholdedActivation()
 				- pNodeView1->GetSpringActivation());
+	}
 
-	CNodeView *pNodeView2 = (CNodeView *) pNode2->GetView();
-
-	REAL factor2 = exp(pNodeView2->GetNode()->GetPrimaryActivation())
-			* (pNodeView2->GetThresholdedActivation() 
+	REAL factor2 = 0.0;
+	auto pNodeView2 = (CNodeView *) pNode2->GetView();
+	if (pNodeView2 != NULL)
+	{
+		factor2 = exp(pNodeView2->GetNode()->GetPrimaryActivation())
+			* (pNodeView2->GetThresholdedActivation()
 				- pNodeView2->GetSpringActivation());
+	}
 
 	// return difference in factors; > 0 if factor1 > factor2
 	return factor1 < factor2; // 
