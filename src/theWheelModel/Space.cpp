@@ -355,7 +355,13 @@ BOOL
 
 	AddNode(new CNode(this, _T("Child7")), child6);
 	AddNode(new CNode(this, _T("Child8")), child6);
+	AddNode(new CNode(this, _T("Child81")), child6);
+	AddNode(new CNode(this, _T("Child82")), child6);
 
+	AddNode(new CNode(this, _T("Child9")), child5);
+	AddNode(new CNode(this, _T("Child10")), child5);
+	AddNode(new CNode(this, _T("Child9")), child5);
+	AddNode(new CNode(this, _T("Child10")), child5);
 	AddNode(new CNode(this, _T("Child9")), child5);
 	AddNode(new CNode(this, _T("Child10")), child5);
 
