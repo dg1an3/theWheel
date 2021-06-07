@@ -229,7 +229,7 @@ CNodeView *CSpaceView::FindNodeViewAt(CPoint pt)
 	{
 		// get the current node view
 		CNodeView *pNodeView = GetNodeView(nAt);
-		assert(pNodeView != NULL);
+		// assert(pNodeView != NULL);
 
 		// see if the mouse-click was within it
 		const CRgn& rgnShape = pNodeView->GetShapeHit();
