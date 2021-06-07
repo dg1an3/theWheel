@@ -229,7 +229,10 @@ CNodeView *CSpaceView::FindNodeViewAt(CPoint pt)
 	{
 		// get the current node view
 		CNodeView *pNodeView = GetNodeView(nAt);
-		// assert(pNodeView != NULL);
+		if (pNodeView == NULL)
+		{
+			continue;
+		}
 
 		// see if the mouse-click was within it
 		const CRgn& rgnShape = pNodeView->GetShapeHit();
@@ -533,7 +536,11 @@ void CSpaceView::CenterNodeViews()
 	for (nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
 	{
 		// get the node view
-		CNodeView *pView = GetNodeView(nAt);
+		auto pView = GetNodeView(nAt);
+		if (pView == NULL)
+		{
+			continue;
+		}
 
 		// scale by the activation of the node view
 		REAL scaleFactor = pView->GetNode()->GetPrimaryActivation();
@@ -572,7 +579,12 @@ void CSpaceView::CenterNodeViews()
 	//		window center
 	for (nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
 	{
-		CNodeView *pView = GetNodeView(nAt);
+		auto pView = GetNodeView(nAt);
+		if (pView == NULL)
+		{
+			continue;
+		}
+
 		pView->GetNode()->SetPosition(pView->GetNode()->GetPosition() - vOffset,
 			pView->GetNode()->IsPositionReset(false));
 	}
@@ -1017,8 +1029,14 @@ void CSpaceView::OnPaint()
 		for (int nAt = 0; nAt < arrNodeViewsToDraw.GetCount(); nAt++)
     {
       CNode *pNode = arrNodeViewsToDraw[nAt];
-			if (!pNode->GetIsSubThreshold())
-				((CNodeView*)pNode->GetView())->DrawLinks(m_pd3dDev, &m_skin);
+	  auto pNodeView = (CNodeView*) pNode->GetView();
+	  if (pNodeView != NULL)
+	  {
+		  if (!pNode->GetIsSubThreshold())
+		  {
+			  pNodeView->DrawLinks(m_pd3dDev, &m_skin);
+		  }
+	  }
     }
 #endif
 
@@ -1031,8 +1049,12 @@ void CSpaceView::OnPaint()
 		for (int nAt = 0; nAt < arrNodeViewsToDraw.GetCount(); nAt++)
     {
       CNode *pNode = arrNodeViewsToDraw[nAt];
-			if (!pNode->GetIsSubThreshold())
-				((CNodeView*)pNode->GetView())->Draw(m_pd3dDev); 
+	  auto pNodeView = (CNodeView*)pNode->GetView();
+	  if (pNodeView != NULL)
+	  {
+		  if (!pNode->GetIsSubThreshold())
+			  pNodeView->Draw(m_pd3dDev);
+	  }
     }
 #endif
 
@@ -1194,8 +1216,14 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 	// update the privates
 	for (int nAt = 0; nAt < GetNodeViewCount(); nAt++)
 	{
-		GetNodeView(nAt)->UpdateSpringPosition(GetSpace()->GetSpringConst());
-		GetNodeView(nAt)->UpdateSpringActivation(GetSpace()->GetSpringConst());
+		auto pNodeView = GetNodeView(nAt);
+		if (pNodeView == NULL)
+		{
+			continue;
+		}
+
+		pNodeView->UpdateSpringPosition(GetSpace()->GetSpringConst());
+		pNodeView->UpdateSpringActivation(GetSpace()->GetSpringConst());
 	}
 
 	// now center based on the new positions
