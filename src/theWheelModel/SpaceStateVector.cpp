@@ -221,7 +221,7 @@ void
 
 	// form the pseudo-inverse of the a coordinates
 	m_mNewCoords_psinv.Reshape(m_mNewCoords.GetCols(), m_mNewCoords.GetRows());
-	if (!Pseudoinvert(m_mNewCoords, m_mNewCoords_psinv))	
+	if (true) // !Pseudoinvert(m_mNewCoords, m_mNewCoords_psinv))	
 	{
 		// just set the positions
 		SetPositionsVector(vPositions);
