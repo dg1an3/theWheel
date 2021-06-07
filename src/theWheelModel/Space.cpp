@@ -347,8 +347,17 @@ BOOL
 	AddNode(new CNode(this, _T("Child3")), pMainNode);
 
 	AddNode(new CNode(this, _T("Child4")), child1);
-	AddNode(new CNode(this, _T("Child5")), child1);
-	AddNode(new CNode(this, _T("Child6")), child1);
+	auto child5 = new CNode(this, _T("Child5"));
+	AddNode(child5, child1);
+
+	auto child6 = new CNode(this, _T("Child6"));
+	AddNode(child6, child1);
+
+	AddNode(new CNode(this, _T("Child7")), child6);
+	AddNode(new CNode(this, _T("Child8")), child6);
+
+	AddNode(new CNode(this, _T("Child9")), child5);
+	AddNode(new CNode(this, _T("Child10")), child5);
 
 	// initialize the node activations from the root node
 	pMainNode->SetActivation((REAL) 0.5);

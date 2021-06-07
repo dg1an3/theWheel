@@ -598,6 +598,10 @@ void CSpaceView::ActivatePending()
 	for (int nAt = 0; nAt < GetVisibleNodeCount(); nAt++)
 	{
 		CNodeView *pNodeView = GetNodeView(nAt);
+		if (pNodeView == NULL)
+		{
+			continue;
+		}
 
 		if (pNodeView->GetPendingActivation() > 1e-6)
 		{
