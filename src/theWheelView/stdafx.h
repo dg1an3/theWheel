@@ -88,7 +88,9 @@
 
 // multimedia and sound includes
 #include <d3d9.h>
-#include <d3dx9.h>
+// #include <d3dx9.h>
+#include "D3DXImpl.h"
+
 #include <mmsystem.h>
 #include <mmreg.h>
 #include <msacm.h>

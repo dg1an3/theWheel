@@ -18,14 +18,14 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseOfMfc>Dynamic</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseOfMfc>Dynamic</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -106,6 +106,7 @@
     <ClCompile Include="Tracker.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="D3DXImpl.h" />
     <ClInclude Include="include\DDUTIL.H" />
     <ClInclude Include="include\DesigntimeTracker.h" />
     <ClInclude Include="include\Elliptangle.h" />
@@ -124,6 +125,7 @@
     <ClInclude Include="THEWHEEL_VIEW_resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="ClassDiagram.cd" />
     <None Include="res\H_point.cur" />
     <None Include="res\link.cur" />
     <None Include="res\saw.cur" />

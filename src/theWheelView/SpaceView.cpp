@@ -913,12 +913,12 @@ void CSpaceView::OnPaint()
 		mat._43 = 0.0; // -1.0;
 		// D3DXMatrixOrthoRH(&mat, rectOuter.Width(), rectOuter.Height(), -0.1, -10.0); //, 1.0);
 		ASSERT_HRESULT(m_pd3dDev->SetTransform(D3DTS_VIEW, 
-			&mat));
+			(D3DMATRIX*) & mat));
 
 		D3DXMATRIX mat2;
 		D3DXMatrixOrthoLH(&mat2, rectOuter.Width() / 1.0, rectOuter.Height() / 1.0, 0.5, 10.0);
 		ASSERT_HRESULT(m_pd3dDev->SetTransform(D3DTS_PROJECTION, 
-			&mat2));
+			(D3DMATRIX*) & mat2));
 
 		D3DVIEWPORT9 vp;
 		m_pd3dDev->GetViewport(&vp);
@@ -930,7 +930,7 @@ void CSpaceView::OnPaint()
 		// identity world matrix
 		D3DXMATRIX matWorld;
 		D3DXMatrixIdentity(&matWorld);
-		m_pd3dDev->SetTransform( D3DTS_WORLD, &matWorld );
+		m_pd3dDev->SetTransform( D3DTS_WORLD, (D3DMATRIX*) &matWorld );
 
 		// view matrix at z = -5, looking toward +z
 		D3DXVECTOR3 vEyePt( -rectOuter.Width()/2.0, -rectOuter.Height()/2.0, 10.0f) ; // 0.0f, 0.0f, 1.0f );
@@ -938,7 +938,7 @@ void CSpaceView::OnPaint()
 		D3DXVECTOR3 vUpVec( 0.0f, 1.0f, 0.0f );
 		D3DXMATRIX matView;
 		D3DXMatrixLookAtLH( &matView, &vEyePt, &vLookatPt, &vUpVec);
-		m_pd3dDev->SetTransform( D3DTS_VIEW, &matView );
+		m_pd3dDev->SetTransform( D3DTS_VIEW, (D3DMATRIX*) &matView );
 
 		// orthogonal projection transform
 		D3DXMATRIX matProj;
