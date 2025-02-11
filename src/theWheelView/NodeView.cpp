@@ -497,7 +497,7 @@ void CNodeView::Draw(LPDIRECT3DDEVICE9 lpDDS)
 		-m_extInner.GetCenter()[0], 
 		-m_extInner.GetCenter()[1],
 		 m_extInner.GetCenter()[2]);
-	ASSERT_HRESULT(lpDDS->SetTransform(D3DTS_WORLD, &mat));
+	ASSERT_HRESULT(lpDDS->SetTransform(D3DTS_WORLD, (D3DMATRIX*) & mat));
 
 	// render the skin
 	// m_pParent->m_skin.BltSkin(lpDDS, this);

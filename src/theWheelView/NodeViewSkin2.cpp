@@ -118,19 +118,20 @@ void
 
 	// and set the world transform for the scale factos
 	D3DXMATRIX oldWorld;
-	ASSERT_HRESULT(m_pDevice->GetTransform( D3DTS_WORLD, &oldWorld ));
+	ASSERT_HRESULT(m_pDevice->GetTransform( D3DTS_WORLD, (D3DMATRIX*) & oldWorld));
 
 	D3DXMATRIX scaleWorld;
 	D3DXMatrixScaling(&scaleWorld, scaleX, scaleY, 100.0); // (scaleX + scaleY) / 2.0f);
 
-	D3DXMATRIX newWorld;
-	D3DXMatrixMultiply(&newWorld, &scaleWorld, &oldWorld);
-	ASSERT_HRESULT(m_pDevice->SetTransform( D3DTS_WORLD, &newWorld ));
+	D3DXMATRIX newWorld = scaleWorld * oldWorld;
+	// D3DXMatrixMultiply(&newWorld, &scaleWorld, &oldWorld);
+	
+	ASSERT_HRESULT(m_pDevice->SetTransform( D3DTS_WORLD, (D3DMATRIX*) & newWorld));
 
 	// render
 	m_arrPlaques[nIndex]->Render();
 
-	ASSERT_HRESULT(m_pDevice->SetTransform( D3DTS_WORLD, &oldWorld ));
+	ASSERT_HRESULT(m_pDevice->SetTransform( D3DTS_WORLD, (D3DMATRIX*)&oldWorld ));
 
 }	// NodeViewSkin::Render
 
