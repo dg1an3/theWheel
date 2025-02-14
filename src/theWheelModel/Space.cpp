@@ -620,7 +620,7 @@ void CSpace::Serialize(CArchive& ar)
 		DeleteContents();
 
 		// serialize schema
-		ar >> dwSchema;
+		// ar >> dwSchema;
 
 		// read in the root node pointer
 		ar >> m_pRootNode;
@@ -669,11 +669,16 @@ void CSpace::Serialize(CArchive& ar)
 	else
 	{
 		// serialize schema
-		ar << (DWORD) dwSchema;
+		// ar << (DWORD) dwSchema;
 
 		// just serialize the root node pointer
 		ar << m_pRootNode;
 	}
+
+	// super node count
+	int nSuperNodeCount = 100;
+	GetLayoutManager()->SetMaxSuperNodeCount(nSuperNodeCount);
+	return;
 
 	if (dwSchema >= 2)
 	{
@@ -698,7 +703,7 @@ void CSpace::Serialize(CArchive& ar)
 			// super node count
 			int nSuperNodeCount;
 			ar >> nSuperNodeCount;
-			nSuperNodeCount = 60;
+			nSuperNodeCount = 100;
 			GetLayoutManager()->SetMaxSuperNodeCount(nSuperNodeCount);
 
 			// layout manager parameters
