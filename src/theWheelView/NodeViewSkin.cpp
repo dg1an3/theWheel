@@ -910,11 +910,15 @@ void CNodeViewSkin::DrawLink(CDC *pDC, CVectorD<3>& vFrom, REAL actFrom,
 		0.95 * GetBValue(m_colorBk)));
 
 	CBrush *pOldBrush;
-	if (actFrom + actTo < 0.025)
+	if (actFrom + actTo < 0.04)
+	{
+		return;
+	}
+	else if (actFrom + actTo < 0.06)
 	{
 		pOldBrush = pDC->SelectObject(&brushLight);
 	}
-	else if (actFrom + actTo < 0.05)
+	else if (actFrom + actTo < 0.08)
 	{
 		pOldBrush = pDC->SelectObject(&brushMid);
 	}
