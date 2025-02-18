@@ -37,7 +37,7 @@
 const REAL TOLERANCE = (REAL) 1e+3;
 
 // scale for the sizes of the nodes
-const REAL SIZE_SCALE = 100.0;
+const REAL SIZE_SCALE = 150.0;
 
 // constants for the distance scale vs. activation curve
 const REAL DIST_SCALE_MIN = 1.0;
@@ -60,8 +60,8 @@ const REAL K_REP = 3200.0;
 const REAL RELAX_SIGMOID_SHIFT = 1.20; // 1.5; // 0.30; 
 const REAL RELAX_SIGMOID_FACTOR = 1.5; // 4.0; // 1.5; // 8.0; 
 
-const REAL RELAX_NEW_GAIN_FACTOR = 0.1;
-const REAL RELAX_NEW_GAIN_FACTOR_SUBTHRESHOLD = 0.25;
+const REAL RELAX_NEW_GAIN_FACTOR = 0.4;
+const REAL RELAX_NEW_GAIN_FACTOR_SUBTHRESHOLD = 0.8;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -101,8 +101,8 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 	// create and initialize the conjugate gradient optimizer
 	CConjGradOptimizer *pCGO = new CConjGradOptimizer(this);
 	pCGO->SetLineToleranceEqual(false);
-	pCGO->SetTolerance(1e-4);
-	pCGO->GetBrentOptimizer().SetTolerance(1e-5);
+	pCGO->SetTolerance(1e-3);
+	pCGO->GetBrentOptimizer().SetTolerance(1e-4);
 
 	// set the conj grad optimizer
 	m_pConjGradOptimizer = pCGO;

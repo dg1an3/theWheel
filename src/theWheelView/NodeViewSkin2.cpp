@@ -35,8 +35,8 @@ void
 	// compute the new width and height from the desired area and the desired
 	//		aspect ratio
 	CVectorD<2, REAL> sz;
-	sz[0] = sqrt(activation / aspectRatio) / 2.0f;
-	sz[1] = sqrt(activation * aspectRatio) / 2.0f;
+	sz[0] = sqrt(activation / aspectRatio) / 1.0f;
+	sz[1] = sqrt(activation * aspectRatio) / 1.0f;
 
 	// CExtent<3, REAL> rect;
 	extent.Deflate(-sz[0], -sz[1], -sz[0], -sz[1]); // Inflate(sz);  /// TODO: add Inflate to Extent
@@ -52,7 +52,7 @@ int
 	NodeViewSkin::GetPlaqueIndex(REAL activation)
 {
 	// form the index
-	int nIndex = Round<int>(activation * 100.0f); // 1000.0f);
+	int nIndex = Round<int>(activation * 200.0f); // 1000.0f);
 	nIndex = __max(nIndex, 1);
 
 	// see if we have the molding yet
@@ -121,7 +121,7 @@ void
 	ASSERT_HRESULT(m_pDevice->GetTransform( D3DTS_WORLD, (D3DMATRIX*) & oldWorld));
 
 	D3DXMATRIX scaleWorld;
-	D3DXMatrixScaling(&scaleWorld, scaleX, scaleY, 100.0); // (scaleX + scaleY) / 2.0f);
+	D3DXMatrixScaling(&scaleWorld, scaleX, scaleY, (scaleX + scaleY) / 2.0f);
 
 	D3DXMATRIX newWorld = scaleWorld * oldWorld;
 	// D3DXMatrixMultiply(&newWorld, &scaleWorld, &oldWorld);
