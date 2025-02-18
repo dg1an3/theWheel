@@ -206,6 +206,28 @@ REAL
 	REAL sizeAvg = 0.5 * (sizeFrom + sizeTo);
 	CVectorD<3> vOffset = pFrom->GetPosition() - pTo->GetPosition();
 
+	for (int shiftX = -1; shiftX <= 1; shiftX ++) {
+		auto pNewTo = pFrom->GetPosition();
+		pNewTo[0] += shiftX * 800;
+		auto vNewOffset = pFrom->GetPosition() - pNewTo;
+
+		if (vNewOffset.GetLength() < vOffset.GetLength())
+		{
+			vOffset = vNewOffset;
+		}
+	}
+
+	for (int shiftY = -1; shiftY <= 1; shiftY++) {
+		auto pNewTo = pFrom->GetPosition();
+		pNewTo[1] += shiftY * 400;
+		auto vNewOffset = pFrom->GetPosition() - pNewTo;
+		if (vNewOffset.GetLength() < vOffset.GetLength())
+		{
+			vOffset = vNewOffset;
+		}
+	}
+
+
 	// compute the relative actual distance
 	const REAL act_dist = (REAL) sqrt(vOffset[0] * vOffset[0] 
 											/ (sizeAvg * sizeAvg/*vSizeAvg[0] * vSizeAvg[0]*/)
