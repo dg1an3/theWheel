@@ -676,7 +676,7 @@ void CSpace::Serialize(CArchive& ar)
 	}
 
 	// super node count
-	int nSuperNodeCount = 100;
+	int nSuperNodeCount = 60;
 	GetLayoutManager()->SetMaxSuperNodeCount(nSuperNodeCount);
 	return;
 

@@ -286,7 +286,7 @@ LPDIRECT3DVERTEXBUFFER9 Plaque::GetVertexBufferFan()
 
 		// holds the new vertex
 		NormalVertex vert; // TODO: make sure this is initialized
-		vert.Position = D3DXVECTOR3(0.0, Y, m_borderRadius - 0.1);
+		vert.Position = D3DXVECTOR3(0.0, Y, m_borderRadius + 0.1);
 		vert.Normal = D3DXVECTOR3(0.0, 0.0, 1.0);
 		arrVerts.push_back(vert); 
 /*
