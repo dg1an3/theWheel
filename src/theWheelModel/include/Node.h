@@ -14,9 +14,6 @@
 // the image utilities
 #include "Dib.h"
 
-// the base class
-#include "NodeBase.h"
-
 // the links
 #include "NodeLink.h"
 
@@ -73,11 +70,7 @@ private:
 	CSpace *m_pSpace;
 
 	// the collection of children
-#ifdef STL_COLL
 	vector<CNode*> m_arrChildren;
-#else
-  CAtlArray<CNode*> m_arrChildren;
-#endif
 
 	// pointer to the DIB, if it is loaded
 	CDib *m_pDib;
@@ -120,16 +113,9 @@ public:
 private:
 
 	// the collection of links
-#ifdef STL_COLL
-  vector<CNodeLink*> 
-#else
-  CAtlArray<CNodeLink*> m_arrLinks;
-#endif
-#ifdef STL_COLL
-	stdext::hash_map<CNode*, CNodeLink*> 
-#else
-  CAtlMap<CNode*, CNodeLink*> m_mapLinks;
-#endif
+	vector< CNodeLink* >  m_arrLinks;
+	
+	map< CNode*, CNodeLink* > m_mapLinks;
 
 public:
 

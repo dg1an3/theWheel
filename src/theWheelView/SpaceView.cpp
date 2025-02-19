@@ -169,6 +169,11 @@ CSpaceView::~CSpaceView()
 	// delete the tracker
 	delete m_pTracker;
 
+	if (m_pNLM != NULL)
+	{
+		delete m_pNLM;
+	}
+
 }	// CSpaceView::~CSpaceView
 
 
