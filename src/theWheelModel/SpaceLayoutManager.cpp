@@ -101,8 +101,8 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 	// create and initialize the conjugate gradient optimizer
 	CConjGradOptimizer *pCGO = new CConjGradOptimizer(this);
 	pCGO->SetLineToleranceEqual(false);
-	pCGO->SetTolerance(1e-3);
-	pCGO->GetBrentOptimizer().SetTolerance(1e-4);
+	pCGO->SetTolerance(1e-2);
+	pCGO->GetBrentOptimizer().SetTolerance(1e-2);
 
 	// set the conj grad optimizer
 	m_pConjGradOptimizer = pCGO;
