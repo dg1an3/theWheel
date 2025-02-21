@@ -18,7 +18,7 @@
 
 // DirectDraw and utilities
 #include <ddraw.h>
-#include "ddutil.h"
+// #include "ddutil.h"
 
 // subordinate classes
 #include "NodeView.h"
