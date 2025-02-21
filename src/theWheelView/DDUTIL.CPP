@@ -6,7 +6,7 @@
  *  Content:    Routines for loading bitmap and palettes from resources
  *
  ***************************************************************************/
-// #include <stdafx.h>
+#include "stdafx.h"
 
 #undef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN

@@ -27,28 +27,28 @@ static char THIS_FILE[] = __FILE__;
 /////////////////////////////////////////////////////////////////////////////
 
 // the scale factor for normalization
-const REAL PRIM_NORM_SCALE = 0.020 * 3.5; // 3.5; // 0.050 * 3.5;		
-const REAL SEC_NORM_SCALE = 0.060 * 3.5; // 3.5;
+const REAL PRIM_NORM_SCALE = 0.020f * 3.5f; // 3.5; // 0.050 * 3.5;		
+const REAL SEC_NORM_SCALE = 0.060f * 3.5f; // 3.5;
 
 // constants for runaway adjustment
-const REAL MAX_RUNAWAY_RADIUS = 500.0;
-const REAL RUNAWAY_DIVISOR = 3.0;
+const REAL MAX_RUNAWAY_RADIUS = 500.0f;
+const REAL RUNAWAY_DIVISOR = 3.0f;
 
 // constant for sub-threshold decay toward center
-const REAL SUBNODE_DECAY_RATE = 0.9;
+const REAL SUBNODE_DECAY_RATE = 0.9f;
 
 // min and max for randomly assigning initial weights
-const REAL MIN_INITIAL_WGT = 0.4;
-const REAL MAX_INITIAL_WGT = 0.7;
+const REAL MIN_INITIAL_WGT = 0.4f;
+const REAL MAX_INITIAL_WGT = 0.7f;
 
 const REAL TOTAL_ACTIVATION_FRACTION = // 2.0; // 
-	0.40;
+	0.40f;
 	// 0.20;
 
-const REAL DEFAULT_SPRING_CONST = 0.95;
+const REAL DEFAULT_SPRING_CONST = 0.95f;
 
-const REAL PROPAGATE_SCALE = 0.40; // 0.25; // 0.40; // 0.80; // 1.0;
-const REAL PROPAGATE_ALPHA = 0.99; // 1.00; // 0.90; // 0.98;
+const REAL PROPAGATE_SCALE = 0.40f; // 0.25; // 0.40; // 0.80; // 1.0;
+const REAL PROPAGATE_ALPHA = 0.99f; // 1.00; // 0.90; // 0.98;
 
 //////////////////////////////////////////////////////////////////////
 REAL 
@@ -92,9 +92,9 @@ CSpace::CSpace()
 	m_pLayoutManager = new CSpaceLayoutManager(this);
 
 	// set the spring constant (from the profile)
-	SetSpringConst( 1.0 / 100.0 * 
+	SetSpringConst( 1.0f / 100.0f * 
 		(REAL) ::AfxGetApp()->GetProfileInt(_T("LAYOUT"), _T("SPRING_CONST"), 
-			Round<int>(100.0 * GetSpringConst())));
+			Round<int>(100.0f * GetSpringConst())));
 
 }	// CSpace::CSpace
 
@@ -178,7 +178,7 @@ void
 
 	// set the activation for the new node, only after adding to
 	//		the array (because it will update the total activation)
-	pNewNode->SetActivation(actWeight * 0.1);
+	pNewNode->SetActivation(actWeight * 0.1f);
 
 }	// CSpace::AddNode
 
@@ -195,7 +195,7 @@ void
 		(*iter)->Unlink(pMarkedNode, FALSE);
 #else
   int nMarkedAt = -1;
-  for (int nAt = 0; nAt < m_arrNodes.GetCount(); nAt++)
+  for (auto nAt = 0U; nAt < m_arrNodes.GetCount(); nAt++)
   {
     m_arrNodes[nAt]->Unlink(pMarkedNode, FALSE);
     if (m_arrNodes[nAt] == pMarkedNode)
@@ -209,7 +209,7 @@ void
 	pMarkedNode->SetParent(NULL);
 
 	// de-activate
-	pMarkedNode->SetActivation(0.00001);
+	pMarkedNode->SetActivation(0.00001f);
 
 	// find and remove the node from the array
 #ifdef STL_COLL_SPACE_NODES
@@ -273,7 +273,7 @@ void
 	// normalizes the nodes to a known sum
 {
 	REAL totalActivation = GetTotalActivation(true);
-	REAL diffFrac = (sum / totalActivation - 1.0);
+	REAL diffFrac = (sum / totalActivation - 1.0f);
 	if (diffFrac > 0.0) diffFrac = 0.0;
 
 #ifdef STL_COLL_SPACE_NODES
@@ -292,7 +292,7 @@ void
 	}
 #else
 	// scale the nodes
-	for (int nAt = 0; nAt < m_arrNodes.GetCount(); nAt++)
+	for (auto nAt = 0U; nAt < m_arrNodes.GetCount(); nAt++)
 	{
     CNode *pNode = m_arrNodes[nAt];
 
@@ -386,11 +386,11 @@ int NodeSortByActivation(const void *pLeft, const void *pRight)
   CNode *pNodeL = *(CNode**) pLeft;
 	REAL act1 = pNodeL->GetActivation();
 	// now add additional factor for post-super count: max 40 adds 0.1 to activation
-	act1 += 0.1 * (REAL) pNodeL->GetPostSuperCount() / 40.0;
+	act1 += 0.1f * pNodeL->GetPostSuperCount() / 40.0f;
 
   CNode *pNodeR = *(CNode**) pRight;
 	REAL act2 = pNodeR->GetActivation();
-	act2 += 0.1 * (REAL) pNodeR->GetPostSuperCount() / 40.0;
+	act2 += 0.1f * pNodeR->GetPostSuperCount() / 40.0f;
 
   return (act1 > act2) ? -1 : 1;
 }
@@ -559,7 +559,7 @@ REAL
 		for (iterNode = m_arrNodes.begin(); iterNode != m_arrNodes.end(); iterNode++)
 			m_totalPrimaryActivation += (*iterNode)->GetPrimaryActivation();
 #else
-		for (int nAt = 0; nAt < m_arrNodes.GetCount(); nAt++)
+		for (auto nAt = 0U; nAt < m_arrNodes.GetCount(); nAt++)
     {
 		  CNode *pNode = m_arrNodes[nAt];
       m_totalPrimaryActivation += pNode->GetPrimaryActivation();
@@ -590,7 +590,7 @@ REAL
 		for (iterNode = m_arrNodes.begin(); iterNode != m_arrNodes.end(); iterNode++)
       m_totalSecondaryActivation += (*iterNode)->GetSecondaryActivation();
 #else
-		for (int nAt = 0; nAt < m_arrNodes.GetCount(); nAt++)
+		for (auto nAt = 0U; nAt < m_arrNodes.GetCount(); nAt++)
     {
 		  CNode *pNode = m_arrNodes[nAt];
       m_totalSecondaryActivation += pNode->GetSecondaryActivation();
@@ -693,12 +693,12 @@ void CSpace::Serialize(CArchive& ar)
 			// spring constant
 			double springConst;
 			ar >> springConst;
-			SetSpringConst(springConst);
+			SetSpringConst((REAL)springConst);
 
 			// primary/secondary ratio
 			double primSecRatio;
 			ar >> primSecRatio;
-			SetPrimSecRatio(primSecRatio);
+			SetPrimSecRatio((REAL)primSecRatio);
 
 			// super node count
 			int nSuperNodeCount;
@@ -710,15 +710,15 @@ void CSpace::Serialize(CArchive& ar)
 			double tolerance;
 			ar >> tolerance;
 			tolerance = 0.01;
-			GetLayoutManager()->SetTolerance(tolerance);
+			GetLayoutManager()->SetTolerance((REAL)tolerance);
 
 			double k_pos;
 			ar >> k_pos;
-			GetLayoutManager()->SetKPos(k_pos);
+			GetLayoutManager()->SetKPos((REAL)k_pos);
 
 			double k_rep;
 			ar >> k_rep;
-			GetLayoutManager()->SetKRep(k_rep);
+			GetLayoutManager()->SetKRep((REAL)k_rep);
 		}
 		else
 		{
