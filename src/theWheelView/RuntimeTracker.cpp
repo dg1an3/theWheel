@@ -73,7 +73,7 @@ void CRuntimeTracker::OnMouseMove(UINT nFlags, CPoint point)
 
 	// initialize the pending activation for an on-node move
 	REAL deltaAct = // 0.04 / 6.0; // 
-		0.1;
+		0.1f;
 
 	// stores the string for the URL of the pointed-to view (if any
 	//CString strMessage;
@@ -97,7 +97,7 @@ void CRuntimeTracker::OnMouseMove(UINT nFlags, CPoint point)
 		pSelectedView = m_pView->FindNearestNodeView(point);
 
 		// set to lower activation
-		deltaAct *= 0.5;
+		deltaAct *= 0.5f;
 
 		// set to an arrow
 		::SetCursor(::LoadCursor(NULL, IDC_ARROW));
@@ -129,7 +129,7 @@ void CRuntimeTracker::OnTimer(UINT nElapsed, CPoint point)
 	if (m_pView->m_pMaximizedView == NULL && NULL != pSelectedView)
 	{
 		pSelectedView->AddPendingActivation((REAL) // /*0.025*/0.08 / 6.0); // 0.015 / 6.0); // 
-			0.05);
+			0.05f);
 	}
 
 }	// CRuntimeTracker::OnTimer

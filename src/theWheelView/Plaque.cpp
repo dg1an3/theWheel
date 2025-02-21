@@ -55,7 +55,7 @@ void
 	ASSERT_HRESULT(m_pDevice->SetStreamSource(0, m_pTriStripVB, 0, sizeof(NormalVertex)));
 	ASSERT_HRESULT(m_pDevice->SetIndices(m_pTriStripIB));
 
-	for (int nAt = 0; nAt < m_arrSectionStartVB.size()-1; nAt++)
+	for (auto nAt = 0U; nAt < m_arrSectionStartVB.size()-1; nAt++)
 	{
 		//// and draw to the device
 		ASSERT_HRESULT(m_pDevice->DrawIndexedPrimitive(D3DPT_TRIANGLESTRIP, 
@@ -125,14 +125,14 @@ void
 {
 	// track the shape discontinuities
 	std::vector<REAL>& arrDiscont = m_pShape->Discontinuities();
-	int nNextDiscont = 0;
+	auto nNextDiscont = 0U;
 
 	// step size for the four quadrants of the molding section
 	const REAL step = 2.0f * PIf / REAL(m_nNumSteps * 4.0f);
 
 	// step through the angles
 	REAL theta = 0.0f; 
-	for (int nSlice = 0; nSlice < m_nNumSteps * 4; nSlice++)
+	for (auto nSlice = 0U; nSlice < (size_t)m_nNumSteps * 4; nSlice++)
 	{
 		// are we at the last step?
 		if (nSlice + 1 == m_nNumSteps * 4)
@@ -274,19 +274,19 @@ LPDIRECT3DVERTEXBUFFER9 Plaque::GetVertexBufferFan()
 	if (!m_pTriFanVB)
 	{
 		std::vector<REAL>& arrDiscont = m_pShape->Discontinuities();
-		int nNextDiscont = 0;
+		auto nNextDiscont = 0U;
 	
 		// calculate the vertices for the section
 		std::vector<NormalVertex> arrVerts;
 
 		REAL Y = // 0.05; // 
-			m_pShape->InnerRect.GetMin(1) + (m_pShape->InnerRect.GetSize(1)) * 0.75; //  + 0.5f; // .Height / 8.0f;
-		REAL angleStart = 0.0, angleEnd = PIf;
+			m_pShape->InnerRect.GetMin(1) + (m_pShape->InnerRect.GetSize(1)) * 0.75f; //  + 0.5f; // .Height / 8.0f;
+		REAL angleStart = 0.0f, angleEnd = PIf;
 		m_pShape->InvEvalY(Y, angleStart, angleEnd);
 
 		// holds the new vertex
 		NormalVertex vert; // TODO: make sure this is initialized
-		vert.Position = D3DXVECTOR3(0.0, Y, m_borderRadius + 0.1);
+		vert.Position = D3DXVECTOR3(0.0, Y, m_borderRadius + 0.1f);
 		vert.Normal = D3DXVECTOR3(0.0, 0.0, 1.0);
 		arrVerts.push_back(vert); 
 /*
@@ -304,7 +304,7 @@ LPDIRECT3DVERTEXBUFFER9 Plaque::GetVertexBufferFan()
 		{
 			// evaluate the next shape point
 			CVectorD<2, REAL> vPt = m_pShape->Eval(angleStart);
-			vert.Position = D3DXVECTOR3(vPt[0], vPt[1], m_borderRadius - 0.1);
+			vert.Position = D3DXVECTOR3(vPt[0], vPt[1], m_borderRadius - 0.1f);
 			arrVerts.push_back(vert);
 
 			angleStart += angleDiff / (REAL) (m_nNumSteps * 4);
@@ -313,7 +313,7 @@ LPDIRECT3DVERTEXBUFFER9 Plaque::GetVertexBufferFan()
 				&& angleStart > arrDiscont[nNextDiscont])
 			{
 				CVectorD<2, REAL> vPt = m_pShape->Eval(arrDiscont[nNextDiscont++]);
-				vert.Position = D3DXVECTOR3(vPt[0], vPt[1], m_borderRadius - 0.1);
+				vert.Position = D3DXVECTOR3(vPt[0], vPt[1], m_borderRadius - 0.1f);
 				arrVerts.push_back(vert);
 			}
 		}

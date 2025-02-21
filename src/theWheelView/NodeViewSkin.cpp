@@ -67,8 +67,8 @@ const int MAX_HEIGHT_GDI = 1;
 REAL ComputeEllipticalness(REAL activation)
 {
 	// compute the r, which represents the amount of "elliptical-ness"
-	REAL scale = (1.0 - 1.0 / sqrt(2.0));
-	return 1.0 - scale * exp(-8.0 * activation + 0.01);
+	REAL scale = (REAL)(1.0 - 1.0 / sqrt(2.0));
+	return (REAL)(1.0 - scale * exp(-8.0 * activation + 0.01));
 
 }	// ComputeEllipticalness
 
@@ -84,7 +84,11 @@ CVectorD<3, double> EvalElliptangle(double theta, double *p)
 	double sign = cos(theta) > 0 ? 1.0 : -1.0;
 	double theta_prime = atan2(sign * p[0] * tan(theta), sign * p[1]);
 
-	return CVectorD<3>(p[0] * cos(theta_prime), p[1] * sin(theta_prime), 0.0);
+	return CVectorD<3>(
+		(REAL)(p[0] * cos(theta_prime)), 
+		(REAL)(p[1] * sin(theta_prime)), 
+		REAL(0.0)
+	);
 
 }	// EvalElliptangle
 
@@ -98,11 +102,11 @@ COLORREF BlendColors(COLORREF color1, COLORREF color2, REAL frac1)
 {
 	// compute blended color
 	REAL red = (REAL) GetRValue(color1) * frac1 
-		+ (REAL) GetRValue(color2) * (1.0 - frac1);
+		+ (REAL) GetRValue(color2) * (REAL(1.0) - frac1);
 	REAL grn = (REAL) GetGValue(color1) * frac1 
-		+ (REAL) GetGValue(color2) * (1.0 - frac1);
+		+ (REAL) GetGValue(color2) * (REAL(1.0) - frac1);
 	REAL blu = (REAL) GetBValue(color1) * frac1 
-		+ (REAL) GetBValue(color2) * (1.0 - frac1);
+		+ (REAL) GetBValue(color2) * (REAL(1.0) - frac1);
 
 	// return computed color
 	return RGB(red, grn, blu);
@@ -234,7 +238,7 @@ CVectorD<3>
 
 	// adjusts node size, so that larger nodes get more empty space around them 
 	//		(i.e. are proportionately smaller within their radius)
-	const REAL nodeSizeAdjust = log(3.0 * activation+1.0) / (3.0 * activation);
+	const REAL nodeSizeAdjust = (REAL)(log(3.0 * activation+1.0) / (3.0 * activation));
 	vSize *= nodeSizeAdjust;
 
 	// return the computed size
@@ -268,8 +272,8 @@ void CNodeViewSkin::CalcInnerOuterRect(CNodeView *pNodeView)
 	REAL r = ComputeEllipticalness(pNodeView->GetSpringActivation());
 
 	// adjust inner rectangle proportions
-	vSize[0] -= (1.0 - r) * vSize[0];
-	vSize[1] -= (1.0 - r) * vSize[1];
+	vSize[0] -= (REAL(1.0) - r) * vSize[0];
+	vSize[1] -= (REAL(1.0) - r) * vSize[1];
 
 	// set inner width and height
 	pNodeView->m_extInner.SetCenter(vPos);
@@ -345,7 +349,7 @@ void CNodeViewSkin::CalcLeftRightEllipseExtent(CNodeView *pNodeView, CExtent<3,R
 
 	// now compute the ellipse's rectangle
 	extent = extOuter;
-	extent.SetSize(1, 2.0  * bx, FIX_CENTER);
+	extent.SetSize(1, 2.0f  * bx, FIX_CENTER);
 
 	// return extLeftRightEllipse;
 
@@ -373,7 +377,7 @@ void CNodeViewSkin::CalcTopBottomEllipseExtent(CNodeView *pNodeView, CExtent<3,R
 
 	// now compute the ellipse's rectangle
 	extent = extOuter;
-	extent.SetSize(0, 2.0 * by, FIX_CENTER);
+	extent.SetSize(0, 2.0f * by, FIX_CENTER);
 
 	// return extTopBottomEllipse;
 

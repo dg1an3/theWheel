@@ -65,9 +65,9 @@ void CSpaceOptDlg::DoDataExchange(CDataExchange* pDX)
 	if (pDX->m_bSaveAndValidate && pSLM != NULL)
 	{
 		m_pSpace->GetLayoutManager()->SetMaxSuperNodeCount(m_nSuperNodeCount);
-		pSLM->SetTolerance(m_tolerance);
-		pSLM->SetKPos(m_kpos);
-		pSLM->SetKRep(m_krep);	
+		pSLM->SetTolerance(REAL(m_tolerance));
+		pSLM->SetKPos(REAL(m_kpos));
+		pSLM->SetKRep(REAL(m_krep));
 	}
 }
 
