@@ -81,12 +81,6 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DDUTIL.CPP">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="DesigntimeTracker.cpp" />
     <ClCompile Include="Elliptangle.cpp" />
     <ClCompile Include="Molding.cpp" />
@@ -107,7 +101,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="D3DXImpl.h" />
-    <ClInclude Include="include\DDUTIL.H" />
     <ClInclude Include="include\DesigntimeTracker.h" />
     <ClInclude Include="include\Elliptangle.h" />
     <ClInclude Include="include\Molding.h" />

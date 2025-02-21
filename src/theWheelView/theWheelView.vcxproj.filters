@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DDUTIL.CPP">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DesigntimeTracker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -62,9 +59,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\DDUTIL.H">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\DesigntimeTracker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
