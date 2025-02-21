@@ -62,6 +62,15 @@
     <ClInclude Include="include\UpdateStamp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\CastVectorD.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MatrixD.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\VectorD.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />

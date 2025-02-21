@@ -15,7 +15,7 @@
 #include "Dib.h"
 
 // the base class
-#include "NodeBase.h"
+// #include "NodeBase.h"
 
 // the links
 #include "NodeLink.h"

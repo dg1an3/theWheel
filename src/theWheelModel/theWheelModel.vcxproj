@@ -91,13 +91,16 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\CastVectorD.h" />
     <ClInclude Include="include\Dib.h" />
+    <ClInclude Include="include\MatrixD.h" />
     <ClInclude Include="include\Node.h" />
     <ClInclude Include="include\NodeLink.h" />
     <ClInclude Include="include\Space.h" />
     <ClInclude Include="include\SpaceLayoutManager.h" />
     <ClInclude Include="include\SpaceStateVector.h" />
     <ClInclude Include="include\UpdateStamp.h" />
+    <ClInclude Include="include\VectorD.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
