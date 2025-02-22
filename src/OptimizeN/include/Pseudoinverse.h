@@ -11,7 +11,7 @@
 #include <MatrixNxM.h>
 
 // constant for pseudo-inverse
-const REAL PSEUDO_EPS = (REAL) 1e-8;
+const REAL PSEUDO_EPS = 1e-8f;
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE>
