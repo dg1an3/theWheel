@@ -968,12 +968,21 @@ void CSpaceView::OnPaint()
 	ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_AMBIENT, // D3DCOLOR_RGBA(96, 96, 96, 255))); // 
 		D3DCOLOR_RGBA(64, 64, 64, 255))); // (DWORD) D3DCOLOR_COLORVALUE(0.25, 0.25, 0.25, 1.0)));
 
-	ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_FOGENABLE, TRUE));
+	auto enableFog = false;
+	if (enableFog)
+	{
+		// set up fog
+		ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_FOGENABLE, TRUE));
+		ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_FOGVERTEXMODE, D3DFOG_LINEAR));
+		ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_FOGCOLOR,
+			D3DCOLOR_XRGB(GetRValue(m_colorBk), GetGValue(m_colorBk), GetBValue(m_colorBk)))); // 0x00FFFFFF)); // Highest 8 bits are not used.
+		float Start = 0.0f, End = 15.0f;
+		m_pd3dDev->SetRenderState(D3DRS_FOGSTART, *(DWORD*)(&Start));
+		m_pd3dDev->SetRenderState(D3DRS_FOGEND, *(DWORD*)(&End));
+	}
 
-	ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_FOGVERTEXMODE, D3DFOG_LINEAR));
+	// draw test checkerbkard pattern
 
-	ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_FOGCOLOR, 
-		D3DCOLOR_XRGB(GetRValue(m_colorBk), GetGValue(m_colorBk), GetBValue(m_colorBk)))); // 0x00FFFFFF)); // Highest 8 bits are not used.
 
 	float Start = 0.0f, End = 15.0f;
         m_pd3dDev->SetRenderState(D3DRS_FOGSTART, *(DWORD *)(&Start));

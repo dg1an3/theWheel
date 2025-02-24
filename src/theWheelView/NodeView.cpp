@@ -57,6 +57,9 @@ const COLORREF BACK_COLOR = RGB(228, 228, 228);
 // TODO: get this from NodeViewSkin
 const int THICK_PEN_WIDTH = 4;
 
+const REAL WRAP_SPACE_SIZE_X = 600;
+const REAL WRAP_SPACE_SIZE_Y = 600;
+
 //////////////////////////////////////////////////////////////////////
 // statics for storing the font for smooth text
 
@@ -492,69 +495,78 @@ void CNodeView::SetMaximized(BOOL bMax)
 //////////////////////////////////////////////////////////////////////
 void CNodeView::Draw(LPDIRECT3DDEVICE9 lpDDS)
 {
-	D3DXMATRIX mat;
-	D3DXMatrixTranslation(&mat, 
-		-m_extInner.GetCenter()[0], 
-		-m_extInner.GetCenter()[1],
-		 m_extInner.GetCenter()[2]);
-	ASSERT_HRESULT(lpDDS->SetTransform(D3DTS_WORLD, (D3DMATRIX*) & mat));
+	for (auto shiftX = -1; shiftX <= 1; shiftX++) {
+		for (auto shiftY = -1; shiftY <= 1; shiftY++) {
 
-	// render the skin
-	// m_pParent->m_skin.BltSkin(lpDDS, this);
-	m_pParent->m_pSkin->Render(this);
+			D3DXMATRIX mat;
+			D3DXMatrixTranslation(&mat, 
+				-m_extInner.GetCenter()[0] + shiftX*WRAP_SPACE_SIZE_X,
+				-m_extInner.GetCenter()[1] + shiftY*WRAP_SPACE_SIZE_Y,
+				 m_extInner.GetCenter()[2]);
+			ASSERT_HRESULT(lpDDS->SetTransform(D3DTS_WORLD, (D3DMATRIX*) & mat));
 
-/*	LPDIRECT3DSURFACE9 lpd3dSurf = NULL;
-	ASSERT_HRESULT(lpDDS->GetRenderTarget(0, &lpd3dSurf));
+			auto saveCenter = m_extInner.GetCenter();
+			// render the skin
+			// m_pParent->m_skin.BltSkin(lpDDS, this);
+			m_pParent->m_pSkin->Render(this);
 
-	HDC hdc;
-	ASSERT_HRESULT(lpd3dSurf->GetDC(&hdc));
+			m_extInner.SetCenter(saveCenter);
 
-	// get a DC for the drawing surface
-	CDC dc;
-	dc.Attach(hdc);
-	// GET_ATTACH_DC(lpDDS, dc);
+			if (false) {
+				LPDIRECT3DSURFACE9 lpd3dSurf = NULL;
+				ASSERT_HRESULT(lpDDS->GetRenderTarget(0, &lpd3dSurf));
 
-	// only draw if it has a substantial area
-	if (m_extOuter.GetSize(1) >= 1)
-	{
-		// get the inner rectangle for drawing 
-		CExtent<3,REAL> extCurrent = m_extInner;
-		if (extCurrent.GetSize(1) > 10)
-			extCurrent.Deflate(5, 5, 5, 5);
-		
-		if (extCurrent.GetSize(1) >= 0.0)
-		{
-			// now set up layout
-			CNodeLayoutManager *pNLM = m_pParent->m_pNLM;
+				HDC hdc;
+				ASSERT_HRESULT(lpd3dSurf->GetDC(&hdc));
 
-			// store the calculated extents
-			CExtent<3,REAL> extTitle;
-			CExtent<3,REAL> extImage;
-			CExtent<3,REAL> extDesc;
+				// get a DC for the drawing surface
+				CDC dc;
+				dc.Attach(hdc);
+				// GET_ATTACH_DC(lpDDS, dc);
 
-			// current height = NLM selector
-			pNLM->CalcExtent(extCurrent, this, 
-				m_layoutSelect > 0.0 ? m_layoutSelect : 0.0, 
-				extTitle,
-				extImage,
-				extDesc);
+				// only draw if it has a substantial area
+				if (m_extOuter.GetSize(1) >= 1)
+				{
+					// get the inner rectangle for drawing 
+					CExtent<3, REAL> extCurrent = m_extInner;
+					if (extCurrent.GetSize(1) > 10)
+						extCurrent.Deflate(5, 5, 5, 5);
 
-			// draw the node elements
-			DrawTitleBand(&dc, extTitle);
-			DrawImage(&dc, extImage);
-			DrawTitle(&dc, extTitle);
-			DrawText(&dc, extDesc);
+					if (extCurrent.GetSize(1) >= 0.0)
+					{
+						// now set up layout
+						CNodeLayoutManager* pNLM = m_pParent->m_pNLM;
+
+						// store the calculated extents
+						CExtent<3, REAL> extTitle;
+						CExtent<3, REAL> extImage;
+						CExtent<3, REAL> extDesc;
+
+						// current height = NLM selector
+						pNLM->CalcExtent(extCurrent, this,
+							m_layoutSelect > 0.0 ? m_layoutSelect : 0.0,
+							extTitle,
+							extImage,
+							extDesc);
+
+						// draw the node elements
+						DrawTitleBand(&dc, extTitle);
+						DrawImage(&dc, extImage);
+						DrawTitle(&dc, extTitle);
+						DrawText(&dc, extDesc);
+					}
+				}
+
+				// release the DC
+				// RELEASE_DETACH_DC(lpDDS, dc);
+				dc.Detach();
+
+				lpd3dSurf->ReleaseDC(hdc);
+
+				lpd3dSurf->Release();
+			}
 		}
 	}
-
-	// release the DC
-	// RELEASE_DETACH_DC(lpDDS, dc);
-	dc.Detach();
-
-	lpd3dSurf->ReleaseDC(hdc); 
-
-	lpd3dSurf->Release(); */
-
 }	// CNodeView::Draw
 
 static ProfileFlag g_DisplayGainFlag(_T("Display"), _T("Gain"));
@@ -615,6 +627,27 @@ void CNodeView::DrawLinks(LPDIRECT3DDEVICE9 lpDDS, // CDC *pDC,
 					// draw the link
 					CVectorD<3> vFrom = GetSpringCenter();
 					CVectorD<3> vTo = pLinkedView->GetSpringCenter();
+
+					for (int shiftX = 0; shiftX <= 0; shiftX++) {
+						auto vNewTo = vTo;
+						vNewTo[0] += shiftX * WRAP_SPACE_SIZE_X;
+
+						if ((vFrom - vNewTo).GetLength() < (vFrom - vTo).GetLength())
+						{
+							vTo = vNewTo;
+						}
+					}
+
+					for (int shiftY = 0; shiftY <= 0; shiftY++) {
+						auto vNewTo = vTo;
+						vNewTo[1] += shiftY * WRAP_SPACE_SIZE_Y;
+
+						if ((vFrom - vNewTo).GetLength() < (vFrom - vTo).GetLength())
+						{
+							vTo = vNewTo;
+						}
+					}
+
 					REAL gain = GetNode()->GetLinkTo(pLinkedView->GetNode())->GetGain();
 
 					CVectorD<3> vMid = (REAL) 0.5 * (vFrom + vTo);
