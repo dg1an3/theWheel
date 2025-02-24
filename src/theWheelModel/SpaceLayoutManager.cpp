@@ -37,7 +37,7 @@
 const REAL TOLERANCE = (REAL) 1e+3;
 
 // scale for the sizes of the nodes
-const REAL SIZE_SCALE = 150.0;
+const REAL SIZE_SCALE = 100.0;
 
 // constants for the distance scale vs. activation curve
 const REAL DIST_SCALE_MIN = 1.0f;
@@ -63,6 +63,8 @@ const REAL RELAX_SIGMOID_FACTOR = 1.5f; // 4.0; // 1.5; // 8.0;
 const REAL RELAX_NEW_GAIN_FACTOR = 0.4f;
 const REAL RELAX_NEW_GAIN_FACTOR_SUBTHRESHOLD = 0.8f;
 
+const REAL WRAP_SPACE_SIZE_X = 800;
+const REAL WRAP_SPACE_SIZE_Y = 600;
 
 //////////////////////////////////////////////////////////////////////
 CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
@@ -206,9 +208,9 @@ REAL
 	REAL sizeAvg = 0.5f * (sizeFrom + sizeTo);
 	CVectorD<3> vOffset = pFrom->GetPosition() - pTo->GetPosition();
 
-	for (int shiftX = -1; shiftX <= 1; shiftX ++) {
-		auto pNewTo = pFrom->GetPosition();
-		pNewTo[0] += shiftX * 800;
+	for (int shiftX = 0; shiftX <= 0; shiftX ++) {
+		auto pNewTo = pTo->GetPosition();
+		pNewTo[0] += shiftX * WRAP_SPACE_SIZE_X;
 		auto vNewOffset = pFrom->GetPosition() - pNewTo;
 
 		if (vNewOffset.GetLength() < vOffset.GetLength())
@@ -217,9 +219,9 @@ REAL
 		}
 	}
 
-	for (int shiftY = -1; shiftY <= 1; shiftY++) {
-		auto pNewTo = pFrom->GetPosition();
-		pNewTo[1] += shiftY * 400;
+	for (int shiftY = 0; shiftY <= 0; shiftY++) {
+		auto pNewTo = pTo->GetPosition();
+		pNewTo[1] += shiftY * WRAP_SPACE_SIZE_Y;
 		auto vNewOffset = pFrom->GetPosition() - pNewTo;
 		if (vNewOffset.GetLength() < vOffset.GetLength())
 		{
@@ -555,8 +557,31 @@ REAL
 			// set up some common values
 
 			// compute the x- and y-offset between the views
-			const REAL x = m_vState[nAtNode*2 + 0] - m_vState[nAtLinked*2 + 0];
-			const REAL y = m_vState[nAtNode*2 + 1] - m_vState[nAtLinked*2 + 1];
+			REAL x = m_vState[nAtNode*2 + 0] - m_vState[nAtLinked*2 + 0];
+			REAL y = m_vState[nAtNode*2 + 1] - m_vState[nAtLinked*2 + 1];
+			auto dist = sqrtf(x * x + y * y);
+
+			for (int shiftX = 0; shiftX <= 0; shiftX++) {
+				auto xTo = m_vState[nAtLinked * 2 + 0] + shiftX * WRAP_SPACE_SIZE_X;
+				auto xNew = m_vState[nAtNode * 2 + 0] - xTo;
+				auto distNew = sqrtf(xNew * xNew + y * y);
+				if (distNew < dist)
+				{
+					x = xNew;
+					dist = distNew;
+				}
+			}
+
+			for (int shiftY = 0; shiftY <= 0; shiftY++) {
+				auto yTo = m_vState[nAtLinked * 2 + 1] + shiftY * WRAP_SPACE_SIZE_Y;
+				auto yNew = m_vState[nAtNode * 2 + 1] - yTo;
+				auto distNew = sqrtf(x * x + yNew * yNew);
+				if (distNew < dist)
+				{
+					y = yNew;
+					dist = distNew;
+				}
+			}
 
 			// compute the x- and y-scales for the fields -- average of
 			//		two rectangles

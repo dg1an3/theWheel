@@ -57,6 +57,9 @@ const COLORREF BACK_COLOR = RGB(228, 228, 228);
 // TODO: get this from NodeViewSkin
 const int THICK_PEN_WIDTH = 4;
 
+const REAL WRAP_SPACE_SIZE_X = 600;
+const REAL WRAP_SPACE_SIZE_Y = 600;
+
 //////////////////////////////////////////////////////////////////////
 // statics for storing the font for smooth text
 
@@ -492,16 +495,23 @@ void CNodeView::SetMaximized(BOOL bMax)
 //////////////////////////////////////////////////////////////////////
 void CNodeView::Draw(LPDIRECT3DDEVICE9 lpDDS)
 {
-	D3DXMATRIX mat;
-	D3DXMatrixTranslation(&mat,
-		-m_extInner.GetCenter()[0],
-		-m_extInner.GetCenter()[1],
-		 m_extInner.GetCenter()[2]);
-	ASSERT_HRESULT(lpDDS->SetTransform(D3DTS_WORLD, (D3DMATRIX*) & mat));
+	for (auto shiftX = -1; shiftX <= 1; shiftX++) {
+		for (auto shiftY = -1; shiftY <= 1; shiftY++) {
 
-	// render the skin (D3D only; GDI overlay done in DrawOverlay)
-	m_pParent->m_pSkin->Render(this);
+			D3DXMATRIX mat;
+			D3DXMatrixTranslation(&mat,
+				-m_extInner.GetCenter()[0] + shiftX*WRAP_SPACE_SIZE_X,
+				-m_extInner.GetCenter()[1] + shiftY*WRAP_SPACE_SIZE_Y,
+				 m_extInner.GetCenter()[2]);
+			ASSERT_HRESULT(lpDDS->SetTransform(D3DTS_WORLD, (D3DMATRIX*) & mat));
 
+			auto saveCenter = m_extInner.GetCenter();
+			// render the skin (D3D only; GDI overlay done in DrawOverlay)
+			m_pParent->m_pSkin->Render(this);
+
+			m_extInner.SetCenter(saveCenter);
+		}
+	}
 }	// CNodeView::Draw
 
 
@@ -602,6 +612,27 @@ void CNodeView::DrawLinks(LPDIRECT3DDEVICE9 lpDDS, CNodeViewSkin *pSkin)
 					// draw the link
 					CVectorD<3> vFrom = GetSpringCenter();
 					CVectorD<3> vTo = pLinkedView->GetSpringCenter();
+
+					for (int shiftX = 0; shiftX <= 0; shiftX++) {
+						auto vNewTo = vTo;
+						vNewTo[0] += shiftX * WRAP_SPACE_SIZE_X;
+
+						if ((vFrom - vNewTo).GetLength() < (vFrom - vTo).GetLength())
+						{
+							vTo = vNewTo;
+						}
+					}
+
+					for (int shiftY = 0; shiftY <= 0; shiftY++) {
+						auto vNewTo = vTo;
+						vNewTo[1] += shiftY * WRAP_SPACE_SIZE_Y;
+
+						if ((vFrom - vNewTo).GetLength() < (vFrom - vTo).GetLength())
+						{
+							vTo = vNewTo;
+						}
+					}
+
 					REAL gain = GetNode()->GetLinkTo(pLinkedView->GetNode())->GetGain();
 
 					CVectorD<3> vMid = (REAL) 0.5 * (vFrom + vTo);
