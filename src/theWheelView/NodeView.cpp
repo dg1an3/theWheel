@@ -544,7 +544,7 @@ void CNodeView::Draw(LPDIRECT3DDEVICE9 lpDDS)
 
 						// current height = NLM selector
 						pNLM->CalcExtent(extCurrent, this,
-							m_layoutSelect > 0.0 ? m_layoutSelect : 0.0,
+							m_layoutSelect > 0.0f ? m_layoutSelect : 0.0f,
 							extTitle,
 							extImage,
 							extDesc);
