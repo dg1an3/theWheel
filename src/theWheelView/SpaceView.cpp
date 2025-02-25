@@ -966,7 +966,7 @@ void CSpaceView::OnPaint()
 		ASSERT_HRESULT(m_pd3dDev->BeginScene());
 
 		// now populate array to hold the drawing-order for the nodeviews
-		arrNodeViewsToDraw.resize(__min(GetVisibleNodeCount() * 2, 
+		arrNodeViewsToDraw.resize(__min((UINT) GetVisibleNodeCount() * 2, 
 			GetSpace()->m_arrNodes.size())); 
 		copy(GetSpace()->m_arrNodes.begin(), 
 			GetSpace()->m_arrNodes.begin() + arrNodeViewsToDraw.size(),
