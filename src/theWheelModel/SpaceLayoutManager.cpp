@@ -40,28 +40,28 @@ const REAL TOLERANCE = (REAL) 1e+3;
 const REAL SIZE_SCALE = 100.0;
 
 // constants for the distance scale vs. activation curve
-const REAL DIST_SCALE_MIN = 1.0;
-const REAL DIST_SCALE_MAX = 1.35;
-const REAL ACTIVATION_MIDPOINT = 0.25;
+const REAL DIST_SCALE_MIN = 1.0f;
+const REAL DIST_SCALE_MAX = 1.35f;
+const REAL ACTIVATION_MIDPOINT = 0.25f;
 
 // compute the optimal normalized distance
-const REAL MIDWEIGHT = 0.5;
+const REAL MIDWEIGHT = 0.5f;
 const REAL OPT_DIST = DIST_SCALE_MIN
 	+ (DIST_SCALE_MAX - DIST_SCALE_MIN) 
-		* (1.0 - MIDWEIGHT / (MIDWEIGHT + ACTIVATION_MIDPOINT));
+		* (1.0f - MIDWEIGHT / (MIDWEIGHT + ACTIVATION_MIDPOINT));
 
 // constant for weighting the position energy
-const REAL K_POS = 600.0;
+const REAL K_POS = 600.0f;
 
 // constant for weighting the repulsion energy
-const REAL K_REP = 3200.0;
+const REAL K_REP = 3200.0f;
 
 
-const REAL RELAX_SIGMOID_SHIFT = 1.20; // 1.5; // 0.30; 
-const REAL RELAX_SIGMOID_FACTOR = 1.5; // 4.0; // 1.5; // 8.0; 
+const REAL RELAX_SIGMOID_SHIFT = 1.20f; // 1.5; // 0.30; 
+const REAL RELAX_SIGMOID_FACTOR = 1.5f; // 4.0; // 1.5; // 8.0; 
 
-const REAL RELAX_NEW_GAIN_FACTOR = 0.4;
-const REAL RELAX_NEW_GAIN_FACTOR_SUBTHRESHOLD = 0.8;
+const REAL RELAX_NEW_GAIN_FACTOR = 0.4f;
+const REAL RELAX_NEW_GAIN_FACTOR_SUBTHRESHOLD = 0.8f;
 
 const REAL WRAP_SPACE_SIZE_X = 800;
 const REAL WRAP_SPACE_SIZE_Y = 600;
@@ -103,8 +103,8 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 	// create and initialize the conjugate gradient optimizer
 	CConjGradOptimizer *pCGO = new CConjGradOptimizer(this);
 	pCGO->SetLineToleranceEqual(false);
-	pCGO->SetTolerance(1e-3);
-	pCGO->GetBrentOptimizer().SetTolerance(1e-4);
+	pCGO->SetTolerance(1e-3f);
+	pCGO->GetBrentOptimizer().SetTolerance(1e-4f);
 
 	// set the conj grad optimizer
 	m_pConjGradOptimizer = pCGO;
@@ -194,7 +194,7 @@ REAL
 	// store the size -- add 10 to ensure non-zero sizes
 	// CVectorD<3> vSizeFrom = // pFrom->GetSize(pFrom->GetActivation());
 	//	pFrom->GetRadius() * CVectorD<3>(1.0, 1.0, 0.0);
-	REAL sizeFrom = SIZE_SCALE * pFrom->GetRadius() + 10.0;
+	REAL sizeFrom = SIZE_SCALE * pFrom->GetRadius() + 10.0f;
 	// vSizeFrom *= SIZE_SCALE;
 	// vSizeFrom += CVectorD<3>(10.0, 10.0, 0.0);
 
@@ -202,10 +202,10 @@ REAL
 	//	pTo->GetRadius() * CVectorD<3>(1.0, 1.0, 0.0);
 	// vSizeTo *= SIZE_SCALE;
 	// vSizeTo += CVectorD<3>(10.0, 10.0, 0.0);
-	REAL sizeTo = SIZE_SCALE * pTo->GetRadius() + 10.0;
+	REAL sizeTo = SIZE_SCALE * pTo->GetRadius() + 10.0f;
 
 	// CVectorD<3> vSizeAvg = (REAL) 0.5 * (vSizeFrom + vSizeTo);
-	REAL sizeAvg = 0.5 * (sizeFrom + sizeTo);
+	REAL sizeAvg = 0.5f * (sizeFrom + sizeTo);
 	CVectorD<3> vOffset = pFrom->GetPosition() - pTo->GetPosition();
 
 	for (int shiftX = 0; shiftX <= 0; shiftX ++) {
@@ -234,7 +234,7 @@ REAL
 	const REAL act_dist = (REAL) sqrt(vOffset[0] * vOffset[0] 
 											/ (sizeAvg * sizeAvg/*vSizeAvg[0] * vSizeAvg[0]*/)
 		+ vOffset[1] * vOffset[1] 
-				/ (sizeAvg * sizeAvg /*vSizeAvg[1] * vSizeAvg[1]*/)) + 0.001;
+				/ (sizeAvg * sizeAvg /*vSizeAvg[1] * vSizeAvg[1]*/)) + 0.001f;
 
 	// compute the distance error
 	const REAL dist_error = act_dist - OPT_DIST;
@@ -386,7 +386,7 @@ void
 	for_each(m_pSpace->m_arrNodes.begin() + GetSuperNodeCount(), m_pSpace->m_arrNodes.end(),
 		bind2nd(mem_fun1<void, CNode, BOOL>(&CNode::SetIsSubThreshold), TRUE));
 #else
-	for (int nAt = GetSuperNodeCount(); nAt < m_pSpace->m_arrNodes.GetCount(); nAt++)
+	for (auto nAt = (size_t)GetSuperNodeCount(); nAt < m_pSpace->m_arrNodes.GetCount(); nAt++)
 	{
 		m_pSpace->m_arrNodes[nAt]->SetIsSubThreshold(TRUE);
 	}
@@ -469,11 +469,11 @@ void
 					distErr *= (pNode->GetActivation() + pLinked->GetActivation());
 #endif
 					// compute the gain and set it
-					REAL new_gain = 1.0 
+					REAL new_gain = 1.0f
 						- Sigmoid(distErr - RELAX_SIGMOID_SHIFT, RELAX_SIGMOID_FACTOR);
 
 					// and set, based on percentage of current
-					pLink->SetGain(pLink->GetGain() * (1.0 - NEW_GAIN_FACTOR)
+					pLink->SetGain(pLink->GetGain() * (1.0f - NEW_GAIN_FACTOR)
 						+ new_gain * NEW_GAIN_FACTOR);
 				}
 			}
@@ -516,7 +516,7 @@ void
 #ifdef STL_COLL_SPACE_NODES
 		arrSize[nAtNode] = SIZE_SCALE * (*iterNode)->GetRadius() + 10.0; 
 #else
-		arrSize[nAtNode] = SIZE_SCALE * pNode->GetRadius() + 10.0; 
+		arrSize[nAtNode] = SIZE_SCALE * pNode->GetRadius() + 10.0f;
 #endif
 
 		m_mSS[nAtNode][nAtNode] = 1.0;
@@ -537,7 +537,7 @@ void
 #endif
 
       // common size is average
-			const REAL ss = (arrSize[nAtNode] + arrSize[nAtLinkedNode]) / 2.0;
+			const REAL ss = (arrSize[nAtNode] + arrSize[nAtLinkedNode]) / 2.0f;
 
 			// set size in size matrix
 			m_mSS[nAtLinkedNode][nAtNode] = ss * ss;

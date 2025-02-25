@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 
 #include <CastVectorD.h>
-#include "NodeViewSkin2.h"
+#include "NodeViewSkin2007.h"
 #include "NodeView.h"
 #include "Elliptangle.h"
 
@@ -52,7 +52,7 @@ int
 	NodeViewSkin::GetPlaqueIndex(REAL activation)
 {
 	// form the index
-	int nIndex = Round<int>(activation * 200.0f); // 1000.0f);
+	auto nIndex = Round<size_t>(activation * 200.0f); // 1000.0f);
 	nIndex = __max(nIndex, 1);
 
 	// see if we have the molding yet
@@ -108,7 +108,7 @@ void
 	pNV->m_extInner.SetMin(CCastVectorD<3,REAL>(extent.GetMin()));
 	pNV->m_extInner.SetMax(CCastVectorD<3,REAL>(extent.GetMax()));
 
-	REAL sizeUp = 100.0 + 1200.0 * (activation) * (activation);
+	REAL sizeUp = 100.0f + 1200.0f * (activation) * (activation);
 	REAL scaleX = sizeUp * pNV->m_extInner.GetSize(0) /
 		m_arrPlaques[nIndex]->GetShape()->InnerRect.GetSize(0);
 	REAL scaleY = sizeUp * pNV->m_extInner.GetSize(1) /

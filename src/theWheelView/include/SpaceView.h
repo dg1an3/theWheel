@@ -22,7 +22,7 @@
 // subordinate classes
 #include "NodeView.h"
 #include "NodeViewSkin.h"
-#include "NodeViewSkin2.h"
+#include "NodeViewSkin2007.h"
 #include "NodeLayoutManager.h"
 #include "Tracker.h"
 

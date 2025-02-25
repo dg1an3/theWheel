@@ -36,17 +36,17 @@ static char THIS_FILE[] = __FILE__;
 const COLORREF DEFAULT_TITLE = RGB(166, 190, 191);
 
 // view scaling factor
-const REAL VIEW_SCALE = 650.0; // 
+const REAL VIEW_SCALE = REAL(650.0); // 
 		// 550.0;		
 
 // maximum for spring constant
-const REAL MAX_SPRING_CONST = 4.0;
+const REAL MAX_SPRING_CONST = REAL(4.0);
 
 // minimum for a post-super node
-const REAL MIN_POST_SUPER = 0.0014;
+const REAL MIN_POST_SUPER = REAL(0.0014);
 
 // min weight to draw link
-const REAL MIN_WEIGHT_TO_DRAW_LINK = 0.01;
+const REAL MIN_WEIGHT_TO_DRAW_LINK = REAL(0.01);
 
 // width of text block
 const int TEXT_WIDTH = 400;
@@ -134,8 +134,8 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 	pParent->GetClientRect(&rectParent);
 
 	// set up the spring constants
-	m_posSpring.SetB(8.0);
-	m_posSpring.SetMass(0.6);
+	m_posSpring.SetB(REAL(8.0));
+	m_posSpring.SetMass(REAL(0.6));
 	m_posSpring.SetOrigin(GetNode()->GetPosition());
 	m_posSpring.SetPosition(GetNode()->GetPosition());
 
@@ -269,7 +269,7 @@ REAL CNodeView::GetThresholdedActivation()
 		{
 			// return the scaled, thresholded activation
 			return std::min<REAL>(activation * superThresholdScale * superThresholdScale, 
-				TOTAL_ACTIVATION * 0.2);
+				TOTAL_ACTIVATION * REAL(0.2));
 		}
 	}
 
@@ -364,7 +364,7 @@ void CNodeView::UpdateSpringPosition(REAL springConst)
 	// else
 	{
 		// otherwise, update the sping
-		m_posSpring.UpdateSpring(0.01, 10);
+		m_posSpring.UpdateSpring(REAL(0.01), 10);
 	}
 
 	// and invalidate the parent window
@@ -386,7 +386,7 @@ void CNodeView::UpdateSpringActivation(REAL springConst)
 		REAL m_springActivation = m_actSpring.GetPosition()[0];
 
 		// update spring activation
- 		m_springActivation = TOTAL_ACTIVATION * 0.35 * (1.0 - springConst)
+ 		m_springActivation = TOTAL_ACTIVATION * REAL(0.35) * (REAL(1.0) - springConst)
 			+ m_springActivation * springConst;
 
 		m_actSpring.SetPosition(CVectorD<3>(m_springActivation, 0., 0.));
@@ -397,7 +397,7 @@ void CNodeView::UpdateSpringActivation(REAL springConst)
 
 	// update spring activation
 	m_actSpring.SetOrigin(CVectorD<3>(GetThresholdedActivation(), 0., 0.));
-	m_actSpring.UpdateSpring(0.01, 10);
+	m_actSpring.UpdateSpring(REAL(0.01), 10);
 
 	// update layout selection spring
 
@@ -407,7 +407,7 @@ void CNodeView::UpdateSpringActivation(REAL springConst)
 	m_pParent->m_skin.CalcShape(this, m_shapeHit, 10);
 
 	// now, determine integer layout selection (set point), based on m_extCurrent
-	REAL layoutSelectInt = __max(m_extInner.GetSize(1) - 10.0, 0.0);		// SYNCH with Draw code
+	REAL layoutSelectInt = (REAL)__max(m_extInner.GetSize(1) - 10.0, 0.0);		// SYNCH with Draw code
 
 	// now determine the integer layout selection (where it should be at) 
 	CNodeLayoutManager *pNLM = m_pParent->m_pNLM;
@@ -419,7 +419,7 @@ void CNodeView::UpdateSpringActivation(REAL springConst)
 
 	// now update spring
 	m_layoutSelectSpring.SetPosition(CVectorD<3>(m_layoutSelect - layoutSelectInt, 0., 0.));
-	m_layoutSelectSpring.UpdateSpring(0.01, 10);
+	m_layoutSelectSpring.UpdateSpring(REAL(0.01), 10);
 	m_layoutSelect = m_layoutSelectSpring.GetPosition()[0] + layoutSelectInt;
 
 	// and invalidate the parent window
@@ -608,7 +608,7 @@ void CNodeView::DrawLinks(LPDIRECT3DDEVICE9 lpDDS, // CDC *pDC,
 				// draw the link
 				CVectorD<3> vFrom = GetSpringCenter();
 				CVectorD<3> vTo = pLinkedView->GetSpringCenter();
-				REAL gain = 0.01 + sqrt(GetNode()->GetLinkTo(pLinkedView->GetNode())->GetGain());
+				REAL gain = REAL(0.01) + sqrt(GetNode()->GetLinkTo(pLinkedView->GetNode())->GetGain());
 
 				pSkin->DrawLink(pDC, vFrom, 
 					gain * GetSpringActivation(), 
@@ -679,8 +679,8 @@ void CNodeView::DrawTitle(CDC *pDC, const CExtent<3,REAL>& rectTitle)
 
 	// calc desired height
 	REAL desiredHeight = rectTitle.GetSize(1);
-	desiredHeight = __max(desiredHeight, 11.0);
-	REAL desiredWidth = rectTitle.GetSize(0) / 80.0;
+	desiredHeight = (REAL)__max(desiredHeight, 11.0);
+	REAL desiredWidth = rectTitle.GetSize(0) / REAL(80.0);
 
 	// get font
 	CFont *pFont = GetTitleFont(Round<int>(desiredHeight));
@@ -721,8 +721,8 @@ void CNodeView::DrawTitle(CDC *pDC, const CExtent<3,REAL>& rectTitle)
 void CNodeView::DrawTitleBand(CDC *pDC, const CExtent<3,REAL>& extTitle)
 {
 	REAL desiredHeight = extTitle.GetSize(1);
-	desiredHeight = __max(desiredHeight, 9.0);
-	REAL desiredWidth = extTitle.GetSize(0) / 80.0;
+	desiredHeight = __max(desiredHeight, REAL(9.0));
+	REAL desiredWidth = extTitle.GetSize(0) / REAL(80.0);
 
 	// get font
 	CFont *pFont = GetTitleFont(Round<int>(desiredHeight));
@@ -753,12 +753,12 @@ void CNodeView::DrawTitleBand(CDC *pDC, const CExtent<3,REAL>& extTitle)
 
 	// now calculate useful title rectangle
 	CExtent<3,REAL> rectTitle = m_extOuter; 
-	rectTitle.SetMin(1, rectTitle.GetMin(1) - 5.0);
+	rectTitle.SetMin(1, rectTitle.GetMin(1) - REAL(5.0));
 
 	// only band if height greater than min
 	if (m_extInner.GetSize(1) > 25.0) 
 	{
-		rectTitle.SetMax(1, rectText.top + nHeight + 3.0);
+		rectTitle.SetMax(1, rectText.top + nHeight + REAL(3.0));
 	}
 
 	// clip to the node view

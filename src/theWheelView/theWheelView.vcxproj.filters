@@ -33,7 +33,7 @@
     <ClCompile Include="NodeViewSkin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="NodeViewSkin2.cpp">
+    <ClCompile Include="NodeViewSkin2007.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Plaque.cpp">
@@ -77,7 +77,7 @@
     <ClInclude Include="include\NodeViewSkin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\NodeViewSkin2.h">
+    <ClInclude Include="include\NodeViewSkin2007.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Plaque.h">

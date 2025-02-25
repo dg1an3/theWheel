@@ -130,7 +130,7 @@ CSpaceView::~CSpaceView()
 	}
 	m_arrNodeViews.clear(); // RemoveAll();
 #else
-	for (int nAt = 0; nAt < m_arrNodeViews.GetCount(); nAt++)
+	for (auto nAt = 0U; nAt < m_arrNodeViews.GetCount(); nAt++)
 	{
 		delete m_arrNodeViews[nAt];
 	}
@@ -266,7 +266,7 @@ CNodeView *CSpaceView::FindNearestNodeView(CPoint pt)
 		// CRect rect = pNodeView->GetInnerRect();
 		CSize sz = // rect.CenterPoint()
 			(CPoint) (pNodeView->GetSpringCenter()) - pt;
-		REAL distSq = sz.cx * sz.cx + sz.cy * sz.cy;
+		REAL distSq = REAL(sz.cx * sz.cx + sz.cy * sz.cy);
 		if (distSq < minDistSq)
 		{
 			pNearest = pNodeView;
@@ -719,7 +719,7 @@ void
 	}
 	m_arrNodeViews.clear();
 #else
-	for (int nAt = 0; nAt < m_arrNodeViews.GetCount(); nAt++)
+	for (auto nAt = 0U; nAt < m_arrNodeViews.GetCount(); nAt++)
 	{
 		delete m_arrNodeViews[nAt];
 	}
@@ -744,8 +744,8 @@ void
 		CNodeView *pNodeView = GetNodeView(nAtNodeView);
 		for (int nAtCount = 0; nAtCount < 100; nAtCount++)
 		{
-			pNodeView->UpdateSpringPosition(0.1);
-			pNodeView->UpdateSpringActivation(0.1);
+			pNodeView->UpdateSpringPosition(0.1f);
+			pNodeView->UpdateSpringActivation(0.1f);
 		}
 	}
 
@@ -916,7 +916,7 @@ void CSpaceView::OnPaint()
 			(D3DMATRIX*) & mat));
 
 		D3DXMATRIX mat2;
-		D3DXMatrixOrthoLH(&mat2, rectOuter.Width() / 1.0, rectOuter.Height() / 1.0, -40.0, 40.0);
+		D3DXMatrixOrthoLH(&mat2, rectOuter.Width() / 1.0f, rectOuter.Height() / 1.0f, -40.0f, 40.0f);
 		ASSERT_HRESULT(m_pd3dDev->SetTransform(D3DTS_PROJECTION, (D3DMATRIX*) & mat2));
 
 		D3DVIEWPORT9 vp;
@@ -932,8 +932,8 @@ void CSpaceView::OnPaint()
 		m_pd3dDev->SetTransform( D3DTS_WORLD, (D3DMATRIX*) &matWorld );
 
 		// view matrix at z = -5, looking toward +z
-		D3DXVECTOR3 vEyePt( -rectOuter.Width()/2.0, -rectOuter.Height()/2.0, 5.0f) ; // 0.0f, 0.0f, 1.0f );
-		D3DXVECTOR3 vLookatPt( -rectOuter.Width()/2.0, -rectOuter.Height()/2.0, -5.0); // 0.0f, 0.0f, 0.0f );
+		D3DXVECTOR3 vEyePt( -rectOuter.Width()/2.0f, -rectOuter.Height()/2.0f, 5.0f) ; // 0.0f, 0.0f, 1.0f );
+		D3DXVECTOR3 vLookatPt( -rectOuter.Width()/2.0f, -rectOuter.Height()/2.0f, -5.0f); // 0.0f, 0.0f, 0.0f );
 		D3DXVECTOR3 vUpVec( 0.0f, 1.0f, 0.0f );
 		D3DXMATRIX matView;
 		D3DXMatrixLookAtLH( &matView, &vEyePt, &vLookatPt, &vUpVec);
@@ -1008,9 +1008,9 @@ void CSpaceView::OnPaint()
     }
 
 #else
-		arrNodeViewsToDraw.SetCount(__min(GetVisibleNodeCount() * 2, 
-			GetSpace()->m_arrNodes.GetCount())); 
-    for (int nAt = 0; nAt < arrNodeViewsToDraw.GetCount(); nAt++)
+		arrNodeViewsToDraw.SetCount(__min((size_t)GetVisibleNodeCount() * 2,
+			(size_t)GetSpace()->m_arrNodes.GetCount()));
+    for (auto nAt = 0U; nAt < arrNodeViewsToDraw.GetCount(); nAt++)
     {
       arrNodeViewsToDraw[nAt] = GetSpace()->m_arrNodes[nAt];
     }
@@ -1034,7 +1034,7 @@ void CSpaceView::OnPaint()
 				((CNodeView*)(*iter)->GetView())->DrawLinks(m_pd3dDev, &m_skin);
 
 #else
-		for (int nAt = 0; nAt < arrNodeViewsToDraw.GetCount(); nAt++)
+		for (auto nAt = 0U; nAt < arrNodeViewsToDraw.GetCount(); nAt++)
     {
       CNode *pNode = arrNodeViewsToDraw[nAt];
 	  auto pNodeView = (CNodeView*) pNode->GetView();
@@ -1054,7 +1054,7 @@ void CSpaceView::OnPaint()
 			if (!(*iter)->GetIsSubThreshold())
 				((CNodeView*)(*iter)->GetView())->Draw(m_pd3dDev); 
 #else
-		for (int nAt = 0; nAt < arrNodeViewsToDraw.GetCount(); nAt++)
+		for (auto nAt = 0U; nAt < arrNodeViewsToDraw.GetCount(); nAt++)
     {
       CNode *pNode = arrNodeViewsToDraw[nAt];
 	  auto pNodeView = (CNodeView*)pNode->GetView();
