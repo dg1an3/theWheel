@@ -24,7 +24,7 @@
 
 // the skin
 #include "NodeViewSkin.h"
-#include "NodeViewSkin2.h"
+#include "NodeViewSkin2007.h"
 
 // and springs for positioning
 #include <Spring.h>
