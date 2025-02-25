@@ -446,11 +446,11 @@ void
 	for (int nAtNode = 0; nAtNode < nNodeCount; nAtNode++, iterNode++)
 	{
 		// store the size -- add 10 to ensure non-zero sizes
-		arrSize[nAtNode] = SIZE_SCALE * (*iterNode)->GetRadius() + 10.0; 
+		arrSize[nAtNode] = SIZE_SCALE * (*iterNode)->GetRadius() + 10.0f; 
 
-		m_mSS[nAtNode][nAtNode] = 1.0;
-		m_mAvgAct[nAtNode][nAtNode] = 0.0;
-		m_mLinks[nAtNode][nAtNode] = 0.0;
+		m_mSS[nAtNode][nAtNode] = 1.0f;
+		m_mAvgAct[nAtNode][nAtNode] = 0.0f;
+		m_mLinks[nAtNode][nAtNode] = 0.0f;
 
 		// iterate over the potential linked views
 		auto iterLinked = iterNode+1;
@@ -458,7 +458,7 @@ void
 				nAtLinkedNode++, iterLinked++)
 		{
 			// common size is average
-			const REAL ss = (arrSize[nAtNode] + arrSize[nAtLinkedNode]) / 2.0;
+			const REAL ss = (arrSize[nAtNode] + arrSize[nAtLinkedNode]) / 2.0f;
 
 			// set size in size matrix
 			m_mSS[nAtLinkedNode][nAtNode] = ss * ss;
