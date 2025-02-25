@@ -196,7 +196,7 @@ const CVectorN<>& CConjGradOptimizer::Optimize(const CVectorN<>& vInit)
 				{
 					projSearchedSq += m_mOrthoBasis[nOrtho][nDim] * m_mOrthoBasis[nOrtho][nDim];
 
-					REAL scale = powf(2.0f, nOrtho) / powf(2.0f, m_nIteration);
+					REAL scale = powf(2.0f, (float)nOrtho) / powf(2.0f, (float)m_nIteration);
 					projSearchedSq_scaled += 
 						m_mOrthoBasis[nOrtho][nDim] * m_mOrthoBasis[nOrtho][nDim]
 							/ (scale * (m_varMax - m_varMin) + m_varMin);

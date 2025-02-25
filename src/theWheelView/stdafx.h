@@ -79,9 +79,11 @@
 
 // STL
 #include <vector>
+#include <map>
 #include <unordered_map>
 #include <algorithm>
 #include <numeric>
+#include <functional>
 
 // utilities
 #include <UtilMacros.h>
