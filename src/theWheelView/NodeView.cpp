@@ -706,8 +706,8 @@ void CNodeView::DrawTitleBand(CDC *pDC, const CExtent<3,REAL>& extTitle)
 	COLORREF backColor = DEFAULT_TITLE;
 	if (GetNode()->GetSpace() != NULL)
 	{
-		GetNode()->GetSpace()->GetClassColorMap().Lookup(
-			GetNode()->GetClass(), backColor);
+		auto result = GetNode()->GetSpace()->GetClassColorMap().find(GetNode()->GetClass());
+		backColor = result->second;
 	}
 
 	// form background brush

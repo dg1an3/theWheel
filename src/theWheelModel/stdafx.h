@@ -66,9 +66,11 @@
 
 // STL
 #include <vector>
+#include <map>
 #include <unordered_map>
 #include <algorithm>
 #include <numeric>
+#include <functional>
 
 // multimedia and sound includes
 #include <mmsystem.h>
