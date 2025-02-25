@@ -27,7 +27,7 @@ static char THIS_FILE[]=__FILE__;
 // 
 // constant defining threshold for propagation
 //////////////////////////////////////////////////////////////////////
-const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01;		// TODO: move to CNodeLink
+const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01f;		// TODO: move to CNodeLink
 
 //////////////////////////////////////////////////////////////////////
 // Event Firing
@@ -36,7 +36,7 @@ const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01;		// TODO: move to CNodeLink
 	if (m_pSpace) m_pSpace->NodeAttributeChangedEvent.Fire(this);*/
 
 //////////////////////////////////////////////////////////////////////
-const REAL PRIM_FRAC = 0.5;
+const REAL PRIM_FRAC = 0.5f;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -384,7 +384,7 @@ REAL CNode::GetLinkWeight(CNode * pToNode)
 REAL CNode::GetLinkGainWeight(CNode *pToNode)
 {
 	CNodeLink *pLink = GetLinkTo(pToNode);
-	if (pLink)
+	if (pLink && !pLink->GetIsStabilizer())
 	{
 		return pLink->GetGainWeight();
 	}
@@ -525,8 +525,8 @@ REAL ScaleWeight(REAL scale, REAL weight)
 {
 	ASSERT(weight >= 0.0);
 	ASSERT(weight < 1.0);
-	REAL scaledXformWeight = -log(1.0-weight) * scale;
-	return 0.99 * (1.0 - exp(-scaledXformWeight));
+	REAL scaledXformWeight = (-logf(1.0f - weight) * scale);
+	return 0.99f * (1.0f - expf(-scaledXformWeight));
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -567,13 +567,13 @@ void
 	if (pActivator == NULL)
 	{
 		m_primaryActivation += PRIM_FRAC * deltaActivation;
-		m_secondaryActivation += (1.0 - PRIM_FRAC) * deltaActivation;
+		m_secondaryActivation += (1.0f - PRIM_FRAC) * deltaActivation;
 
 		// update the total activation value
 		if (m_pSpace)
 		{
 			m_pSpace->m_totalPrimaryActivation += PRIM_FRAC * deltaActivation;
-			m_pSpace->m_totalSecondaryActivation += (1.0 - PRIM_FRAC) * deltaActivation;
+			m_pSpace->m_totalSecondaryActivation += (1.0f - PRIM_FRAC) * deltaActivation;
 		}
 	}
 	else
@@ -617,10 +617,10 @@ bool
 {
 	REAL act1 = GetActivation();
 	// now add additional factor for post-super count: max 40 adds 0.1 to activation
-	act1 += 0.1 * (REAL) GetPostSuperCount() / 40.0;
+	act1 += 0.1f * GetPostSuperCount() / 40.0f;
 
 	REAL act2 = pThanNode->GetActivation();
-	act2 += 0.1 * (REAL) pThanNode->GetPostSuperCount() / 40.0;
+	act2 += 0.1f * pThanNode->GetPostSuperCount() / 40.0f;
 
 	return act1 > act2;
 }
@@ -632,10 +632,10 @@ bool
 {
 	REAL act1 = pLeft->GetActivation();
 	// now add additional factor for post-super count: max 40 adds 0.1 to activation
-	act1 += 0.1 * (REAL) pLeft->GetPostSuperCount() / 40.0;
+	act1 += 0.1f * pLeft->GetPostSuperCount() / 40.0f;
 
 	REAL act2 = pRight->GetActivation();
-	act2 += 0.1 * (REAL) pRight->GetPostSuperCount() / 40.0;
+	act2 += 0.1f * pRight->GetPostSuperCount() / 40.0f;
 
 	return act1 > act2;
 }
@@ -814,22 +814,22 @@ void CNode::Serialize(CArchive &ar)
 		{
 			double primaryActivation;
 			ar >> primaryActivation;
-			m_primaryActivation = primaryActivation;
+			m_primaryActivation = (REAL) primaryActivation;
 
 			double secondaryActivation;
 			ar >> secondaryActivation;
-			m_secondaryActivation = secondaryActivation;
+			m_secondaryActivation = (REAL)secondaryActivation;
 
 			CVectorD<3, double> vPosition;
 			ar >> vPosition;
-			m_vPosition[0] = vPosition[0];
-			m_vPosition[1] = vPosition[1];
-			m_vPosition[2] = vPosition[2];
+			m_vPosition[0] = (REAL) vPosition[0];
+			m_vPosition[1] = (REAL) vPosition[1];
+			m_vPosition[2] = (REAL) vPosition[2];
 
 			ar >> m_pMaxActivator;
 			double maxDeltaActivation;
 			ar >> maxDeltaActivation;
-			m_maxDeltaActivation = maxDeltaActivation;
+			m_maxDeltaActivation = (REAL) maxDeltaActivation;
 		}
 
 		if (nSchema >= 8)
@@ -917,7 +917,7 @@ void CNode::Serialize(CArchive &ar)
 	if (ar.IsLoading())
 	{
 		// set the children's parent
-		for (int nAt = 0; nAt < GetChildCount(); nAt++)
+		for (auto nAt = 0; nAt < GetChildCount(); nAt++)
 		{
 			GetChildAt(nAt)->m_pParent = this;
 		}

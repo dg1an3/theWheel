@@ -451,8 +451,8 @@ int CSpaceTreeView::OnCreate(LPCREATESTRUCT lpCreateStruct)
  	m_wndTree.SetImageList(&m_imageList, TVSIL_NORMAL);
 
     // intialize the drop and no-drop cursors
-    m_hDropCursor = ::LoadCursor(NULL, MAKEINTRESOURCE(IDC_ARROW));
-    m_hNoDropCursor = ::LoadCursor(NULL, MAKEINTRESOURCE(IDC_NO));
+    m_hDropCursor = ::LoadCursor(NULL, IDC_ARROW);
+    m_hNoDropCursor = ::LoadCursor(NULL, IDC_NO);
 
 	return 0;
 

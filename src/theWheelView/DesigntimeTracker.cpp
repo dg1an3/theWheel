@@ -111,13 +111,13 @@ void CDesigntimeTracker::OnButtonUp(UINT nFlags, CPoint point)
 			else
 			{
 				// increase the link weight
-				double weight1 = 
+				auto weight1 = 
 					m_pLinkingView->GetNode()->GetLinkWeight(pLinkedView->GetNode());
-				double weight2 = 
+				auto weight2 = 
 					pLinkedView->GetNode()->GetLinkWeight(m_pLinkingView->GetNode());
 
 				// compute the new weight
-				double newWeight = 1.2 * (weight1 + weight2) * 0.5 + 0.1;
+				auto newWeight = 1.2f * (weight1 + weight2) * 0.5f + 0.1f;
 
 				// set the new weight
 				m_pLinkingView->GetNode()->LinkTo(
@@ -137,13 +137,13 @@ void CDesigntimeTracker::OnButtonUp(UINT nFlags, CPoint point)
 		if (bFound)
 		{
 			// increase the link weight
-			double weight1 = 
+			auto weight1 = 
 				m_pLinkingView->GetNode()->GetLinkWeight(pLinkedView->GetNode());
-			double weight2 = 
+			auto weight2 = 
 				pLinkedView->GetNode()->GetLinkWeight(m_pLinkingView->GetNode());
 
 			// set the new weight
-			double newWeight = 0.8 * (weight1 + weight2) * 0.5;
+			auto newWeight = 0.8f * (weight1 + weight2) * 0.5f;
 			m_pLinkingView->GetNode()->LinkTo(pLinkedView->GetNode(), newWeight, TRUE);
 			pLinkedView->GetNode()->LinkTo(m_pLinkingView->GetNode(), newWeight, TRUE);
 		}

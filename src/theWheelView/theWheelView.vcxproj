@@ -81,19 +81,13 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DDUTIL.CPP">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      </PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      </PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="DesigntimeTracker.cpp" />
     <ClCompile Include="Elliptangle.cpp" />
     <ClCompile Include="Molding.cpp" />
     <ClCompile Include="NodeLayoutManager.cpp" />
     <ClCompile Include="NodeView.cpp" />
     <ClCompile Include="NodeViewSkin.cpp" />
-    <ClCompile Include="NodeViewSkin2.cpp" />
+    <ClCompile Include="NodeViewSkin2007.cpp" />
     <ClCompile Include="Plaque.cpp" />
     <ClCompile Include="RadialShape.cpp" />
     <ClCompile Include="RuntimeTracker.cpp" />
@@ -107,14 +101,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="D3DXImpl.h" />
-    <ClInclude Include="include\DDUTIL.H" />
     <ClInclude Include="include\DesigntimeTracker.h" />
     <ClInclude Include="include\Elliptangle.h" />
     <ClInclude Include="include\Molding.h" />
     <ClInclude Include="include\NodeLayoutManager.h" />
     <ClInclude Include="include\NodeView.h" />
     <ClInclude Include="include\NodeViewSkin.h" />
-    <ClInclude Include="include\NodeViewSkin2.h" />
+    <ClInclude Include="include\NodeViewSkin2007.h" />
     <ClInclude Include="include\Plaque.h" />
     <ClInclude Include="include\RadialShape.h" />
     <ClInclude Include="include\RuntimeTracker.h" />

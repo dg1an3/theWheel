@@ -224,14 +224,14 @@ void CLinkPropDlg::OnEndlabeleditLinklist(NMHDR* pNMHDR, LRESULT* pResult)
 	{
 		// now retrieve the value from the text
 		float weight;
-		_stscanf_s(plvItem->pszText, _T("%f"), &weight, 10);
+		_stscanf_s(plvItem->pszText, _T("%f"), &weight);
 
 		// get the target
 		CNode *pOtherNode = 
 			(CNode *)m_LinkList.GetItemData(plvItem->iItem);
 
 		// and establish the weight
-		m_pCurNode->LinkTo(pOtherNode, weight / 100.0);
+		m_pCurNode->LinkTo(pOtherNode, weight / 100.0f);
 
 		// update the list of links
 		UpdateLinkList(m_pCurNode);
