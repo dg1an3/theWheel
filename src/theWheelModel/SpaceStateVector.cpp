@@ -165,11 +165,11 @@ void
 
 		m_mOldCoords[nAt][0] = act * m_vOldPositions[nAt * 2 + 0];
 		m_mOldCoords[nAt][1] = act * m_vOldPositions[nAt * 2 + 1];
-		m_mOldCoords[nAt][2] = act * 1.0;
+		m_mOldCoords[nAt][2] = act * 1.0f;
 
 		m_mNewCoords[nAt][0] = act * vPositions[nAt * 2 + 0];
 		m_mNewCoords[nAt][1] = act * vPositions[nAt * 2 + 1];
-		m_mNewCoords[nAt][2] = act * 1.0;
+		m_mNewCoords[nAt][2] = act * 1.0f;
 	}
 
 	// work with the transpose of the problem, so that columns < rows
@@ -266,14 +266,14 @@ void
 		ar >> vActivations;
 		CVectorN<> vActReal;
 		for (int nAt = 0; nAt < vActivations.GetDim(); nAt++)
-			vActReal[nAt] = vActivations[nAt];
+			vActReal[nAt] = REAL(vActivations[nAt]);
 		SetActivationsVector(vActReal);
 
 		CVectorN<double> vPositions;
 		ar >> vPositions;
 		CVectorN<> vPosReal;
 		for (int nAt = 0; nAt < vActivations.GetDim(); nAt++)
-			vPosReal[nAt] = vActivations[nAt];
+			vPosReal[nAt] = REAL(vActivations[nAt]);
 		SetPositionsVector(vPosReal);
 
 		// LoadMaps();

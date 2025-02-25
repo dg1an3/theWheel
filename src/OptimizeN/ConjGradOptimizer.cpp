@@ -196,19 +196,19 @@ const CVectorN<>& CConjGradOptimizer::Optimize(const CVectorN<>& vInit)
 				{
 					projSearchedSq += m_mOrthoBasis[nOrtho][nDim] * m_mOrthoBasis[nOrtho][nDim];
 
-					REAL scale = pow(2.0, nOrtho) / pow(2.0, m_nIteration);
+					REAL scale = powf(2.0f, nOrtho) / powf(2.0f, m_nIteration);
 					projSearchedSq_scaled += 
 						m_mOrthoBasis[nOrtho][nDim] * m_mOrthoBasis[nOrtho][nDim]
 							/ (scale * (m_varMax - m_varMin) + m_varMin);
 				}
-				projSearchedSq = __min(projSearchedSq, 1.0);
+				projSearchedSq = __min(projSearchedSq, 1.0f);
 
 				// now calculate factor for variance due to non-searched subspace
-				REAL projNSSq = 1.0 - projSearchedSq;
+				REAL projNSSq = 1.0f - projSearchedSq;
 
 				// and set the corresponding element of the variance vector
 				/// m_vAdaptVariance[nDim] = 1.0 / (projSearchedSq / m_varMin + projNSSq / m_varMax);
-				m_vAdaptVariance[nDim] = 1.0 / (projSearchedSq_scaled + projNSSq / m_varMax);
+				m_vAdaptVariance[nDim] = 1.0f / (projSearchedSq_scaled + projNSSq / m_varMax);
 				if (m_vAdaptVariance[nDim] > m_varMax || m_vAdaptVariance[nDim] < m_varMin)
 				{
 					TRACE("projSearchedSq = %lf\n", projSearchedSq);
