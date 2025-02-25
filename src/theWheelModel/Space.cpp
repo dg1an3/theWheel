@@ -490,7 +490,7 @@ REAL
 	if (bCompute)
 	{		
 		// sum all secondary activations		
-		m_totalPrimaryActivation = accumulate(m_arrNodes.begin(), m_arrNodes.end(), 0.0,
+		m_totalPrimaryActivation = accumulate(m_arrNodes.begin(), m_arrNodes.end(), 0.0f,
 			[](REAL sum, CNode* pNode) { return sum + pNode->GetPrimaryActivation(); });
 	}
 
@@ -508,7 +508,7 @@ REAL
 	if (bCompute)
 	{
 		// sum all secondary activations
-		m_totalSecondaryActivation = accumulate(m_arrNodes.begin(), m_arrNodes.end(), 0.0,
+		m_totalSecondaryActivation = accumulate(m_arrNodes.begin(), m_arrNodes.end(), 0.0f,
 			[](REAL sum, CNode* pNode) { return sum + pNode->GetSecondaryActivation(); });
 	}
 
