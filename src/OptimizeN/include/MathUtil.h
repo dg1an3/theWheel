@@ -181,7 +181,7 @@ inline REAL AngleFromSinCos(REAL sin_angle, REAL cos_angle)
 
 inline REAL Deg2Rad(const REAL& deg)
 {
-	return deg * (atan(1.0) / 4.0) / 180.0;
+	return (REAL)(deg * (atan(1.0) / 4.0) / 180.0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

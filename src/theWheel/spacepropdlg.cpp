@@ -50,8 +50,8 @@ void CSpacePropDlg::DoDataExchange(CDataExchange* pDX)
 
 	if (pDX->m_bSaveAndValidate && m_pSpace != NULL)
 	{
-		m_pSpace->SetSpringConst(m_spring);
-		m_pSpace->SetPrimSecRatio(m_primSec);
+		m_pSpace->SetSpringConst((REAL)m_spring);
+		m_pSpace->SetPrimSecRatio((REAL)m_primSec);
 	}
 }
 

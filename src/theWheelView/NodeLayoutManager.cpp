@@ -100,13 +100,13 @@ REAL
 	CNodeLayoutManager::GetTitleHeight(const CExtent<3,REAL>& rectInner)
 {
 	// calculate title height
-	REAL titleHeight = __max(rectInner.GetSize(1), 0.0);
+	REAL titleHeight = __max(rectInner.GetSize(1), 0.0f);
 
 	// is description enabled?
 	if (GetShowDescription())
 	{
 		// adjust for log title height
-		titleHeight = GetTitleLogWeight() * log(titleHeight + 1.0);
+		titleHeight = GetTitleLogWeight() * logf(titleHeight + 1.0f);
 	}
 	// TRACE("titleHeight = %f\n", titleHeight);
 
@@ -132,7 +132,7 @@ void
 
 	// add a log value, if one set
 	rectImage.SetMin(1, rectImage.GetMin(1) 
-		+ GetImageLogWeight() * log(__max(rectInner.GetSize(1), 0.0)));
+		+ GetImageLogWeight() * logf(__max(rectInner.GetSize(1), 0.0f)));
 
 	// position top, based on whether image is below or beside title
 	if (!GetImageBesideTitle())
@@ -141,7 +141,7 @@ void
 	}
 
 	// default ratio = 1/1
-	REAL widthToHeight = 1.0;
+	REAL widthToHeight = 1.0f;
 
 	// determine max height from max width
 	CDib *pDib = pView->GetNode()->GetDib();
@@ -154,7 +154,7 @@ void
 		widthToHeight = (REAL) sz.cx / (REAL) sz.cy;
 
 		// ensure width <= height
-		widthToHeight = __max(widthToHeight, 1.0);
+		widthToHeight = __max(widthToHeight, 1.0f);
 	}
 	else
 	{
@@ -167,7 +167,7 @@ void
 	REAL imageWidth = __min(rectImage.GetSize(1) * widthToHeight, GetMaxImageWidth());
 
 	// adjust for max (based on inner rectangle width)
-	imageWidth = __min(imageWidth, rectInner.GetSize(0) / 3.0);
+	imageWidth = __min(imageWidth, rectInner.GetSize(0) / 3.0f);
 
 	// and set the rectangle size
 	rectImage.SetSize(0, imageWidth, FIX_MIN);
@@ -205,7 +205,7 @@ void
 		{
 			// aligns to half-way over image, to make more room
 			rectTitle.SetMin(0, rectImage.GetMax(0) + 
-				(rectTitle.GetMin(0) - rectImage.GetMax(0)) / 2.0);
+				(rectTitle.GetMin(0) - rectImage.GetMax(0)) / 2.0f);
 		}
 	}
 	

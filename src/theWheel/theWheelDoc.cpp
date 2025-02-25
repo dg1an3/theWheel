@@ -102,5 +102,5 @@ void CtheWheelDoc::Dump(CDumpContext& dc) const
 
 void CtheWheelDoc::OnScaleLinkWeights()
 {
-	m_space.GetRootNode()->ScaleLinkWeights(sqrt(2.0));
+	m_space.GetRootNode()->ScaleLinkWeights(sqrtf(2.0f));
 }

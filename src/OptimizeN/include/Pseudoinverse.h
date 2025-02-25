@@ -11,7 +11,7 @@
 #include <MatrixNxM.h>
 
 // constant for pseudo-inverse
-const REAL PSEUDO_EPS = (REAL) 1e-8;
+const REAL PSEUDO_EPS = 1e-8f;
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE>
@@ -70,11 +70,11 @@ TYPE
 
 	if (absa > absb)
 	{
-		return absa * (TYPE) sqrt(1.0 + SQR(absb / absa));
+		return absa * sqrtf(1.0f + SQR(absb / absa));
 	}
 	else
 	{
-		return (absb == 0.0 ? 0.0 : absb * (TYPE) sqrt(1.0 + SQR(absa / absb)));
+		return (absb == 0.0f ? 0.0f : absb * sqrtf(1.0f + SQR(absa / absb)));
 	}
 
 }	// pythag
@@ -152,7 +152,7 @@ bool
 					TYPE g = w[nI];
 					TYPE h = pythag(f,g);
 					w[nI] = h;
-					h = 1.0 / h;
+					h = 1.0f / h;
 					c = g * h;
 					s = -f * h;
 					for (int nJ = 0; nJ < mFrom.GetRows(); nJ++)
@@ -190,8 +190,8 @@ bool
 			TYPE g = rv1[nK - 1];
 			TYPE h = rv1[nK];
 			TYPE f = ((y - z) * (y + z) + (g - h) * (g + h)) 
-				/ (2.0 * h * y);
-			g = pythag<TYPE>(f, 1.0);
+				/ (2.0f * h * y);
+			g = pythag<TYPE>(f, 1.0f);
 			f = ((x - z) * (x + z) + h * ((y / (f + SIGN(g,f))) - h))
 				/ x;
 
@@ -223,7 +223,7 @@ bool
 				w[nJ] = z;
 				if (z != 0.0)
 				{
-					z = 1.0/z;
+					z = 1.0f/z;
 					c = f * z;
 					s = h * z;
 				}
@@ -433,7 +433,7 @@ void
 
 		if (w[nI] != 0.0)
 		{
-			TYPE g = 1.0 / w[nI];
+			TYPE g = 1.0f / w[nI];
 			for (int nJ = nI + 1; nJ < m.GetCols(); nJ++)
 			{
 				TYPE s = 0.0;
