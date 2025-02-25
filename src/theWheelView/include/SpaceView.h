@@ -147,14 +147,8 @@ private:
 	CSpace *m_pSpace;
 
 	// the child node views
-	// CObArray m_arrNodeViews;
-#ifdef STL_COLL
 	vector<CNodeView*> m_arrNodeViews;
 	vector<CNode*> arrNodeViewsToDraw;
-#else
-	CAtlArray<CNodeView*> m_arrNodeViews;
-	CAtlArray<CNode*> arrNodeViewsToDraw;
-#endif
 
 	// direct3d interfaces
 	LPDIRECT3D9 m_pd3d;
