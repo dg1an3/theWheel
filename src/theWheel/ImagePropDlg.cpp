@@ -45,14 +45,12 @@ void CImagePropDlg::SetCurNode(CNode *pNode)
 	pComboBox->ResetContent();
 	pComboBox->AddString(_T("<none>"));
 
-	CMap<CString, LPCTSTR, COLORREF, COLORREF>& mapClasses = 
-		pNode->GetSpace()->GetClassColorMap();
-	POSITION pos = mapClasses.GetStartPosition();
-	while (pos != NULL)
+	auto mapClasses = pNode->GetSpace()->GetClassColorMap();
+	auto pos = mapClasses.begin();
+	while (pos != mapClasses.end())
 	{
-		CString pszClassName;
-		COLORREF color;
-		mapClasses.GetNextAssoc(pos, pszClassName, color);
+		auto pszClassName = pos->first;
+		auto color = pos->second;		
 		pComboBox->AddString(pszClassName);
 	}
 

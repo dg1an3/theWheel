@@ -325,13 +325,8 @@ void
 		if (pNode->GetIsSubThreshold()
 			|| pNode->GetPostSuperCount() > 0)
 		{
-#ifdef STL_COLL_SPACE_NODES
 			std::swap(m_pSpace->m_arrNodes.begin()+nAt,
 				m_pSpace->m_arrNodes.begin()+nHighestNewSuper-1);
-#else
-			std::swap(m_pSpace->m_arrNodes[nAt],
-				m_pSpace->m_arrNodes[nHighestNewSuper-1]);
-#endif
 
 			/// TODO: use swap for this
 			// remove from the list
@@ -349,15 +344,8 @@ void
 	}
 
 	// move the new super-nodes to their updated position
-#ifdef STL_COLL_SPACE_NODES
 	for_each(m_pSpace->m_arrNodes.begin(), m_pSpace->m_arrNodes.begin() + GetSuperNodeCount(),
-		mem_fun<void, CNode>(&CNode::PositionNewSuper));
-#else
-	for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
-	{
-		m_pSpace->m_arrNodes[nAt]->PositionNewSuper();
-	}
-#endif
+		[](CNode* pNode) { pNode->PositionNewSuper(); });
 
 	// now layout the new supernodes; three times over
 	for (int nRep = 0; nRep < 1 /* 1 *//*3*/; nRep++)
@@ -370,27 +358,13 @@ void
 	}
 
 	// finish post processing of super-threshold nodes 
-#ifdef STL_COLL_SPACE_NODES
 	for_each(m_pSpace->m_arrNodes.begin(), m_pSpace->m_arrNodes.begin() + GetSuperNodeCount(),
-		mem_fun<void, CNode>(&CNode::UpdatePostSuper));
-#else
-	for (int nAt = 0; nAt < GetSuperNodeCount(); nAt++)
-	{
-		m_pSpace->m_arrNodes[nAt]->UpdatePostSuper();
-	}
-#endif
+		[](CNode* pNode) { pNode->UpdatePostSuper(); });
 
 	// finish processing all subthreshold nodesby moving the new super-nodes to
 	//		their updated position
-#ifdef STL_COLL_SPACE_NODES
 	for_each(m_pSpace->m_arrNodes.begin() + GetSuperNodeCount(), m_pSpace->m_arrNodes.end(),
-		bind2nd(mem_fun1<void, CNode, BOOL>(&CNode::SetIsSubThreshold), TRUE));
-#else
-	for (auto nAt = (size_t)GetSuperNodeCount(); nAt < m_pSpace->m_arrNodes.GetCount(); nAt++)
-	{
-		m_pSpace->m_arrNodes[nAt]->SetIsSubThreshold(TRUE);
-	}
-#endif
+		[](CNode* pNode) { pNode->SetIsSubThreshold(TRUE); });		
 
 }	// CSpace::PositionNewSuperNodes
 
@@ -406,68 +380,35 @@ void
 		: RELAX_NEW_GAIN_FACTOR;
 
 	// iterate over all super nodes
-#ifdef STL_COLL_SPACE_NODES
-	vector<CNode*>::iterator iterNode;
-	for (iterNode = m_pSpace->m_arrNodes.begin(); 
+	for (auto iterNode = m_pSpace->m_arrNodes.begin(); 
 			iterNode != m_pSpace->m_arrNodes.begin() + GetSuperNodeCount(); 
 			iterNode++)
-  {
-#else
-  for (int nAtNode = 0; nAtNode < GetSuperNodeCount(); nAtNode++)
 	{
-    CNode *pNode = m_pSpace->m_arrNodes[nAtNode];
-#endif
 		// iterate over linked nodes
-#ifdef STL_COLL_SPACE_NODES
-		vector<CNode*>::iterator iterLinked;
-		for (iterLinked = m_pSpace->m_arrNodes.begin(); 
+		for (auto iterLinked = m_pSpace->m_arrNodes.begin(); 
 				iterLinked != m_pSpace->m_arrNodes.begin() + GetSuperNodeCount(); 
 				iterLinked++)
 		{
-#else
-    for (int nAtLinked = 0; nAtLinked < GetSuperNodeCount(); nAtLinked++)
-    {
-      CNode *pLinked = m_pSpace->m_arrNodes[nAtLinked];
-#endif
 			// skip if we are at the same node
-#ifdef STL_COLL_SPACE_NODES
 			if (iterNode != iterLinked)
-#else
-      if (pNode != pLinked)
-#endif
 			{
 				if (bSubThreshold 
-#ifdef STL_COLL_SPACE_NODES
 					&& !(*iterLinked)->GetIsSubThreshold()
 					&& !(*iterNode)->GetIsSubThreshold()
 					&& !((*iterLinked)->GetPostSuperCount() > 0)
 					&& !((*iterNode)->GetPostSuperCount() > 0))
-#else
-					&& !pLinked->GetIsSubThreshold()
-					&& !pNode->GetIsSubThreshold()
-					&& !(pLinked->GetPostSuperCount() > 0)
-					&& !(pNode->GetPostSuperCount() > 0))
-#endif
 				{
 					continue;
 				}
 
 				// get the link, if there is one
-#ifdef STL_COLL_SPACE_NODES
 				CNodeLink *pLink = (*iterNode)->GetLinkTo(*iterLinked);
-#else
-				CNodeLink *pLink = pNode->GetLinkTo(pLinked);
-#endif
 				if (pLink != NULL)
 				{
 					// compute the distance error
-#ifdef STL_COLL_SPACE_NODES
 					REAL distErr = GetDistError((*iterNode), (*iterLinked));
 					distErr *= ((*iterNode)->GetActivation() + (*iterLinked)->GetActivation());
-#else
-					REAL distErr = GetDistError(pNode, pLinked);
-					distErr *= (pNode->GetActivation() + pLinked->GetActivation());
-#endif
+
 					// compute the gain and set it
 					REAL new_gain = 1.0f
 						- Sigmoid(distErr - RELAX_SIGMOID_SHIFT, RELAX_SIGMOID_FACTOR);
@@ -503,68 +444,38 @@ void
 	}
 
 	// iterate over all current visualized node views
-#ifdef STL_COLL_SPACE_NODES
-	vector<CNode*>::iterator iterNode = m_pSpace->m_arrNodes.begin();
+	auto iterNode = m_pSpace->m_arrNodes.begin();
 	for (int nAtNode = 0; nAtNode < nNodeCount; nAtNode++, iterNode++)
-  {
-#else
-	for (int nAtNode = 0; nAtNode < nNodeCount; nAtNode++)
-  {
-    CNode *pNode = m_pSpace->m_arrNodes[nAtNode];
-#endif
+	{
 		// store the size -- add 10 to ensure non-zero sizes
-#ifdef STL_COLL_SPACE_NODES
-		arrSize[nAtNode] = SIZE_SCALE * (*iterNode)->GetRadius() + 10.0; 
-#else
-		arrSize[nAtNode] = SIZE_SCALE * pNode->GetRadius() + 10.0f;
-#endif
+		arrSize[nAtNode] = SIZE_SCALE * (*iterNode)->GetRadius() + 10.0f; 
 
-		m_mSS[nAtNode][nAtNode] = 1.0;
-		m_mAvgAct[nAtNode][nAtNode] = 0.0;
-		m_mLinks[nAtNode][nAtNode] = 0.0;
+		m_mSS[nAtNode][nAtNode] = 1.0f;
+		m_mAvgAct[nAtNode][nAtNode] = 0.0f;
+		m_mLinks[nAtNode][nAtNode] = 0.0f;
 
 		// iterate over the potential linked views
-#ifdef STL_COLL_SPACE_NODES
-		vector<CNode*>::iterator iterLinked = iterNode+1;
+		auto iterLinked = iterNode+1;
 		for (int nAtLinkedNode = nAtNode+1; nAtLinkedNode < nNodeCount; 
 				nAtLinkedNode++, iterLinked++)
 		{
-#else
-		for (int nAtLinkedNode = nAtNode+1; nAtLinkedNode < nNodeCount; 
-				nAtLinkedNode++)
-		{
-      CNode *pLinkedNode = m_pSpace->m_arrNodes[nAtLinkedNode];
-#endif
-
-      // common size is average
+			// common size is average
 			const REAL ss = (arrSize[nAtNode] + arrSize[nAtLinkedNode]) / 2.0f;
 
 			// set size in size matrix
 			m_mSS[nAtLinkedNode][nAtNode] = ss * ss;
 
 			// get average activation
-#ifdef STL_COLL_SPACE_NODES
+
 			REAL avgAct = m_mAvgAct[nAtLinkedNode][nAtNode] =
 				((*iterNode)->GetActivation()+(*iterLinked)->GetActivation());
-#else
-			REAL avgAct = m_mAvgAct[nAtLinkedNode][nAtNode] =
-				(pNode->GetActivation()+pLinkedNode->GetActivation());
-#endif
 
 
 			// retrieve the link weight for layout
-#ifdef STL_COLL_SPACE_NODES
 			REAL weight =
 				((*iterNode)->GetActivation() / avgAct * (*iterNode)->GetLinkGainWeight(*iterLinked)
 					+ (*iterLinked)->GetActivation() / avgAct * (*iterLinked)->GetLinkGainWeight((*iterNode))) 
 						+ (REAL) 1e-6;
-#else
-			REAL weight =
-				(pNode->GetActivation() / avgAct * pNode->GetLinkGainWeight(pLinkedNode)
-					+ pLinkedNode->GetActivation() / avgAct * pLinkedNode->GetLinkGainWeight(pNode)) 
-						+ (REAL) 1e-6;
-#endif
-
 
 			// store the link weight
 			m_mLinks[nAtLinkedNode][nAtNode] =

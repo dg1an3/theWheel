@@ -1,4 +1,3 @@
-#include "include\SpaceView.h"
 //////////////////////////////////////////////////////////////////////
 // SpaceView.cpp: implementation of the CSpaceView class.
 //
@@ -123,19 +122,11 @@ CSpaceView::CSpaceView()
 CSpaceView::~CSpaceView()
 {
 	// get rid of the node views
-#ifdef STL_COLL
-	for (int nAt = 0; nAt < m_arrNodeViews.size(); nAt++)
-	{
-		delete m_arrNodeViews.at(nAt);
-	}
-	m_arrNodeViews.clear(); // RemoveAll();
-#else
-	for (auto nAt = 0U; nAt < m_arrNodeViews.GetCount(); nAt++)
+	for (auto nAt = 0U; nAt < m_arrNodeViews.size(); nAt++)
 	{
 		delete m_arrNodeViews[nAt];
 	}
-	m_arrNodeViews.RemoveAll();
-#endif
+	m_arrNodeViews.clear(); // RemoveAll();
 
 	if (m_pd3dDev != NULL)
 		m_pd3dDev->Release();
@@ -168,6 +159,11 @@ CSpaceView::~CSpaceView()
 
 	// delete the tracker
 	delete m_pTracker;
+
+	if (m_pNLM != NULL)
+	{
+		delete m_pNLM;
+	}
 
 }	// CSpaceView::~CSpaceView
 
@@ -474,12 +470,7 @@ void CSpaceView::CreateNodeViews(CNode *pParentNode, CPoint pt)
 	pParentNode->GetDib();
 
 	// and add to the array
-#ifdef STL_COLL
 	m_arrNodeViews.push_back(pNewNodeView);
-#else
-	m_arrNodeViews.Add(pNewNodeView);
-#endif
-
 
 	// and finally, create the child node views
 	int nAtNode;
@@ -712,19 +703,11 @@ void
 	ASSERT(GetSpace() != NULL);
 
 	// get rid of the node views
-#ifdef STL_COLL
-	for (int nAt = 0; nAt < m_arrNodeViews.size(); nAt++)
+	for (auto pNode : m_arrNodeViews)
 	{
-		delete m_arrNodeViews.at(nAt);
+		delete pNode;
 	}
 	m_arrNodeViews.clear();
-#else
-	for (auto nAt = 0U; nAt < m_arrNodeViews.GetCount(); nAt++)
-	{
-		delete m_arrNodeViews[nAt];
-	}
-	m_arrNodeViews.RemoveAll();
-#endif
 
 	// create the child node views
 	CRect rect;
@@ -992,79 +975,26 @@ void CSpaceView::OnPaint()
 		ASSERT_HRESULT(m_pd3dDev->BeginScene());
 
 		// now populate array to hold the drawing-order for the nodeviews
-#ifdef STL_COLL_SPACE_NODES
-		arrNodeViewsToDraw.resize(__min(GetVisibleNodeCount() * 2, 
+		arrNodeViewsToDraw.resize(__min((UINT) GetVisibleNodeCount() * 2, 
 			GetSpace()->m_arrNodes.size())); 
 		copy(GetSpace()->m_arrNodes.begin(), 
 			GetSpace()->m_arrNodes.begin() + arrNodeViewsToDraw.size(),
 			arrNodeViewsToDraw.begin());
-#else
-#ifdef STL_COLL
-		arrNodeViewsToDraw.resize(__min(GetVisibleNodeCount() * 2, 
-			GetSpace()->m_arrNodes.GetCount())); 
-    for (int nAt = 0; nAt < arrNodeViewsToDraw.size(); nAt++)
-    {
-      arrNodeViewsToDraw[nAt] = GetSpace()->m_arrNodes[nAt];
-    }
-
-#else
-		arrNodeViewsToDraw.SetCount(__min((size_t)GetVisibleNodeCount() * 2,
-			(size_t)GetSpace()->m_arrNodes.GetCount()));
-    for (auto nAt = 0U; nAt < arrNodeViewsToDraw.GetCount(); nAt++)
-    {
-      arrNodeViewsToDraw[nAt] = GetSpace()->m_arrNodes[nAt];
-    }
-#endif
-#endif
 
 		// sort by activation difference comparison
-#ifdef STL_COLL
 		sort(arrNodeViewsToDraw.begin(), arrNodeViewsToDraw.end(),
 			&CNodeView::IsActDiffGreater);
-#else
-		sort(&arrNodeViewsToDraw[0], &arrNodeViewsToDraw[0]+arrNodeViewsToDraw.GetCount(),
-			&CNodeView::IsActDiffGreater);
-#endif
 
 		// draw the node view links
-#ifdef STL_COLL
-		vector<CNode*>::iterator iter;
-		for (iter = arrNodeViewsToDraw.begin(); iter != arrNodeViewsToDraw.end(); iter++)
-			if (!(*iter)->GetIsSubThreshold())
-				((CNodeView*)(*iter)->GetView())->DrawLinks(m_pd3dDev, &m_skin);
+		for (auto pNode : arrNodeViewsToDraw)
+			if (!pNode->GetIsSubThreshold())
+				((CNodeView*)pNode->GetView())->DrawLinks(m_pd3dDev, &m_skin);
 
-#else
-		for (auto nAt = 0U; nAt < arrNodeViewsToDraw.GetCount(); nAt++)
-    {
-      CNode *pNode = arrNodeViewsToDraw[nAt];
-	  auto pNodeView = (CNodeView*) pNode->GetView();
-	  if (pNodeView != NULL)
-	  {
-		  if (!pNode->GetIsSubThreshold())
-		  {
-			  pNodeView->DrawLinks(m_pd3dDev, &m_skin);
-		  }
-	  }
-    }
-#endif
 
 		// draw in sorted order
-#ifdef STL_COLL
-		for (iter = arrNodeViewsToDraw.begin(); iter != arrNodeViewsToDraw.end(); iter++)
-			if (!(*iter)->GetIsSubThreshold())
-				((CNodeView*)(*iter)->GetView())->Draw(m_pd3dDev); 
-#else
-		for (auto nAt = 0U; nAt < arrNodeViewsToDraw.GetCount(); nAt++)
-    {
-      CNode *pNode = arrNodeViewsToDraw[nAt];
-	  auto pNodeView = (CNodeView*)pNode->GetView();
-	  if (pNodeView != NULL)
-	  {
-		  if (!pNode->GetIsSubThreshold())
-			  pNodeView->Draw(m_pd3dDev);
-	  }
-    }
-#endif
+		for (auto pNode : arrNodeViewsToDraw)
+			if (!pNode->GetIsSubThreshold())
+				((CNodeView*)pNode->GetView())->Draw(m_pd3dDev);
 
 		// End the scene
 		ASSERT_HRESULT(m_pd3dDev->EndScene());
@@ -1257,86 +1187,3 @@ void CSpaceView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	
 	CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
 }
-
-
-#ifdef SKIN_RENDER_3D
-			///////////////////////////////////////////////////////////////
-			// 3D rendering
-			///////////////////////////////////////////////////////////////
-
-			// create context
-
-			// Direct3D rendering -- initialize the objects first
-			LPDIRECT3DDEVICE2 lpD3DDev = NULL;
-			ASSERT_BOOL(m_skin.InitD3DDevice(m_lpDDSOne, &lpD3DDev));
-
-			CRect rectClient;
-			GetClientRect(rectClient);
-			LPDIRECT3DVIEWPORT2	lpViewport = NULL;
-			ASSERT_BOOL(m_skin.InitViewport(lpD3DDev, rectClient, &lpViewport));
-
-			// set up the zoom transform, accounting for rectangle
-			//		inflation
-			D3DMATRIX mat;
-			ZeroMemory(&mat, sizeof(D3DMATRIX));
-			mat(0, 0) = (D3DVALUE) (1.0 / (rectClient.Width())); //  + 10.0));
-			mat(1, 1) = (D3DVALUE) (1.0 / (rectClient.Width())); // + 10.0));
-			mat(2, 2) = (D3DVALUE) 1.0; 
-			mat(3, 3) = (D3DVALUE) 1.0;
-			ASSERT_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_VIEW, &mat));
-
-			LPDIRECT3DLIGHT lpLights[2];
-			ASSERT_BOOL(m_skin.InitLights(lpViewport, lpLights));
-
-			// create the material and attach to the device's state
-			LPDIRECT3DMATERIAL2	lpMaterial = NULL;
-			ASSERT_BOOL(m_skin.InitMaterial(&lpMaterial));
-
-			D3DTEXTUREHANDLE hMat;
-			ASSERT_HRESULT(lpMaterial->GetHandle(lpD3DDev, &hMat));
-			ASSERT_HRESULT(lpD3DDev->SetLightState(D3DLIGHTSTATE_MATERIAL, hMat));
-
-			// render the skin
-			ASSERT_HRESULT(lpD3DDev->BeginScene());
-
-			// render in sorted order
-			for (nAtNodeView = 0; nAtNodeView < arrNodeViewsToDraw.GetSize(); 
-					nAtNodeView++)
-			{
-				CNodeView *pNodeView = ((CNodeView *)arrNodeViewsToDraw[nAtNodeView]);
-				if (!pNodeView->GetNode()->IsSubThreshold()
-					|| pNodeView->GetNode()->IsPostSuper())
-				{
-					// draw the min_diff node view
-					// TODO: fix this
-					const int THICK_PEN_WIDTH = 4;
-					m_skin.CalcShape(pNodeView, pNodeView->GetShape(), THICK_PEN_WIDTH);
-
-					if (pNodeView->m_extOuter // GetOuterRect()
-						.Height() > 1)
-					{
-						mat(0, 0) = (D3DVALUE) 1.0;
-						mat(1, 1) = (D3DVALUE) 1.0;
-						mat(2, 2) = (D3DVALUE) 1.0;
-						mat(3, 3) = (D3DVALUE) 1.0;
-
-						mat(3, 0) = (D3DVALUE) (pNodeView->GetSpringCenter()[0] * 2.0 - rectClient.Width());
-						mat(3, 1) = (D3DVALUE) (-pNodeView->GetSpringCenter()[1] * 2.0 + rectClient.Height());
-
-						ASSERT_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_WORLD, &mat));
-
-						m_skin.DrawSkinD3D(lpD3DDev, pNodeView);
-					}
-
-					// pNodeView->Draw3D(m_lpDDSOne);
-				}
-			} 
-
-			ASSERT_HRESULT(lpD3DDev->EndScene());
-
-			// release the interface
-			ASSERT_HRESULT(lpMaterial->Release());
-			ASSERT_HRESULT(lpLights[0]->Release());
-			ASSERT_HRESULT(lpLights[1]->Release());
-			ASSERT_HRESULT(lpViewport->Release());
-#endif

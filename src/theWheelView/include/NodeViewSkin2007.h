@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Plaque.h"
-#include "elliptangle.h"
 
 class CNodeView;
 
@@ -32,10 +31,10 @@ public:
 
 	virtual ~NodeViewSkin(void)
 	{
-		for each (Plaque *plaque in m_arrPlaques)
+		for (auto plaque : m_arrPlaques)
 		{
 			if (plaque)
-				delete plaque; // ->~Plaque();
+				delete plaque;
 		}
 	}
 

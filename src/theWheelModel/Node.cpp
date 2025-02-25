@@ -81,28 +81,12 @@ CNode::~CNode()
 	// constructs a CNode object with the given name and description
 {
 	// delete the children
-#ifdef STL_COLL
-  vector<CNode*>::iterator iterNode;
-	for (iterNode = m_arrChildren.begin(); iterNode != m_arrChildren.end(); iterNode++)
+	for (auto iterNode = m_arrChildren.begin(); iterNode != m_arrChildren.end(); iterNode++)
 		delete (*iterNode);
-#else
-  for (auto nAt = 0U; nAt < m_arrChildren.GetCount(); nAt++)
-  {
-    delete m_arrChildren[nAt];
-  }
-#endif
 
-	// delete the links
-#ifdef STL_COLL
-	vector<CNodeLink*>::iterator iterLink;
-	for (iterLink = m_arrLinks.begin(); iterLink != m_arrLinks.end(); iterLink++)
+	// delete the links	
+	for (auto iterLink = m_arrLinks.begin(); iterLink != m_arrLinks.end(); iterLink++)
 		delete (*iterLink);
-#else
-  for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
-  {
-    delete m_arrLinks[nAt];
-  }
-#endif
 
 	// delete the DIB, if present
 	if (m_pDib)
@@ -139,19 +123,8 @@ void CNode::SetParent(CNode *pParent)
 	if (m_pParent)
 	{
 		// find this in the children array
-#ifdef STL_COLL
-		vector<CNode*>::iterator iter;
-		iter = std::remove(m_pParent->m_arrChildren.begin(), m_pParent->m_arrChildren.end(), this);
+		auto iter = std::remove(m_pParent->m_arrChildren.begin(), m_pParent->m_arrChildren.end(), this);
 		m_pParent->m_arrChildren.erase(iter, m_pParent->m_arrChildren.end());
-#else
-    for (int nAt = m_pParent->m_arrChildren.GetCount()-1; nAt >= 0; nAt--)
-    {
-      if (m_pParent->m_arrChildren[nAt] == this)
-      {
-        m_pParent->m_arrChildren.RemoveAt(nAt);
-      }
-    }
-#endif
 	}
 
 	// set the parent pointer
@@ -167,12 +140,7 @@ void CNode::SetParent(CNode *pParent)
 		}
 
 		// add to the children array
-#ifdef STL_COLL
-    m_pParent->m_arrChildren.push_back(this); 
-#else
-    m_pParent->m_arrChildren.Add(this);
-#endif
-
+	    m_pParent->m_arrChildren.push_back(this); 
 	}
 
 }	// CNode::SetParent
@@ -182,11 +150,7 @@ void CNode::SetParent(CNode *pParent)
 int CNode::GetChildCount() const
 	// returns the number of child nodes for this node
 {
-#ifdef STL_COLL
 	return (int) m_arrChildren.size();
-#else
-  return (int) m_arrChildren.GetCount();
-#endif
 
 }	// CNode::GetChildCount
 
@@ -195,11 +159,7 @@ int CNode::GetChildCount() const
 CNode *CNode::GetChildAt(int nAt)
 	// returns the child node at the given index
 {
-#ifdef STL_COLL
-  return m_arrChildren.at(nAt);
-#else
-  return m_arrChildren[nAt];
-#endif
+	return m_arrChildren.at(nAt);
 
 }	// CNode::GetChildAt
 
@@ -367,12 +327,7 @@ REAL
 int CNode::GetLinkCount() const
 	// returns the number of links for this node
 {
-#ifdef STL_COLL
 	return (int) m_arrLinks.size(); 
-#else
-  return (int) m_arrLinks.GetCount(); 
-#endif
-
 
 }	// CNode::GetLinkCount
 
@@ -381,11 +336,7 @@ int CNode::GetLinkCount() const
 //////////////////////////////////////////////////////////////////////
 CNodeLink *CNode::GetLinkAt(int nAt)
 {
-#ifdef STL_COLL
-  return m_arrLinks.at(nAt); 
-#else
-  return m_arrLinks[nAt]; 
-#endif
+	return m_arrLinks.at(nAt); 
 
 }	// CNode::GetLinkAt
 
@@ -396,20 +347,12 @@ CNodeLink *CNode::GetLinkAt(int nAt)
 CNodeLink * CNode::GetLinkTo(CNode * pToNode)
 {
 	// find the weight in the map
-#ifdef STL_COLL
-  stdext::hash_map<CNode*, CNodeLink*>::iterator iter = m_mapLinks.find(pToNode);
+	auto iter = m_mapLinks.find(pToNode);
 	if (iter != m_mapLinks.end())
 	{	
 		// return the weight
 		return iter->second;
 	}
-#else
-  CNodeLink *pToLink/* = NULL*/;
-  if (m_mapLinks.Lookup(pToNode, pToLink))
-  {
-    return pToLink;
-  }
-#endif
 
 	// not found?  return NULL
 	return NULL;
@@ -423,20 +366,12 @@ CNodeLink * CNode::GetLinkTo(CNode * pToNode)
 REAL CNode::GetLinkWeight(CNode * pToNode)
 {
 	// find the weight in the map
-#ifdef STL_COLL
-  stdext::hash_map<CNode*, CNodeLink*>::iterator iter = m_mapLinks.find(pToNode);
+	auto iter = m_mapLinks.find(pToNode);
 	if (iter != m_mapLinks.end())
 	{	
 		// return the weight
 		return iter->second->GetWeight();
 	}
-#else
-  CNodeLink *pToLink/* = NULL*/;
-  if (m_mapLinks.Lookup(pToNode, pToLink))
-  {
-    return pToLink->GetWeight();
-  }
-#endif  
 
 	// not found? return 0.0
 	return (REAL) 0.0;
@@ -482,18 +417,10 @@ void CNode::LinkTo(CNode *pToNode, REAL weight, BOOL bReciprocalLink)
 	{
 		// create a new node link with the target and weight
 		CNodeLink *pLink = new CNodeLink(pToNode, weight);
-#ifdef STL_COLL
 		m_arrLinks.push_back(pLink);
-#else
-    m_arrLinks.Add(pLink);
-#endif
 
 		// add to the map
-#ifdef STL_COLL
 		m_mapLinks.insert(make_pair(pToNode, pLink));
-#else
- 		m_mapLinks.SetAt(pToNode, pLink);
-#endif
 
 		// cross-link at the same weight
 		if (bReciprocalLink)
@@ -528,9 +455,7 @@ void CNode::LinkTo(CNode *pToNode, REAL weight, BOOL bReciprocalLink)
 void CNode::Unlink(CNode *pNode, BOOL bReciprocalLink)
 {
 	// search through the links,
-#ifdef STL_COLL
-  vector<CNodeLink*>::iterator iter;
-	for (iter = m_arrLinks.begin(); iter != m_arrLinks.end(); iter++)
+	for (auto iter = m_arrLinks.begin(); iter != m_arrLinks.end(); iter++)
 	{
 		// looking for the one with the desired target
 		if ((*iter)->GetTarget() == pNode)
@@ -542,26 +467,13 @@ void CNode::Unlink(CNode *pNode, BOOL bReciprocalLink)
 			break;
 		}
 	}
-#else
-  for (int nAt = m_arrLinks.GetCount()-1; nAt >= 0; nAt--)
-  {
-    if (m_arrLinks[nAt]->GetTarget() == pNode)
-    {
-      m_arrLinks.RemoveAt(nAt);
-    }
-  }
-#endif
 
-  /// TODO: does this delete the link object???
+	/// TODO: does this delete the link object???
 
 	// remove from the weight map
-#ifdef STL_COLL
-	stdext::hash_map<CNode*,CNodeLink*>::iterator iter_map = m_mapLinks.find(pNode);
+	auto iter_map = m_mapLinks.find(pNode);
 	if (iter_map != m_mapLinks.end())
 		m_mapLinks.erase(iter_map);
-#else
-  m_mapLinks.RemoveKey(pNode);
-#endif
 
 	// if the reciprocal link should be removed,
 	if (bReciprocalLink)
@@ -578,22 +490,12 @@ void CNode::Unlink(CNode *pNode, BOOL bReciprocalLink)
 //////////////////////////////////////////////////////////////////////
 void CNode::RemoveAllLinks()
 {
-#ifdef STL_COLL
-	vector<CNodeLink*>::iterator iter;
-	for (iter = m_arrLinks.begin(); iter != m_arrLinks.end(); iter++)
+	for (auto iter = m_arrLinks.begin(); iter != m_arrLinks.end(); iter++)
 	{
 		delete (*iter);
 	}
 	m_arrLinks.clear();
 	m_mapLinks.clear();
-#else
-  for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
-  {
-    delete m_arrLinks[nAt];
-  }
-  m_arrLinks.RemoveAll();
-  m_mapLinks.RemoveAll();
-#endif
 
 	// fire change
 	NODE_FIRE_CHANGE();
@@ -606,31 +508,14 @@ REAL
 	CNode::GetMaxLinkWeight(void)
 	// returns max link weight for this and all child nodes
 {	
-  // find the max of my link weights
-#ifdef STL_COLL
-	vector<CNodeLink*>::iterator iterMax;
-	iterMax = max_element(m_arrLinks.begin(), m_arrLinks.end(), 
+	// find the max of my link weights
+	auto iterMax = max_element(m_arrLinks.begin(), m_arrLinks.end(), 
 		&CNodeLink::IsWeightGreater);
 	REAL maxWeight = (*iterMax)->GetWeight();
-#else
-  REAL maxWeight = 0.0;
-  for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
-  {
-    maxWeight = __max(maxWeight, m_arrLinks[nAt]->GetWeight());
-  }
-#endif
 
 	// now do the same for all children
-#ifdef STL_COLL
-	vector<CNode*>::iterator iterNode;
-	for (iterNode = m_arrChildren.begin(); iterNode != m_arrChildren.end(); iterNode++)
+	for (auto iterNode = m_arrChildren.begin(); iterNode != m_arrChildren.end(); iterNode++)
 		maxWeight = __max(maxWeight, (*iterNode)->GetMaxLinkWeight());
-#else
-  for (auto nAt = 0U; nAt < m_arrChildren.GetCount(); nAt++)
-  {
-    maxWeight = __max(maxWeight, m_arrChildren[nAt]->GetMaxLinkWeight());
-  }
-#endif
 
 	return maxWeight;
 }
@@ -650,28 +535,12 @@ void
 	// scales all link weights by scale factor
 {
 	// scale each of the node's links
-#ifdef STL_COLL
-	vector<CNodeLink*>::iterator iterLink;
-	for (iterLink = m_arrLinks.begin(); iterLink != m_arrLinks.end(); iterLink++)
+	for (auto iterLink = m_arrLinks.begin(); iterLink != m_arrLinks.end(); iterLink++)
 		(*iterLink)->SetWeight(ScaleWeight(scale, (*iterLink)->GetWeight()));
-#else
-  for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
-  {
-    m_arrLinks[nAt]->SetWeight(ScaleWeight(scale, m_arrLinks[nAt]->GetWeight()));
-  }
-#endif
 
 	// now do the same for all children
-#ifdef STL_COLL
-	vector<CNode*>::iterator iterNode;
-	for (iterNode = m_arrChildren.begin(); iterNode != m_arrChildren.end(); iterNode++)
+	for (auto iterNode = m_arrChildren.begin(); iterNode != m_arrChildren.end(); iterNode++)
 		(*iterNode)->ScaleLinkWeights(scale);
-#else
-  for (auto nAt = 0U; nAt < m_arrChildren.GetCount(); nAt++)
-  {
-    m_arrChildren[nAt]->ScaleLinkWeights(scale);
-  }
-#endif
 }
 
 
@@ -862,16 +731,8 @@ void
 	}
 
 	// propagate through all links
-#ifdef STL_COLL
-	vector<CNodeLink*>::iterator iter;
-	for (iter = m_arrLinks.begin(); iter != m_arrLinks.end(); iter++)
+	for (auto iter = m_arrLinks.begin(); iter != m_arrLinks.end(); iter++)
 		(*iter)->PropagateActivation(this, initScale, alpha);
-#else
-  for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
-  {
-    m_arrLinks[nAt]->PropagateActivation(this, initScale, alpha);
-  }
-#endif
 
 }	// CNode::PropagateActivation
 
@@ -882,15 +743,8 @@ void
 	// resets the "hasPropagated" flags on the link weights
 {
 	// reset all node link propagation flags
-#ifdef STL_COLL
 	for_each(m_arrLinks.begin(), m_arrLinks.end(),
-		bind2nd(mem_fun1<void, CNodeLink, BOOL>(&CNodeLink::SetHasPropagated), FALSE));
-#else
-  for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
-  {
-    m_arrLinks[nAt]->SetHasPropagated(FALSE);
-  }
-#endif
+		bind2nd(mem_fun<void, CNodeLink, BOOL>(&CNodeLink::SetHasPropagated), FALSE));
 
 	// reset new activation
 	m_newSecondaryActivation = m_secondaryActivation;
@@ -900,15 +754,8 @@ void
 	m_pMaxActivator = NULL;
 
 	// recursively call for children
-#ifdef STL_COLL
 	for_each(m_arrChildren.begin(), m_arrChildren.end(), 
 		mem_fun<void, CNode>(&CNode::ResetForPropagation));
-#else
-  for (auto nAt = 0U; nAt < m_arrChildren.GetCount(); nAt++)
-  {
-    m_arrChildren[nAt]->ResetForPropagation();
-  }
-#endif
 
 
 }	// CNode::ResetForPropagation
@@ -930,15 +777,8 @@ void
 	m_secondaryActivation = m_newSecondaryActivation;
 
 	// recursively call for children
-#ifdef STL_COLL
 	for_each(m_arrChildren.begin(), m_arrChildren.end(), 
 		mem_fun<void, CNode>(&CNode::UpdateFromNewActivation));
-#else
-  for (auto nAt = 0U; nAt < m_arrChildren.GetCount(); nAt++)
-  {
-    m_arrChildren[nAt]->UpdateFromNewActivation();
-  }
-#endif
 }
 
 
@@ -1039,32 +879,16 @@ void CNode::Serialize(CArchive &ar)
 
 	if (ar.IsStoring())
 	{
-#ifdef STL_COLL
-		std::vector<CNode*>::iterator iter;
-		for (iter = m_arrChildren.begin(); iter != m_arrChildren.end(); iter++)
+		for (auto iter = m_arrChildren.begin(); iter != m_arrChildren.end(); iter++)
 			arrChildren.Add(*iter);
-#else
-    for (auto nAt = 0U; nAt < m_arrChildren.GetCount(); nAt++)
-    {
-      arrChildren.Add(m_arrChildren[nAt]);
-    }
-#endif
 	}
 	arrChildren.Serialize(ar);
 	if (ar.IsLoading())
 	{
 		// populate link array
-#ifdef STL_COLL
 		m_arrChildren.clear();
 		for (int nAt = 0; nAt < arrChildren.GetSize(); nAt++)
 			m_arrChildren.push_back((CNode*) arrChildren[nAt]);
-#else
-    m_arrChildren.RemoveAll();
-    for (auto nAt = 0; nAt < arrChildren.GetCount(); nAt++)
-    {
-      m_arrChildren.Add((CNode*) arrChildren[nAt]);
-    }
-#endif
 	}
 
 	// serialize links
@@ -1072,20 +896,11 @@ void CNode::Serialize(CArchive &ar)
 
 	if (ar.IsStoring())
 	{
-#ifdef STL_COLL
-		std::vector<CNodeLink*>::iterator iter;
-		for (iter = m_arrLinks.begin(); iter != m_arrLinks.end(); iter++)
+		for (auto iter = m_arrLinks.begin(); iter != m_arrLinks.end(); iter++)
 		{
 			if ((*iter)->GetWeight() > 1e-6)
 				arrLinks.Add(*iter);
 		}
-#else
-    for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
-    {
-      if (m_arrLinks[nAt]->GetWeight() > 1e-6)
-        arrLinks.Add(m_arrLinks[nAt]);
-    }
-#endif
 	}
 
 	arrLinks.Serialize(ar);
@@ -1093,15 +908,9 @@ void CNode::Serialize(CArchive &ar)
 	if (ar.IsLoading())
 	{
 		// populate link array
-#ifdef STL_COLL
 		m_arrLinks.clear();
 		for (int nAt = 0; nAt < arrLinks.GetSize(); nAt++)
 			m_arrLinks.push_back((CNodeLink*) arrLinks[nAt]);
-#else
-    m_arrLinks.RemoveAll();
-		for (auto nAt = 0; nAt < arrLinks.GetSize(); nAt++)
-			m_arrLinks.Add((CNodeLink*) arrLinks[nAt]);
-#endif
 	}
 
 	// if we are loading,
@@ -1117,19 +926,11 @@ void CNode::Serialize(CArchive &ar)
 		// SortLinks();
 
 		// and set up the map
-#ifdef STL_COLL
 		m_mapLinks.clear();
 		for (int nAt = 0; nAt < GetLinkCount(); nAt++)
 		{
 			m_mapLinks.insert(make_pair(GetLinkAt(nAt)->GetTarget(), GetLinkAt(nAt)));
 		}
-#else
-		m_mapLinks.RemoveAll();
-		for (auto nAt = 0; nAt < GetLinkCount(); nAt++)
-		{
-			m_mapLinks.SetAt(GetLinkAt(nAt)->GetTarget(), GetLinkAt(nAt));
-		}
-#endif
 	}
 
 }	// CNode::Serialize
