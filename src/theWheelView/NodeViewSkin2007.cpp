@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 
 #include <CastVectorD.h>
-#include "NodeViewSkin2.h"
+#include "NodeViewSkin2007.h"
 #include "NodeView.h"
 #include "Elliptangle.h"
 
