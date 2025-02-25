@@ -80,12 +80,11 @@ void CSpaceClassDlg::PopulateClassList()
 		return;
 	
 	int nIndex = 0;
-	POSITION pos = m_pSpace->GetClassColorMap().GetStartPosition();
-	while (NULL != pos)
+	auto pos = m_pSpace->GetClassColorMap().begin();
+	while (m_pSpace->GetClassColorMap().end()  != pos)
 	{
-		CString strClass;
-		COLORREF color;
-		m_pSpace->GetClassColorMap().GetNextAssoc(pos, strClass, color);
+		CString strClass = pos->first;
+		COLORREF color = pos->second;
 
 		// set up the item structure
 		LVITEM lvitem; 
@@ -185,7 +184,7 @@ void CSpaceClassDlg::OnClickClasslist(NMHDR* pNMHDR, LRESULT* pResult)
 				if (m_pSpace)
 				{
 					CString strClass = m_ClassList.GetItemText(pNMListView->iItem, 0);
-					m_pSpace->GetClassColorMap().SetAt(strClass, dlgColor.GetColor());
+					m_pSpace->GetClassColorMap()[strClass] = dlgColor.GetColor();
 				}
 				Invalidate(TRUE);
 			}
@@ -203,7 +202,7 @@ void CSpaceClassDlg::OnBtnnewclass()
 	if (m_strNewClassName != "")
 	{
 		// add a new class item to the space
-		m_pSpace->GetClassColorMap().SetAt(m_strNewClassName, RGB(0, 0, 0));
+		m_pSpace->GetClassColorMap()[m_strNewClassName] = RGB(0, 0, 0);
 
 		PopulateClassList();
 	}

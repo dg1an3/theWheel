@@ -1005,7 +1005,7 @@ void CSpaceView::OnPaint()
 
 #else
 		arrNodeViewsToDraw.SetCount(__min(GetVisibleNodeCount() * 2, 
-			GetSpace()->m_arrNodes.GetCount())); 
+			GetSpace()->m_arrNodes.size()));
     for (int nAt = 0; nAt < arrNodeViewsToDraw.GetCount(); nAt++)
     {
       arrNodeViewsToDraw[nAt] = GetSpace()->m_arrNodes[nAt];

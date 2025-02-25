@@ -130,12 +130,8 @@ int
 	CSpace::GetNodeCount() const
 	// returns the number of nodes in the space
 {
-#ifdef STL_COLL_SPACE_NODES
 	return (int) m_arrNodes.size(); 
-#else
-	return (int) m_arrNodes.GetCount(); 
-#endif
-
+#
 
 }	// CSpace::GetNodeCount
 
@@ -145,12 +141,7 @@ CNode *
 	CSpace::GetNodeAt(int nAt)
 	// returns a node by index
 {
-#ifdef STL_COLL_SPACE_NODES
-  return m_arrNodes.at(nAt);
-#else
-  return m_arrNodes[nAt];
-#endif
-
+	return m_arrNodes.at(nAt);
 
 }	// CSpace::GetNodeAt
 
@@ -189,21 +180,8 @@ void
 	// removes a particular node from the space
 {
 	// unlink from current nodes
-#ifdef STL_COLL_SPACE_NODES
-	vector<CNode*>::iterator iter;
-	for (iter = m_arrNodes.begin(); iter != m_arrNodes.end(); iter++)
-		(*iter)->Unlink(pMarkedNode, FALSE);
-#else
-  int nMarkedAt = -1;
-  for (int nAt = 0; nAt < m_arrNodes.GetCount(); nAt++)
-  {
-    m_arrNodes[nAt]->Unlink(pMarkedNode, FALSE);
-    if (m_arrNodes[nAt] == pMarkedNode)
-    {
-      nMarkedAt = nAt;
-    }
-  }
-#endif
+	for (auto node : m_arrNodes)
+		node->Unlink(pMarkedNode, FALSE);
 
 	// remove the node from the parent
 	pMarkedNode->SetParent(NULL);
@@ -212,15 +190,9 @@ void
 	pMarkedNode->SetActivation(0.00001);
 
 	// find and remove the node from the array
-#ifdef STL_COLL_SPACE_NODES
-	iter = remove(m_arrNodes.begin(), m_arrNodes.end(), pMarkedNode);
+
+	auto iter = remove(m_arrNodes.begin(), m_arrNodes.end(), pMarkedNode);
 	m_arrNodes.erase(iter, m_arrNodes.end());
-#else
-  if (nMarkedAt > -1)
-  {
-    m_arrNodes.RemoveAt(nMarkedAt);
-  }
-#endif
 
 }	// CSpace::RemoveNode
 
@@ -276,26 +248,9 @@ void
 	REAL diffFrac = (sum / totalActivation - 1.0);
 	if (diffFrac > 0.0) diffFrac = 0.0;
 
-#ifdef STL_COLL_SPACE_NODES
 	// scale the nodes
-	vector<CNode*>::iterator iter;
-	for (iter = m_arrNodes.begin(); iter != m_arrNodes.end(); iter++)
+	for (auto pNode : m_arrNodes)
 	{
-		// scale this node's activation
-		m_totalPrimaryActivation -= (*iter)->m_primaryActivation;
-		(*iter)->m_primaryActivation += (*iter)->m_primaryActivation * diffFrac * PRIM_NORM_SCALE;
-		m_totalPrimaryActivation += (*iter)->m_primaryActivation;
-
-		m_totalSecondaryActivation -= (*iter)->m_secondaryActivation;
-		(*iter)->m_secondaryActivation += (*iter)->m_secondaryActivation * diffFrac * SEC_NORM_SCALE;
-		m_totalSecondaryActivation += (*iter)->m_secondaryActivation;
-	}
-#else
-	// scale the nodes
-	for (int nAt = 0; nAt < m_arrNodes.GetCount(); nAt++)
-	{
-    CNode *pNode = m_arrNodes[nAt];
-
 		// scale this node's activation
 		m_totalPrimaryActivation -= pNode->m_primaryActivation;
 		pNode->m_primaryActivation += pNode->m_primaryActivation * diffFrac * PRIM_NORM_SCALE;
@@ -305,13 +260,12 @@ void
 		pNode->m_secondaryActivation += pNode->m_secondaryActivation * diffFrac * SEC_NORM_SCALE;
 		m_totalSecondaryActivation += pNode->m_secondaryActivation;
 	}
-#endif
 
 }	// CSpace::NormalizeNodes
 
 
 //////////////////////////////////////////////////////////////////////
-CMap<CString, LPCTSTR, COLORREF, COLORREF>& 
+map<CString, COLORREF>& 
 	CSpace::GetClassColorMap()
 	// class description accessors
 {
@@ -383,16 +337,16 @@ BOOL
 //////////////////////////////////////////////////////////////////////
 int NodeSortByActivation(const void *pLeft, const void *pRight)
 {
-  CNode *pNodeL = *(CNode**) pLeft;
+	CNode *pNodeL = *(CNode**) pLeft;
 	REAL act1 = pNodeL->GetActivation();
 	// now add additional factor for post-super count: max 40 adds 0.1 to activation
 	act1 += 0.1 * (REAL) pNodeL->GetPostSuperCount() / 40.0;
 
-  CNode *pNodeR = *(CNode**) pRight;
+	CNode *pNodeR = *(CNode**) pRight;
 	REAL act2 = pNodeR->GetActivation();
 	act2 += 0.1 * (REAL) pNodeR->GetPostSuperCount() / 40.0;
 
-  return (act1 > act2) ? -1 : 1;
+	return (act1 > act2) ? -1 : 1;
 }
 
 
@@ -404,16 +358,10 @@ void
 	// if nodes are sorted, leave alone
 	if (!m_bNodesSorted)
 	{	
-#ifdef STL_COLL_SPACE_NODES
+
 		// sort(m_arrNodes.begin(), m_arrNodes.end(), mem_fun1(&CNode::IsActivationGreater));
-    sort(&m_arrNodes[0], &m_arrNodes[0]+m_arrNodes.size(), 
-      &CNode::IsActivationGreaterStatic);
-#else
-    //qsort(&m_arrNodes[0], m_arrNodes.GetCount(), sizeof(CNode*), 
-    //  &NodeSortByActivation);
-    sort(&m_arrNodes[0], &m_arrNodes[0]+m_arrNodes.GetCount(), 
-      &CNode::IsActivationGreaterStatic);
-#endif
+		sort(&m_arrNodes[0], &m_arrNodes[0]+m_arrNodes.size(), 
+			&CNode::IsActivationGreaterStatic);
 
 		// flag as sorted
 		m_bNodesSorted = TRUE;
@@ -433,11 +381,7 @@ void
 	pNode->m_pSpace->m_totalSecondaryActivation += pNode->GetSecondaryActivation();
 
 	// add to the array
-#ifdef STL_COLL_SPACE_NODES
-  m_arrNodes.push_back(pNode);
-#else
-  m_arrNodes.Add(pNode);
-#endif
+	m_arrNodes.push_back(pNode);
 
 	// add the children
 	for (int nAt = 0; nAt < pNode->GetChildCount(); nAt++)
@@ -457,19 +401,14 @@ void
 	// removes all nodes
 {
 	// remove existing nodes from the array
-#ifdef STL_COLL_SPACE_NODES
 	m_arrNodes.clear();
-#else
-	m_arrNodes.RemoveAll();
-#endif
-
 
 	// delete the current root node
 	delete m_pRootNode;
 	m_pRootNode = NULL;
 
 	// clear the class color map
-	m_mapClassColors.RemoveAll();
+	m_mapClassColors.clear();
 
 }	// CSpace::DeleteContents
 
@@ -549,24 +488,11 @@ REAL
 {
 	// are we recomputing?
 	if (bCompute)
-	{
-		// reset total
-		REAL m_totalPrimaryActivation = 0.0;
-
-		// sum all secondary activations
-#ifdef STL_COLL_SPACE_NODES
-		vector<CNode*>::iterator iterNode;
-		for (iterNode = m_arrNodes.begin(); iterNode != m_arrNodes.end(); iterNode++)
-			m_totalPrimaryActivation += (*iterNode)->GetPrimaryActivation();
-#else
-		for (int nAt = 0; nAt < m_arrNodes.GetCount(); nAt++)
-    {
-		  CNode *pNode = m_arrNodes[nAt];
-      m_totalPrimaryActivation += pNode->GetPrimaryActivation();
-    }
-#endif
-
-  }
+	{		
+		// sum all secondary activations		
+		m_totalPrimaryActivation = accumulate(m_arrNodes.begin(), m_arrNodes.end(), 0.0,
+			[](REAL sum, CNode* pNode) { return sum + pNode->GetPrimaryActivation(); });
+	}
 
 	return m_totalPrimaryActivation;
 
@@ -581,21 +507,9 @@ REAL
 	// are we recomputing?
 	if (bCompute)
 	{
-		// reset total
-		m_totalSecondaryActivation = 0.0;
-
 		// sum all secondary activations
-#ifdef STL_COLL_SPACE_NODES
-		vector<CNode*>::iterator iterNode;
-		for (iterNode = m_arrNodes.begin(); iterNode != m_arrNodes.end(); iterNode++)
-      m_totalSecondaryActivation += (*iterNode)->GetSecondaryActivation();
-#else
-		for (int nAt = 0; nAt < m_arrNodes.GetCount(); nAt++)
-    {
-		  CNode *pNode = m_arrNodes[nAt];
-      m_totalSecondaryActivation += pNode->GetSecondaryActivation();
-    }
-#endif
+		m_totalSecondaryActivation = accumulate(m_arrNodes.begin(), m_arrNodes.end(), 0.0,
+			[](REAL sum, CNode* pNode) { return sum + pNode->GetSecondaryActivation(); });
 	}
 
 	return m_totalSecondaryActivation;
@@ -682,8 +596,12 @@ void CSpace::Serialize(CArchive& ar)
 
 	if (dwSchema >= 2)
 	{
+		CMap<CString, LPCTSTR, COLORREF, COLORREF> map;
+
 		// serialize color map
-		m_mapClassColors.Serialize(ar);
+		map.Serialize(ar);
+
+		// TODO: populate actual map
 	}
 
 	if (dwSchema >= 3)

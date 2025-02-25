@@ -62,7 +62,7 @@ public:
 	DECLARE_ATTRIBUTE(PathName, CString)
 	
 	// class description accessors
-	CMap<CString, LPCTSTR, COLORREF, COLORREF>& GetClassColorMap();
+	map<CString, COLORREF>& GetClassColorMap();
 
 	///////////////////////////////////////////////////////////////////
 	// activation
@@ -136,12 +136,7 @@ protected:
 	mutable REAL m_totalSecondaryActivation;
 
 	// the array of nodes
-/// #define STL_COLL_SPACE_NODES
-#ifdef STL_COLL_SPACE_NODES
 	vector<CNode*> m_arrNodes;
-#else
-	CAtlArray<CNode*> m_arrNodes;
-#endif
 
 private:
 
@@ -152,6 +147,6 @@ private:
 	BOOL m_bNodesSorted;
 
 	// the mapping from classes to colors
-	CMap<CString, LPCTSTR, COLORREF, COLORREF> m_mapClassColors;
+	map<CString, COLORREF> m_mapClassColors;
 
 };	// class CSpace

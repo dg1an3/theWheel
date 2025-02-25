@@ -57,19 +57,10 @@ void
 			vActivations.GetDim());
 
 		// and fill them
-#ifdef STL_COLL
-		vector<CNode*>::iterator iter = m_pSpace->m_arrNodes.begin();
-		for (int nAt = 0; nAt < nDim; nAt++, iter++)
-		{
-			ASSERT(iter != m_pSpace->m_arrNodes.end());
-			vActivations[nAt] = (*iter)->GetActivation();
-		}
-#else
 		for (int nAt = 0; nAt < nDim; nAt++)
 		{
 			vActivations[nAt] = m_pSpace->m_arrNodes[nAt]->GetActivation();
 		}
-#endif
 	}
 
 }	// CSpaceStateVector::GetActivationsVector
@@ -87,19 +78,10 @@ void
 			vActivations.GetDim());
 
 		// and fill them
-#ifdef STL_COLL
-		vector<CNode*>::iterator iter = m_pSpace->m_arrNodes.begin();
-		for (int nAt = 0; nAt < nDim; nAt++, iter++)
-		{
-			ASSERT(iter != m_pSpace->m_arrNodes.end());
-			(*iter)->SetActivation(vActivations[nAt]);
-		}
-#else
 		for (int nAt = 0; nAt < nDim; nAt++)
 		{
 			m_pSpace->m_arrNodes[nAt]->SetActivation(vActivations[nAt]);
 		}
-#endif
 	}
 
 }	// CSpaceStateVector::SetActivationsVector
@@ -109,30 +91,19 @@ void
 void 
 	CSpaceStateVector::GetPositionsVector(CVectorN<>& vPositions)
 	// accessor for the positions vector
-  /// TODO: should this be moved to CSpace???
+	/// TODO: should this be moved to CSpace???
 {
 	if (m_pSpace) 
 	{
 		int nNodes = __min(m_pSpace->GetLayoutManager()->GetSuperNodeCount(),
 			vPositions.GetDim() / 2);
 
-#ifdef STL_COLL
-		vector<CNode*>::iterator iter = m_pSpace->m_arrNodes.begin();
-		for (int nAt = 0; nAt < nNodes; nAt++, iter++)
-		{
-			ASSERT(iter != m_pSpace->m_arrNodes.end());
-			const CVectorD<3>& vPos = (*iter)->GetPosition();
-			vPositions[nAt*2 + 0] = vPos[0];
-			vPositions[nAt*2 + 1] = vPos[1];
-		}
-#else
 		for (int nAt = 0; nAt < nNodes; nAt++)
 		{
 			const CVectorD<3>& vPos = m_pSpace->m_arrNodes[nAt]->GetPosition();
 			vPositions[nAt*2 + 0] = vPos[0];
 			vPositions[nAt*2 + 1] = vPos[1];
 		}
-#endif
 	}
 
 }	// CSpaceStateVector::GetPositionsVector
@@ -150,19 +121,6 @@ void
 
 		CVectorD<3> vPos;
 
-#ifdef STL_COLL
-		vector<CNode*>::iterator iter = m_pSpace->m_arrNodes.begin();
-		for (int nAt = 0; nAt < nNodes; nAt++, iter++)
-		{
-			ASSERT(iter != m_pSpace->m_arrNodes.end());
-			// form the node view's position
-			vPos[0] = vPositions[nAt*2 + 0];
-			vPos[1] = vPositions[nAt*2 + 1];
-
-			// load positions from nodes
-			(*iter)->SetPosition(vPos, (*iter)->IsPositionReset(false));
-		}
-#else
 		for (int nAt = 0; nAt < nNodes; nAt++)
 		{
 			// form the node view's position
@@ -173,7 +131,6 @@ void
 			m_pSpace->m_arrNodes[nAt]->SetPosition(vPos, 
 				m_pSpace->m_arrNodes[nAt]->IsPositionReset(false));
 		}
-#endif
 	}
 
 }	// CSpaceStateVector::SetPositionsVector
