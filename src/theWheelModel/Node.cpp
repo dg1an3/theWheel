@@ -27,7 +27,7 @@ static char THIS_FILE[]=__FILE__;
 // 
 // constant defining threshold for propagation
 //////////////////////////////////////////////////////////////////////
-const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01;		// TODO: move to CNodeLink
+const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01f;		// TODO: move to CNodeLink
 
 //////////////////////////////////////////////////////////////////////
 // Event Firing
@@ -36,7 +36,7 @@ const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01;		// TODO: move to CNodeLink
 	if (m_pSpace) m_pSpace->NodeAttributeChangedEvent.Fire(this);*/
 
 //////////////////////////////////////////////////////////////////////
-const REAL PRIM_FRAC = 0.5;
+const REAL PRIM_FRAC = 0.5f;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -86,7 +86,7 @@ CNode::~CNode()
 	for (iterNode = m_arrChildren.begin(); iterNode != m_arrChildren.end(); iterNode++)
 		delete (*iterNode);
 #else
-  for (int nAt = 0; nAt < m_arrChildren.GetCount(); nAt++)
+  for (auto nAt = 0U; nAt < m_arrChildren.GetCount(); nAt++)
   {
     delete m_arrChildren[nAt];
   }
@@ -98,7 +98,7 @@ CNode::~CNode()
 	for (iterLink = m_arrLinks.begin(); iterLink != m_arrLinks.end(); iterLink++)
 		delete (*iterLink);
 #else
-  for (int nAt = 0; nAt < m_arrLinks.GetCount(); nAt++)
+  for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
   {
     delete m_arrLinks[nAt];
   }
@@ -449,7 +449,7 @@ REAL CNode::GetLinkWeight(CNode * pToNode)
 REAL CNode::GetLinkGainWeight(CNode *pToNode)
 {
 	CNodeLink *pLink = GetLinkTo(pToNode);
-	if (pLink)
+	if (pLink && !pLink->GetIsStabilizer())
 	{
 		return pLink->GetGainWeight();
 	}
@@ -587,7 +587,7 @@ void CNode::RemoveAllLinks()
 	m_arrLinks.clear();
 	m_mapLinks.clear();
 #else
-  for (int nAt = 0; nAt < m_arrLinks.GetCount(); nAt++)
+  for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
   {
     delete m_arrLinks[nAt];
   }
@@ -614,7 +614,7 @@ REAL
 	REAL maxWeight = (*iterMax)->GetWeight();
 #else
   REAL maxWeight = 0.0;
-  for (int nAt = 0; nAt < m_arrLinks.GetCount(); nAt++)
+  for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
   {
     maxWeight = __max(maxWeight, m_arrLinks[nAt]->GetWeight());
   }
@@ -626,7 +626,7 @@ REAL
 	for (iterNode = m_arrChildren.begin(); iterNode != m_arrChildren.end(); iterNode++)
 		maxWeight = __max(maxWeight, (*iterNode)->GetMaxLinkWeight());
 #else
-  for (int nAt = 0; nAt < m_arrChildren.GetCount(); nAt++)
+  for (auto nAt = 0U; nAt < m_arrChildren.GetCount(); nAt++)
   {
     maxWeight = __max(maxWeight, m_arrChildren[nAt]->GetMaxLinkWeight());
   }
@@ -640,8 +640,8 @@ REAL ScaleWeight(REAL scale, REAL weight)
 {
 	ASSERT(weight >= 0.0);
 	ASSERT(weight < 1.0);
-	REAL scaledXformWeight = -log(1.0-weight) * scale;
-	return 0.99 * (1.0 - exp(-scaledXformWeight));
+	REAL scaledXformWeight = (-logf(1.0f - weight) * scale);
+	return 0.99f * (1.0f - expf(-scaledXformWeight));
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -655,7 +655,7 @@ void
 	for (iterLink = m_arrLinks.begin(); iterLink != m_arrLinks.end(); iterLink++)
 		(*iterLink)->SetWeight(ScaleWeight(scale, (*iterLink)->GetWeight()));
 #else
-  for (int nAt = 0; nAt < m_arrLinks.GetCount(); nAt++)
+  for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
   {
     m_arrLinks[nAt]->SetWeight(ScaleWeight(scale, m_arrLinks[nAt]->GetWeight()));
   }
@@ -667,7 +667,7 @@ void
 	for (iterNode = m_arrChildren.begin(); iterNode != m_arrChildren.end(); iterNode++)
 		(*iterNode)->ScaleLinkWeights(scale);
 #else
-  for (int nAt = 0; nAt < m_arrChildren.GetCount(); nAt++)
+  for (auto nAt = 0U; nAt < m_arrChildren.GetCount(); nAt++)
   {
     m_arrChildren[nAt]->ScaleLinkWeights(scale);
   }
@@ -698,13 +698,13 @@ void
 	if (pActivator == NULL)
 	{
 		m_primaryActivation += PRIM_FRAC * deltaActivation;
-		m_secondaryActivation += (1.0 - PRIM_FRAC) * deltaActivation;
+		m_secondaryActivation += (1.0f - PRIM_FRAC) * deltaActivation;
 
 		// update the total activation value
 		if (m_pSpace)
 		{
 			m_pSpace->m_totalPrimaryActivation += PRIM_FRAC * deltaActivation;
-			m_pSpace->m_totalSecondaryActivation += (1.0 - PRIM_FRAC) * deltaActivation;
+			m_pSpace->m_totalSecondaryActivation += (1.0f - PRIM_FRAC) * deltaActivation;
 		}
 	}
 	else
@@ -748,10 +748,10 @@ bool
 {
 	REAL act1 = GetActivation();
 	// now add additional factor for post-super count: max 40 adds 0.1 to activation
-	act1 += 0.1 * (REAL) GetPostSuperCount() / 40.0;
+	act1 += 0.1f * GetPostSuperCount() / 40.0f;
 
 	REAL act2 = pThanNode->GetActivation();
-	act2 += 0.1 * (REAL) pThanNode->GetPostSuperCount() / 40.0;
+	act2 += 0.1f * pThanNode->GetPostSuperCount() / 40.0f;
 
 	return act1 > act2;
 }
@@ -763,10 +763,10 @@ bool
 {
 	REAL act1 = pLeft->GetActivation();
 	// now add additional factor for post-super count: max 40 adds 0.1 to activation
-	act1 += 0.1 * (REAL) pLeft->GetPostSuperCount() / 40.0;
+	act1 += 0.1f * pLeft->GetPostSuperCount() / 40.0f;
 
 	REAL act2 = pRight->GetActivation();
-	act2 += 0.1 * (REAL) pRight->GetPostSuperCount() / 40.0;
+	act2 += 0.1f * pRight->GetPostSuperCount() / 40.0f;
 
 	return act1 > act2;
 }
@@ -867,7 +867,7 @@ void
 	for (iter = m_arrLinks.begin(); iter != m_arrLinks.end(); iter++)
 		(*iter)->PropagateActivation(this, initScale, alpha);
 #else
-  for (int nAt = 0; nAt < m_arrLinks.GetCount(); nAt++)
+  for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
   {
     m_arrLinks[nAt]->PropagateActivation(this, initScale, alpha);
   }
@@ -886,7 +886,7 @@ void
 	for_each(m_arrLinks.begin(), m_arrLinks.end(),
 		bind2nd(mem_fun1<void, CNodeLink, BOOL>(&CNodeLink::SetHasPropagated), FALSE));
 #else
-  for (int nAt = 0; nAt < m_arrLinks.GetCount(); nAt++)
+  for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
   {
     m_arrLinks[nAt]->SetHasPropagated(FALSE);
   }
@@ -904,7 +904,7 @@ void
 	for_each(m_arrChildren.begin(), m_arrChildren.end(), 
 		mem_fun<void, CNode>(&CNode::ResetForPropagation));
 #else
-  for (int nAt = 0; nAt < m_arrChildren.GetCount(); nAt++)
+  for (auto nAt = 0U; nAt < m_arrChildren.GetCount(); nAt++)
   {
     m_arrChildren[nAt]->ResetForPropagation();
   }
@@ -934,7 +934,7 @@ void
 	for_each(m_arrChildren.begin(), m_arrChildren.end(), 
 		mem_fun<void, CNode>(&CNode::UpdateFromNewActivation));
 #else
-  for (int nAt = 0; nAt < m_arrChildren.GetCount(); nAt++)
+  for (auto nAt = 0U; nAt < m_arrChildren.GetCount(); nAt++)
   {
     m_arrChildren[nAt]->UpdateFromNewActivation();
   }
@@ -974,22 +974,22 @@ void CNode::Serialize(CArchive &ar)
 		{
 			double primaryActivation;
 			ar >> primaryActivation;
-			m_primaryActivation = primaryActivation;
+			m_primaryActivation = (REAL) primaryActivation;
 
 			double secondaryActivation;
 			ar >> secondaryActivation;
-			m_secondaryActivation = secondaryActivation;
+			m_secondaryActivation = (REAL)secondaryActivation;
 
 			CVectorD<3, double> vPosition;
 			ar >> vPosition;
-			m_vPosition[0] = vPosition[0];
-			m_vPosition[1] = vPosition[1];
-			m_vPosition[2] = vPosition[2];
+			m_vPosition[0] = (REAL) vPosition[0];
+			m_vPosition[1] = (REAL) vPosition[1];
+			m_vPosition[2] = (REAL) vPosition[2];
 
 			ar >> m_pMaxActivator;
 			double maxDeltaActivation;
 			ar >> maxDeltaActivation;
-			m_maxDeltaActivation = maxDeltaActivation;
+			m_maxDeltaActivation = (REAL) maxDeltaActivation;
 		}
 
 		if (nSchema >= 8)
@@ -1044,7 +1044,7 @@ void CNode::Serialize(CArchive &ar)
 		for (iter = m_arrChildren.begin(); iter != m_arrChildren.end(); iter++)
 			arrChildren.Add(*iter);
 #else
-    for (int nAt = 0; nAt < m_arrChildren.GetCount(); nAt++)
+    for (auto nAt = 0U; nAt < m_arrChildren.GetCount(); nAt++)
     {
       arrChildren.Add(m_arrChildren[nAt]);
     }
@@ -1060,7 +1060,7 @@ void CNode::Serialize(CArchive &ar)
 			m_arrChildren.push_back((CNode*) arrChildren[nAt]);
 #else
     m_arrChildren.RemoveAll();
-    for (int nAt = 0; nAt < arrChildren.GetCount(); nAt++)
+    for (auto nAt = 0; nAt < arrChildren.GetCount(); nAt++)
     {
       m_arrChildren.Add((CNode*) arrChildren[nAt]);
     }
@@ -1080,7 +1080,7 @@ void CNode::Serialize(CArchive &ar)
 				arrLinks.Add(*iter);
 		}
 #else
-    for (int nAt = 0; nAt < m_arrLinks.GetCount(); nAt++)
+    for (auto nAt = 0U; nAt < m_arrLinks.GetCount(); nAt++)
     {
       if (m_arrLinks[nAt]->GetWeight() > 1e-6)
         arrLinks.Add(m_arrLinks[nAt]);
@@ -1099,7 +1099,7 @@ void CNode::Serialize(CArchive &ar)
 			m_arrLinks.push_back((CNodeLink*) arrLinks[nAt]);
 #else
     m_arrLinks.RemoveAll();
-		for (int nAt = 0; nAt < arrLinks.GetSize(); nAt++)
+		for (auto nAt = 0; nAt < arrLinks.GetSize(); nAt++)
 			m_arrLinks.Add((CNodeLink*) arrLinks[nAt]);
 #endif
 	}
@@ -1108,7 +1108,7 @@ void CNode::Serialize(CArchive &ar)
 	if (ar.IsLoading())
 	{
 		// set the children's parent
-		for (int nAt = 0; nAt < GetChildCount(); nAt++)
+		for (auto nAt = 0; nAt < GetChildCount(); nAt++)
 		{
 			GetChildAt(nAt)->m_pParent = this;
 		}
@@ -1125,7 +1125,7 @@ void CNode::Serialize(CArchive &ar)
 		}
 #else
 		m_mapLinks.RemoveAll();
-		for (int nAt = 0; nAt < GetLinkCount(); nAt++)
+		for (auto nAt = 0; nAt < GetLinkCount(); nAt++)
 		{
 			m_mapLinks.SetAt(GetLinkAt(nAt)->GetTarget(), GetLinkAt(nAt));
 		}

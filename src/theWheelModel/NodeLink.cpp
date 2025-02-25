@@ -21,7 +21,7 @@ static char THIS_FILE[]=__FILE__;
 #define new DEBUG_NEW
 #endif
 
-const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01;	
+const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01f;
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -64,7 +64,7 @@ IMPLEMENT_SERIAL(CNodeLink, CObject, VERSIONABLE_SCHEMA|2);
 //////////////////////////////////////////////////////////////////////
 // CNodeLink::GetWeight
 // 
-// returns the weight of this link
+	// returns the weight of this link
 //////////////////////////////////////////////////////////////////////
 REAL CNodeLink::GetWeight() const
 {
@@ -76,7 +76,7 @@ REAL CNodeLink::GetWeight() const
 //////////////////////////////////////////////////////////////////////
 // CNodeLink::SetWeight
 // 
-// sets the weight of this link
+	// sets the weight of this link
 //////////////////////////////////////////////////////////////////////
 void CNodeLink::SetWeight(REAL newWeight)
 {
@@ -90,7 +90,7 @@ REAL
 	CNodeLink::GetGainWeight() const
 	// gets the gain weight = weight * gain
 {
-	return 0.99 * GetGain() * GetWeight() + 0.01 * GetWeight();
+	return 0.99f * GetGain() * GetWeight() + 0.01f * GetWeight();
 
 }	// CNodeLink::GetGainWeight
 
