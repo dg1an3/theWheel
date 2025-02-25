@@ -87,7 +87,7 @@
     <ClCompile Include="NodeLayoutManager.cpp" />
     <ClCompile Include="NodeView.cpp" />
     <ClCompile Include="NodeViewSkin.cpp" />
-    <ClCompile Include="NodeViewSkin2.cpp" />
+    <ClCompile Include="NodeViewSkin2007.cpp" />
     <ClCompile Include="Plaque.cpp" />
     <ClCompile Include="RadialShape.cpp" />
     <ClCompile Include="RuntimeTracker.cpp" />
@@ -107,7 +107,7 @@
     <ClInclude Include="include\NodeLayoutManager.h" />
     <ClInclude Include="include\NodeView.h" />
     <ClInclude Include="include\NodeViewSkin.h" />
-    <ClInclude Include="include\NodeViewSkin2.h" />
+    <ClInclude Include="include\NodeViewSkin2007.h" />
     <ClInclude Include="include\Plaque.h" />
     <ClInclude Include="include\RadialShape.h" />
     <ClInclude Include="include\RuntimeTracker.h" />
