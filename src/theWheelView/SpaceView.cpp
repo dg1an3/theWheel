@@ -885,18 +885,15 @@ void CSpaceView::OnPaint()
 		GetClientRect(&rectOuter);
 		D3DXMATRIX mat;
 		ZeroMemory(&mat, sizeof(D3DMATRIX));
-		mat._11 /* (0, 0) */ = (D3DVALUE) // 0.5; // 
-			1.0; // (1.0 / (rectOuter.Width()));// + 10.0));
-		mat._22 /* (1, 1) */ = (D3DVALUE) // 0.5; // 
-			1.0; // (1.0 / (rectOuter.Height())); // Width()));// + 10.0));
-		mat._33 /* (2, 2) */ = (D3DVALUE) 1.0; // 0.5; // 1.0; 
+		mat._11 /* (0, 0) */ = (D3DVALUE) /* 0.5; */ 1.0; // (1.0 / (rectOuter.Width()));// + 10.0));
+		mat._22 /* (1, 1) */ = (D3DVALUE) /* 0.5; */ 1.0; // (1.0 / (rectOuter.Height())); // Width()));// + 10.0));
+		mat._33 /* (2, 2) */ = (D3DVALUE) 1.0; // 0.5; // 1.0;
 		mat._44 /* (3, 3) */ = (D3DVALUE) 1.0;
 		mat._41 = 0.0; // -rectOuter.Width()/2.0; // (D3DVALUE) -rectOuter.Width() / 2.0;
 		mat._42 = 0.0; // rectOuter.Height()/2.0; // * (FLOAT) rectOuter.Height() / (FLOAT) rectOuter.Width(); // (D3DVALUE) -rectOuter.Height() / 2.0;
 		mat._43 = 0.0; // -1.0;
 		// D3DXMatrixOrthoRH(&mat, rectOuter.Width(), rectOuter.Height(), -0.1, -10.0); //, 1.0);
-		ASSERT_HRESULT(m_pd3dDev->SetTransform(D3DTS_VIEW, 
-			(D3DMATRIX*) & mat));
+		ASSERT_HRESULT(m_pd3dDev->SetTransform(D3DTS_VIEW, (D3DMATRIX*) & mat));
 
 		D3DXMATRIX mat2;
 		D3DXMatrixOrthoLH(&mat2, rectOuter.Width() / 1.0f, rectOuter.Height() / 1.0f, -40.0f, 40.0f);
@@ -927,9 +924,6 @@ void CSpaceView::OnPaint()
 		D3DXMatrixOrthoLH( &matProj, 0.5f, 0.5f, -100.5f, 100.5f); // 8.0f, 8.0f, 0.5f, 1.5f);
 		// m_pd3dDev->SetTransform( D3DTS_PROJECTION, &matProj );
 
-
-
-
 		D3DLIGHT9 light;
 		ZeroMemory( &light, sizeof(D3DLIGHT9) );
 		light.Type       = D3DLIGHT_DIRECTIONAL;
@@ -947,23 +941,26 @@ void CSpaceView::OnPaint()
 
 		// Finally, turn on some ambient light.
 		// m_pd3dDev->SetRenderState( D3DRS_AMBIENT, 0x00000000); // 0x00202020 );
-	// set up an ambient light source
-	ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_AMBIENT, // D3DCOLOR_RGBA(96, 96, 96, 255))); // 
-		D3DCOLOR_RGBA(64, 64, 64, 255))); // (DWORD) D3DCOLOR_COLORVALUE(0.25, 0.25, 0.25, 1.0)));
+		// set up an ambient light source
+		ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_AMBIENT, /* D3DCOLOR_RGBA(96, 96, 96, 255))); */ D3DCOLOR_RGBA(64, 64, 64, 255))); // (DWORD) D3DCOLOR_COLORVALUE(0.25, 0.25, 0.25, 1.0)));
 
-	ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_FOGENABLE, TRUE));
-
-	ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_FOGVERTEXMODE, D3DFOG_LINEAR));
-
-	ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_FOGCOLOR, 
-		D3DCOLOR_XRGB(GetRValue(m_colorBk), GetGValue(m_colorBk), GetBValue(m_colorBk)))); // 0x00FFFFFF)); // Highest 8 bits are not used.
-
-	float Start = 0.0f, End = 15.0f;
-        m_pd3dDev->SetRenderState(D3DRS_FOGSTART, *(DWORD *)(&Start));
-        m_pd3dDev->SetRenderState(D3DRS_FOGEND,   *(DWORD *)(&End));
+		auto enableFog = false;
+		if (enableFog)
+		{
+			// set up fog
+			ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_FOGENABLE, TRUE));
+			ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_FOGVERTEXMODE, D3DFOG_LINEAR));
+			ASSERT_HRESULT(m_pd3dDev->SetRenderState(D3DRS_FOGCOLOR,
+				D3DCOLOR_XRGB(GetRValue(m_colorBk), GetGValue(m_colorBk), GetBValue(m_colorBk)))); // 0x00FFFFFF)); // Highest 8 bits are not used.
+			float Start = 0.0f, End = 15.0f;
+			m_pd3dDev->SetRenderState(D3DRS_FOGSTART, *(DWORD*)(&Start));
+			m_pd3dDev->SetRenderState(D3DRS_FOGEND, *(DWORD*)(&End));
+		}
 
 		// Begin the scene
 		ASSERT_HRESULT(m_pd3dDev->BeginScene());
+
+		// draw test checkerbkard pattern
 
 		// now populate array to hold the drawing-order for the nodeviews
 		arrNodeViewsToDraw.resize(__min((UINT) GetVisibleNodeCount() * 2, 
