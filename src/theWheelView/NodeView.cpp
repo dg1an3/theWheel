@@ -57,8 +57,8 @@ const COLORREF BACK_COLOR = RGB(228, 228, 228);
 // TODO: get this from NodeViewSkin
 const int THICK_PEN_WIDTH = 4;
 
-const REAL WRAP_SPACE_SIZE_X = 600;
-const REAL WRAP_SPACE_SIZE_Y = 600;
+const REAL WRAP_SPACE_SIZE_X = 1000;
+const REAL WRAP_SPACE_SIZE_Y = 800;
 
 //////////////////////////////////////////////////////////////////////
 // statics for storing the font for smooth text
