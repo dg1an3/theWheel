@@ -63,8 +63,8 @@ const REAL RELAX_SIGMOID_FACTOR = 1.5f; // 4.0; // 1.5; // 8.0;
 const REAL RELAX_NEW_GAIN_FACTOR = 0.4f;
 const REAL RELAX_NEW_GAIN_FACTOR_SUBTHRESHOLD = 0.8f;
 
-const REAL WRAP_SPACE_SIZE_X = 800;
-const REAL WRAP_SPACE_SIZE_Y = 600;
+const REAL WRAP_SPACE_SIZE_X = 1000;
+const REAL WRAP_SPACE_SIZE_Y = 800;
 
 //////////////////////////////////////////////////////////////////////
 CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
