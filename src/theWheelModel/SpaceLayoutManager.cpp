@@ -259,7 +259,7 @@ void
 	LayoutNodesPartial(0);
 
 	// relax
-	Relax();
+	// Relax();
 
 	// perform xlate-rotate
 	// set the resulting positions, rotate-translating in the process
@@ -354,7 +354,7 @@ void
 		LayoutNodesPartial(nHighestNewSuper);
 
 		// now relax the new super nodes
-		Relax(true);
+		// Relax(true);
 	}
 
 	// finish post processing of super-threshold nodes 
@@ -413,9 +413,9 @@ void
 					REAL new_gain = 1.0f
 						- Sigmoid(distErr - RELAX_SIGMOID_SHIFT, RELAX_SIGMOID_FACTOR);
 
-					// and set, based on percentage of current
-					pLink->SetGain(pLink->GetGain() * (1.0f - NEW_GAIN_FACTOR)
-						+ new_gain * NEW_GAIN_FACTOR);
+					//// and set, based on percentage of current
+					//pLink->SetGain(pLink->GetGain() * (1.0f - NEW_GAIN_FACTOR)
+					//	+ new_gain * NEW_GAIN_FACTOR);
 				}
 			}
 		}
@@ -475,7 +475,7 @@ void
 			REAL weight =
 				((*iterNode)->GetActivation() / avgAct * (*iterNode)->GetLinkGainWeight(*iterLinked)
 					+ (*iterLinked)->GetActivation() / avgAct * (*iterLinked)->GetLinkGainWeight((*iterNode))) 
-						+ (REAL) 1e-6;
+						+ (REAL) 1e-9;
 
 			// store the link weight
 			m_mLinks[nAtLinkedNode][nAtNode] =
