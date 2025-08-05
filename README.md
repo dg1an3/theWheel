@@ -35,7 +35,7 @@ npm run serve
 │   ├── elliptangle.ts    # Main elliptangle renderer class
 │   └── main.ts           # Entry point that exports to global scope
 ├── dist/                 # Compiled JavaScript output
-├── elliptangle.html      # Main HTML file
+├── index.html            # Main HTML file
 ├── package.json          # NPM configuration
 ├── tsconfig.json         # TypeScript configuration
 └── README.md            # This file
