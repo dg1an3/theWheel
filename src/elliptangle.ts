@@ -156,11 +156,11 @@ class ElliptangleRenderer {
         this.ctx.fillStyle = textColor;
         this.ctx.font = `${fontSize}px ${fontFamily}`;
         this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
+        this.ctx.textBaseline = 'top';
         
-        // Calculate center position
+        // Calculate center X position and top Y position
         const centerX = x + w / 2;
-        const centerY = y + h / 2;
+        const topY = y + fontSize * 0.2; // Small padding from the top edge
         
         // Measure text to ensure it fits
         const textMetrics = this.ctx.measureText(text);
@@ -173,7 +173,7 @@ class ElliptangleRenderer {
         }
         
         // Draw the text
-        this.ctx.fillText(text, centerX, centerY);
+        this.ctx.fillText(text, centerX, topY);
     }
 
     clear(): void {
