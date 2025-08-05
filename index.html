@@ -33,6 +33,12 @@
         input[type="range"] {
             width: 200px;
         }
+        input[type="text"] {
+            width: 200px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
         input[type="color"] {
             width: 50px;
             height: 30px;
@@ -83,6 +89,19 @@
             <input type="range" id="strokeWidth" min="1" max="10" value="3">
             <span id="strokeWidthValue">3</span>
         </div>
+        <div class="control-group">
+            <label>Text:</label>
+            <input type="text" id="text" value="Hello" placeholder="Enter text...">
+        </div>
+        <div class="control-group">
+            <label>Text Color:</label>
+            <input type="color" id="textColor" value="#FFFFFF">
+        </div>
+        <div class="control-group">
+            <label>Font Size Ratio:</label>
+            <input type="range" id="fontSizeRatio" min="0.1" max="0.8" step="0.05" value="0.3">
+            <span id="fontSizeRatioValue">0.3</span>
+        </div>
     </div>
 
     <script type="module" src="dist/main.js"></script>
@@ -99,6 +118,9 @@
         const topLeftStroke = document.getElementById('topLeftStroke');
         const bottomRightStroke = document.getElementById('bottomRightStroke');
         const strokeWidth = document.getElementById('strokeWidth');
+        const text = document.getElementById('text');
+        const textColor = document.getElementById('textColor');
+        const fontSizeRatio = document.getElementById('fontSizeRatio');
         
         // Value display elements
         const activationValue = document.getElementById('activationValue');
@@ -106,6 +128,7 @@
         const widthValue = document.getElementById('widthValue');
         const heightValue = document.getElementById('heightValue');
         const strokeWidthValue = document.getElementById('strokeWidthValue');
+        const fontSizeRatioValue = document.getElementById('fontSizeRatioValue');
 
         function adjustActivation() {
             activationValue.textContent = activation.value;
@@ -129,6 +152,7 @@
             widthValue.textContent = w;
             heightValue.textContent = h;
             strokeWidthValue.textContent = strokeW;
+            fontSizeRatioValue.textContent = parseFloat(fontSizeRatio.value).toFixed(2);
             
             // Center the elliptangle
             const x = (canvas.width - w) / 2;
@@ -139,7 +163,10 @@
                 fillColor: fillColor.value,
                 topLeftStroke: topLeftStroke.value,
                 bottomRightStroke: bottomRightStroke.value,
-                strokeWidth: strokeW
+                strokeWidth: strokeW,
+                text: text.value,
+                textColor: textColor.value,
+                fontSizeRatio: parseFloat(fontSizeRatio.value)
             });
         }
 
@@ -149,7 +176,7 @@
             render();
         });
 
-        [curveAmount, width, height, fillColor, topLeftStroke, bottomRightStroke, strokeWidth].forEach(control => {
+        [curveAmount, width, height, fillColor, topLeftStroke, bottomRightStroke, strokeWidth, text, textColor, fontSizeRatio].forEach(control => {
             control.addEventListener('input', render);
         });
 

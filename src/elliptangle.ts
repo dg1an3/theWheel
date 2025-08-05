@@ -3,6 +3,10 @@ interface ElliptangleOptions {
     topLeftStroke?: string;
     bottomRightStroke?: string;
     strokeWidth?: number;
+    text?: string;
+    textColor?: string;
+    fontFamily?: string;
+    fontSizeRatio?: number; // Ratio of font size to height (default: 0.3)
 }
 
 interface Point {
@@ -35,7 +39,11 @@ class ElliptangleRenderer {
             fillColor = '#4CAF50',
             topLeftStroke = '#81C784',
             bottomRightStroke = '#2E7D32',
-            strokeWidth = 3
+            strokeWidth = 3,
+            text = '',
+            textColor = '#FFFFFF',
+            fontFamily = 'Arial, sans-serif',
+            fontSizeRatio = 0.3
         } = options;
 
         // First fill the shape
@@ -124,6 +132,48 @@ class ElliptangleRenderer {
             bottomLeft.x, bottomLeft.y
         );
         this.ctx.stroke();
+        
+        // Draw text if provided
+        if (text) {
+            this.drawText(x, y, w, h, text, textColor, fontFamily, fontSizeRatio);
+        }
+    }
+
+    private drawText(
+        x: number, 
+        y: number, 
+        w: number, 
+        h: number, 
+        text: string, 
+        textColor: string, 
+        fontFamily: string, 
+        fontSizeRatio: number
+    ): void {
+        // Calculate font size based on height
+        const fontSize = Math.floor(h * fontSizeRatio);
+        
+        // Set font properties
+        this.ctx.fillStyle = textColor;
+        this.ctx.font = `${fontSize}px ${fontFamily}`;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        
+        // Calculate center position
+        const centerX = x + w / 2;
+        const centerY = y + h / 2;
+        
+        // Measure text to ensure it fits
+        const textMetrics = this.ctx.measureText(text);
+        const textWidth = textMetrics.width;
+        
+        // If text is too wide, reduce font size
+        if (textWidth > w * 0.8) { // Leave 20% padding
+            const adjustedFontSize = Math.floor((w * 0.8 / textWidth) * fontSize);
+            this.ctx.font = `${adjustedFontSize}px ${fontFamily}`;
+        }
+        
+        // Draw the text
+        this.ctx.fillText(text, centerX, centerY);
     }
 
     clear(): void {
