@@ -13,7 +13,7 @@
         }
         canvas {
             border: 2px solid #333;
-            background: white;
+            background: gray;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
@@ -46,6 +46,11 @@
     <canvas id="canvas" width="600" height="400"></canvas>
     
     <div class="controls">
+        <div class="control-group">
+            <label>Activation:</label>
+            <input type="range" id="activation" min="0" max="100" value="80">
+            <span id="activationValue">80</span>
+        </div>
         <div class="control-group">
             <label>Curve Amount:</label>
             <input type="range" id="curveAmount" min="0" max="50" value="20">
@@ -80,11 +85,13 @@
         </div>
     </div>
 
+    <script src="elliptangle.js"></script>
     <script>
         const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        const renderer = new ElliptangleRenderer(canvas);
         
         // Control elements
+        const activation = document.getElementById('activation');
         const curveAmount = document.getElementById('curveAmount');
         const width = document.getElementById('width');
         const height = document.getElementById('height');
@@ -94,103 +101,22 @@
         const strokeWidth = document.getElementById('strokeWidth');
         
         // Value display elements
+        const activationValue = document.getElementById('activationValue');
         const curveValue = document.getElementById('curveValue');
         const widthValue = document.getElementById('widthValue');
         const heightValue = document.getElementById('heightValue');
         const strokeWidthValue = document.getElementById('strokeWidthValue');
 
-        function drawElliptangleWithSeparateStrokes(x, y, w, h, curve) {
-            // First fill the shape
-            ctx.beginPath();
-            
-            // Define the four corners
-            const topLeft = { x: x, y: y };
-            const topRight = { x: x + w, y: y };
-            const bottomRight = { x: x + w, y: y + h };
-            const bottomLeft = { x: x, y: y + h };
-            
-            // Start at top-left corner
-            ctx.moveTo(topLeft.x, topLeft.y);
-            
-            // Top side (left to right) - curved outward
-            ctx.quadraticCurveTo(
-                x + w/2, y - curve,  // Control point (outward curve)
-                topRight.x, topRight.y
-            );
-            
-            // Right side (top to bottom) - curved outward
-            ctx.quadraticCurveTo(
-                x + w + curve, y + h/2,  // Control point (outward curve)
-                bottomRight.x, bottomRight.y
-            );
-            
-            // Bottom side (right to left) - curved outward
-            ctx.quadraticCurveTo(
-                x + w/2, y + h + curve,  // Control point (outward curve)
-                bottomLeft.x, bottomLeft.y
-            );
-            
-            // Left side (bottom to top) - curved outward
-            ctx.quadraticCurveTo(
-                x - curve, y + h/2,  // Control point (outward curve)
-                topLeft.x, topLeft.y
-            );
-            
-            ctx.closePath();
-            
-            // Fill the shape
-            ctx.fillStyle = fillColor.value;
-            ctx.fill();
-            
-            // Set line join and cap styles for clean connections
-            ctx.lineJoin = 'round';
-            ctx.lineCap = 'round';
-            ctx.lineWidth = parseInt(strokeWidth.value);
-            
-            // Draw top and left sides as one connected path
-            ctx.strokeStyle = topLeftStroke.value;
-            ctx.beginPath();
-            ctx.moveTo(topLeft.x, topLeft.y);
-            // Top side
-            ctx.quadraticCurveTo(
-                x + w/2, y - curve,
-                topRight.x, topRight.y
-            );
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(bottomLeft.x, bottomLeft.y);
-            // Left side
-            ctx.quadraticCurveTo(
-                x - curve, y + h/2,
-                topLeft.x, topLeft.y
-            );
-            ctx.stroke();
-            
-            // Draw bottom and right sides as one connected path
-            ctx.strokeStyle = bottomRightStroke.value;
-            ctx.beginPath();
-            ctx.moveTo(topRight.x, topRight.y);
-            // Right side
-            ctx.quadraticCurveTo(
-                x + w + curve, y + h/2,
-                bottomRight.x, bottomRight.y
-            );
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(bottomRight.x, bottomRight.y);
-            // Bottom side
-            ctx.quadraticCurveTo(
-                x + w/2, y + h + curve,
-                bottomLeft.x, bottomLeft.y
-            );
-            ctx.stroke();
+        function adjustActivation() {
+            activationValue.textContent = activation.value;
+            curveAmount.value = 2000.0 / activation.value; // Adjust curve amount based on activation
+            width.value = Math.max(100, activation.value * 3.5); // Adjust width based on activation
+            height.value = Math.max(80, activation.value * 2.5); // Adjust
         }
 
         function render() {
             // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            renderer.clear();
             
             // Get current values
             const curve = parseInt(curveAmount.value);
@@ -209,10 +135,20 @@
             const y = (canvas.height - h) / 2;
             
             // Draw the elliptangle
-            drawElliptangleWithSeparateStrokes(x, y, w, h, curve);
+            renderer.drawElliptangleWithSeparateStrokes(x, y, w, h, curve, {
+                fillColor: fillColor.value,
+                topLeftStroke: topLeftStroke.value,
+                bottomRightStroke: bottomRightStroke.value,
+                strokeWidth: strokeW
+            });
         }
 
         // Add event listeners
+        activation.addEventListener('input', () => {
+            adjustActivation();
+            render();
+        });
+
         [curveAmount, width, height, fillColor, topLeftStroke, bottomRightStroke, strokeWidth].forEach(control => {
             control.addEventListener('input', render);
         });
