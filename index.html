@@ -77,6 +77,10 @@
             <input type="color" id="fillColor" value="#4CAF50">
         </div>
         <div class="control-group">
+            <label>Header Fill Color:</label>
+            <input type="color" id="headerFillColor" value="#81C784">
+        </div>
+        <div class="control-group">
             <label>Top/Left Stroke:</label>
             <input type="color" id="topLeftStroke" value="#81C784">
         </div>
@@ -115,6 +119,7 @@
         const width = document.getElementById('width');
         const height = document.getElementById('height');
         const fillColor = document.getElementById('fillColor');
+        const headerFillColor = document.getElementById('headerFillColor');
         const topLeftStroke = document.getElementById('topLeftStroke');
         const bottomRightStroke = document.getElementById('bottomRightStroke');
         const strokeWidth = document.getElementById('strokeWidth');
@@ -161,6 +166,7 @@
             // Draw the elliptangle
             renderer.drawElliptangleWithSeparateStrokes(x, y, w, h, curve, {
                 fillColor: fillColor.value,
+                headerFillColor: headerFillColor.value,
                 topLeftStroke: topLeftStroke.value,
                 bottomRightStroke: bottomRightStroke.value,
                 strokeWidth: strokeW,
@@ -176,7 +182,7 @@
             render();
         });
 
-        [curveAmount, width, height, fillColor, topLeftStroke, bottomRightStroke, strokeWidth, text, textColor, fontSizeRatio].forEach(control => {
+        [curveAmount, width, height, fillColor, headerFillColor, topLeftStroke, bottomRightStroke, strokeWidth, text, textColor, fontSizeRatio].forEach(control => {
             control.addEventListener('input', render);
         });
 
