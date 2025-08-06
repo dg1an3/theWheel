@@ -92,7 +92,7 @@ class ElliptangleRenderer {
         
         // Calculate header area height based on text
         const fontSize = Math.floor(h * fontSizeRatio);
-        const headerHeight = text ? fontSize + (fontSize * 0.2) : 0; // Text height + minimal padding
+        const headerHeight = text ? fontSize + (fontSize * 0.1) : 0; // Text height + minimal padding for tighter fit
         
         // If there's text, create a header section with different color
         if (text && headerHeight > 0) {
@@ -146,7 +146,7 @@ class ElliptangleRenderer {
         
         // Draw text if provided
         if (text) {
-            this.drawText(x, y, w, h, text, textColor, fontFamily, fontSizeRatio);
+            this.drawText(x, y, w, h, curve, text, textColor, fontFamily, fontSizeRatio);
         }
     }
 
@@ -155,6 +155,7 @@ class ElliptangleRenderer {
         y: number, 
         w: number, 
         h: number, 
+        curve: number,
         text: string, 
         textColor: string, 
         fontFamily: string, 
@@ -172,8 +173,8 @@ class ElliptangleRenderer {
         // Calculate center X position and safe Y position
         const centerX = x + w / 2;
         // Calculate safe Y position that avoids the curved area
-        const curveDepth = this.calculateCurveDepthAtPosition(x, y, w, h, fontSize);
-        const safeTopY = y + Math.max(curveDepth, fontSize * 0.1); // Either curve depth or minimal padding
+        const curveDepth = this.calculateCurveDepthAtPosition(x, y, w, h, curve);
+        const safeTopY = y + Math.max(curveDepth * 0.7, fontSize * 0.05); // More aggressive positioning - 70% of curve depth or minimal padding
         
         // Measure text to ensure it fits
         const textMetrics = this.ctx.measureText(text);
@@ -228,8 +229,8 @@ class ElliptangleRenderer {
         // Calculate the safe text position and actual header height needed
         const fontSize = Math.floor(h * 0.3); // Use the same calculation as in drawText
         const curveDepth = this.calculateCurveDepthAtPosition(x, y, w, h, curve);
-        const safeTopY = y + Math.max(curveDepth, fontSize * 0.1);
-        const actualHeaderHeight = (safeTopY - y) + fontSize + (fontSize * 0.1); // Safe position + text + minimal padding
+        const safeTopY = y + Math.max(curveDepth * 0.7, fontSize * 0.05); // More aggressive positioning
+        const actualHeaderHeight = (safeTopY - y) + fontSize + (fontSize * 0.05); // Tighter spacing
         
         // Calculate the horizontal line position (just below the text area)
         const lineY = y + actualHeaderHeight;
