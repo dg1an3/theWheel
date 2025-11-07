@@ -211,7 +211,7 @@ REAL CNodeView::GetThresholdedActivation()
 		if (activation >= activationThreshold)
 		{
 			// return the scaled, thresholded activation
-			return 	_cpp_min<REAL>(activation * superThresholdScale * superThresholdScale, 
+			return 	min(activation * superThresholdScale * superThresholdScale,
 				TOTAL_ACTIVATION * 0.2);
 		}
 	}

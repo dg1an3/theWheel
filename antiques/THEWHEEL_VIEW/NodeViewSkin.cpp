@@ -122,7 +122,9 @@ CNodeViewSkin::CNodeViewSkin()
 : m_nWidth(0),
 	m_nHeight(0),
 	m_lpDD(NULL),
+#ifdef SKIN_RENDER_3D
 	m_lpD3D(NULL),
+#endif
 	m_colorBk(RGB(192, 192, 192))
 {
 }	// CNodeViewSkin::CNodeViewSkin
@@ -138,8 +140,10 @@ CNodeViewSkin::~CNodeViewSkin()
 	// sets the client area to 0, 0 (frees surfaces)
 	SetClientArea(0, 0, m_colorBk);
 
+#ifdef SKIN_RENDER_3D
 	if (m_lpD3D)
 		m_lpD3D->Release();
+#endif
 
 	if (m_lpDD)
 		m_lpDD->Release();
@@ -159,7 +163,9 @@ BOOL CNodeViewSkin::InitDDraw(LPDIRECTDRAW lpDD)
 	m_lpDD->AddRef();
 
 	// get the Direct3D2 interface
+#ifdef SKIN_RENDER_3D
 	CHECK_HRESULT(m_lpDD->QueryInterface(IID_IDirect3D2, (void**)&m_lpD3D));
+#endif
 
 	return TRUE;
 
@@ -337,6 +343,7 @@ CExtent<REAL> CNodeViewSkin::CalcTopBottomEllipseExtent(CNodeView *pNodeView)
 
 
 /////////////////////////////////////////////////////////////////////////////
+#ifdef SKIN_RENDER_3D
 // CNodeViewSkin::InitD3DDevice
 //
 // initializes the D3D device upon which rendering will occur
@@ -362,9 +369,11 @@ BOOL CNodeViewSkin::InitD3DDevice(LPDIRECTDRAWSURFACE lpDDS,
 	return TRUE;
 
 }	// CNodeViewSkin::InitD3DDevice
+#endif // SKIN_RENDER_3D
 
 
 /////////////////////////////////////////////////////////////////////////////
+#ifdef SKIN_RENDER_3D
 // CNodeViewSkin::InitViewport
 //
 // initializes the viewport within which rendering will occur
@@ -398,9 +407,11 @@ BOOL CNodeViewSkin::InitViewport(LPDIRECT3DDEVICE2 lpD3DDev, CRect rect,
 	return TRUE;
 
 }	// CNodeViewSkin::InitViewport
+#endif // SKIN_RENDER_3D
 
     
 /////////////////////////////////////////////////////////////////////////////
+#ifdef SKIN_RENDER_3D
 // CNodeViewSkin::InitLights
 //
 // initializes the viewport within which rendering will occur
@@ -444,9 +455,11 @@ BOOL CNodeViewSkin::InitLights(LPDIRECT3DVIEWPORT2 lpViewport,
 	return TRUE;
 
 }	// CNodeViewSkin::InitLights
+#endif // SKIN_RENDER_3D
 
 
 /////////////////////////////////////////////////////////////////////////////
+#ifdef SKIN_RENDER_3D
 // CNodeViewSkin::InitMaterial
 //
 // initializes the material for rendering
@@ -476,6 +489,7 @@ BOOL CNodeViewSkin::InitMaterial(LPDIRECT3DMATERIAL2 *lppD3DMat)
     return TRUE;
 
 }	// CNodeViewSkin::InitMaterial
+#endif // SKIN_RENDER_3D
 
 
 //////////////////////////////////////////////////////////////////////
@@ -637,6 +651,7 @@ LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView,
 			// release and detach
 			RELEASE_DETACH_DC(lpDDS, dc);
 		}
+#ifdef SKIN_RENDER_3D
 		else
 		{
 			// Direct3D rendering -- initialize the objects first
@@ -680,6 +695,14 @@ LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView,
 			ASSERT_HRESULT(lpD3DDev->Release());
 		}
 
+#else
+			// Use GDI for large surfaces too
+			CDC dc;
+			GET_ATTACH_DC(lpDDS, dc);
+			dc.OffsetWindowOrg(rectSrc.left, rectSrc.top);
+			DrawSkinGDI(&dc, pNodeView);
+			RELEASE_DETACH_DC(lpDDS, dc);
+#endif // SKIN_RENDER_3D
 		// store the newly-formed DDS
 		m_arrlpSkinDDS.SetAt(nWidth, lpDDS);
 	}
@@ -799,6 +822,7 @@ void CNodeViewSkin::DrawSkinGDI(CDC *pDC, CNodeView *pNodeView)
 
 
 //////////////////////////////////////////////////////////////////////
+#ifdef SKIN_RENDER_3D
 // CNodeViewSkin::DrawSkinD3D
 // 
 // draws the skin for the node view using Direct3D calls
@@ -845,6 +869,7 @@ void CNodeViewSkin::DrawSkinD3D(IDirect3DDevice2 *lpD3DDev,
 }	// CNodeViewSkin::DrawSkinD3D
 
 
+#endif // SKIN_RENDER_3D
 //////////////////////////////////////////////////////////////////////
 // CNodeViewSkin::DrawLink
 // 

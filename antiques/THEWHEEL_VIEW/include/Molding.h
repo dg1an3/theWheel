@@ -18,16 +18,19 @@
 #include <VectorD.h>
 
 // Direct3D for rendering
+#ifdef SKIN_RENDER_3D
 #include <d3d.h>
+#endif
 
 // constant for number of steps from front plane to edge
 const int NUM_STEPS = 8;
 
 //////////////////////////////////////////////////////////////////////
 // class CMolding
-// 
+//
 // helper class to render molding for nodes
 //////////////////////////////////////////////////////////////////////
+#ifdef SKIN_RENDER_3D
 class CMolding  
 {
 public:	
@@ -50,6 +53,7 @@ private:
 	CVectorD<3, double> m_arrNormals[NUM_STEPS];
 
 };	// class CMolding
+#endif // SKIN_RENDER_3D
 
 
 #endif // !defined(AFX_MOLDING_H__439417B4_2D02_44BD_97DE_6AC3EDF482DE__INCLUDED_)

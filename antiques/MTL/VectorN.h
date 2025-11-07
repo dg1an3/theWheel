@@ -9,7 +9,9 @@
 #if !defined(VECTORN_H)
 #define VECTORN_H
 
+#ifdef USE_IPP
 #include <ippm.h>
+#endif
 
 #include <VectorOps.h>
 

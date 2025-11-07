@@ -8,7 +8,9 @@
 #include "theWheelDoc.h"
 #include "theWheelView.h"
 
+#ifdef USE_IPP
 #include <ipp.h>
+#endif
 #include <SpaceView.h>
 
 #ifdef _DEBUG
@@ -75,6 +77,7 @@ BOOL CtheWheelApp::InitInstance()
 	AfxEnableControlContainer();
 
 	// call static init of IPP library
+#ifdef USE_IPP
 	IppStatus ippInitStat = ippStaticInit();
 	if (ippStsNoErr != ippInitStat
 		&& ippStsDllNotFoundBestUsed != ippInitStat)
@@ -83,6 +86,7 @@ BOOL CtheWheelApp::InitInstance()
 	}
 
 	// Standard initialization
+#endif // USE_IPP
 	// If you are not using these features and wish to reduce the size
 	// of your final executable, you should remove from the following
 	// the specific initialization routines you do not need
