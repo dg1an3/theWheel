@@ -751,5 +751,61 @@ void
 #define TRACE_VECTOR(strMessage, v)
 #endif
 
+//////////////////////////////////////////////////////////////////////
+template<int DIM, class TYPE>
+std::vector<CVectorD<DIM, TYPE>> WrapPositions(
+	const CVectorD<DIM, TYPE>& v,
+	const CVectorD<DIM, TYPE>& vExtent
+) {
+	std::vector<CVectorD<DIM, TYPE>> positions;
+	for (auto shiftY = -1; shiftY <= 1; shiftY++) {
+		auto vShifted = v;
+		vShifted[1] += shiftY * vExtent[1];
+		for (auto shiftX = -1; shiftX <= 1; shiftX++) {
+			vShifted[0] = v[0] + shiftX * vExtent[0];
+			positions.push_back(vShifted);
+		}
+	}
+	return positions;
+
+}	// WrapPositions
+
+
+//////////////////////////////////////////////////////////////////////
+template<int DIM, class TYPE>
+std::tuple<TYPE, CVectorD<DIM, TYPE>, CVectorD<DIM, TYPE>> 
+	WrapDistance(
+		const CVectorD<DIM, TYPE>& vFrom,
+		const CVectorD<DIM, TYPE>& vTo,
+		const CVectorD<DIM, TYPE>& vExtent,
+		bool wrapFrom = true
+) {
+	std::vector<CVectorD<DIM, TYPE>> wrappedFrom;
+	if (wrapFrom) {
+		wrappedFrom = WrapPositions(vFrom, vExtent);
+	}
+	else {
+		wrappedFrom.push_back(vFrom);
+	}
+	auto wrappedTo = WrapPositions(vTo, vExtent);
+
+	CVectorD<DIM, TYPE> minFrom = vFrom; // wrappedFrom[0];
+	CVectorD<DIM, TYPE> minTo = wrappedTo[0];
+	TYPE minLength = 1e+8;
+	auto from = vFrom;
+	for (auto from : wrappedFrom) {
+		for (auto to : wrappedTo) {
+			auto thisMinLength = (from - to).GetLength();
+			if (thisMinLength < minLength) {
+				minFrom = from;
+				minTo = to;
+				minLength = thisMinLength;
+			}
+		}
+	}
+	return std::make_tuple(minLength, minFrom, minTo);
+
+}	// WrapDistance
+
 
 #endif	// !defined(VECTOR_H)

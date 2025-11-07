@@ -744,7 +744,7 @@ void
 {
 	// reset all node link propagation flags
 	for_each(m_arrLinks.begin(), m_arrLinks.end(),
-		bind2nd(mem_fun<void, CNodeLink, BOOL>(&CNodeLink::SetHasPropagated), FALSE));
+		[](auto pLink) { pLink->SetHasPropagated(FALSE); });
 
 	// reset new activation
 	m_newSecondaryActivation = m_secondaryActivation;
@@ -754,8 +754,8 @@ void
 	m_pMaxActivator = NULL;
 
 	// recursively call for children
-	for_each(m_arrChildren.begin(), m_arrChildren.end(), 
-		mem_fun<void, CNode>(&CNode::ResetForPropagation));
+	for_each(m_arrChildren.begin(), m_arrChildren.end(),
+		[](auto pLink) { pLink->ResetForPropagation(); });
 
 
 }	// CNode::ResetForPropagation
@@ -777,8 +777,8 @@ void
 	m_secondaryActivation = m_newSecondaryActivation;
 
 	// recursively call for children
-	for_each(m_arrChildren.begin(), m_arrChildren.end(), 
-		mem_fun<void, CNode>(&CNode::UpdateFromNewActivation));
+	for_each(m_arrChildren.begin(), m_arrChildren.end(),
+		[](auto pChild) { pChild->UpdateFromNewActivation();  });
 }
 
 

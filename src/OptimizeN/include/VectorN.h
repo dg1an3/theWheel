@@ -630,7 +630,7 @@ CArchive&
 
 #endif	// __AFX_H__
 
-
+#if EXT_LOGGING
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
 void 
@@ -670,6 +670,6 @@ void
 	}
 
 }	// LogExprExt
-
+#endif
 
 #endif	// !defined(VECTORN_H)

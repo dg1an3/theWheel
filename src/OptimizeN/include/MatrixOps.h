@@ -192,7 +192,7 @@ void
 				nAtOrthoCol--)
 		{
 			// compute the scale factor
-			MATRIX_TYPE::ELEM_TYPE scalar = (mMat[nAtCol] * mMat[nAtOrthoCol]) 
+			auto scalar = (mMat[nAtCol] * mMat[nAtOrthoCol]) 
 				/ (mMat[nAtOrthoCol] * mMat[nAtOrthoCol]);
 
 			for (int nAtRow = 0; nAtRow < mMat.GetRows(); nAtRow++)
@@ -226,8 +226,8 @@ bool
 	valarray<int> arrColumnSwaps(mMat.GetCols());
 
 	// helper vectors to hold rows
-	MATRIX_TYPE::COL_TYPE vRow(mMat.GetCols());
-	MATRIX_TYPE::COL_TYPE vOtherRow(mMat.GetCols());
+	auto vRow(mMat.GetCols());
+	auto vOtherRow(mMat.GetCols());
 	
 	for (int nCol = 0; nCol < mMat.GetCols(); nCol++)
 	{
@@ -266,7 +266,7 @@ bool
 		}
 
 		// scale factor to be applied
-		MATRIX_TYPE::ELEM_TYPE scale = R(1.0) / mCopy[nCol][nCol];	
+		auto scale = R(1.0) / mCopy[nCol][nCol];	
 
 		// scale the copy to get a 1.0 in the diagonal
 		mCopy.GetRow(nCol, vRow);
@@ -332,7 +332,7 @@ void
 	{
 		for (int nAtCol = 0; nAtCol < mMat.GetCols(); nAtCol++)
 		{
-			MATRIX_TYPE::ELEM_TYPE temp = mMat[nAtCol][nRow1];
+			auto temp = mMat[nAtCol][nRow1];
 			mMat[nAtCol][nRow1] = mMat[nAtCol][nRow2];
 			mMat[nAtCol][nRow2] = temp;
 		}
@@ -351,7 +351,7 @@ void
 	if (nCol1 != nCol2)
 	{
 		// temporary vector storage
-		MATRIX_TYPE::COL_TYPE vTemp = mMat[nCol1];	
+		auto vTemp = mMat[nCol1];	
 
 		// and swap the two rows
 		mMat[nCol1] = mMat[nCol2];
