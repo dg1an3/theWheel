@@ -1,7 +1,7 @@
 ﻿# CMakeList.txt : Top-level CMake project file, do global configuration
 # and include sub-projects here.
 #
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.10...3.31)
 
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
@@ -11,5 +11,27 @@ endif()
 
 project ("theWheel_src")
 
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Find Python before pybind11 to use modern CMake Python finding
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+
+# Configure pybind11 to use modern Python finding
+set(PYBIND11_FINDPYTHON ON)
+
+# Fetch pybind11 for Python bindings
+include(FetchContent)
+FetchContent_Declare(
+  pybind11
+  GIT_REPOSITORY https://github.com/pybind/pybind11.git
+  GIT_TAG v2.13.6
+)
+FetchContent_MakeAvailable(pybind11)
+
 # Include sub-projects.
+add_subdirectory ("OptimizeN")
+add_subdirectory ("theWheelModel")
+add_subdirectory ("pythewheel")
 add_subdirectory ("OptimizeND")
