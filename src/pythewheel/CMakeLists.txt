@@ -1,0 +1,36 @@
+# CMakeLists.txt for pythewheel - Python bindings for theWheel
+
+# Python is already found in parent CMakeLists.txt
+# Just create the Python module
+# Using simplified bindings for now to avoid macro expansion issues
+pybind11_add_module(pythewheel bindings_simple.cpp)
+
+# Include directories for headers
+target_include_directories(pythewheel PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../OptimizeN/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../theWheelModel/include
+)
+
+# Link with theWheelModel
+target_link_libraries(pythewheel PRIVATE theWheelModel)
+
+# Set C++ standard
+target_compile_features(pythewheel PRIVATE cxx_std_17)
+
+# Install to a known location for testing
+# This will put the module in the build directory's python subfolder
+set_target_properties(pythewheel PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/python"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/python"
+)
+
+# On Windows, handle runtime library conflicts
+if(MSVC)
+    # Match the runtime of the linked libraries
+    target_compile_options(pythewheel PRIVATE /MD$<$<CONFIG:Debug>:d>)
+
+    # Link with debug CRT when in debug mode
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        target_link_libraries(pythewheel PRIVATE msvcrtd.lib msvcprtd.lib)
+    endif()
+endif()

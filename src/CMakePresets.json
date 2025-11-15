@@ -4,13 +4,9 @@
         {
             "name": "windows-base",
             "hidden": true,
-            "generator": "Ninja",
+            "generator": "Visual Studio 17 2022",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "installDir": "${sourceDir}/out/install/${presetName}",
-            "cacheVariables": {
-                "CMAKE_C_COMPILER": "cl.exe",
-                "CMAKE_CXX_COMPILER": "cl.exe"
-            },
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
@@ -23,7 +19,7 @@
             "inherits": "windows-base",
             "architecture": {
                 "value": "x64",
-                "strategy": "external"
+                "strategy": "set"
             },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
@@ -32,7 +28,11 @@
         {
             "name": "x64-release",
             "displayName": "x64 Release",
-            "inherits": "x64-debug",
+            "inherits": "windows-base",
+            "architecture": {
+                "value": "x64",
+                "strategy": "set"
+            },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
@@ -42,8 +42,8 @@
             "displayName": "x86 Debug",
             "inherits": "windows-base",
             "architecture": {
-                "value": "x86",
-                "strategy": "external"
+                "value": "Win32",
+                "strategy": "set"
             },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
@@ -52,10 +52,36 @@
         {
             "name": "x86-release",
             "displayName": "x86 Release",
-            "inherits": "x86-debug",
+            "inherits": "windows-base",
+            "architecture": {
+                "value": "Win32",
+                "strategy": "set"
+            },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "x64-debug",
+            "configurePreset": "x64-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x64-release",
+            "configurePreset": "x64-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "x86-debug",
+            "configurePreset": "x86-debug",
+            "configuration": "Debug"
+        },
+        {
+            "name": "x86-release",
+            "configurePreset": "x86-release",
+            "configuration": "Release"
         }
     ]
 }
