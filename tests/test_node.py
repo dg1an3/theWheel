@@ -58,26 +58,27 @@ class TestNode:
         assert node.get_class() == "TestClass"
 
     def test_initial_activation(self, node):
-        """Test initial activation values"""
-        # Initial activation should be 0
-        assert node.get_activation() == 0.0
-        assert node.get_primary_activation() == 0.0
-        assert node.get_secondary_activation() == 0.0
+        """Test initial activation values.
+        CNode initializes with m_primaryActivation=0.005 and
+        m_secondaryActivation=0.005, so total is 0.01."""
+        assert abs(node.get_activation() - 0.01) < 1e-6
+        assert abs(node.get_primary_activation() - 0.005) < 1e-6
+        assert abs(node.get_secondary_activation() - 0.005) < 1e-6
 
     def test_set_activation(self, node):
-        """Test setting activation values"""
+        """Test setting activation value.
+        SetActivation splits the delta equally between primary and secondary
+        when called without an activator node."""
         node.set_activation(0.5)
-        assert node.get_activation() == 0.5
+        assert abs(node.get_activation() - 0.5) < 1e-6
 
-    def test_set_primary_activation(self, node):
-        """Test setting primary activation"""
-        node.set_primary_activation(0.3)
-        assert node.get_primary_activation() == 0.3
-
-    def test_set_secondary_activation(self, node):
-        """Test setting secondary activation"""
-        node.set_secondary_activation(0.2)
-        assert node.get_secondary_activation() == 0.2
+    def test_activation_splits_primary_secondary(self, node):
+        """Test that SetActivation splits delta between primary and secondary.
+        Starting from 0.005/0.005, setting total to 0.5 adds delta=0.49.
+        Primary gets +0.245, secondary gets +0.245."""
+        node.set_activation(0.5)
+        assert abs(node.get_primary_activation() - 0.25) < 1e-4
+        assert abs(node.get_secondary_activation() - 0.25) < 1e-4
 
     def test_position(self, node):
         """Test getting and setting position"""
@@ -105,6 +106,7 @@ class TestNode:
         # Check we can retrieve the link
         link = node1.get_link_to(node2)
         assert link is not None
+        assert abs(link.get_weight() - 0.5) < 1e-6
 
     def test_get_link_weight(self, space):
         """Test getting link weight between nodes"""
@@ -149,7 +151,14 @@ class TestNode:
 
         # Check parent-child relationship
         assert child.get_parent() == parent
-        assert parent.get_child_count() >= 0
+        assert parent.get_child_count() == 1
+
+    def test_radius(self, node):
+        """Test radius calculation based on activation"""
+        node.set_activation(0.25)
+        radius = node.get_radius()
+        # radius = sqrt(activation)
+        assert abs(radius - 0.5) < 1e-4
 
 
 @pytest.mark.integration
@@ -170,4 +179,4 @@ class TestNodeActivation:
         # Activate first node
         node1.set_activation(1.0)
 
-        assert node1.get_activation() == 1.0
+        assert abs(node1.get_activation() - 1.0) < 1e-6

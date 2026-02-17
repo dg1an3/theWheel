@@ -30,27 +30,22 @@ class TestSpace:
         assert space is not None
 
     def test_initial_node_count(self, space):
-        """Test initial node count"""
-        # A new space should have at least the root node
-        count = space.get_node_count()
-        assert count >= 0
+        """Test initial node count is zero (root node is hidden)"""
+        assert space.get_node_count() == 0
 
     def test_root_node(self, space):
-        """Test that space has a root node"""
+        """Test that space has a hidden root node after construction"""
         root = space.get_root_node()
-        # Root node may be None initially or auto-created
-        # Just verify the accessor works
-        assert root is not None or root is None
+        assert root is not None
 
     def test_add_node(self, space):
         """Test adding a node to the space"""
-        node = pythewheel.Node(space, "TestNode", "Test")
         initial_count = space.get_node_count()
-
+        node = pythewheel.Node(space, "TestNode", "Test")
         space.add_node(node, None)
 
-        # Node count should increase
-        assert space.get_node_count() >= initial_count
+        # Node count should increase by 1
+        assert space.get_node_count() == initial_count + 1
 
     def test_add_node_with_parent(self, space):
         """Test adding a node with a parent"""
@@ -72,9 +67,9 @@ class TestSpace:
         space.add_node(node2, None)
 
         count = space.get_node_count()
-        if count > 0:
-            retrieved = space.get_node_at(0)
-            assert retrieved is not None
+        assert count >= 2
+        retrieved = space.get_node_at(0)
+        assert retrieved is not None
 
     def test_remove_node(self, space):
         """Test removing a node from the space"""
@@ -85,7 +80,7 @@ class TestSpace:
         space.remove_node(node)
 
         # Node count should decrease
-        assert space.get_node_count() <= initial_count
+        assert space.get_node_count() < initial_count
 
     def test_current_node(self, space):
         """Test getting and setting the current node"""
@@ -194,8 +189,7 @@ class TestSpaceActivation:
         node = pythewheel.Node(space, "Node", "Test")
         space.add_node(node, None)
 
-        node.set_primary_activation(0.6)
-        node.set_secondary_activation(0.4)
+        node.set_activation(0.6)
 
         total_primary = space.get_total_primary_activation(True)
         total_secondary = space.get_total_secondary_activation(True)
@@ -234,7 +228,6 @@ class TestSpaceNetwork:
         for i in range(3):
             child = pythewheel.Node(space, f"Child{i}", f"Child {i}")
             space.add_node(child, root)
-            child.set_parent(root)
 
         # Root should have children
         assert root.get_child_count() >= 3
