@@ -52,7 +52,6 @@ if(MSVC)
     set_target_properties(theWheelModel PROPERTIES
         COMPILE_DEFINITIONS "_AFXDLL"
     )
-    target_compile_options(theWheelModel PRIVATE /MD$<$<CONFIG:Debug>:d>)
 
     # Precompiled headers
     target_precompile_headers(theWheelModel PRIVATE stdafx.h)

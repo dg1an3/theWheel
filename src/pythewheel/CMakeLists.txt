@@ -24,13 +24,6 @@ set_target_properties(pythewheel PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/python"
 )
 
-# On Windows, handle runtime library conflicts
-if(MSVC)
-    # Match the runtime of the linked libraries
-    target_compile_options(pythewheel PRIVATE /MD$<$<CONFIG:Debug>:d>)
-
-    # Link with debug CRT when in debug mode
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        target_link_libraries(pythewheel PRIVATE msvcrtd.lib msvcprtd.lib)
-    endif()
-endif()
+# MSVC runtime is set globally to /MD (MultiThreadedDLL) in the root
+# CMakeLists.txt via CMAKE_MSVC_RUNTIME_LIBRARY. No per-target CRT
+# flags needed here.
