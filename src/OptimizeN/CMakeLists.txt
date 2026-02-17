@@ -51,7 +51,6 @@ if(MSVC)
     set_target_properties(OptimizeN PROPERTIES
         COMPILE_DEFINITIONS "_AFXDLL"
     )
-    target_compile_options(OptimizeN PRIVATE /MD$<$<CONFIG:Debug>:d>)
 
     # Precompiled headers
     target_precompile_headers(OptimizeN PRIVATE stdafx.h)

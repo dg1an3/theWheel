@@ -9,7 +9,17 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
+# Enable per-target MSVC runtime library selection (CMake 3.15+).
+if (POLICY CMP0091)
+  cmake_policy(SET CMP0091 NEW)
+endif()
+
 project ("theWheel_src")
+
+# Use release DLL runtime (/MD) for all configurations, including Debug.
+# Python extensions must match the Python interpreter's CRT, which is /MD.
+# All static libraries in this tree must use the same CRT for consistent linking.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
