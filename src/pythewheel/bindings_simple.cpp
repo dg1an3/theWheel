@@ -81,29 +81,69 @@ PYBIND11_MODULE(pythewheel, m) {
                    std::to_string(v[1]) + ", " + std::to_string(v[2]) + ")";
         });
 
-    // Bind CNode (simplified - core methods only)
-    py::class_<CNode>(m, "Node")
+    // Bind CNodeLink
+    py::class_<CNodeLink>(m, "NodeLink")
+        .def("get_weight", &CNodeLink::GetWeight)
+        .def("get_gain", &CNodeLink::GetGain)
+        .def("get_gain_weight", &CNodeLink::GetGainWeight)
+        .def("get_target", [](CNodeLink* link) -> CNode* {
+            return link->GetTarget();
+        }, py::return_value_policy::reference)
+        .def("is_stabilizer", [](CNodeLink* link) -> bool {
+            return link->GetIsStabilizer() != FALSE;
+        });
+
+    // Bind CNode
+    // Use py::nodelete because nodes have parent-child ownership: a parent's
+    // destructor deletes its children.  Without nodelete, pybind11 would also
+    // try to delete child nodes, causing a double-free crash.
+    py::class_<CNode, std::unique_ptr<CNode, py::nodelete>>(m, "Node")
         .def(py::init<>())
         .def(py::init<CSpace*>(), py::arg("space") = nullptr)
         .def(py::init([](CSpace* space, const std::string& name, const std::string& desc) {
             return new CNode(space, StdStringToCString(name), StdStringToCString(desc));
         }), py::arg("space") = nullptr, py::arg("name") = "", py::arg("description") = "")
-        // Basic attributes with CString conversion
+
+        // Name
         .def("get_name", [](CNode* node) {
             return CStringToStdString(node->GetName());
         })
         .def("set_name", [](CNode* node, const std::string& name) {
             node->SetName(StdStringToCString(name));
         })
+
+        // Description
         .def("get_description", [](CNode* node) {
             return CStringToStdString(node->GetDescription());
         })
         .def("set_description", [](CNode* node, const std::string& desc) {
             node->SetDescription(StdStringToCString(desc));
         })
+
+        // Class
+        .def("get_class", [](CNode* node) {
+            return CStringToStdString(node->GetClass());
+        })
+        .def("set_class", [](CNode* node, const std::string& cls) {
+            node->SetClass(StdStringToCString(cls));
+        })
+
+        // Hierarchy
+        .def("get_parent", [](CNode* node) -> CNode* {
+            return node->GetParent();
+        }, py::return_value_policy::reference)
+        .def("set_parent", &CNode::SetParent, py::arg("parent"))
+        .def("get_child_count", &CNode::GetChildCount)
+        .def("get_child_at", &CNode::GetChildAt, py::arg("index"),
+             py::return_value_policy::reference)
+
         // Links
         .def("get_link_count", &CNode::GetLinkCount)
-        .def("get_link_weight", &CNode::GetLinkWeight)
+        .def("get_link_at", &CNode::GetLinkAt, py::arg("index"),
+             py::return_value_policy::reference)
+        .def("get_link_to", &CNode::GetLinkTo, py::arg("node"),
+             py::return_value_policy::reference)
+        .def("get_link_weight", &CNode::GetLinkWeight, py::arg("node"))
         .def("link_to", &CNode::LinkTo,
              py::arg("to_node"),
              py::arg("weight"),
@@ -111,31 +151,96 @@ PYBIND11_MODULE(pythewheel, m) {
         .def("unlink", &CNode::Unlink,
              py::arg("node"),
              py::arg("reciprocal") = true)
+
         // Activation
         .def("get_activation", &CNode::GetActivation)
-        .def("set_activation", &CNode::SetActivation)
+        .def("set_activation", [](CNode* node, REAL activation) {
+            node->SetActivation(activation);
+        }, py::arg("activation"))
         .def("get_primary_activation", &CNode::GetPrimaryActivation)
         .def("get_secondary_activation", &CNode::GetSecondaryActivation)
-        // Position (using lambda to handle const reference return)
-        .def("get_position", [](CNode* node) -> const CVectorD<3>& {
+
+        // Position
+        .def("get_position", [](CNode* node) -> CVectorD<3> {
             return node->GetPosition();
-        }, py::return_value_policy::reference)
+        })
         .def("set_position", [](CNode* node, const CVectorD<3>& pos) {
             node->SetPosition(pos);
-        });
+        })
 
-    // Bind CSpace (simplified - core methods only)
+        // Radius
+        .def("get_radius", &CNode::GetRadius)
+        .def("get_radius_for_activation", &CNode::GetRadiusForActivation,
+             py::arg("activation"));
+
+    // Bind CSpace
     py::class_<CSpace>(m, "Space")
-        .def(py::init<>())
+        .def(py::init([]() {
+            auto space = new CSpace();
+            // Create a hidden root node so ActivateNode and other
+            // operations that traverse the node hierarchy work correctly.
+            auto root = new CNode();
+            root->SetName(CString(_T("%%hiddenroot%%")));
+            space->SetRootNode(root);
+            return space;
+        }))
+
         // Node management
         .def("get_node_count", &CSpace::GetNodeCount)
-        .def("add_node", &CSpace::AddNode,
-             py::arg("new_node"),
-             py::arg("parent_node") = nullptr)
-        .def("remove_node", &CSpace::RemoveNode)
+        .def("get_node_at", &CSpace::GetNodeAt, py::arg("index"),
+             py::return_value_policy::reference)
+        .def("get_root_node", [](CSpace* space) -> CNode* {
+            return space->GetRootNode();
+        }, py::return_value_policy::reference)
+        .def("add_node", [](CSpace* space, CNode* node, CNode* parent) {
+            // If no explicit parent, parent under the hidden root so that
+            // ActivateNode's ResetForPropagation traversal reaches the node.
+            if (parent == nullptr) {
+                node->SetParent(space->GetRootNode());
+            }
+            space->AddNode(node, parent);
+        }, py::arg("node"), py::arg("parent") = nullptr)
+        .def("remove_node", &CSpace::RemoveNode, py::arg("node"))
+
+        // Current node
+        .def("get_current_node", [](CSpace* space) -> CNode* {
+            return space->GetCurrentNode();
+        }, py::return_value_policy::reference)
+        .def("set_current_node", &CSpace::SetCurrentNode, py::arg("node"))
+
+        // Path name
+        .def("get_path_name", [](CSpace* space) {
+            return CStringToStdString(space->GetPathName());
+        })
+        .def("set_path_name", [](CSpace* space, const std::string& path) {
+            space->SetPathName(StdStringToCString(path));
+        })
+
         // Activation
-        .def("activate_node", &CSpace::ActivateNode)
-        .def("normalize_nodes", &CSpace::NormalizeNodes, py::arg("sum") = 1.0)
+        .def("activate_node", &CSpace::ActivateNode,
+             py::arg("node"), py::arg("scale"))
+        .def("normalize_nodes", &CSpace::NormalizeNodes,
+             py::arg("sum") = 1.0)
         .def("sort_nodes", &CSpace::SortNodes)
-        .def("get_total_activation", &CSpace::GetTotalActivation, py::arg("compute") = false);
+        .def("get_total_activation", &CSpace::GetTotalActivation,
+             py::arg("compute") = false)
+        .def("get_total_primary_activation", &CSpace::GetTotalPrimaryActivation,
+             py::arg("compute") = false)
+        .def("get_total_secondary_activation", &CSpace::GetTotalSecondaryActivation,
+             py::arg("compute") = false)
+
+        // Layout parameters
+        .def("get_prim_sec_ratio", &CSpace::GetPrimSecRatio)
+        .def("set_prim_sec_ratio", &CSpace::SetPrimSecRatio, py::arg("ratio"))
+        .def("get_spring_const", &CSpace::GetSpringConst)
+        .def("set_spring_const", &CSpace::SetSpringConst, py::arg("k"))
+        .def("get_center", [](CSpace* space) -> CVectorD<3> {
+            return space->GetCenter();
+        })
+        .def("set_center", [](CSpace* space, const CVectorD<3>& center) {
+            space->SetCenter(center);
+        })
+        .def("get_layout_manager", [](CSpace* space) {
+            return space->GetLayoutManager();
+        }, py::return_value_policy::reference);
 }
