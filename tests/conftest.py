@@ -28,7 +28,9 @@ def setup_python_path():
     project_root = os.path.dirname(os.path.dirname(__file__))
 
     search_paths = [
+        os.path.join(project_root, 'src', 'out', 'build', 'x64-debug', 'python', 'Debug'),
         os.path.join(project_root, 'src', 'out', 'build', 'x64-debug', 'python'),
+        os.path.join(project_root, 'src', 'out', 'build', 'x64-release', 'python', 'Release'),
         os.path.join(project_root, 'src', 'out', 'build', 'x64-release', 'python'),
         os.path.join(project_root, 'build', 'python'),
         os.path.join(project_root, 'build', 'Debug', 'python'),
