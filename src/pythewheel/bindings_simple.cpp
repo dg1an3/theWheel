@@ -34,6 +34,17 @@
 
 namespace py = pybind11;
 
+// Minimal MFC app state for Python module
+class CPythonModuleApp : public CWinApp
+{
+public:
+    CPythonModuleApp() {}
+    virtual BOOL InitInstance() { return TRUE; }
+};
+
+// Static instance to initialize MFC
+static CPythonModuleApp theApp;
+
 // Helper to convert CString to std::string
 std::string CStringToStdString(const CString& cstr) {
     return std::string(CT2A(cstr));
@@ -72,7 +83,11 @@ PYBIND11_MODULE(pythewheel, m) {
 
     // Bind CNode (simplified - core methods only)
     py::class_<CNode>(m, "Node")
+        .def(py::init<>())
         .def(py::init<CSpace*>(), py::arg("space") = nullptr)
+        .def(py::init([](CSpace* space, const std::string& name, const std::string& desc) {
+            return new CNode(space, StdStringToCString(name), StdStringToCString(desc));
+        }), py::arg("space") = nullptr, py::arg("name") = "", py::arg("description") = "")
         // Basic attributes with CString conversion
         .def("get_name", [](CNode* node) {
             return CStringToStdString(node->GetName());

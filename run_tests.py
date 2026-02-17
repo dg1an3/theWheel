@@ -22,7 +22,9 @@ def find_pythewheel_module():
     project_root = os.path.dirname(os.path.abspath(__file__))
 
     search_paths = [
+        os.path.join(project_root, 'src', 'out', 'build', 'x64-debug', 'python', 'Debug'),
         os.path.join(project_root, 'src', 'out', 'build', 'x64-debug', 'python'),
+        os.path.join(project_root, 'src', 'out', 'build', 'x64-release', 'python', 'Release'),
         os.path.join(project_root, 'src', 'out', 'build', 'x64-release', 'python'),
         os.path.join(project_root, 'build', 'python'),
         os.path.join(project_root, 'build', 'Debug', 'python'),
@@ -32,9 +34,12 @@ def find_pythewheel_module():
     for path in search_paths:
         # Look for .pyd (Windows) or .so (Linux/Mac) files
         if os.path.exists(path):
-            files = os.listdir(path)
-            if any(f.startswith('pythewheel') and (f.endswith('.pyd') or f.endswith('.so')) for f in files):
-                return path
+            try:
+                files = os.listdir(path)
+                if any(f.startswith('pythewheel') and (f.endswith('.pyd') or f.endswith('.so')) for f in files):
+                    return path
+            except OSError:
+                continue
 
     return None
 
@@ -44,10 +49,16 @@ def main():
     # Find the module
     module_path = find_pythewheel_module()
 
+    # Set up environment
+    env = os.environ.copy()
+
     if module_path:
         print(f"Found pythewheel module at: {module_path}")
-        # Add to Python path
-        sys.path.insert(0, module_path)
+        # Add to Python path for subprocess
+        if 'PYTHONPATH' in env:
+            env['PYTHONPATH'] = module_path + os.pathsep + env['PYTHONPATH']
+        else:
+            env['PYTHONPATH'] = module_path
     else:
         print("WARNING: Could not locate pythewheel module.")
         print("Please build the project first using CMake:")
@@ -71,8 +82,8 @@ def main():
 
     print(f"\nRunning: {' '.join(pytest_args)}\n")
 
-    # Run pytest
-    result = subprocess.run(pytest_args)
+    # Run pytest with modified environment
+    result = subprocess.run(pytest_args, env=env)
 
     return result.returncode
 
