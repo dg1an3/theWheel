@@ -1,11 +1,11 @@
 # Branch Summary
 
-**Generated**: 2025-11-07
+**Generated**: 2025-11-07 | **Updated**: 2026-02-18
 **Repository**: theWheel
 
 ## Overview
 
-This repository has **8 local branches** (including main) with corresponding remote tracking branches. Development activity spans from February to November 2025, with active modernization and refactoring efforts.
+This repository has **8 local branches** (including main) with corresponding remote tracking branches. Development activity spans from February 2025 to February 2026, with the current focus on CMake build modernization and comprehensive testing infrastructure.
 
 ---
 
@@ -21,10 +21,36 @@ This repository has **8 local branches** (including main) with corresponding rem
 
 ## Active Development Branches
 
-### `feature/wrap-distance` ⭐ Most Recent
+### `feature/cmake` ⭐ Most Recent (Current Branch)
+- **Last Updated**: 2026-02-18
+- **Status**: Active development - Major build modernization with testing infrastructure
+- **Commits Ahead of Main**: 9 commits
+- **Latest Commit**: Add unit tests for CNode, CNodeLink, CSpace, and CVectorD classes; implement Google Test framework integration
+- **Key Changes**:
+  - CMake build system for OptimizeN, theWheelModel, and OptimizeND
+  - CMakePresets.json with x64-debug and x64-release presets
+  - MSVC compatibility layer with `mfc_compat.h` for cross-platform builds
+  - Per-target MSVC runtime library selection in CMake
+  - Python bindings via pybind11 (`pythewheel` module with `bindings.cpp` and `bindings_simple.cpp`)
+  - Comprehensive pytest-based test suite (test_vector3d, test_node, test_space)
+  - Google Test (gtest) C++ unit tests for CNode, CNodeLink, CSpace, CVectorD
+  - Model source modifications to support non-MFC builds (Node.cpp, NodeLink.cpp, Space.cpp)
+- **Purpose**: Modernize build system with CMake, enable cross-platform compilation without MFC dependency, establish dual testing infrastructure (Python + C++)
+- **Files Added/Modified** (43 files, +3616/-41 lines):
+  - `src/CMakeLists.txt`, `src/CMakePresets.json`
+  - `src/OptimizeN/CMakeLists.txt`, `src/OptimizeN/include/mfc_compat.h`
+  - `src/OptimizeND/CMakeLists.txt`, `src/OptimizeND/OptimizeND.cpp/h`
+  - `src/theWheelModel/CMakeLists.txt`
+  - `src/pythewheel/CMakeLists.txt`, `src/pythewheel/bindings.cpp`, `src/pythewheel/bindings_simple.cpp`
+  - `src/theWheelModelTests/CMakeLists.txt`, `src/theWheelModelTests/test_*.cpp` (5 test files)
+  - `tests/conftest.py`, `tests/test_vector3d.py`, `tests/test_node.py`, `tests/test_space.py`
+  - `requirements.txt`, `pytest.ini`, `run_tests.py`
+  - `TESTING.md`, `PYTHON_TESTING_QUICKSTART.md`, `PYTHON_TESTING_STATUS.md`
+
+### `feature/wrap-distance`
 - **Last Updated**: 2025-11-07
 - **Status**: Active development
-- **Commits Ahead of Main**: 8 commits
+- **Commits Ahead of Main**: 9 commits
 - **Latest Commit**: Refactor codebase and adopt modern C++ practices
 - **Key Changes**:
   - Extensive refactoring with modern C++ practices
@@ -46,37 +72,6 @@ This repository has **8 local branches** (including main) with corresponding rem
 ---
 
 ## Feature Branches (March 2025)
-
-### `feature/cmake`
-- **Last Updated**: 2025-11-07
-- **Status**: In progress - Major update with Python testing infrastructure
-- **Commits Ahead of Main**: 2+ commits
-- **Key Changes**:
-  - Added CMakeLists.txt and CMakePresets.json to src/
-  - Created new OptimizeND project with CMake configuration
-  - **NEW: Complete Python testing infrastructure using pybind11**
-  - **NEW: Added CMakeLists.txt for OptimizeN library**
-  - **NEW: Added CMakeLists.txt for theWheelModel library**
-  - **NEW: Created pythewheel Python bindings module**
-  - **NEW: Comprehensive pytest-based test suite**
-- **Purpose**: Modernize build system with CMake alongside existing Visual Studio solution, enable Python-based testing
-- **Files Added**:
-  - `src/CMakeLists.txt` (updated with pybind11 integration)
-  - `src/CMakePresets.json`
-  - `src/OptimizeN/CMakeLists.txt` (new)
-  - `src/OptimizeND/CMakeLists.txt`
-  - `src/OptimizeND/OptimizeND.cpp/h`
-  - `src/theWheelModel/CMakeLists.txt` (new)
-  - `src/pythewheel/CMakeLists.txt` (new)
-  - `src/pythewheel/bindings.cpp` (new)
-  - `requirements.txt` (Python dependencies)
-  - `pytest.ini` (pytest configuration)
-  - `TESTING.md` (comprehensive testing documentation)
-  - `run_tests.py` (test runner script)
-  - `tests/conftest.py` (pytest configuration)
-  - `tests/test_vector3d.py` (Vector3D unit tests)
-  - `tests/test_node.py` (Node unit and integration tests)
-  - `tests/test_space.py` (Space unit and integration tests)
 
 ### `feature/weel-app`
 - **Last Updated**: 2025-03-22
@@ -141,9 +136,9 @@ This repository has **8 local branches** (including main) with corresponding rem
 | Branch | Status | Priority | Recommendation |
 |--------|--------|----------|----------------|
 | `main` | ✅ Stable | - | Current baseline |
+| `feature/cmake` | 🚧 Active | High | Current focus - complete CMake migration and testing |
 | `feature/wrap-distance` | 🚧 Active | High | Continue development, consider merging when stable |
 | `docs/claude-md` | ✅ Merged | Low | Safe to delete |
-| `feature/cmake` | ⏸️ Paused | Medium | Resume when ready to complete CMake migration |
 | `feature/weel-app` | 🧪 Experimental | Medium | Evaluate if web version should continue |
 | `feature/convert-space-to-md` | ⚠️ Stale | Low | Consider deleting if no longer needed |
 | `feature/use_stl` | ⚠️ Stale | Low | Consider deleting if no longer needed |
@@ -154,20 +149,20 @@ This repository has **8 local branches** (including main) with corresponding rem
 
 ## Recommendations
 
-### Ready to Merge
-1. **bugfix/cast-warnings** - Improves code quality with cast warning fixes
-2. **bugfix/clean-up-unused-files** - Reduces technical debt
-
 ### Active Development
-3. **feature/wrap-distance** - Major modernization effort, continue development
+1. **feature/cmake** - Current focus: CMake build modernization with Google Test and Python testing infrastructure (9 commits, 43 files changed)
+2. **feature/wrap-distance** - Major modernization effort for modern C++ and rendering improvements
+
+### Ready to Merge
+3. **bugfix/cast-warnings** - Improves code quality with cast warning fixes
+4. **bugfix/clean-up-unused-files** - Reduces technical debt
 
 ### Cleanup Candidates
-4. **docs/claude-md** - Already merged, safe to delete
-5. **feature/convert-space-to-md** - No unique changes, consider deleting
-6. **feature/use_stl** - No unique changes, consider deleting
+5. **docs/claude-md** - Already merged, safe to delete
+6. **feature/convert-space-to-md** - No unique changes, consider deleting
+7. **feature/use_stl** - No unique changes, consider deleting
 
-### Resume When Ready
-7. **feature/cmake** - Complete when modernizing build system
+### Evaluate
 8. **feature/weel-app** - Continue if web-based version is desired
 
 ---
@@ -176,10 +171,11 @@ This repository has **8 local branches** (including main) with corresponding rem
 
 - All branches have corresponding remote tracking branches on origin
 - Most feature branches created in March 2025 represent parallel modernization experiments
-- Recent focus (November 2025) is on `feature/wrap-distance` for modern C++ refactoring
-- Two bugfix branches from February are complete and ready for integration
+- Current focus (February 2026) is on `feature/cmake` for build modernization and test infrastructure
+- `feature/wrap-distance` and `feature/cmake` are both 9 commits ahead of main, representing the two most active branches
+- Two bugfix branches from February 2025 are complete and ready for integration
 - Consider consolidating or cleaning up stale branches to reduce confusion
 
 ---
 
-**Last Updated**: 2025-11-07
+**Last Updated**: 2026-02-18
