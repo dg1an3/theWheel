@@ -1,0 +1,8 @@
+# Python dependencies for theWheel testing
+
+# Testing framework
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Useful testing utilities
+pytest-mock>=3.10.0

@@ -16,6 +16,14 @@
 #include <complex>
 using namespace std;
 
+// _finite is MSVC-specific; use std::isfinite on other platforms
+#ifndef _MSC_VER
+#include <cmath>
+#ifndef _finite
+#define _finite(x) std::isfinite(x)
+#endif
+#endif
+
 //////////////////////////////////////////////////////////////////////
 // standard real representation
 //////////////////////////////////////////////////////////////////////
@@ -277,16 +285,16 @@ inline REAL GetProfileReal(const char *pszSection, const char *pszName, double d
 
 	CString strValue;
 	strValue.Format(_T("%lf"), default_value);
-	
+
 	// get profile string, or default value
-	strValue = ::AfxGetApp()->GetProfileString(A2T(pszSection), A2T(pszName), strValue);
+	strValue = ::AfxGetApp()->GetProfileString(CA2T(pszSection), CA2T(pszName), strValue);
 
 	// turn to REAL
 	REAL value;
 	_stscanf_s(strValue.GetBuffer(), _T(REAL_FMT), &value);
 
 	// make sure parameter is written, so it can be modified through RegEdit
-	::AfxGetApp()->WriteProfileString(A2T(pszSection), A2T(pszName), strValue);
+	::AfxGetApp()->WriteProfileString(CA2T(pszSection), CA2T(pszName), strValue);
 
 	return value;
 
