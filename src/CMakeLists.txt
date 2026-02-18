@@ -19,7 +19,9 @@ project ("theWheel_src")
 # Use release DLL runtime (/MD) for all configurations, including Debug.
 # Python extensions must match the Python interpreter's CRT, which is /MD.
 # All static libraries in this tree must use the same CRT for consistent linking.
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+endif()
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)

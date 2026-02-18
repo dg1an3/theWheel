@@ -103,6 +103,7 @@ public:										\
 
 
 //////////////////////////////////////////////////////////////////////
+#ifdef _MSC_VER
 #define CHECK_HRESULT(call) \
 {							\
 	HRESULT hr = call;		\
@@ -119,20 +120,25 @@ public:										\
 	HRESULT hr = call;				\
 	ATLASSERT(SUCCEEDED(hr));	\
 }
+#endif // _MSC_VER
 
 
 //////////////////////////////////////////////////////////////////////
 // Macros for logging
 //////////////////////////////////////////////////////////////////////
 
-#define BEGIN_LOG_SECTION(name) { 
+#define BEGIN_LOG_SECTION(name) {
 #define BEGIN_LOG_SECTION_(name) {
 #define BEGIN_LOG_ONLY(name) if (0) {
-#define EXIT_LOG_SECTION() 
+#define EXIT_LOG_SECTION()
 #define END_LOG_SECTION() (void) 0; }
+#ifdef _MSC_VER
 #define LOG 1 ? (void) 0 : ::AfxTrace
+#else
+#define LOG(...) ((void)0)
+#endif
 #define LOG_EXPR(expr)
 #define LOG_EXPR_DESC(expr, desc)
 #define LOG_EXPR_EXT(expr)
-#define LOG_EXPR_EXT_DESC(expr, desc) 
+#define LOG_EXPR_EXT_DESC(expr, desc)
 

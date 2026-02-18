@@ -27,3 +27,11 @@ set_target_properties(pythewheel PROPERTIES
 # MSVC runtime is set globally to /MD (MultiThreadedDLL) in the root
 # CMakeLists.txt via CMAKE_MSVC_RUNTIME_LIBRARY. No per-target CRT
 # flags needed here.
+
+# On MSVC, MFC flags are needed
+if(MSVC)
+    target_compile_definitions(pythewheel PRIVATE _AFXDLL NOMINMAX)
+else()
+    target_compile_definitions(pythewheel PRIVATE NOMINMAX)
+    target_compile_options(pythewheel PRIVATE -Wall -Wno-unused-variable -Wno-sign-compare)
+endif()

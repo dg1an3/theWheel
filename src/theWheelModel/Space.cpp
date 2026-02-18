@@ -66,7 +66,11 @@ REAL
 //////////////////////////////////////////////////////////////////////
 // Event Firing
 //////////////////////////////////////////////////////////////////////
-#define SPACE_FIRE_CHANGE(TAG, NODE) UpdateAllViews(NULL, TAG, NODE); 
+#ifdef _MSC_VER
+#define SPACE_FIRE_CHANGE(TAG, NODE) UpdateAllViews(NULL, TAG, NODE);
+#else
+#define SPACE_FIRE_CHANGE(TAG, NODE)
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 // CSpace construction/destruction
@@ -91,10 +95,12 @@ CSpace::CSpace()
 	// construct layout manager
 	m_pLayoutManager = new CSpaceLayoutManager(this);
 
+#ifdef _MSC_VER
 	// set the spring constant (from the profile)
-	SetSpringConst( 1.0f / 100.0f * 
-		(REAL) ::AfxGetApp()->GetProfileInt(_T("LAYOUT"), _T("SPRING_CONST"), 
+	SetSpringConst( 1.0f / 100.0f *
+		(REAL) ::AfxGetApp()->GetProfileInt(_T("LAYOUT"), _T("SPRING_CONST"),
 			Round<int>(100.0f * GetSpringConst())));
+#endif
 
 }	// CSpace::CSpace
 
@@ -416,7 +422,7 @@ void
 /////////////////////////////////////////////////////////////////////////////
 // CSpace diagnostics
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(_MSC_VER)
 
 //////////////////////////////////////////////////////////////////////
 // CSpace::AssertValid
@@ -517,9 +523,10 @@ REAL
 }	// CSpace::GetTotalSecondaryActivation
 
 
+#ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
 // CSpace::Serialize
-// 
+//
 // reads/writes the CSpace to an archive
 //////////////////////////////////////////////////////////////////////
 void CSpace::Serialize(CArchive& ar)
@@ -657,5 +664,5 @@ void CSpace::Serialize(CArchive& ar)
 	}
 
 }	// CSpace::Serialize
-
+#endif // _MSC_VER
 
