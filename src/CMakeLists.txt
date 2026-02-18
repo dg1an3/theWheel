@@ -42,8 +42,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(pybind11)
 
+# Enable testing
+enable_testing()
+
 # Include sub-projects.
 add_subdirectory ("OptimizeN")
 add_subdirectory ("theWheelModel")
 add_subdirectory ("pythewheel")
 add_subdirectory ("OptimizeND")
+add_subdirectory ("theWheelModelTests")
