@@ -143,9 +143,10 @@ CNodeLink::PropagateActivation(CNode *pFromNode, REAL initScale, REAL alpha)
 }	// CNodeLink::PropagateActivation
 
 
+#ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
 // CNodeLink::Serialize
-// 
+//
 // serializes the node link
 //////////////////////////////////////////////////////////////////////
 void CNodeLink::Serialize(CArchive &ar)
@@ -181,3 +182,4 @@ void CNodeLink::Serialize(CArchive &ar)
 	}
 
 }	// CNodeLink::Serialize
+#endif // _MSC_VER

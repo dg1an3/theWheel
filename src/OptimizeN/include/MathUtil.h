@@ -16,6 +16,14 @@
 #include <complex>
 using namespace std;
 
+// _finite is MSVC-specific; use std::isfinite on other platforms
+#ifndef _MSC_VER
+#include <cmath>
+#ifndef _finite
+#define _finite(x) std::isfinite(x)
+#endif
+#endif
+
 //////////////////////////////////////////////////////////////////////
 // standard real representation
 //////////////////////////////////////////////////////////////////////

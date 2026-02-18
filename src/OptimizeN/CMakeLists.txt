@@ -9,8 +9,12 @@ set(OPTIMIZEN_SOURCES
     ObjectiveFunction.cpp
     Optimizer.cpp
     PowellOptimizer.cpp
-    stdafx.cpp
 )
+
+# stdafx.cpp is only needed for MSVC precompiled headers
+if(MSVC)
+    list(APPEND OPTIMIZEN_SOURCES stdafx.cpp)
+endif()
 
 # Collect all header files
 set(OPTIMIZEN_HEADERS
@@ -28,6 +32,7 @@ set(OPTIMIZEN_HEADERS
     include/UtilMacros.h
     include/VectorN.h
     include/VectorOps.h
+    include/mfc_compat.h
     stdafx.h
 )
 
@@ -45,7 +50,7 @@ target_include_directories(OptimizeN
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# MFC is required for this library
+# MFC is required for this library on MSVC
 if(MSVC)
     # Use MFC in a shared DLL
     set_target_properties(OptimizeN PROPERTIES
@@ -54,4 +59,7 @@ if(MSVC)
 
     # Precompiled headers
     target_precompile_headers(OptimizeN PRIVATE stdafx.h)
+else()
+    # GCC/Clang warning flags
+    target_compile_options(OptimizeN PRIVATE -Wall -Wno-unused-variable -Wno-sign-compare)
 endif()

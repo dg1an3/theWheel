@@ -11,8 +11,10 @@
 // math vector
 #include <VectorD.h>
 
+#ifdef _MSC_VER
 // the image utilities
 #include "Dib.h"
+#endif
 
 // the links
 #include "NodeLink.h"
@@ -62,8 +64,10 @@ public:
 	DECLARE_ATTRIBUTE_GI(Class, CString);
 	DECLARE_ATTRIBUTE_GI(ImageFilename, CString);
 
+#ifdef _MSC_VER
 	// loads the image file, if necessary
 	CDib *GetDib();
+#endif
 
 private:
 	// pointer to the space that contains this node
@@ -72,8 +76,10 @@ private:
 	// the collection of children
 	vector<CNode*> m_arrChildren;
 
+#ifdef _MSC_VER
 	// pointer to the DIB, if it is loaded
 	CDib *m_pDib;
+#endif
 
 public:
 
@@ -228,8 +234,10 @@ public:
 	// serialization support
 	DECLARE_SERIAL(CNode)
 
+#ifdef _MSC_VER
 	// serialization of this node
 	virtual void Serialize(CArchive &ar);
+#endif
 
 };	// class CNode
 

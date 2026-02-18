@@ -50,9 +50,11 @@ CNode::CNode(CSpace *pSpace,
 	: m_pSpace(pSpace)
 		, m_pParent(NULL)
 
+#ifdef _MSC_VER
 		, m_pDib(NULL)
+#endif
 
-		, m_primaryActivation((REAL) 0.005)		// initialize with a very 
+		, m_primaryActivation((REAL) 0.005)		// initialize with a very
 		, m_secondaryActivation((REAL) 0.005)		// small activation
 
 		, m_pMaxActivator(NULL)
@@ -88,11 +90,13 @@ CNode::~CNode()
 	for (auto iterLink = m_arrLinks.begin(); iterLink != m_arrLinks.end(); iterLink++)
 		delete (*iterLink);
 
+#ifdef _MSC_VER
 	// delete the DIB, if present
 	if (m_pDib)
 	{
 		delete m_pDib;
 	}
+#endif
 
 }	// CNode::~CNode
 
@@ -225,12 +229,14 @@ void
 {
 	m_ImageFilename = strImageFilename;
 
+#ifdef _MSC_VER
 	// trigger re-loading of image filename
 	if (m_pDib != NULL)
 	{
 		delete m_pDib;
 		m_pDib = NULL;
 	}
+#endif
 
 	// fire change
 	NODE_FIRE_CHANGE();
@@ -238,6 +244,7 @@ void
 }	// CNode::SetImageFilename
 
 
+#ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
 CDib *
 	CNode::GetDib()
@@ -265,6 +272,7 @@ CDib *
 	return m_pDib;
 
 }	// CNode::GetDib
+#endif // _MSC_VER
 
 /// TODO: should position + size stuff be in an adjacent class?
 //////////////////////////////////////////////////////////////////////
@@ -782,9 +790,10 @@ void
 }
 
 
+#ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
 // CNode::Serialize
-// 
+//
 // serialize the node
 //////////////////////////////////////////////////////////////////////
 void CNode::Serialize(CArchive &ar)
@@ -934,4 +943,4 @@ void CNode::Serialize(CArchive &ar)
 	}
 
 }	// CNode::Serialize
-
+#endif // _MSC_VER
