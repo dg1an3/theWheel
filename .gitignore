@@ -202,3 +202,5 @@ BuildArtifacts/
 node_modules/
 /tests/__pycache__
 /.claude
+*.pyc
+__pycache__/
