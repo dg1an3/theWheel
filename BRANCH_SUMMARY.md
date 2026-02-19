@@ -5,7 +5,7 @@
 
 ## Overview
 
-This repository has **5 local branches** (including main) with corresponding remote tracking branches. Development activity spans from February 2025 to February 2026. Four stale branches (`bugfix/cast-warnings`, `bugfix/clean-up-unused-files`, `docs/claude-md`, `feature/cmake`) were deleted on 2026-02-18 after confirming they had been merged to main.
+This repository has **4 local branches** (including main) with corresponding remote tracking branches. Development activity spans from February 2025 to February 2026. Five stale branches were deleted on 2026-02-18 after confirming they had been merged to main (see Deleted Branches section).
 
 ---
 
@@ -60,13 +60,6 @@ This repository has **5 local branches** (including main) with corresponding rem
 - **Key Changes**: Only README and CLAUDE.md changes (documentation)
 - **Purpose**: Unclear - may have been for converting .spx format to markdown representation
 
-### `feature/use_stl`
-- **Last Updated**: 2025-03-22
-- **Status**: Minimal changes, possibly abandoned
-- **Commits Ahead of Main**: 0 unique commits
-- **Key Changes**: Only README and CLAUDE.md changes (documentation)
-- **Purpose**: Possibly intended to replace custom containers with STL containers
-
 ---
 
 ## Deleted Branches (Merged)
@@ -79,6 +72,7 @@ The following branches were merged to main and deleted on 2026-02-18:
 | `bugfix/clean-up-unused-files` | PR #4 | Removed dead code and unused files |
 | `docs/claude-md` | PRs #10, #11 | Added CLAUDE.md and README documentation |
 | `feature/cmake` | PR #8 | CMake build modernization, Google Test, Python bindings |
+| `feature/use_stl` | PR #6 | Partial STL container migration (std::map for class colors) |
 
 ---
 
@@ -90,7 +84,6 @@ The following branches were merged to main and deleted on 2026-02-18:
 | `feature/wrap-distance` | 🚧 Active | High | Continue development, consider merging when stable |
 | `feature/weel-app` | 🧪 Experimental | Medium | Evaluate if web version should continue |
 | `feature/convert-space-to-md` | ⚠️ Stale | Low | Consider deleting if no longer needed |
-| `feature/use_stl` | ⚠️ Stale | Low | Consider deleting if no longer needed |
 
 ---
 
@@ -101,7 +94,6 @@ The following branches were merged to main and deleted on 2026-02-18:
 
 ### Cleanup Candidates
 2. **feature/convert-space-to-md** - No unique changes, consider deleting
-3. **feature/use_stl** - No unique changes, consider deleting
 
 ### Evaluate
 4. **feature/weel-app** - Continue if web-based version is desired
@@ -114,7 +106,7 @@ The following branches were merged to main and deleted on 2026-02-18:
 - Most feature branches created in March 2025 represent parallel modernization experiments
 - CMake build modernization, bugfixes, and documentation have been merged to main
 - `feature/wrap-distance` is the most active development branch (9 commits ahead of main)
-- Two stale branches (`feature/convert-space-to-md`, `feature/use_stl`) could be cleaned up
+- One stale branch (`feature/convert-space-to-md`) could be cleaned up
 
 ---
 
