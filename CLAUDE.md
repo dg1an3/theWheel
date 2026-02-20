@@ -144,10 +144,57 @@ Custom template-based linear algebra:
 - **Matrices**: `CMatrixNxM<TYPE>` for transformations
 - See `OptimizeN/include/VectorOps.h` for low-level operations
 
-### File Format
-- **Extension**: `.spx` (serialized space files)
-- **Serialization**: CSpace/CNode/CNodeLink implement MFC serialization
-- Loaded via theWheel's Document/View architecture
+### File Format (.spx)
+
+The `.spx` files are MFC CArchive binary archives containing serialized CNode networks.
+
+**Binary Format Overview:**
+- File may start with a DWORD CSpace schema prefix (if first bytes ≠ 0xFFFF) or directly with CNode class tag
+- MFC CArchive object tracking: classes and objects share a single map with 1-based indices
+  - `0x0000` = NULL pointer
+  - `0xFFFF` = NEW_CLASS_TAG (schema WORD, name length WORD, name bytes, then object data)
+  - `0x8000 | idx` = OLD_CLASS_TAG (existing class, new object instance)
+  - Plain WORD `idx` = back-reference to existing object
+  - `0x7FFF` = BIG_OBJECT_TAG (followed by DWORD index)
+- CString: BYTE length (or 0xFF + WORD, or 0xFF 0xFFFF + DWORD), then char data (ANSI/latin-1)
+- CObArray: WORD count (via WriteCount), then serialized CObject* entries
+
+**CNode Schema Versions:**
+- **Schema 5**: name, description, image_filename, URL + children + links
+- **Schema 6**: + class_name field
+- **Schema 7**: + primary/secondary activation (doubles), position (3 doubles), max activator (CObject*), max delta (double)
+- **Schema 8**: + optSSV (CObject*, always NULL in practice)
+
+**CNodeLink Schema Versions:**
+- **Schema 1**: weight (float), target (CObject* ref)
+- **Schema 2**: + IsStabilizer (BOOL, 4 bytes DWORD)
+
+**Eevorg (Evolutionary Automaton):**
+Two historical versions exist in .spx files, auto-detected by the parser:
+- **Standalone** (1995, `Eevorg : CObject`): 3 WORDs (maxVal, maxRule, score) + CByteArray rules
+- **CNode subclass** (theWheel era): CNode::Serialize at file schema, then 3 WORDs + CByteArray
+
+**Python Parser:** `scripts/spx_parser.py` — pure Python MFC archive parser
+- `parse_spx(filepath)` → returns root `SpxNode` tree
+- Handles schemas 5-8, CNodeLink schemas 1-2, both Eevorg variants
+- Tested against all 14 known .spx files (6 theWheel_antiques + 8 OneDrive/Timeline)
+
+**Markdown Converter:** `scripts/spx_to_markdown.py` — converts parsed nodes to markdown
+- `convert_spx_to_markdown(spx_path, output_dir)` → generates one .md per category + index.md
+
+**Known .spx Files:**
+- `C:\dev\DLaneAtElekta\theWheel_antiques\theWheel\data\` — 4 files (schemas 5-6)
+- `C:\dev\DLaneAtElekta\theWheel_antiques\theWheel2001\data\` — 1 file (schema 5)
+- `C:\dev\DLaneAtElekta\theWheel_antiques\THEWHEEL_MODEL\THEWHEEL_MODEL_Test\` — 1 file (schema 8)
+- `C:\Users\Derek\OneDrive\Timeline\35 theWheel\S200310-02 DGL Projects 10-2003 ~ SOM2001_20030428\` — 8 files:
+  - `data\DerekLane\Derek.spx` (62 nodes — personal ToDo categories)
+  - `data\RT\Radiation Treatment.spx` (51 nodes — radiation therapy)
+  - `data\RT\RT.spx` (63 nodes — radiation therapy)
+  - `data\SonicSpace\SonicSpace-schema6.spx` (185 nodes — music genres)
+  - `data\SonicSpace\SonicSpace.spx` (169 nodes — music genres)
+  - `data\TheWell\TheWell.spx` (90 nodes — topics)
+  - `data\Topics\Corpus.spx` (54 nodes — evolution topics)
+  - `theWheel-2002-06\TheWell3.spx` (89 nodes — topics)
 
 ## Important Notes
 
