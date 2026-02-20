@@ -1,0 +1,27 @@
+site_name: theWheel
+site_description: Semantic visualization and knowledge organization system
+repo_url: https://github.com/dg1an3/theWheel
+
+theme:
+  name: material
+  palette:
+    scheme: default
+    primary: teal
+    accent: teal
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - User Guide:
+    - Getting Started: user-guide/getting-started.md
+    - Working with Nodes: user-guide/nodes.md
+    - Loading Files: user-guide/loading-files.md
+  - Reference:
+    - Architecture: reference/architecture.md
+    - File Format (.spx): reference/spx-format.md
+
+plugins:
+  - search
