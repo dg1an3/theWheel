@@ -31,8 +31,6 @@ END_MESSAGE_MAP()
 
 CtheWheelApp::CtheWheelApp()
 {
-	EnableHtmlHelp();
-
 	// TODO: add construction code here,
 	// Place all significant initialization in InitInstance
 }
