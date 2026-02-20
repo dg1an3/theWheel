@@ -575,6 +575,7 @@ void
 //
 // macro to trace matrix -- only compiles in debug version
 //////////////////////////////////////////////////////////////////////
+#undef TRACE_VECTOR
 #ifdef _DEBUG
 #define TRACE_VECTOR(strMessage, v) \
 	TRACE(strMessage);				\
@@ -631,10 +632,11 @@ CArchive&
 #endif	// __AFX_H__
 
 
+#ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
-void 
-	LogExprExt(const CVectorN<TYPE> & vVec, 
+void
+	LogExprExt(const CVectorN<TYPE> & vVec,
 			const char *pszName, const char *pszModule)
 	// helper function for XML logging of vectors
 {
@@ -656,7 +658,7 @@ void
 
 		// set type to generice "CVector"
 		pVarElem->Attribute("type", "CVector");
-		
+
 		// get the current format for the element type
 		const char *pszFormat = pLog->GetFormat((TYPE) 0);
 		for (int nAt = 0; nAt < vVec.GetDim(); nAt++)
@@ -670,6 +672,7 @@ void
 	}
 
 }	// LogExprExt
+#endif // _MSC_VER
 
 
 #endif	// !defined(VECTORN_H)

@@ -6,6 +6,13 @@
 #include <ippm.h>
 #endif
 
+// Ensure __forceinline is available on non-MSVC platforms
+#ifndef _MSC_VER
+#ifndef __forceinline
+#define __forceinline inline __attribute__((always_inline))
+#endif
+#endif
+
 // subst for forcing inline of function expansions
 #define INLINE __forceinline
 

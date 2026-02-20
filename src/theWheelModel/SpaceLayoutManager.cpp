@@ -323,7 +323,7 @@ void
 		if (pNode->GetIsSubThreshold()
 			|| pNode->GetPostSuperCount() > 0)
 		{
-			std::swap(m_pSpace->m_arrNodes.begin()+nAt,
+			std::iter_swap(m_pSpace->m_arrNodes.begin()+nAt,
 				m_pSpace->m_arrNodes.begin()+nHighestNewSuper-1);
 
 			/// TODO: use swap for this
