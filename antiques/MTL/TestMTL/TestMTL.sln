@@ -1,0 +1,33 @@
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MTL", "..\MTL.vcproj", "{1507CEE8-A564-4AC2-88D0-05C3D9142C01}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestMTL", "TestMTL.vcproj", "{A6B5EE4E-2497-4E31-8800-328A89ADD51A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{1507CEE8-A564-4AC2-88D0-05C3D9142C01} = {1507CEE8-A564-4AC2-88D0-05C3D9142C01}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release_f|Win32 = Release_f|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1507CEE8-A564-4AC2-88D0-05C3D9142C01}.Debug|Win32.ActiveCfg = Debug|Win32
+		{1507CEE8-A564-4AC2-88D0-05C3D9142C01}.Debug|Win32.Build.0 = Debug|Win32
+		{1507CEE8-A564-4AC2-88D0-05C3D9142C01}.Release_f|Win32.ActiveCfg = Release_f|Win32
+		{1507CEE8-A564-4AC2-88D0-05C3D9142C01}.Release_f|Win32.Build.0 = Release_f|Win32
+		{1507CEE8-A564-4AC2-88D0-05C3D9142C01}.Release|Win32.ActiveCfg = Release|Win32
+		{1507CEE8-A564-4AC2-88D0-05C3D9142C01}.Release|Win32.Build.0 = Release|Win32
+		{A6B5EE4E-2497-4E31-8800-328A89ADD51A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A6B5EE4E-2497-4E31-8800-328A89ADD51A}.Debug|Win32.Build.0 = Debug|Win32
+		{A6B5EE4E-2497-4E31-8800-328A89ADD51A}.Release_f|Win32.ActiveCfg = Release|Win32
+		{A6B5EE4E-2497-4E31-8800-328A89ADD51A}.Release_f|Win32.Build.0 = Release|Win32
+		{A6B5EE4E-2497-4E31-8800-328A89ADD51A}.Release|Win32.ActiveCfg = Release|Win32
+		{A6B5EE4E-2497-4E31-8800-328A89ADD51A}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
