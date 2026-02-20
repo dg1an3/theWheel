@@ -198,7 +198,8 @@ info.jenkinsproperties
 BuildArtifacts/
 *_?.?.?.?.properties
 /PyBlobService/env_pyblob
-/PyBlobService/PyBlobService/__pycache__
 
 node_modules/
-node_modules/
+/.claude
+*.pyc
+__pycache__/

@@ -61,8 +61,10 @@ public:
 	//////////////////////////////////////////////////////////////////
 	// serialization
 
+#ifdef _MSC_VER
 	// serialization of this node link
 	virtual void Serialize(CArchive &ar);
+#endif
 
 protected:
 

@@ -75,8 +75,10 @@ public:
     void Draw(LPDIRECT3DDEVICE9 lpDDS); // LPDIRECTDRAWSURFACE lpDDS);
 
     // draws the links for this nodeview
-    void DrawLinks(LPDIRECT3DDEVICE9 lpDDS, // CDC *pDC, 
-		CNodeViewSkin *pSkin);
+    void DrawLinks(LPDIRECT3DDEVICE9 lpDDS, CNodeViewSkin *pSkin);
+
+    // draws GDI title/text overlay (currently unused; title rendered via D3DXFont in Draw)
+    void DrawOverlay(CDC *pDC);
 
     // adds an amount of pending activation
     void AddPendingActivation(REAL pending);
@@ -107,6 +109,20 @@ public:
 
 	static bool IsActivationGreater(CNodeView *pNodeView1, CNodeView *pNodeView2);
 	static bool IsActDiffGreater(CNode *pNode1, CNode *pNode2);
+
+	// returns the inner extent as a Win32 RECT (screen coordinates)
+	RECT GetInnerRECT() const
+	{
+		RECT r;
+		r.left   = (LONG) m_extInner.GetMin(0);
+		r.top    = (LONG) m_extInner.GetMin(1);
+		r.right  = (LONG) m_extInner.GetMax(0);
+		r.bottom = (LONG) m_extInner.GetMax(1);
+		return r;
+	}
+
+	// returns true if the inner extent has a drawable area
+	bool HasDrawableArea() const { return m_extInner.GetSize(1) >= 1; }
 
 protected:
     // stores the node view's region (shape)

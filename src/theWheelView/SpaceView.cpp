@@ -957,15 +957,10 @@ void CSpaceView::OnPaint()
 			m_pd3dDev->SetRenderState(D3DRS_FOGEND, *(DWORD*)(&End));
 		}
 
-		// Begin the scene
-		ASSERT_HRESULT(m_pd3dDev->BeginScene());
-
-		// draw test checkerbkard pattern
-
 		// now populate array to hold the drawing-order for the nodeviews
-		arrNodeViewsToDraw.resize(__min((UINT) GetVisibleNodeCount() * 2, 
-			GetSpace()->m_arrNodes.size())); 
-		copy(GetSpace()->m_arrNodes.begin(), 
+		arrNodeViewsToDraw.resize(__min((UINT) GetVisibleNodeCount() * 2,
+			GetSpace()->m_arrNodes.size()));
+		copy(GetSpace()->m_arrNodes.begin(),
 			GetSpace()->m_arrNodes.begin() + arrNodeViewsToDraw.size(),
 			arrNodeViewsToDraw.begin());
 
@@ -973,22 +968,99 @@ void CSpaceView::OnPaint()
 		sort(arrNodeViewsToDraw.begin(), arrNodeViewsToDraw.end(),
 			&CNodeView::IsActDiffGreater);
 
-		// draw the node view links
+		// GDI link lines pass (before D3D skins so skins appear on top of links)
+		ASSERT_HRESULT(m_pd3dDev->BeginScene());
+
 		for (auto pNode : arrNodeViewsToDraw)
-			if (!pNode->GetIsSubThreshold())
+			if (!pNode->GetIsSubThreshold() && pNode->GetView() != NULL)
 				((CNodeView*)pNode->GetView())->DrawLinks(m_pd3dDev, &m_skin);
 
-
-		// draw in sorted order
+		// D3D skin pass
 		for (auto pNode : arrNodeViewsToDraw)
-			if (!pNode->GetIsSubThreshold())
+			if (!pNode->GetIsSubThreshold() && pNode->GetView() != NULL)
 				((CNodeView*)pNode->GetView())->Draw(m_pd3dDev);
 
-		// End the scene
+		// GDI title text pass: draw titles on the render target surface after D3D skins.
+		// If the driver executes D3D commands synchronously, text appears on top of skins.
+		{
+			LPDIRECT3DSURFACE9 lpd3dSurf = NULL;
+			if (SUCCEEDED(m_pd3dDev->GetRenderTarget(0, &lpd3dSurf)))
+			{
+				HDC hdc = NULL;
+				if (SUCCEEDED(lpd3dSurf->GetDC(&hdc)))
+				{
+					HFONT hFont = (HFONT)::GetStockObject(DEFAULT_GUI_FONT);
+					HFONT hOldFont = (HFONT)::SelectObject(hdc, hFont);
+					::SetBkMode(hdc, TRANSPARENT);
+
+					for (auto pNode : arrNodeViewsToDraw)
+					{
+						if (!pNode->GetIsSubThreshold() && pNode->GetView() != NULL)
+						{
+							CNodeView *pNV = (CNodeView *) pNode->GetView();
+							if (pNV->HasDrawableArea())
+							{
+								RECT rect = pNV->GetInnerRECT();
+								rect.top += (rect.bottom - rect.top) / 4;
+								// draw black shadow
+								RECT rectShadow = { rect.left+1, rect.top+1, rect.right+1, rect.bottom+1 };
+								::SetTextColor(hdc, RGB(0, 0, 0));
+								::DrawText(hdc, pNode->GetName(), -1, &rectShadow,
+									DT_CENTER | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+								// draw white text
+								::SetTextColor(hdc, RGB(255, 255, 255));
+								::DrawText(hdc, pNode->GetName(), -1, &rect,
+									DT_CENTER | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+							}
+						}
+					}
+
+					::SelectObject(hdc, hOldFont);
+					lpd3dSurf->ReleaseDC(hdc);
+				}
+				lpd3dSurf->Release();
+			}
+		}
+
 		ASSERT_HRESULT(m_pd3dDev->EndScene());
 
 		// Present the backbuffer contents to the display
 		hr = m_pd3dDev->Present( NULL, NULL, NULL, NULL );
+
+		// Also draw titles via the window DC after Present (DWM composites on top of D3D).
+		// This is a fallback in case the render-target GDI pass above renders under the skins.
+		{
+			HDC hWndDC = ::GetDC(m_hWnd);
+			if (hWndDC)
+			{
+				HFONT hFont = (HFONT) ::GetStockObject(DEFAULT_GUI_FONT);
+				HFONT hOldFont = (HFONT) ::SelectObject(hWndDC, hFont);
+				::SetBkMode(hWndDC, TRANSPARENT);
+
+				for (auto pNode : arrNodeViewsToDraw)
+				{
+					if (!pNode->GetIsSubThreshold() && pNode->GetView() != NULL)
+					{
+						CNodeView *pNV = (CNodeView *) pNode->GetView();
+						if (pNV->HasDrawableArea())
+						{
+							RECT rect = pNV->GetInnerRECT();
+							rect.top += (rect.bottom - rect.top) / 4;
+							RECT rectShadow = { rect.left+1, rect.top+1, rect.right+1, rect.bottom+1 };
+							::SetTextColor(hWndDC, RGB(0, 0, 0));
+							::DrawText(hWndDC, pNode->GetName(), -1, &rectShadow,
+								DT_CENTER | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+							::SetTextColor(hWndDC, RGB(255, 255, 255));
+							::DrawText(hWndDC, pNode->GetName(), -1, &rect,
+								DT_CENTER | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+						}
+					}
+				}
+
+				::SelectObject(hWndDC, hOldFont);
+				::ReleaseDC(m_hWnd, hWndDC);
+			}
+		}
 
 		// see if the device was lost
 		if (D3DERR_DEVICELOST == hr)
@@ -1137,6 +1209,17 @@ void CSpaceView::OnTimer(UINT nIDEvent)
 	{
 		// layout the nodes and center them
 		GetSpace()->GetLayoutManager()->LayoutNodes();
+	}
+
+	// ensure all nodes have views (handles nodes added after initial load)
+	for (int nAt = 0; nAt < GetSpace()->GetNodeCount(); nAt++)
+	{
+		CNode* pNode = GetSpace()->GetNodeAt(nAt);
+		if (pNode->GetView() == NULL)
+		{
+			CNodeView* pNewNodeView = new CNodeView(pNode, this);
+			m_arrNodeViews.push_back(pNewNodeView);
+		}
 	}
 
 	// update the privates

@@ -500,75 +500,58 @@ void CNodeView::Draw(LPDIRECT3DDEVICE9 lpDDS)
 	for (auto position : WrapPositions(m_extInner.GetCenter(), WRAP_SPACE_EXTENT)) {
 
 		D3DXMATRIX mat;
-		D3DXMatrixTranslation(&mat, 
+		D3DXMatrixTranslation(&mat,
 			-position[0],
 			-position[1],
 			position[2]);
 		ASSERT_HRESULT(lpDDS->SetTransform(D3DTS_WORLD, (D3DMATRIX*) & mat));
 
-		auto saveCenter = position;
-		// render the skin
-		// m_pParent->m_skin.BltSkin(lpDDS, this);
+		// render the skin (D3D only; GDI overlay done in SpaceView title passes)
 		m_pParent->m_pSkin->Render(this);
-
-		// m_extInner.SetCenter(saveCenter);
-
-		if (false) {
-			LPDIRECT3DSURFACE9 lpd3dSurf = NULL;
-			ASSERT_HRESULT(lpDDS->GetRenderTarget(0, &lpd3dSurf));
-
-			HDC hdc;
-			ASSERT_HRESULT(lpd3dSurf->GetDC(&hdc));
-
-			// get a DC for the drawing surface
-			CDC dc;
-			dc.Attach(hdc);
-			// GET_ATTACH_DC(lpDDS, dc);
-
-			// only draw if it has a substantial area
-			if (m_extOuter.GetSize(1) >= 1)
-			{
-				// get the inner rectangle for drawing 
-				CExtent<3, REAL> extCurrent = m_extInner;
-				if (extCurrent.GetSize(1) > 10)
-					extCurrent.Deflate(5, 5, 5, 5);
-
-				if (extCurrent.GetSize(1) >= 0.0)
-				{
-					// now set up layout
-					CNodeLayoutManager* pNLM = m_pParent->m_pNLM;
-
-					// store the calculated extents
-					CExtent<3, REAL> extTitle;
-					CExtent<3, REAL> extImage;
-					CExtent<3, REAL> extDesc;
-
-					// current height = NLM selector
-					pNLM->CalcExtent(extCurrent, this,
-						m_layoutSelect > 0.0f ? m_layoutSelect : 0.0f,
-						extTitle,
-						extImage,
-						extDesc);
-
-					// draw the node elements
-					DrawTitleBand(&dc, extTitle);
-					DrawImage(&dc, extImage);
-					DrawTitle(&dc, extTitle);
-					DrawText(&dc, extDesc);
-				}
-			}
-
-			// release the DC
-			// RELEASE_DETACH_DC(lpDDS, dc);
-			dc.Detach();
-
-			lpd3dSurf->ReleaseDC(hdc);
-
-			lpd3dSurf->Release();
-		}
 	}
 
 }	// CNodeView::Draw
+
+
+//////////////////////////////////////////////////////////////////////
+// CNodeView::DrawOverlay
+//
+// draws GDI title/text overlay on top of the already-rendered skin;
+// called after EndScene with a DC obtained from the back buffer
+//////////////////////////////////////////////////////////////////////
+void CNodeView::DrawOverlay(CDC *pDC)
+{
+	// only draw if it has a substantial area
+	if (m_extOuter.GetSize(1) < 1)
+		return;
+
+	// get the inner rectangle for drawing
+	CExtent<3,REAL> extCurrent = m_extInner;
+	if (extCurrent.GetSize(1) > 10)
+		extCurrent.Deflate(5, 5, 5, 5);
+
+	if (extCurrent.GetSize(1) < 0.0)
+		return;
+
+	// now set up layout
+	CNodeLayoutManager *pNLM = m_pParent->m_pNLM;
+
+	CExtent<3,REAL> extTitle;
+	CExtent<3,REAL> extImage;
+	CExtent<3,REAL> extDesc;
+
+	pNLM->CalcExtent(extCurrent, this,
+		m_layoutSelect > 0.0 ? m_layoutSelect : 0.0,
+		extTitle,
+		extImage,
+		extDesc);
+
+	DrawTitleBand(pDC, extTitle);
+	DrawImage(pDC, extImage);
+	DrawTitle(pDC, extTitle);
+	DrawText(pDC, extDesc);
+
+}	// CNodeView::DrawOverlay
 
 static ProfileFlag g_DisplayGainFlag(_T("Display"), _T("Gain"));
 
@@ -577,8 +560,7 @@ static ProfileFlag g_DisplayGainFlag(_T("Display"), _T("Gain"));
 // 
 // draws the links for this node view
 //////////////////////////////////////////////////////////////////////
-void CNodeView::DrawLinks(LPDIRECT3DDEVICE9 lpDDS, // CDC *pDC, 
-						  CNodeViewSkin *pSkin)
+void CNodeView::DrawLinks(LPDIRECT3DDEVICE9 lpDDS, CNodeViewSkin *pSkin)
 {
 	LPDIRECT3DSURFACE9 lpd3dSurf = NULL;
 	ASSERT_HRESULT(lpDDS->GetRenderTarget(0, &lpd3dSurf));
@@ -641,6 +623,15 @@ void CNodeView::DrawLinks(LPDIRECT3DDEVICE9 lpDDS, // CDC *pDC,
 				}
 			}
 		}
+	}
+
+	// draw node title text (before D3D skin, so skin renders on top)
+	if (m_extInner.GetSize(1) >= 1)
+	{
+		CRect rect = (CRect) m_extInner;
+		pDC->SetTextColor(RGB(0, 0, 0));
+		pDC->DrawText(GetNode()->GetName(), rect,
+			DT_CENTER | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
 	}
 
 	dc.Detach();
