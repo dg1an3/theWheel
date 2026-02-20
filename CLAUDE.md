@@ -26,30 +26,56 @@ msbuild theWheel_src.sln /p:Configuration=Release /p:Platform=Win32
 3. theWheelView (static library, depends on theWheelModel)
 4. theWheel (executable, depends on all above)
 
-### CMake Build (In Progress)
+### CMake Build (Cross-Platform)
 
-A CMake build system is being added for modernization:
+The CMake build system supports both Windows and macOS:
+
 ```bash
-# Configure using presets
+# Windows (Visual Studio)
 cmake --preset x64-debug
-cmake --preset x64-release
-
-# Build
 cmake --build out/build/x64-debug
-cmake --build out/build/x64-release
+
+# macOS
+cmake --preset macos-debug
+cmake --build out/build/macos-debug
+
+# Run tests (either platform)
+cd src/out/build/macos-debug  # or x64-debug
+ctest --output-on-failure
 ```
 
-**Note**: Currently only OptimizeND (a test project) has CMake configuration. The main projects still use Visual Studio .vcxproj files.
+### macOS Build (wxWidgets)
+
+Prerequisites:
+```bash
+brew install wxwidgets cmake
+```
+
+Build and run:
+```bash
+cd src
+cmake --preset macos-debug
+cmake --build out/build/macos-debug
+# Launch the app
+open out/build/macos-debug/theWheelWx/theWheelWx.app
+```
+
+The macOS build produces:
+- **OptimizeN** and **theWheelModel** static libraries (fully portable)
+- **theWheelModelTests** (85 Google Test unit tests)
+- **theWheelWx** (wxWidgets GUI application with 2D rendering)
+
+**Note**: The Windows build also produces theWheelView (DirectX 9), theWheel (MFC app), and pythewheel (Python bindings) which are not yet ported to macOS.
 
 ## High-Level Architecture
 
 ### Four-Layer Structure
 
 ```
-theWheel (MFC Application)
-    ↓
-theWheelView (DirectX 9 Rendering)
-    ↓
+theWheel (MFC Application)     theWheelWx (wxWidgets Application)
+    ↓                               ↓
+theWheelView (DirectX 9)       [2D wxDC Rendering]
+    ↓                               ↓
 theWheelModel (Core Data & Logic)
     ↓
 OptimizeN (Numerical Optimization)
@@ -88,30 +114,41 @@ OptimizeN (Numerical Optimization)
 
 ## Technology Stack
 
-- **Language**: C++ (targeting C++14/17, with CMake configured for C++20)
-- **Platform**: Windows Win32
-- **UI Framework**: MFC (Microsoft Foundation Classes) with Document/View architecture
-- **Graphics**: DirectX 9 (D3D9, requires June 2010 DirectX SDK)
-- **Build Tools**: Visual Studio 2017/2022 (v143 toolset), MSBuild, CMake 3.8+
-- **Optional Libraries**: Intel IPP (for optimized vector operations)
+- **Language**: C++ (C++17, CMake configured for C++17)
+- **Platforms**: Windows Win32, macOS (via wxWidgets)
+- **UI Framework (Windows)**: MFC (Microsoft Foundation Classes) with Document/View architecture
+- **UI Framework (macOS)**: wxWidgets 3.3+ with 2D wxDC rendering
+- **Graphics (Windows)**: DirectX 9 (D3D9, requires June 2010 DirectX SDK)
+- **Graphics (macOS)**: wxWidgets 2D rendering (wxPaintDC, wxBufferedPaintDC)
+- **Build Tools**: Visual Studio 2017/2022, CMake 3.10+, Ninja/Make
+- **Cross-Platform**: `mfc_compat.h` provides MFC type stubs for non-MSVC platforms
+- **Optional Libraries**: Intel IPP (for optimized vector operations, Windows only)
 
 ## Project Structure
 
 ```
 src/
-├── theWheel/           # MFC application (Document/View)
+├── theWheel/           # MFC application (Document/View) [Windows only]
+├── theWheelWx/         # wxWidgets application [macOS/Linux]
+│   ├── WheelApp.cpp/h        # wxApp + wxFrame (main window)
+│   ├── SpacePanel.cpp/h      # 2D rendering panel (wxPaintDC)
+│   ├── SpaceTreeView.cpp/h   # Node hierarchy tree (wxTreeCtrl)
+│   ├── PropertyDialogs.cpp/h # Node/Space property dialogs
+│   ├── SpaceSerializer.cpp/h # JSON file I/O
+│   ├── Spring.h               # Standalone spring physics (port)
+│   └── wxcompat.h             # Force-include for mfc_compat types
 ├── theWheelModel/      # Core data model and activation logic
 │   ├── include/        # Public headers (Node.h, Space.h, etc.)
 │   └── *.cpp           # Implementation files
-├── theWheelView/       # DirectX 9 rendering layer
+├── theWheelView/       # DirectX 9 rendering layer [Windows only]
 │   ├── include/        # Public headers (SpaceView.h, NodeView.h, etc.)
 │   └── *.cpp           # Rendering implementation
 ├── OptimizeN/          # Numerical optimization library
 │   ├── include/        # Public headers (Optimizer.h, VectorN.h, etc.)
 │   └── *.cpp           # Optimization algorithms
-├── OptimizeND/         # New CMake test project (modernization)
-├── node-view-skin-design.md  # Detailed rendering design doc
-└── TODO.txt            # Refactoring plans
+├── OptimizeND/         # CMake test project
+├── theWheelModelTests/ # Google Test suite (85 tests)
+└── pythewheel/         # Python bindings via pybind11 [Windows only]
 ```
 
 ## Common Development Tasks
