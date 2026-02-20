@@ -6,6 +6,8 @@
 #if !defined(AFX_STDAFX_H__70763E28_0829_11D5_9E4C_00B0D0609AB0__INCLUDED_)
 #define AFX_STDAFX_H__70763E28_0829_11D5_9E4C_00B0D0609AB0__INCLUDED_
 
+#ifdef _MSC_VER
+
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
@@ -24,9 +26,9 @@
 #define WINVER 0x0501		// Change this to the appropriate value to target other versions of Windows.
 #endif
 
-#ifndef _WIN32_WINNT		// Allow use of features specific to Windows XP or later.                   
+#ifndef _WIN32_WINNT		// Allow use of features specific to Windows XP or later.
 #define _WIN32_WINNT 0x0501	// Change this to the appropriate value to target other versions of Windows.
-#endif						
+#endif
 
 #ifndef _WIN32_WINDOWS		// Allow use of features specific to Windows 98 or later.
 #define _WIN32_WINDOWS 0x0410 // Change this to the appropriate value to target Windows Me or later.
@@ -50,33 +52,37 @@
 #include <atlcoll.h>
 
 // internet includes for web pages
-#include <wininet.h> 
-#include <urlmon.h> 
-#include <mshtml.h> 
+#include <wininet.h>
+#include <urlmon.h>
+#include <mshtml.h>
 
 // common definitions
 #include <comdef.h>
-
-
-// #ifndef _SECURE_SCL
-// #define _SECURE_SCL 0
-// #endif
-// #define _HAS_ITERATOR_DEBUGGING 0
-
-
-// STL
-#include <vector>
-#include <map>
-#include <unordered_map>
-#include <algorithm>
-#include <numeric>
-#include <functional>
 
 // multimedia and sound includes
 #include <mmsystem.h>
 #include <mmreg.h>
 #include <msacm.h>
 // #include <dsound.h>
+
+#else // !_MSC_VER (Linux/GCC/Clang)
+
+#include <mfc_compat.h>
+
+#include <cmath>
+#include <cstdio>
+#include <cstdarg>
+#include <cassert>
+
+#endif // _MSC_VER
+
+// STL - available on all platforms
+#include <vector>
+#include <map>
+#include <unordered_map>
+#include <algorithm>
+#include <numeric>
+#include <functional>
 
 // utility macros
 #include <UtilMacros.h>
