@@ -854,6 +854,9 @@ void CSpaceTreeView::OnNewNode()
 
 		// add the node to the space, with the given parent
 		GetSpace()->AddNode(pNewNode, pParentNode);
+
+		// add the new node to the tree control under its parent
+		AddNodeItem(pNewNode);
 	}
 
 }	// CSpaceTreeView::OnNewNode
