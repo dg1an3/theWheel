@@ -50,8 +50,10 @@ public:
 	//////////////////////////////////////////////////////////////////
 	// serialization
 
+#ifdef _MSC_VER
 	// serialization of this node
 	virtual void Serialize(CArchive &ar);
+#endif
 
 private:
 	// the associated space

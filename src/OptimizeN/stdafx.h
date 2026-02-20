@@ -6,6 +6,8 @@
 #if !defined(AFX_STDAFX_H__70763E23_0829_11D5_9E4C_00B0D0609AB0__INCLUDED_)
 #define AFX_STDAFX_H__70763E23_0829_11D5_9E4C_00B0D0609AB0__INCLUDED_
 
+#ifdef _MSC_VER
+
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
@@ -27,6 +29,23 @@
 #endif
 
 #include <afxtempl.h>
+
+#else // !_MSC_VER (Linux/GCC/Clang)
+
+#include <mfc_compat.h>
+
+#include <string>
+#include <vector>
+#include <map>
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <cstdarg>
+#include <algorithm>
+#include <numeric>
+#include <functional>
+
+#endif // _MSC_VER
 
 #include <UtilMacros.h>
 

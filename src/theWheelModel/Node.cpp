@@ -50,9 +50,11 @@ CNode::CNode(CSpace *pSpace,
 	: m_pSpace(pSpace)
 		, m_pParent(NULL)
 
+#ifdef _MSC_VER
 		, m_pDib(NULL)
+#endif
 
-		, m_primaryActivation((REAL) 0.005)		// initialize with a very 
+		, m_primaryActivation((REAL) 0.005)		// initialize with a very
 		, m_secondaryActivation((REAL) 0.005)		// small activation
 
 		, m_pMaxActivator(NULL)
@@ -88,11 +90,13 @@ CNode::~CNode()
 	for (auto iterLink = m_arrLinks.begin(); iterLink != m_arrLinks.end(); iterLink++)
 		delete (*iterLink);
 
+#ifdef _MSC_VER
 	// delete the DIB, if present
 	if (m_pDib)
 	{
 		delete m_pDib;
 	}
+#endif
 
 }	// CNode::~CNode
 
@@ -225,12 +229,14 @@ void
 {
 	m_ImageFilename = strImageFilename;
 
+#ifdef _MSC_VER
 	// trigger re-loading of image filename
 	if (m_pDib != NULL)
 	{
 		delete m_pDib;
 		m_pDib = NULL;
 	}
+#endif
 
 	// fire change
 	NODE_FIRE_CHANGE();
@@ -238,6 +244,7 @@ void
 }	// CNode::SetImageFilename
 
 
+#ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
 CDib *
 	CNode::GetDib()
@@ -265,6 +272,7 @@ CDib *
 	return m_pDib;
 
 }	// CNode::GetDib
+#endif // _MSC_VER
 
 /// TODO: should position + size stuff be in an adjacent class?
 //////////////////////////////////////////////////////////////////////
@@ -738,13 +746,13 @@ void
 
 
 //////////////////////////////////////////////////////////////////////
-void 
+void
 	CNode::ResetForPropagation()
 	// resets the "hasPropagated" flags on the link weights
 {
 	// reset all node link propagation flags
 	for_each(m_arrLinks.begin(), m_arrLinks.end(),
-		bind2nd(mem_fun<void, CNodeLink, BOOL>(&CNodeLink::SetHasPropagated), FALSE));
+		[](CNodeLink* pLink) { pLink->SetHasPropagated(FALSE); });
 
 	// reset new activation
 	m_newSecondaryActivation = m_secondaryActivation;
@@ -754,22 +762,22 @@ void
 	m_pMaxActivator = NULL;
 
 	// recursively call for children
-	for_each(m_arrChildren.begin(), m_arrChildren.end(), 
-		mem_fun<void, CNode>(&CNode::ResetForPropagation));
+	for_each(m_arrChildren.begin(), m_arrChildren.end(),
+		[](CNode* pNode) { pNode->ResetForPropagation(); });
 
 
 }	// CNode::ResetForPropagation
 
 
 //////////////////////////////////////////////////////////////////////
-void 
+void
 	CNode::UpdateFromNewActivation(void)
 	// transfers new_activation (from Propagate) to current activation for all child nodes
 {
 	// update the total activation value
 	if (m_pSpace)
 	{
-		m_pSpace->m_totalSecondaryActivation += 
+		m_pSpace->m_totalSecondaryActivation +=
 			(m_newSecondaryActivation - m_secondaryActivation);
 	}
 
@@ -777,14 +785,15 @@ void
 	m_secondaryActivation = m_newSecondaryActivation;
 
 	// recursively call for children
-	for_each(m_arrChildren.begin(), m_arrChildren.end(), 
-		mem_fun<void, CNode>(&CNode::UpdateFromNewActivation));
+	for_each(m_arrChildren.begin(), m_arrChildren.end(),
+		[](CNode* pNode) { pNode->UpdateFromNewActivation(); });
 }
 
 
+#ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
 // CNode::Serialize
-// 
+//
 // serialize the node
 //////////////////////////////////////////////////////////////////////
 void CNode::Serialize(CArchive &ar)
@@ -934,4 +943,4 @@ void CNode::Serialize(CArchive &ar)
 	}
 
 }	// CNode::Serialize
-
+#endif // _MSC_VER

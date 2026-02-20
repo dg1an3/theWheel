@@ -105,13 +105,13 @@ void
 	// compute scaling to requested activation size
 	CExtent<2,REAL> extent;
 	CalcRectForActivation(activation, extent);
-	pNV->m_extInner.SetMin(CCastVectorD<3,REAL>(extent.GetMin()));
-	pNV->m_extInner.SetMax(CCastVectorD<3,REAL>(extent.GetMax()));
+	// Do NOT overwrite pNV->m_extInner: it holds pixel-space coords set by
+	// CalcInnerOuterRect and is needed by GDI title rendering. Use extent directly.
 
 	REAL sizeUp = 100.0f + 1200.0f * (activation) * (activation);
-	REAL scaleX = sizeUp * pNV->m_extInner.GetSize(0) /
+	REAL scaleX = sizeUp * extent.GetSize(0) /
 		m_arrPlaques[nIndex]->GetShape()->InnerRect.GetSize(0);
-	REAL scaleY = sizeUp * pNV->m_extInner.GetSize(1) /
+	REAL scaleY = sizeUp * extent.GetSize(1) /
 		m_arrPlaques[nIndex]->GetShape()->InnerRect.GetSize(1);
 	//REAL scaleX = m_arrPlaques[nIndex]->GetShape()->InnerRect.Width / pNV->InnerRect.Width;
 	//REAL scaleY = m_arrPlaques[nIndex]->GetShape()->InnerRect.Height / pNV->InnerRect.Height;

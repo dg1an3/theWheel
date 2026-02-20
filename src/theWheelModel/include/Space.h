@@ -14,7 +14,9 @@
 #include "SpaceStateVector.h"
 
 
+#ifdef _MSC_VER
 class CSpaceView;
+#endif
 
 //////////////////////////////////////////////////////////////////////
 // constant for total allowed activation of nodes
@@ -100,12 +102,14 @@ public:
 	// returns a pointer to the layout manager
 	DECLARE_ATTRIBUTE_PTR(LayoutManager, CSpaceLayoutManager);
 
+#ifdef _MSC_VER
 // Overrides
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(CSpace)
 	public:
 	virtual void Serialize(CArchive& ar);
 	//}}AFX_VIRTUAL
+#endif
 
 // Implementation
 public:
@@ -116,7 +120,7 @@ public:
 	// deletes all content
 	virtual void DeleteContents();
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(_MSC_VER)
 	virtual void AssertValid() const;
 	virtual void Dump(CDumpContext& dc) const;
 #endif
@@ -129,7 +133,9 @@ protected:
 	friend CNode;
 	friend CSpaceLayoutManager;
 	friend CSpaceStateVector;
+#ifdef _MSC_VER
 	friend CSpaceView;
+#endif
 
 	// holds the computed total activation
 	mutable REAL m_totalPrimaryActivation;
