@@ -632,9 +632,10 @@ CArchive&
 
 
 //////////////////////////////////////////////////////////////////////
+#ifdef _MSC_VER
 template<class TYPE>
-void 
-	LogExprExt(const CVectorN<TYPE> & vVec, 
+void
+	LogExprExt(const CVectorN<TYPE> & vVec,
 			const char *pszName, const char *pszModule)
 	// helper function for XML logging of vectors
 {
@@ -656,7 +657,7 @@ void
 
 		// set type to generice "CVector"
 		pVarElem->Attribute("type", "CVector");
-		
+
 		// get the current format for the element type
 		const char *pszFormat = pLog->GetFormat((TYPE) 0);
 		for (int nAt = 0; nAt < vVec.GetDim(); nAt++)
@@ -670,6 +671,7 @@ void
 	}
 
 }	// LogExprExt
+#endif
 
 
 #endif	// !defined(VECTORN_H)

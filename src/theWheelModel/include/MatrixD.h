@@ -1143,9 +1143,10 @@ REAL
 
 
 //////////////////////////////////////////////////////////////////////
+#ifdef _MSC_VER
 template<int DIM, class TYPE>
-void 
-	LogExprExt(const CVectorD<DIM, TYPE> & vVec, 
+void
+	LogExprExt(const CVectorD<DIM, TYPE> & vVec,
 			const char *pszName, const char *pszModule)
 	// helper function for XML logging of vectors
 {
@@ -1181,6 +1182,7 @@ void
 	}
 
 }	// LogExprExt
+#endif // _MSC_VER
 
 
 #endif
