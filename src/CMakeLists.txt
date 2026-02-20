@@ -14,7 +14,7 @@ if (POLICY CMP0091)
   cmake_policy(SET CMP0091 NEW)
 endif()
 
-project ("theWheel_src")
+project ("theWheel_src" LANGUAGES CXX)
 
 # Use release DLL runtime (/MD) for all configurations, including Debug.
 # Python extensions must match the Python interpreter's CRT, which is /MD.
@@ -48,6 +48,5 @@ enable_testing()
 # Include sub-projects.
 add_subdirectory ("OptimizeN")
 add_subdirectory ("theWheelModel")
-add_subdirectory ("pythewheel")
-add_subdirectory ("OptimizeND")
+add_subdirectory ("pybind")
 add_subdirectory ("theWheelModelTests")

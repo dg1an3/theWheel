@@ -10,7 +10,7 @@ The theWheel project now includes Python bindings for core C++ classes, enabling
 
 ### Python Bindings (`pythewheel`)
 
-The `src/pythewheel/` directory contains pybind11 bindings that expose the following C++ classes to Python:
+The `src/pybind/` directory contains pybind11 bindings that expose the following C++ classes to Python:
 
 - **Vector3D**: 3D position vectors (CVectorD<3>)
 - **NodeLink**: Weighted directed links between nodes (CNodeLink)
@@ -36,15 +36,14 @@ tests/
 First, ensure you have Python 3.x installed and visible to CMake.
 
 ```bash
-# Configure the build (from the src directory)
-cd src
+# Configure the build (from the repo root)
 cmake --preset x64-debug
 
 # Build the project (this will fetch pybind11 and build the Python module)
-cmake --build out/build/x64-debug
+cmake --build build/x64-debug
 ```
 
-The Python module will be built to: `src/out/build/x64-debug/python/pythewheel.pyd` (Windows) or `pythewheel.so` (Linux/Mac)
+The Python module will be built to: `build/x64-debug/python/pythewheel.pyd` (Windows) or `pythewheel.so` (Linux/Mac)
 
 ### 2. Install Python Testing Dependencies
 
@@ -183,7 +182,7 @@ If you get `ImportError: No module named 'pythewheel'`:
 
 ```python
 import sys
-sys.path.insert(0, r'C:\dev\theWheel\src\out\build\x64-debug\python')
+sys.path.insert(0, r'C:\dev\theWheel\build\x64-debug\python')
 import pythewheel
 ```
 
@@ -212,9 +211,8 @@ To integrate these tests into a CI/CD pipeline:
 # Example GitHub Actions workflow
 - name: Build project
   run: |
-    cd src
     cmake --preset x64-debug
-    cmake --build out/build/x64-debug
+    cmake --build build/x64-debug
 
 - name: Install test dependencies
   run: pip install -r requirements.txt
@@ -239,7 +237,7 @@ Planned improvements to the testing infrastructure:
 
 When adding new Python bindings:
 
-1. Update `src/pythewheel/bindings.cpp` with new class bindings
+1. Update `src/pybind/bindings.cpp` with new class bindings
 2. Add corresponding test file in `tests/`
 3. Update this documentation
 4. Ensure all tests pass before submitting PR

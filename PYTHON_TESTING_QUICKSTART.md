@@ -14,17 +14,15 @@ This is a condensed guide to get you up and running with Python-based testing fo
 ### 1. Build the Python Module
 
 ```bash
-# Navigate to the src directory
-cd C:\dev\theWheel\src
-
-# Configure CMake (this will fetch pybind11 automatically)
+# Configure CMake from the repo root (this will fetch pybind11 automatically)
+cd C:\dev\theWheel
 cmake --preset x64-debug
 
 # Build everything including the Python bindings
-cmake --build out/build/x64-debug
+cmake --build build/x64-debug
 ```
 
-The build will create `pythewheel.pyd` in `src/out/build/x64-debug/python/`
+The build will create `pythewheel.pyd` in `build/x64-debug/python/`
 
 ### 2. Install Python Dependencies
 
@@ -136,7 +134,7 @@ pytest --cov=pythewheel --cov-report=html
 
 ```bash
 # Build
-cmake --preset x64-debug && cmake --build out/build/x64-debug
+cmake --preset x64-debug && cmake --build build/x64-debug
 
 # Test
 python run_tests.py
@@ -149,9 +147,9 @@ pytest --cov=pythewheel --cov-report=html
 # Then open htmlcov/index.html
 
 # Clean rebuild
-rm -rf out/build/x64-debug
+rm -rf build/x64-debug
 cmake --preset x64-debug
-cmake --build out/build/x64-debug
+cmake --build build/x64-debug
 ```
 
 ---
