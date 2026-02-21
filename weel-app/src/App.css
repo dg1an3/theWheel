@@ -14,6 +14,34 @@ body {
   height: 100%;
 }
 
+.tab-bar {
+  display: flex;
+  background: #1a1a2e;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.tab-button {
+  padding: 10px 24px;
+  border: none;
+  background: #1a1a2e;
+  color: #888;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-button:hover {
+  color: #ccc;
+}
+
+.tab-button.active {
+  color: #fff;
+  border-bottom-color: #4CAF50;
+}
+
 .control-panel {
   background: rgba(0, 0, 0, 0.7);
   padding: 15px;

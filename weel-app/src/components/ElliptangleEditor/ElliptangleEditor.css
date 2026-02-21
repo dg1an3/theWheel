@@ -1,0 +1,49 @@
+.elliptangle-editor {
+    padding: 20px;
+    background: #f0f0f0;
+    height: 100%;
+    overflow-y: auto;
+    text-align: center;
+}
+
+.elliptangle-controls {
+    margin: 20px auto;
+    max-width: 600px;
+    text-align: left;
+}
+
+.elliptangle-controls .control-group {
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.elliptangle-controls label {
+    min-width: 140px;
+    font-weight: bold;
+    color: #333;
+}
+
+.elliptangle-controls input[type="range"] {
+    width: 200px;
+}
+
+.elliptangle-controls input[type="text"] {
+    width: 200px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.elliptangle-controls input[type="color"] {
+    width: 50px;
+    height: 30px;
+    border: none;
+    border-radius: 4px;
+}
+
+.elliptangle-controls span {
+    min-width: 40px;
+    color: #333;
+}

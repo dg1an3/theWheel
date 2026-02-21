@@ -276,7 +276,7 @@ These enable consistent serialization and reduce boilerplate.
 
 ## TODO
 
-- Merge `elliptangle/` (TypeScript parametric shape renderer) and `weel-app/` (React component) into a single web frontend
+- ~~Merge `elliptangle/` (TypeScript parametric shape renderer) and `weel-app/` (React component) into a single web frontend~~ (Done: elliptangle Canvas renderer merged into `weel-app/src/components/ElliptangleEditor/`, shared geometry types in `weel-app/src/geometry/`, standalone `elliptangle/` deleted)
 
 ## Architecture References
 
