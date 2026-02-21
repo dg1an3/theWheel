@@ -274,6 +274,10 @@ These enable consistent serialization and reduce boilerplate.
 - **Evolution**: Started in 2000, modernization ongoing (CMake, git)
 - **Related Projects**: See `.NET web service (theWeelNet), ActiveX controls, self-organizing maps (SOM), tag mapping (TagMap08)
 
+## TODO
+
+- Merge `elliptangle/` (TypeScript parametric shape renderer) and `weel-app/` (React component) into a single web frontend
+
 ## Architecture References
 
 - `docs/node-view-skin-design.md`: Comprehensive rendering design with pseudo-code for Plaque/Elliptangle/RadialShape classes
