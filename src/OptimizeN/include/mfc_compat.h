@@ -73,6 +73,9 @@ typedef const char* LPCTSTR;
 #define TRACE(...) ((void)0)
 #define TRACE_VECTOR(...) ((void)0)
 
+// USES_CONVERSION - ATL string conversion macro, no-op on non-MSVC
+#define USES_CONVERSION
+
 // DEBUG_NEW / THIS_FILE - used in #ifdef _DEBUG blocks
 #define DEBUG_NEW new
 

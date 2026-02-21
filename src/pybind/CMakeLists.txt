@@ -1,4 +1,4 @@
-# CMakeLists.txt for pythewheel - Python bindings for theWheel
+# CMakeLists.txt for pybind - Python bindings for theWheel
 
 # Python is already found in parent CMakeLists.txt
 # Just create the Python module

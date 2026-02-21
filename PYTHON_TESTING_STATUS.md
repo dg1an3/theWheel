@@ -10,12 +10,12 @@ I've successfully set up a comprehensive Python testing infrastructure for theWh
 - ✅ Updated `src/CMakeLists.txt` with pybind11 integration via FetchContent
 - ✅ Created `src/OptimizeN/CMakeLists.txt` for the optimization library
 - ✅ Created `src/theWheelModel/CMakeLists.txt` for the model library
-- ✅ Created `src/pythewheel/CMakeLists.txt` for Python bindings
+- ✅ Created `src/pybind/CMakeLists.txt` for Python bindings
 - ✅ Added Python 3 detection and configuration
 - ✅ Configured MFC support with proper _AFXDLL defines
 
 ### 2. Python Bindings Module (`pythewheel`)
-- ✅ Created `src/pythewheel/bindings_simple.cpp` with pybind11 bindings
+- ✅ Created `src/pybind/bindings_simple.cpp` with pybind11 bindings
 - ✅ Exposed Vector3D class with full operator support
 - ✅ Exposed CNode class with core methods (name, description, links, activation, position)
 - ✅ Exposed CSpace class with node management and activation methods
@@ -61,7 +61,7 @@ error LNK2001: unresolved external symbol __imp__CrtDbgReportW
    ```bash
    cd src
    cmake --preset x64-release
-   cmake --build out/build/x64-release
+   cmake --build build/x64-release
    ```
    Then update test paths to use `x64-release` instead of `x64-debug`.
 
@@ -77,9 +77,9 @@ error LNK2001: unresolved external symbol __imp__CrtDbgReportW
 ```
 src/OptimizeN/CMakeLists.txt
 src/theWheelModel/CMakeLists.txt
-src/pythewheel/CMakeLists.txt
-src/pythewheel/bindings.cpp (complex version)
-src/pythewheel/bindings_simple.cpp (working version)
+src/pybind/CMakeLists.txt
+src/pybind/bindings.cpp (complex version)
+src/pybind/bindings_simple.cpp (working version)
 requirements.txt
 pytest.ini
 TESTING.md
@@ -109,7 +109,7 @@ BRANCH_SUMMARY.md
    ```bash
    cd C:\dev\theWheel\src
    cmake --preset x64-release
-   cmake --build out/build/x64-release
+   cmake --build build/x64-release
    ```
 
 2. Update test path in `tests/conftest.py` to use `x64-release`:

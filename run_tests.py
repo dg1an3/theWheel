@@ -22,13 +22,12 @@ def find_pythewheel_module():
     project_root = os.path.dirname(os.path.abspath(__file__))
 
     search_paths = [
-        os.path.join(project_root, 'src', 'out', 'build', 'x64-debug', 'python', 'Debug'),
-        os.path.join(project_root, 'src', 'out', 'build', 'x64-debug', 'python'),
-        os.path.join(project_root, 'src', 'out', 'build', 'x64-release', 'python', 'Release'),
-        os.path.join(project_root, 'src', 'out', 'build', 'x64-release', 'python'),
-        os.path.join(project_root, 'build', 'python'),
-        os.path.join(project_root, 'build', 'Debug', 'python'),
-        os.path.join(project_root, 'build', 'Release', 'python'),
+        os.path.join(project_root, 'build', 'x64-debug', 'python', 'Debug'),
+        os.path.join(project_root, 'build', 'x64-debug', 'python'),
+        os.path.join(project_root, 'build', 'x64-release', 'python', 'Release'),
+        os.path.join(project_root, 'build', 'x64-release', 'python'),
+        os.path.join(project_root, 'build', 'macos-debug', 'python'),
+        os.path.join(project_root, 'build', 'macos-release', 'python'),
     ]
 
     for path in search_paths:
@@ -62,9 +61,8 @@ def main():
     else:
         print("WARNING: Could not locate pythewheel module.")
         print("Please build the project first using CMake:")
-        print("  cd src")
         print("  cmake --preset x64-debug")
-        print("  cmake --build out/build/x64-debug")
+        print("  cmake --build build/x64-debug")
         print()
         response = input("Continue anyway? (y/n): ")
         if response.lower() != 'y':

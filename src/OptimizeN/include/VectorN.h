@@ -634,6 +634,7 @@ CArchive&
 
 #ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
+#ifdef _MSC_VER
 template<class TYPE>
 void
 	LogExprExt(const CVectorN<TYPE> & vVec,

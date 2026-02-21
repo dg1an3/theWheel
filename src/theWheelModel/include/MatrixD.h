@@ -1144,6 +1144,7 @@ REAL
 
 #ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
+#ifdef _MSC_VER
 template<int DIM, class TYPE>
 void
 	LogExprExt(const CVectorD<DIM, TYPE> & vVec,

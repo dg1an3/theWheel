@@ -30,19 +30,22 @@ msbuild theWheel_src.sln /p:Configuration=Release /p:Platform=Win32
 
 The CMake build system supports both Windows and macOS:
 
+Presets are defined in `CMakePresets.json` at the repo root:
 ```bash
 # Windows (Visual Studio)
 cmake --preset x64-debug
-cmake --build out/build/x64-debug
+cmake --build build/x64-debug
 
 # macOS
 cmake --preset macos-debug
-cmake --build out/build/macos-debug
+cmake --build build/macos-debug
 
 # Run tests (either platform)
-cd src/out/build/macos-debug  # or x64-debug
+cd build/macos-debug  # or build/x64-debug
 ctest --output-on-failure
 ```
+
+Build output goes to `build/<preset-name>/` at the repo root.
 
 ### macOS Build (wxWidgets)
 
@@ -53,11 +56,10 @@ brew install wxwidgets cmake
 
 Build and run:
 ```bash
-cd src
 cmake --preset macos-debug
-cmake --build out/build/macos-debug
+cmake --build build/macos-debug
 # Launch the app
-open out/build/macos-debug/theWheelWx/theWheelWx.app
+open build/macos-debug/theWheelWx/theWheelWx.app
 ```
 
 The macOS build produces:
@@ -148,7 +150,9 @@ src/
 │   └── *.cpp           # Optimization algorithms
 ├── OptimizeND/         # CMake test project
 ├── theWheelModelTests/ # Google Test suite (85 tests)
-└── pythewheel/         # Python bindings via pybind11 [Windows only]
+├── pythewheel/         # Python bindings via pybind11 [Windows only]
+├── node-view-skin-design.md  # Detailed rendering design doc
+└── TODO.txt            # Refactoring plans
 ```
 
 ## Common Development Tasks
@@ -244,11 +248,16 @@ Two historical versions exist in .spx files, auto-detected by the parser:
 - Heavy use of MFC classes (CWnd, CDocument, CView, etc.) limits cross-platform portability
 - COM/ActiveX variants exist (AxWheel, AxWheelServer) but are legacy
 
-### Refactoring Plans (from TODO.txt)
-- Remove XMLLogging dependency (move to OptimizeN)
+### Refactoring Plans
+- Remove XMLLogging dependency (move XMLLogging.h and UtilMacro.h to OptimizeN)
 - Get rid of ModelObject base class
+- Remove GradDescOptimizer and DFPOptimizer from OptimizeN
+- Move Observer.h to theWheelModel (used in Space.h)
+- Move CExtent to theWheelView
+- Move MathUtil.h, VectorD.h, VectorN.h, VectorOps.h to OptimizeN/include
 - Replace MTL (Matrix Template Library) with modern alternatives (e.g., Eigen)
-- Move utility classes to appropriate layers (Observer.h → theWheelModel, CExtent → theWheelView)
+  - CMatrixNxM is used in SpaceStateVector (SVD rotation) and ObjectiveFunction (hessian)
+  - CMatrixD is used for CMolding — check if D3DMATRIX can replace it, and whether CMolding is still needed with Plaque
 
 ### Macro System
 The codebase uses DECLARE_ATTRIBUTE macros extensively for property getters/setters:
@@ -267,8 +276,7 @@ These enable consistent serialization and reduce boilerplate.
 
 ## Architecture References
 
-- `node-view-skin-design.md`: Comprehensive rendering design with pseudo-code for Plaque/Elliptangle/RadialShape classes
-- `TODO.txt`: Current refactoring priorities and technical debt
+- `docs/node-view-skin-design.md`: Comprehensive rendering design with pseudo-code for Plaque/Elliptangle/RadialShape classes
 
 ## Running Tests
 
@@ -276,4 +284,4 @@ No formal unit test framework is currently integrated. Testing is primarily done
 - Building and running the main theWheel.exe application
 - Loading .spx test files
 - Verifying visual rendering and activation behavior
-- OptimizeND project may serve as a test harness for modernized components
+- theWheelModelTests (Google Test) provides unit test coverage for core model classes
