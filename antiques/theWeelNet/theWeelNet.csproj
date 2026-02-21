@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>theWeelNet</RootNamespace>
+    <AssemblyName>theWeelNet</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Cluster.aspx.cs" />
+    <Compile Include="Cluster.aspx.designer.cs" />
+    <Compile Include="FeatureVector\Cluster.cs" />
+    <Compile Include="GenerateImage.ashx.cs" />
+    <Compile Include="GenerateImageTest.aspx.cs" />
+    <Compile Include="GenerateImageTest.aspx.designer.cs" />
+    <Compile Include="Objects.aspx.cs" />
+    <Compile Include="Objects.aspx.designer.cs" />
+    <Compile Include="FeatureVector\IFeatureVector.cs" />
+    <Compile Include="Sort.aspx.cs" />
+    <Compile Include="Sort.aspx.designer.cs" />
+    <Compile Include="TagChooser.ascx.cs" />
+    <Compile Include="TagChooser.ascx.designer.cs" />
+    <Compile Include="TagStatistics.aspx.cs" />
+    <Compile Include="TagStatistics.aspx.designer.cs" />
+    <Compile Include="theWeelDB.cs" />
+    <Compile Include="theWeelDB.Designer.cs" />
+    <Compile Include="theWeelNet.asmx.cs" />
+    <Compile Include="FeatureVector\Vector.cs" />
+  </ItemGroup>
+
+</Project>

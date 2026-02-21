@@ -742,6 +742,7 @@ void
 //
 // macro to trace matrix -- only compiles in debug version
 //////////////////////////////////////////////////////////////////////
+#undef TRACE_VECTOR
 #ifdef _DEBUG
 #define TRACE_VECTOR(strMessage, v) \
 	TRACE(strMessage);				\

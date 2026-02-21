@@ -26,30 +26,58 @@ msbuild theWheel_src.sln /p:Configuration=Release /p:Platform=Win32
 3. theWheelView (static library, depends on theWheelModel)
 4. theWheel (executable, depends on all above)
 
-### CMake Build (In Progress)
+### CMake Build (Cross-Platform)
 
-A CMake build system is being added for modernization:
+The CMake build system supports both Windows and macOS:
+
+Presets are defined in `CMakePresets.json` at the repo root:
 ```bash
-# Configure using presets
+# Windows (Visual Studio)
 cmake --preset x64-debug
-cmake --preset x64-release
+cmake --build build/x64-debug
 
-# Build
-cmake --build out/build/x64-debug
-cmake --build out/build/x64-release
+# macOS
+cmake --preset macos-debug
+cmake --build build/macos-debug
+
+# Run tests (either platform)
+cd build/macos-debug  # or build/x64-debug
+ctest --output-on-failure
 ```
 
-**Note**: Currently only OptimizeND (a test project) has CMake configuration. The main projects still use Visual Studio .vcxproj files.
+Build output goes to `build/<preset-name>/` at the repo root.
+
+### macOS Build (wxWidgets)
+
+Prerequisites:
+```bash
+brew install wxwidgets cmake
+```
+
+Build and run:
+```bash
+cmake --preset macos-debug
+cmake --build build/macos-debug
+# Launch the app
+open build/macos-debug/theWheelWx/theWheelWx.app
+```
+
+The macOS build produces:
+- **OptimizeN** and **theWheelModel** static libraries (fully portable)
+- **theWheelModelTests** (85 Google Test unit tests)
+- **theWheelWx** (wxWidgets GUI application with 2D rendering)
+
+**Note**: The Windows build also produces theWheelView (DirectX 9), theWheel (MFC app), and pythewheel (Python bindings) which are not yet ported to macOS.
 
 ## High-Level Architecture
 
 ### Four-Layer Structure
 
 ```
-theWheel (MFC Application)
-    ↓
-theWheelView (DirectX 9 Rendering)
-    ↓
+theWheel (MFC Application)     theWheelWx (wxWidgets Application)
+    ↓                               ↓
+theWheelView (DirectX 9)       [2D wxDC Rendering]
+    ↓                               ↓
 theWheelModel (Core Data & Logic)
     ↓
 OptimizeN (Numerical Optimization)
@@ -88,28 +116,41 @@ OptimizeN (Numerical Optimization)
 
 ## Technology Stack
 
-- **Language**: C++ (targeting C++14/17, with CMake configured for C++20)
-- **Platform**: Windows Win32
-- **UI Framework**: MFC (Microsoft Foundation Classes) with Document/View architecture
-- **Graphics**: DirectX 9 (D3D9, requires June 2010 DirectX SDK)
-- **Build Tools**: Visual Studio 2017/2022 (v143 toolset), MSBuild, CMake 3.8+
-- **Optional Libraries**: Intel IPP (for optimized vector operations)
+- **Language**: C++ (C++17, CMake configured for C++17)
+- **Platforms**: Windows Win32, macOS (via wxWidgets)
+- **UI Framework (Windows)**: MFC (Microsoft Foundation Classes) with Document/View architecture
+- **UI Framework (macOS)**: wxWidgets 3.3+ with 2D wxDC rendering
+- **Graphics (Windows)**: DirectX 9 (D3D9, requires June 2010 DirectX SDK)
+- **Graphics (macOS)**: wxWidgets 2D rendering (wxPaintDC, wxBufferedPaintDC)
+- **Build Tools**: Visual Studio 2017/2022, CMake 3.10+, Ninja/Make
+- **Cross-Platform**: `mfc_compat.h` provides MFC type stubs for non-MSVC platforms
+- **Optional Libraries**: Intel IPP (for optimized vector operations, Windows only)
 
 ## Project Structure
 
 ```
 src/
-├── theWheel/           # MFC application (Document/View)
+├── theWheel/           # MFC application (Document/View) [Windows only]
+├── theWheelWx/         # wxWidgets application [macOS/Linux]
+│   ├── WheelApp.cpp/h        # wxApp + wxFrame (main window)
+│   ├── SpacePanel.cpp/h      # 2D rendering panel (wxPaintDC)
+│   ├── SpaceTreeView.cpp/h   # Node hierarchy tree (wxTreeCtrl)
+│   ├── PropertyDialogs.cpp/h # Node/Space property dialogs
+│   ├── SpaceSerializer.cpp/h # JSON file I/O
+│   ├── Spring.h               # Standalone spring physics (port)
+│   └── wxcompat.h             # Force-include for mfc_compat types
 ├── theWheelModel/      # Core data model and activation logic
 │   ├── include/        # Public headers (Node.h, Space.h, etc.)
 │   └── *.cpp           # Implementation files
-├── theWheelView/       # DirectX 9 rendering layer
+├── theWheelView/       # DirectX 9 rendering layer [Windows only]
 │   ├── include/        # Public headers (SpaceView.h, NodeView.h, etc.)
 │   └── *.cpp           # Rendering implementation
 ├── OptimizeN/          # Numerical optimization library
 │   ├── include/        # Public headers (Optimizer.h, VectorN.h, etc.)
 │   └── *.cpp           # Optimization algorithms
-├── OptimizeND/         # New CMake test project (modernization)
+├── OptimizeND/         # CMake test project
+├── theWheelModelTests/ # Google Test suite (85 tests)
+├── pythewheel/         # Python bindings via pybind11 [Windows only]
 ├── node-view-skin-design.md  # Detailed rendering design doc
 └── TODO.txt            # Refactoring plans
 ```
@@ -207,11 +248,16 @@ Two historical versions exist in .spx files, auto-detected by the parser:
 - Heavy use of MFC classes (CWnd, CDocument, CView, etc.) limits cross-platform portability
 - COM/ActiveX variants exist (AxWheel, AxWheelServer) but are legacy
 
-### Refactoring Plans (from TODO.txt)
-- Remove XMLLogging dependency (move to OptimizeN)
+### Refactoring Plans
+- Remove XMLLogging dependency (move XMLLogging.h and UtilMacro.h to OptimizeN)
 - Get rid of ModelObject base class
+- Remove GradDescOptimizer and DFPOptimizer from OptimizeN
+- Move Observer.h to theWheelModel (used in Space.h)
+- Move CExtent to theWheelView
+- Move MathUtil.h, VectorD.h, VectorN.h, VectorOps.h to OptimizeN/include
 - Replace MTL (Matrix Template Library) with modern alternatives (e.g., Eigen)
-- Move utility classes to appropriate layers (Observer.h → theWheelModel, CExtent → theWheelView)
+  - CMatrixNxM is used in SpaceStateVector (SVD rotation) and ObjectiveFunction (hessian)
+  - CMatrixD is used for CMolding — check if D3DMATRIX can replace it, and whether CMolding is still needed with Plaque
 
 ### Macro System
 The codebase uses DECLARE_ATTRIBUTE macros extensively for property getters/setters:
@@ -228,10 +274,13 @@ These enable consistent serialization and reduce boilerplate.
 - **Evolution**: Started in 2000, modernization ongoing (CMake, git)
 - **Related Projects**: See `.NET web service (theWeelNet), ActiveX controls, self-organizing maps (SOM), tag mapping (TagMap08)
 
+## TODO
+
+- ~~Merge `elliptangle/` (TypeScript parametric shape renderer) and `weel-app/` (React component) into a single web frontend~~ (Done: elliptangle Canvas renderer merged into `weel-app/src/components/ElliptangleEditor/`, shared geometry types in `weel-app/src/geometry/`, standalone `elliptangle/` deleted)
+
 ## Architecture References
 
-- `node-view-skin-design.md`: Comprehensive rendering design with pseudo-code for Plaque/Elliptangle/RadialShape classes
-- `TODO.txt`: Current refactoring priorities and technical debt
+- `docs/node-view-skin-design.md`: Comprehensive rendering design with pseudo-code for Plaque/Elliptangle/RadialShape classes
 
 ## Running Tests
 
@@ -239,4 +288,4 @@ No formal unit test framework is currently integrated. Testing is primarily done
 - Building and running the main theWheel.exe application
 - Loading .spx test files
 - Verifying visual rendering and activation behavior
-- OptimizeND project may serve as a test harness for modernized components
+- theWheelModelTests (Google Test) provides unit test coverage for core model classes

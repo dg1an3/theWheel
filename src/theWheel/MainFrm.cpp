@@ -26,11 +26,10 @@ IMPLEMENT_DYNCREATE(CMainFrame, CFrameWnd)
 
 BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_WM_CREATE()
-	// Global help commands
-	ON_COMMAND(ID_HELP_FINDER, &CFrameWnd::OnHelpFinder)
-	ON_COMMAND(ID_HELP, &CFrameWnd::OnHelp)
-	ON_COMMAND(ID_CONTEXT_HELP, &CFrameWnd::OnContextHelp)
-	ON_COMMAND(ID_DEFAULT_HELP, &CFrameWnd::OnHelpFinder)
+	// Help commands — open MkDocs static site in the default browser
+	ON_COMMAND(ID_HELP_FINDER, &CMainFrame::OnHelpOpen)
+	ON_COMMAND(ID_HELP, &CMainFrame::OnHelpOpen)
+	ON_COMMAND(ID_DEFAULT_HELP, &CMainFrame::OnHelpOpen)
 	ON_COMMAND(ID_VIEW_DESIGNTIME, &CMainFrame::OnViewDesigntime)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_DESIGNTIME, &CMainFrame::OnUpdateViewDesigntime)
 END_MESSAGE_MAP()
@@ -156,6 +155,23 @@ BOOL CMainFrame::OnCmdMsg(UINT nID, int nCode, void* pExtra, AFX_CMDHANDLERINFO*
 	}
 
 	return CFrameWnd::OnCmdMsg(nID, nCode, pExtra, pHandlerInfo);
+}
+
+void CMainFrame::OnHelpOpen()
+{
+	// Resolve docs/site/index.html relative to the executable
+	TCHAR szExePath[MAX_PATH];
+	GetModuleFileName(nullptr, szExePath, MAX_PATH);
+	CString sExeDir(szExePath);
+	sExeDir = sExeDir.Left(sExeDir.ReverseFind(_T('\\')));
+
+	CString sHelpPath = sExeDir + _T("\\docs\\site\\index.html");
+
+	// Fall back to the repo-relative path for development builds
+	if (GetFileAttributes(sHelpPath) == INVALID_FILE_ATTRIBUTES)
+		sHelpPath = sExeDir + _T("\\..\\..\\docs\\site\\index.html");
+
+	ShellExecute(m_hWnd, _T("open"), sHelpPath, nullptr, nullptr, SW_SHOWNORMAL);
 }
 
 void CMainFrame::OnViewDesigntime()

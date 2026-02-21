@@ -26,7 +26,7 @@ theWheel/
 │   ├── theWheelModel/     # Core data model and spreading activation logic
 │   ├── theWheelView/      # DirectX 9 rendering layer
 │   ├── OptimizeN/         # Multi-dimensional optimization library
-│   └── OptimizeND/        # CMake modernization test project
+│   └── theWheelModelTests/ # Google Test unit tests
 │
 ├── pyweel/                # Python implementation
 │   ├── space.py          # Space container with activation management

@@ -1,6 +1,6 @@
-import { Extent2D } from '../components/NodeVisualization/geometry/Extent2D';
-import { Vector2D } from '../components/NodeVisualization/geometry/Vector2D';
-import { RadialShape } from '../components/NodeVisualization/geometry/RadialShape';
+import { Extent2D } from '../geometry';
+import { Vector2D } from '../geometry';
+import { RadialShape } from '../geometry';
 import { PlaqueGeometry } from '../types';
 
 // Constants

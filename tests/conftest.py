@@ -28,13 +28,12 @@ def setup_python_path():
     project_root = os.path.dirname(os.path.dirname(__file__))
 
     search_paths = [
-        os.path.join(project_root, 'src', 'out', 'build', 'x64-debug', 'python', 'Debug'),
-        os.path.join(project_root, 'src', 'out', 'build', 'x64-debug', 'python'),
-        os.path.join(project_root, 'src', 'out', 'build', 'x64-release', 'python', 'Release'),
-        os.path.join(project_root, 'src', 'out', 'build', 'x64-release', 'python'),
-        os.path.join(project_root, 'build', 'python'),
-        os.path.join(project_root, 'build', 'Debug', 'python'),
-        os.path.join(project_root, 'build', 'Release', 'python'),
+        os.path.join(project_root, 'build', 'x64-debug', 'python', 'Debug'),
+        os.path.join(project_root, 'build', 'x64-debug', 'python'),
+        os.path.join(project_root, 'build', 'x64-release', 'python', 'Release'),
+        os.path.join(project_root, 'build', 'x64-release', 'python'),
+        os.path.join(project_root, 'build', 'macos-debug', 'python'),
+        os.path.join(project_root, 'build', 'macos-release', 'python'),
     ]
 
     module_found = False

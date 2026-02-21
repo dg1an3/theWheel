@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>AxWheelServer</RootNamespace>
+    <AssemblyName>AxWheelServer</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Node.cs" />
+    <Compile Include="Link.cs" />
+    <Compile Include="NodeService.asmx.cs" />
+    <Compile Include="Space.cs" />
+  </ItemGroup>
+
+</Project>

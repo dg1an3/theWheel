@@ -52,6 +52,7 @@ protected:  // control bar embedded members
 protected:
 	DECLARE_MESSAGE_MAP()
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+	afx_msg void OnHelpOpen();
 	afx_msg void OnViewDesigntime();
 	afx_msg void OnUpdateViewDesigntime(CCmdUI *pCmdUI);
 };

@@ -1142,10 +1142,12 @@ REAL
 }	// Eigenvector
 
 
+#ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
+#ifdef _MSC_VER
 template<int DIM, class TYPE>
-void 
-	LogExprExt(const CVectorD<DIM, TYPE> & vVec, 
+void
+	LogExprExt(const CVectorD<DIM, TYPE> & vVec,
 			const char *pszName, const char *pszModule)
 	// helper function for XML logging of vectors
 {
@@ -1167,7 +1169,7 @@ void
 
 		// set type to generice "CVector"
 		pVarElem->Attribute("type", "CVector");
-		
+
 		// get the current format for the element type
 		const char *pszFormat = pLog->GetFormat((VECTOR_TYPE::ELEM_TYPE) 0);
 		for (int nAt = 0; nAt < vVec.GetDim(); nAt++)
@@ -1181,6 +1183,7 @@ void
 	}
 
 }	// LogExprExt
+#endif // _MSC_VER
 
 
 #endif

@@ -1,7 +1,7 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
-import { Elliptangle } from './geometry/Elliptangle';
+import { Elliptangle } from '../../geometry';
 import { BORDER_RADIUS, computeEllipticalness, calcRectForActivation, createPlaqueGeometry } from '../../utils/geometryUtils';
 import { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';

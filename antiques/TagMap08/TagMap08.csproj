@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>TagMap08</RootNamespace>
+    <AssemblyName>TagMap08</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Code\Bookmark.cs" />
+    <Compile Include="Code\Cluster.cs" />
+    <Compile Include="Code\Tag.cs" />
+    <Compile Include="Code\Vector.cs" />
+    <Compile Include="Default.aspx.cs" />
+    <Compile Include="Default.aspx.designer.cs" />
+  </ItemGroup>
+
+</Project>

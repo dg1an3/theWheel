@@ -203,4 +203,7 @@ BuildArtifacts/
 node_modules/
 /.claude
 *.pyc
+
+# MkDocs generated output
+docs/site/
 __pycache__/

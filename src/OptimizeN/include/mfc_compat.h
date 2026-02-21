@@ -73,6 +73,9 @@ typedef const char* LPCTSTR;
 #define TRACE(...) ((void)0)
 #define TRACE_VECTOR(...) ((void)0)
 
+// USES_CONVERSION - ATL string conversion macro, no-op on non-MSVC
+#define USES_CONVERSION
+
 // DEBUG_NEW / THIS_FILE - used in #ifdef _DEBUG blocks
 #define DEBUG_NEW new
 
@@ -110,11 +113,19 @@ class CString
 public:
     CString() {}
     CString(const char* s) : m_str(s ? s : "") {}
+    CString(const wchar_t* s) { // Support wxWidgets _T() producing wide strings
+        if (s) {
+            size_t len = wcslen(s);
+            m_str.resize(len);
+            for (size_t i = 0; i < len; i++) m_str[i] = (char)s[i];
+        }
+    }
     CString(const std::string& s) : m_str(s) {}
     CString(const CString& other) : m_str(other.m_str) {}
 
     CString& operator=(const CString& other) { m_str = other.m_str; return *this; }
     CString& operator=(const char* s) { m_str = (s ? s : ""); return *this; }
+    CString& operator=(const wchar_t* s) { *this = CString(s); return *this; }
 
     // Conversion
     operator const char*() const { return m_str.c_str(); }
@@ -216,5 +227,8 @@ typedef long HRESULT;
 #define FAILED(hr) (((HRESULT)(hr)) < 0)
 #define SUCCEEDED(hr) (((HRESULT)(hr)) >= 0)
 #endif
+
+// USES_CONVERSION - ATL string conversion macro, no-op on non-MSVC
+#define USES_CONVERSION
 
 #endif // MFC_COMPAT_H

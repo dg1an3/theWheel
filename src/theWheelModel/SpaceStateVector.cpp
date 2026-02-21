@@ -251,9 +251,10 @@ void
 }	// CSpaceLayoutManager::RotateTranslateStateVector
 
 
+#ifdef _MSC_VER
 /// TODO: get rid of this
 //////////////////////////////////////////////////////////////////////
-void 
+void
 	CSpaceStateVector::Serialize(CArchive &ar)
 	// serialization of this state vector
 {
@@ -295,4 +296,5 @@ void
 		ar << vPositions;
 	}
 }	// CSpaceStateVector::Serialize
+#endif // _MSC_VER
 
