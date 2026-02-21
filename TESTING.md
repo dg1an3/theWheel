@@ -1,211 +1,190 @@
-# theWheel Python Testing Guide
+# Testing Guide
 
-This document describes the Python-based testing infrastructure for theWheel using pybind11 and pytest.
+This document describes the testing infrastructure for theWheel, covering both the C++ Google Test suite and the Python pytest suite.
 
-## Overview
+## Quick Start
 
-The theWheel project now includes Python bindings for core C++ classes, enabling comprehensive testing of the semantic visualization and spreading activation functionality using Python's pytest framework.
+### C++ Tests (Google Test)
 
-## Architecture
+```bash
+# Build and run (either platform)
+cmake --preset x64-debug          # or macos-debug
+cmake --build build/x64-debug
+cd build/x64-debug && ctest --output-on-failure
+```
 
-### Python Bindings (`pythewheel`)
+### Python Tests (pytest)
 
-The `src/pybind/` directory contains pybind11 bindings that expose the following C++ classes to Python:
+```bash
+# Build the Python module first (see C++ step above)
+pip install -r requirements.txt
+python scripts/run_tests.py       # or: pytest -v
+```
 
-- **Vector3D**: 3D position vectors (CVectorD<3>)
-- **NodeLink**: Weighted directed links between nodes (CNodeLink)
-- **Node**: Semantic nodes with activation, position, and links (CNode)
-- **Space**: Container managing the node network (CSpace)
+---
 
-### Test Structure
+## C++ Tests (theWheelModelTests)
+
+The primary test suite uses Google Test (v1.14.0, fetched via CMake FetchContent) and covers the core model layer.
+
+### Test Files
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `test_vectord.cpp` | 27 | `CVectorD<N>` construction, arithmetic, normalization |
+| `test_node.cpp` | 25 | `CNode` construction, naming, linking, activation, position |
+| `test_nodelink.cpp` | 11 | `CNodeLink` weight, target, stabilizer flag |
+| `test_space.cpp` | 13 | `CSpace` node management, hierarchy, activation |
+| `test_space_layout_manager.cpp` | 9 | `CSpaceLayoutManager` energy minimization, layout |
+| **Total** | **85** | |
+
+Source: [src/theWheelModelTests/](src/theWheelModelTests/)
+
+### Running C++ Tests
+
+```bash
+# Full build + test (Windows)
+cmake --preset x64-debug
+cmake --build build/x64-debug
+cd build/x64-debug && ctest --output-on-failure
+
+# Full build + test (macOS)
+cmake --preset macos-debug
+cmake --build build/macos-debug
+cd build/macos-debug && ctest --output-on-failure
+
+# Run the test executable directly for verbose output
+./build/x64-debug/src/theWheelModelTests/theWheelModelTests
+```
+
+### Adding C++ Tests
+
+1. Add test cases to an existing `test_*.cpp` file, or create a new one
+2. If creating a new file, add it to `TEST_SOURCES` in [src/theWheelModelTests/CMakeLists.txt](src/theWheelModelTests/CMakeLists.txt)
+3. Tests are auto-discovered by CTest via `gtest_discover_tests()`
+
+---
+
+## Python Tests (pytest + pythewheel)
+
+Python bindings (`pythewheel`) expose core C++ classes via pybind11, enabling testing with pytest.
+
+### Exposed Classes
+
+| Python Class | C++ Class | Description |
+|--------------|-----------|-------------|
+| `Vector3D` | `CVectorD<3>` | 3D position vectors |
+| `NodeLink` | `CNodeLink` | Weighted links between nodes |
+| `Node` | `CNode` | Semantic nodes with activation |
+| `Space` | `CSpace` | Container managing node networks |
+
+Bindings source: [src/pybind/bindings_simple.cpp](src/pybind/bindings_simple.cpp)
+
+### Test Files
 
 ```
 tests/
-├── __init__.py          # Test package marker
-├── conftest.py          # Pytest configuration and shared fixtures
-├── test_vector3d.py     # Tests for Vector3D class
-├── test_node.py         # Tests for Node class
-├── test_space.py        # Tests for Space class
-└── (future test files)
+├── conftest.py          # Auto-locates pythewheel module, shared fixtures
+├── test_vector3d.py     # Vector math operations
+├── test_node.py         # Node creation, linking, activation
+└── test_space.py        # Space management, network operations
 ```
 
-## Setup Instructions
+### Setup
 
-### 1. Build the Project with CMake
-
-First, ensure you have Python 3.x installed and visible to CMake.
+**Prerequisites**: Python 3.7+, CMake 3.10+, Visual Studio with MFC (Windows) or wxWidgets (macOS)
 
 ```bash
-# Configure the build (from the repo root)
+# 1. Build the Python module
 cmake --preset x64-debug
-
-# Build the project (this will fetch pybind11 and build the Python module)
 cmake --build build/x64-debug
-```
 
-The Python module will be built to: `build/x64-debug/python/pythewheel.pyd` (Windows) or `pythewheel.so` (Linux/Mac)
-
-### 2. Install Python Testing Dependencies
-
-```bash
-# From the repository root
+# 2. Install Python test dependencies
 pip install -r requirements.txt
 ```
 
-This installs:
-- pytest (testing framework)
-- pytest-cov (coverage reporting)
-- pytest-mock (mocking utilities)
+The build creates `pythewheel.pyd` (Windows) or `pythewheel.so` (macOS) in `build/<preset>/python/`.
 
-### 3. Run Tests
+### Running Python Tests
 
 ```bash
-# Run all tests
-pytest
+# Convenience script (auto-locates module)
+python scripts/run_tests.py
 
-# Run with verbose output
+# Or run pytest directly
 pytest -v
-
-# Run specific test file
-pytest tests/test_node.py
-
-# Run tests by marker
-pytest -m unit           # Only unit tests
-pytest -m integration    # Only integration tests
-pytest -m activation     # Only activation tests
-
-# Run with coverage report
-pytest --cov=pythewheel --cov-report=html
+pytest tests/test_node.py -v        # specific file
+pytest -m unit                       # by marker
+pytest -m integration                # by marker
+pytest -m activation                 # by marker
+pytest --cov=pythewheel --cov-report=html   # with coverage
 ```
 
-## Test Categories
+### Test Markers
 
-Tests are organized using pytest markers:
+Defined in [pytest.ini](pytest.ini):
 
-- **@pytest.mark.unit**: Unit tests for individual components
-- **@pytest.mark.integration**: Integration tests across multiple components
-- **@pytest.mark.activation**: Tests specifically for activation spreading
-- **@pytest.mark.layout**: Tests for spatial layout algorithms
-- **@pytest.mark.slow**: Long-running tests
+| Marker | Purpose |
+|--------|---------|
+| `@pytest.mark.unit` | Unit tests for individual components |
+| `@pytest.mark.integration` | Integration tests across components |
+| `@pytest.mark.activation` | Activation spreading tests |
+| `@pytest.mark.layout` | Spatial layout tests |
+| `@pytest.mark.slow` | Long-running tests |
 
-## Writing New Tests
-
-### Basic Test Structure
+### Writing Python Tests
 
 ```python
 import pytest
 import pythewheel
 
 @pytest.mark.unit
-def test_my_feature():
-    """Test description"""
-    node = pythewheel.Node()
-    node.set_name("Test")
-    assert node.get_name() == "Test"
-```
-
-### Using Fixtures
-
-```python
-@pytest.fixture
-def space():
-    """Create a Space for testing"""
-    return pythewheel.Space()
-
-def test_with_space(space):
-    """This test automatically gets a fresh Space"""
-    node = pythewheel.Node(space, "Test", "Description")
-    space.add_node(node, None)
-    assert space.get_node_count() > 0
-```
-
-## Example Test Cases
-
-### Test Node Creation and Attributes
-
-```python
 def test_node_attributes():
     space = pythewheel.Space()
     node = pythewheel.Node(space, "Concept", "A test concept")
-
     assert node.get_name() == "Concept"
     assert node.get_description() == "A test concept"
 
-    node.set_class("Category")
-    assert node.get_class() == "Category"
-```
-
-### Test Node Linking
-
-```python
-def test_node_linking():
-    space = pythewheel.Space()
-    node1 = pythewheel.Node(space, "Node1", "First")
-    node2 = pythewheel.Node(space, "Node2", "Second")
-
-    # Create weighted link
-    node1.link_to(node2, 0.75)
-
-    # Verify link exists
-    assert node1.get_link_count() > 0
-    assert node1.get_link_weight(node2) == 0.75
-```
-
-### Test Activation Spreading
-
-```python
+@pytest.mark.activation
 def test_activation():
     space = pythewheel.Space()
-    node1 = pythewheel.Node(space, "Active", "Active node")
-
-    # Set activation
-    node1.set_activation(1.0)
-    assert node1.get_activation() == 1.0
-
-    # Set primary/secondary
-    node1.set_primary_activation(0.7)
-    node1.set_secondary_activation(0.3)
-
-    assert node1.get_primary_activation() == 0.7
-    assert node1.get_secondary_activation() == 0.3
+    node = pythewheel.Node(space, "Active", "Active node")
+    node.set_activation(1.0)
+    assert node.get_activation() == 1.0
 ```
+
+Shared fixtures are defined in [tests/conftest.py](tests/conftest.py).
+
+---
 
 ## Troubleshooting
 
-### Module Not Found Error
+### `ImportError: No module named 'pythewheel'`
+1. Build the project with CMake first
+2. Verify the `.pyd`/`.so` file exists in `build/<preset>/python/`
+3. The `conftest.py` auto-adds the build path; if that fails, set `PYTHONPATH` manually
 
-If you get `ImportError: No module named 'pythewheel'`:
+### Python module link error (`__imp__CrtDbgReportW`)
+This is a debug/release CRT mismatch. Python extensions require `/MD` (release CRT), but MFC debug builds use `/MDd`. **Workaround**: build with a release preset, or use the C++ test suite for debug builds.
 
-1. Ensure you've built the project with CMake
-2. Check that the `.pyd` or `.so` file exists in the build output directory
-3. The `conftest.py` should automatically find it, but you can manually add the path:
+### Build fails with "Python not found"
+Ensure Python is in your PATH and CMake can find it (look for "Found Python" in CMake output).
 
-```python
-import sys
-sys.path.insert(0, r'C:\dev\theWheel\build\x64-debug\python')
-import pythewheel
-```
+### MFC-related errors
+Ensure Visual Studio is installed with MFC components. The CMake configuration handles `_AFXDLL` automatically for MSVC.
 
-### Build Errors
+---
 
-If the Python module fails to build:
+## Known Limitations
 
-1. Ensure Python development headers are installed
-2. Check that CMake found Python: look for "Found Python" in CMake output
-3. Verify pybind11 was fetched: check for "pybind11" in the build output
-4. On Windows, ensure you're using the correct Visual Studio toolset
+- **Simplified bindings**: `bindings_simple.cpp` exposes core functionality but not all `DECLARE_ATTRIBUTE`-generated methods (can be added with lambdas)
+- **Debug builds**: Python module only works with release builds due to CRT mismatch
+- **CDib/Images**: Image functionality not exposed to Python (MFC-dependent)
+- **Windows-only for Python**: pybind module requires MFC; macOS port not yet supported for pythewheel
 
-### MFC Dependency Issues
-
-The theWheelModel library depends on MFC. If you encounter MFC-related errors:
-
-1. Ensure Visual Studio is installed with MFC components
-2. The CMake configuration should handle this automatically for MSVC
-3. Some functions using MFC-specific types (like CDib) may not be fully exposed to Python
+---
 
 ## CI/CD Integration
-
-To integrate these tests into a CI/CD pipeline:
 
 ```yaml
 # Example GitHub Actions workflow
@@ -214,36 +193,12 @@ To integrate these tests into a CI/CD pipeline:
     cmake --preset x64-debug
     cmake --build build/x64-debug
 
-- name: Install test dependencies
+- name: Run C++ tests
+  run: cd build/x64-debug && ctest --output-on-failure
+
+- name: Install Python test dependencies
   run: pip install -r requirements.txt
 
-- name: Run tests
+- name: Run Python tests
   run: pytest -v --cov=pythewheel --cov-report=xml
 ```
-
-## Future Enhancements
-
-Planned improvements to the testing infrastructure:
-
-- [ ] Add tests for CSpaceLayoutManager (layout optimization)
-- [ ] Add tests for activation propagation through networks
-- [ ] Performance benchmarks using pytest-benchmark
-- [ ] Mock the MFC dependencies to enable cross-platform testing
-- [ ] Add property-based testing with Hypothesis
-- [ ] Integration with theWheelView rendering tests
-- [ ] Automated regression testing with saved .spx files
-
-## Contributing
-
-When adding new Python bindings:
-
-1. Update `src/pybind/bindings.cpp` with new class bindings
-2. Add corresponding test file in `tests/`
-3. Update this documentation
-4. Ensure all tests pass before submitting PR
-
-## References
-
-- [pybind11 Documentation](https://pybind11.readthedocs.io/)
-- [pytest Documentation](https://docs.pytest.org/)
-- [theWheel Architecture](CLAUDE.md)

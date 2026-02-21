@@ -1,21 +1,31 @@
 # Branch Summary
 
-**Generated**: 2025-11-07 | **Updated**: 2026-02-18
+**Generated**: 2025-11-07 | **Updated**: 2026-02-20
 **Repository**: theWheel
 
 ## Overview
 
-This repository has **4 local branches** (including main) with corresponding remote tracking branches. Development activity spans from February 2025 to February 2026. Five stale branches were deleted on 2026-02-18 after confirming they had been merged to main (see Deleted Branches section).
+This repository has **3 local branches** (including main) with one remote tracking branch beyond main. Significant development activity since the last update: multiple feature branches merged to main via PRs, repository reorganized with antiques/ directory, wxWidgets macOS port added, and MkDocs help system integrated. Two additional branches (`feature/merge-antiques` and `feature/rearrangements`) exist locally but are fully merged to main.
 
 ---
 
 ## Main Branch
 
 ### `main`
-- **Last Updated**: 2025-11-07
+- **Last Updated**: 2026-02-20
 - **Status**: Primary development branch
-- **Latest Commit**: Update branch summary with current development status and focus on CMake modernization and testing infrastructure
-- **Description**: Stable branch with CMake build modernization, testing infrastructure, and merged documentation/bugfix improvements
+- **Latest Commit**: Add TODO section and merge plans for elliptangle and weel-app into web frontend
+- **Recent Activity** (since 2025-11-08):
+  - Merged PR #12 (`feature/convert-space-to-md`) — space-to-markdown conversion
+  - Merged PR #13 (`feature/node-title-rendering`) — improved node title rendering and overlay handling
+  - Merged PR #9 (`feature/weel-app`) — React TypeScript web application
+  - Merged PR #18 (`feature/mkdocs-help`) — replaced CHM help with MkDocs static site
+  - Merged PR #16 (`feature/merge-elliptangle`) — merged elliptangle repository history
+  - Merged PR #17 (`feature/macos-port`) — wxWidgets port for macOS
+  - Merged `feature/rearrangements` — reorganized legacy projects to antiques/, cleaned build paths
+  - Added NodeViewSkin and Plaque rendering classes
+  - Added antiques/ directory with historical CVS-era source code
+  - Moved output/ to data/ with cleaner subfolder names
 
 ---
 
@@ -24,7 +34,8 @@ This repository has **4 local branches** (including main) with corresponding rem
 ### `feature/wrap-distance`
 - **Last Updated**: 2025-11-07
 - **Status**: Active development
-- **Commits Ahead of Main**: 9 commits
+- **Commits Ahead of Main**: 5 commits
+- **Remote**: `origin/feature/wrap-distance`
 - **Latest Commit**: Refactor codebase and adopt modern C++ practices
 - **Key Changes**:
   - Extensive refactoring with modern C++ practices
@@ -38,41 +49,39 @@ This repository has **4 local branches** (including main) with corresponding rem
 
 ---
 
-## Feature Branches (March 2025)
+## Merged Branches (Pending Deletion)
 
-### `feature/weel-app`
-- **Last Updated**: 2025-03-22
-- **Status**: Experimental
-- **Commits Ahead of Main**: 3 commits
-- **Key Changes**:
-  - Created complete React TypeScript web application
-  - Implemented 3D visualization components using React
-  - Added geometry utilities (Elliptangle, RadialShape, Vector2D, Extent2D)
-  - NodeGraph and Node visualization components
-- **Purpose**: Web-based reimplementation of theWheel visualization using modern web technologies
-- **Technology Stack**: React, TypeScript, Create-React-App
-- **Files Added**: Entire `weel-app/` directory with full React project structure
+These local branches are fully merged to main and can be safely deleted:
 
-### `feature/convert-space-to-md`
-- **Last Updated**: 2025-03-22
-- **Status**: Minimal changes, possibly abandoned
-- **Commits Ahead of Main**: 0 unique commits
-- **Key Changes**: Only README and CLAUDE.md changes (documentation)
-- **Purpose**: Unclear - may have been for converting .spx format to markdown representation
+### `feature/merge-antiques`
+- **Last Updated**: 2026-02-20
+- **Status**: Fully merged to main (0 unique commits)
+- **Purpose**: Added antiques/ directory with historical CVS-era source code
+
+### `feature/rearrangements`
+- **Last Updated**: 2026-02-20
+- **Status**: Fully merged to main (0 unique commits)
+- **Purpose**: Reorganized legacy projects from src/ to antiques/, cleaned build paths, removed OptimizeND module
 
 ---
 
-## Deleted Branches (Merged)
+## Deleted Branches (Previously Merged)
 
-The following branches were merged to main and deleted on 2026-02-18:
+The following branches were merged to main and deleted:
 
-| Branch | Merged Via | Description |
-|--------|-----------|-------------|
-| `bugfix/cast-warnings` | PR #5 | Fixed cast warnings throughout codebase |
-| `bugfix/clean-up-unused-files` | PR #4 | Removed dead code and unused files |
-| `docs/claude-md` | PRs #10, #11 | Added CLAUDE.md and README documentation |
-| `feature/cmake` | PR #8 | CMake build modernization, Google Test, Python bindings |
-| `feature/use_stl` | PR #6 | Partial STL container migration (std::map for class colors) |
+| Branch | Merged Via | Date Deleted | Description |
+|--------|-----------|--------------|-------------|
+| `bugfix/cast-warnings` | PR #5 | 2026-02-18 | Fixed cast warnings throughout codebase |
+| `bugfix/clean-up-unused-files` | PR #4 | 2026-02-18 | Removed dead code and unused files |
+| `docs/claude-md` | PRs #10, #11 | 2026-02-18 | Added CLAUDE.md and README documentation |
+| `feature/cmake` | PR #8 | 2026-02-18 | CMake build modernization, Google Test, Python bindings |
+| `feature/use_stl` | PR #6 | 2026-02-18 | Partial STL container migration (std::map for class colors) |
+| `feature/convert-space-to-md` | PR #12 | — | Space-to-markdown conversion |
+| `feature/node-title-rendering` | PR #13 | — | Improved node title rendering and overlay |
+| `feature/weel-app` | PR #9 | — | React TypeScript web application |
+| `feature/mkdocs-help` | PR #18 | — | Replaced CHM help with MkDocs static site |
+| `feature/merge-elliptangle` | PR #16 | — | Merged elliptangle repository history |
+| `feature/macos-port` | PR #17 | — | wxWidgets port for macOS |
 
 ---
 
@@ -80,34 +89,31 @@ The following branches were merged to main and deleted on 2026-02-18:
 
 | Branch | Status | Priority | Recommendation |
 |--------|--------|----------|----------------|
-| `main` | ✅ Stable | - | Current baseline (includes merged CMake, bugfixes, docs) |
+| `main` | ✅ Stable | — | Current baseline with macOS port, web app, MkDocs, reorganized structure |
 | `feature/wrap-distance` | 🚧 Active | High | Continue development, consider merging when stable |
-| `feature/weel-app` | 🧪 Experimental | Medium | Evaluate if web version should continue |
-| `feature/convert-space-to-md` | ⚠️ Stale | Low | Consider deleting if no longer needed |
+| `feature/merge-antiques` | ✅ Merged | — | Safe to delete |
+| `feature/rearrangements` | ✅ Merged | — | Safe to delete |
 
 ---
 
 ## Recommendations
 
 ### Active Development
-1. **feature/wrap-distance** - Major modernization effort for modern C++ and rendering improvements
+1. **feature/wrap-distance** — Major modernization effort for modern C++ and rendering improvements (5 commits ahead)
 
 ### Cleanup Candidates
-2. **feature/convert-space-to-md** - No unique changes, consider deleting
-
-### Evaluate
-4. **feature/weel-app** - Continue if web-based version is desired
+2. **feature/merge-antiques** — Fully merged, no unique commits, delete local branch
+3. **feature/rearrangements** — Fully merged, no unique commits, delete local branch
 
 ---
 
 ## Notes
 
-- All remaining branches have corresponding remote tracking branches on origin
-- Most feature branches created in March 2025 represent parallel modernization experiments
-- CMake build modernization, bugfixes, and documentation have been merged to main
-- `feature/wrap-distance` is the most active development branch (9 commits ahead of main)
-- One stale branch (`feature/convert-space-to-md`) could be cleaned up
+- Only `feature/wrap-distance` has a remote tracking branch (beyond main)
+- `feature/merge-antiques` and `feature/rearrangements` are local-only and fully merged
+- Main has seen substantial activity since Nov 2025: 6 PRs merged, major repository reorganization
+- The `weel-app/` and `elliptangle/` directories are now on main with a TODO to merge them into a single web frontend
 
 ---
 
-**Last Updated**: 2026-02-18
+**Last Updated**: 2026-02-20
