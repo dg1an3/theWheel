@@ -631,8 +631,8 @@ CArchive&
 
 #endif	// __AFX_H__
 
+#if EXT_LOGGING
 
-#ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
 #ifdef _MSC_VER
 template<class TYPE>
@@ -673,7 +673,6 @@ void
 	}
 
 }	// LogExprExt
-#endif // _MSC_VER
-
+#endif
 
 #endif	// !defined(VECTORN_H)
