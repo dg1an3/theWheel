@@ -1142,7 +1142,6 @@ REAL
 }	// Eigenvector
 
 
-#ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
 #ifdef _MSC_VER
 template<int DIM, class TYPE>

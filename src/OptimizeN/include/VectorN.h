@@ -632,7 +632,6 @@ CArchive&
 #endif	// __AFX_H__
 
 
-#ifdef _MSC_VER
 //////////////////////////////////////////////////////////////////////
 #ifdef _MSC_VER
 template<class TYPE>
