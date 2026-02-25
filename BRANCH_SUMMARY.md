@@ -1,21 +1,25 @@
 # Branch Summary
 
-**Generated**: 2025-11-07 | **Updated**: 2026-02-20
+**Generated**: 2025-11-07 | **Updated**: 2026-02-24
 **Repository**: theWheel
 
 ## Overview
 
-This repository has **3 local branches** (including main) with one remote tracking branch beyond main. Significant development activity since the last update: multiple feature branches merged to main via PRs, repository reorganized with antiques/ directory, wxWidgets macOS port added, and MkDocs help system integrated. Two additional branches (`feature/merge-antiques` and `feature/rearrangements`) exist locally but are fully merged to main.
+This repository has **3 local branches** (including main) with one remote tracking branch beyond main. Significant development activity since the last update: multiple feature branches merged to main via PRs (SDK-style csproj conversion, documentation consolidation, and header cleanup), repository reorganized with antiques/ directory, wxWidgets macOS port added, and MkDocs help system integrated.
 
 ---
 
 ## Main Branch
 
 ### `main`
-- **Last Updated**: 2026-02-20
+- **Last Updated**: 2026-02-24
 - **Status**: Primary development branch
-- **Latest Commit**: Add TODO section and merge plans for elliptangle and weel-app into web frontend
-- **Recent Activity** (since 2025-11-08):
+- **Latest Commit**: Merge PR #23 (`cleanup/redundant-msc-ver-ifdefs`) — Removed redundant #ifdef _MSC_VER
+- **Recent Activity** (since 2026-02-18):
+  - Merged PR #23 (`cleanup/redundant-msc-ver-ifdefs`) — header file cleanup
+  - Refactored **Elliptangle** and **Weel App** components
+  - Merged PR #22 (`feature/sdk-style-csproj`) — converted legacy csproj files to SDK-style
+  - Merged PR #21 (`docs/consolidate-testing-docs`) — consolidated Python testing docs and scripts
   - Merged PR #12 (`feature/convert-space-to-md`) — space-to-markdown conversion
   - Merged PR #13 (`feature/node-title-rendering`) — improved node title rendering and overlay handling
   - Merged PR #9 (`feature/weel-app`) — React TypeScript web application
@@ -53,15 +57,10 @@ This repository has **3 local branches** (including main) with one remote tracki
 
 These local branches are fully merged to main and can be safely deleted:
 
-### `feature/merge-antiques`
+### `docs/consolidate-testing-docs`
 - **Last Updated**: 2026-02-20
 - **Status**: Fully merged to main (0 unique commits)
-- **Purpose**: Added antiques/ directory with historical CVS-era source code
-
-### `feature/rearrangements`
-- **Last Updated**: 2026-02-20
-- **Status**: Fully merged to main (0 unique commits)
-- **Purpose**: Reorganized legacy projects from src/ to antiques/, cleaned build paths, removed OptimizeND module
+- **Purpose**: Consolidate Python testing documentation and scripts into TESTING.md
 
 ---
 
@@ -71,6 +70,10 @@ The following branches were merged to main and deleted:
 
 | Branch | Merged Via | Date Deleted | Description |
 |--------|-----------|--------------|-------------|
+| `cleanup/redundant-msc-ver-ifdefs` | PR #23 | 2026-02-24 | Removed redundant #ifdef _MSC_VER |
+| `feature/sdk-style-csproj` | PR #22 | 2026-02-22 | Convert legacy csproj to SDK-style |
+| `feature/merge-antiques` | — | 2026-02-20 | Added antiques/ directory with historical CVS-era source code |
+| `feature/rearrangements` | — | 2026-02-20 | Reorganized legacy projects from src/ to antiques/ |
 | `bugfix/cast-warnings` | PR #5 | 2026-02-18 | Fixed cast warnings throughout codebase |
 | `bugfix/clean-up-unused-files` | PR #4 | 2026-02-18 | Removed dead code and unused files |
 | `docs/claude-md` | PRs #10, #11 | 2026-02-18 | Added CLAUDE.md and README documentation |
@@ -89,10 +92,9 @@ The following branches were merged to main and deleted:
 
 | Branch | Status | Priority | Recommendation |
 |--------|--------|----------|----------------|
-| `main` | ✅ Stable | — | Current baseline with macOS port, web app, MkDocs, reorganized structure |
+| `main` | ✅ Stable | — | Current baseline with SDK-style csproj, macOS port, web app, MkDocs |
 | `feature/wrap-distance` | 🚧 Active | High | Continue development, consider merging when stable |
-| `feature/merge-antiques` | ✅ Merged | — | Safe to delete |
-| `feature/rearrangements` | ✅ Merged | — | Safe to delete |
+| `docs/consolidate-testing-docs` | ✅ Merged | — | Safe to delete |
 
 ---
 
@@ -102,18 +104,17 @@ The following branches were merged to main and deleted:
 1. **feature/wrap-distance** — Major modernization effort for modern C++ and rendering improvements (5 commits ahead)
 
 ### Cleanup Candidates
-2. **feature/merge-antiques** — Fully merged, no unique commits, delete local branch
-3. **feature/rearrangements** — Fully merged, no unique commits, delete local branch
+2. **docs/consolidate-testing-docs** — Fully merged, no unique commits, delete local branch
 
 ---
 
 ## Notes
 
 - Only `feature/wrap-distance` has a remote tracking branch (beyond main)
-- `feature/merge-antiques` and `feature/rearrangements` are local-only and fully merged
-- Main has seen substantial activity since Nov 2025: 6 PRs merged, major repository reorganization
-- The `weel-app/` and `elliptangle/` directories are now on main with a TODO to merge them into a single web frontend
+- `docs/consolidate-testing-docs` is local-only and fully merged
+- Main has seen substantial activity in Feb 2026: 8 PRs merged, major repository reorganization, SDK-style conversion, and documentation consolidation
+- The `weel-app/` and `elliptangle/` components have been refactored for the React web frontend
 
 ---
 
-**Last Updated**: 2026-02-20
+**Last Updated**: 2026-02-24
