@@ -54,9 +54,13 @@ add_subdirectory ("theWheelModel")
 
 if(MSVC)
     add_subdirectory ("pybind")
+    add_subdirectory ("theWheelView")
+    add_subdirectory ("theWheel")
 endif()
 
-add_subdirectory ("OptimizeND")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/OptimizeND")
+    add_subdirectory ("OptimizeND")
+endif()
 add_subdirectory ("theWheelModelTests")
 
 # wxWidgets application (macOS/Linux)
