@@ -720,7 +720,7 @@ void CSpaceTreeView::OnLButtonUp(UINT nFlags, CPoint point)
 // 
 // scrolling during drag
 //////////////////////////////////////////////////////////////////////
-void CSpaceTreeView::OnTimer(UINT nIDEvent) 
+void CSpaceTreeView::OnTimer(UINT_PTR nIDEvent)
 {
     // check the ID to see if it is the scrolling timer
     if (nIDEvent != m_nScrollTimerID)

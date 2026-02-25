@@ -1175,7 +1175,7 @@ void CSpaceView::OnLButtonDblClk(UINT nFlags, CPoint point)
 // 
 // Timer call updates the springs and performs a layout
 //////////////////////////////////////////////////////////////////////
-void CSpaceView::OnTimer(UINT nIDEvent) 
+void CSpaceView::OnTimer(UINT_PTR nIDEvent)
 {
 	// AFX_MANAGE_STATE(m_pModuleState);
 
