@@ -40,6 +40,9 @@ public:
 
 	virtual void OnKeyDown(UINT nChar, UINT nFlags);
 
+	// handler for mouse wheel events
+	virtual void OnMouseWheel(UINT nFlags, short zDelta, CPoint point);
+
 	// drawing function for special annotations
 	virtual void OnDraw(CDC *pDC);
 

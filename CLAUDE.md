@@ -278,6 +278,25 @@ These enable consistent serialization and reduce boilerplate.
 
 - ~~Merge `elliptangle/` (TypeScript parametric shape renderer) and `weel-app/` (React component) into a single web frontend~~ (Done: elliptangle Canvas renderer merged into `weel-app/src/components/ElliptangleEditor/`, shared geometry types in `weel-app/src/geometry/`, standalone `elliptangle/` deleted)
 
+## Active Development Branches
+
+Five independent workstreams, each on a separate branch:
+
+### `feature/cmake-mfc-build` — Add MFC apps to CMake build
+Add CMakeLists.txt for theWheelView (static lib) and theWheel (MFC exe) so the full Windows app builds via CMake alongside the existing portable targets. Also fixes x64 compilation issues (UINT_PTR for OnTimer, SHANDLE_PTR for get_HWND). DirectX 9 headers/libs come from the Windows SDK — the legacy June 2010 DirectX SDK is not required.
+
+### `feature/upgrade-d3d11` — Upgrade DirectX 9 to Direct3D 11
+Replace all D3D9 API usage in theWheelView with D3D11. Key changes: fixed-function pipeline → HLSL shaders, FVF → input layouts, SetTransform/SetMaterial → constant buffers, triangle fan → triangle list (D3D11 has no TRIANGLEFAN). Eliminates the legacy DirectX SDK dependency entirely since D3D11 ships with the Windows SDK. New files: D3D11Renderer.h/.cpp (device management), Shaders.hlsl (vertex + pixel shaders).
+
+### `feature/mouse-wheel-activation` — Mouse wheel activates nodes
+Add WM_MOUSEWHEEL handling to CSpaceView: hit-test the node under the cursor via FindNodeViewAt(), then call ActivateNodeView() with a scale proportional to wheel delta. Also extend CTracker with a virtual OnMouseWheel. In the wxWidgets SpacePanel, change the existing OnMouseWheel from zoom-only to: wheel over a node → activate, wheel over empty space → zoom.
+
+### `feature/node-body-text` — Display node Description field on canvas
+CNode already has a Description field (serialized since schema 5, editable in wxWidgets property dialogs). Render it visually below the node name when activation exceeds a threshold. In theWheelView: GDI DrawText with DT_WORDBREAK in the text overlay pass. In SpacePanel: smaller font below the name, clipped to node bounds. Only shown when the node is large enough on screen.
+
+### `data/extract-thewheel-data` — Extract data from Google Drive
+Parse .spx files and .jpg images from `G:\My Drive\00 DATA\theWheel_data`. New scripts: spx_to_json.py (converts SpxNode tree to the JSON format matching SpaceSerializer::Save), extract_thewheel_data.py (batch conversion). Implement SpaceSerializer::Load() with a simple recursive-descent JSON parser. Deferred until the Google Drive path is accessible.
+
 ## Architecture References
 
 - `docs/node-view-skin-design.md`: Comprehensive rendering design with pseudo-code for Plaque/Elliptangle/RadialShape classes

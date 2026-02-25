@@ -94,6 +94,10 @@ void CTracker::OnKeyDown(UINT nChar, UINT nFlags)
 {
 }
 
+void CTracker::OnMouseWheel(UINT nFlags, short zDelta, CPoint point)
+{
+}
+
 
 //////////////////////////////////////////////////////////////////////
 // CTracker::OnTimer

@@ -780,6 +780,7 @@ BEGIN_MESSAGE_MAP(CSpaceView, CWnd)
 	ON_WM_TIMER()
 	ON_WM_KEYDOWN()
 	ON_WM_LBUTTONDBLCLK()
+	ON_WM_MOUSEWHEEL()
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -1169,6 +1170,43 @@ void CSpaceView::OnLButtonDblClk(UINT nFlags, CPoint point)
 	
 	CWnd::OnLButtonDblClk(nFlags, point);
 }
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::OnMouseWheel
+//
+// Mouse wheel over a node adjusts its activation
+//////////////////////////////////////////////////////////////////////
+BOOL CSpaceView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
+{
+	// hit-test: find the node view under the cursor
+	CNodeView *pNodeView = FindNodeViewAt(pt);
+
+	if (pNodeView != NULL)
+	{
+		// scale: WHEEL_DELTA (120) = one notch = 0.3 activation units
+		REAL scale = (REAL)zDelta / (REAL)WHEEL_DELTA * 0.3f;
+
+		// activate the node
+		ActivateNodeView(pNodeView, scale);
+
+		// normalize to prevent runaway activation
+		GetSpace()->NormalizeNodes();
+
+		// update recent activated for centering
+		m_pRecentActivated[1] = m_pRecentActivated[0];
+		m_pRecentActivated[0] = pNodeView;
+	}
+
+	// forward to tracker for extensibility
+	if (m_pTracker != NULL)
+	{
+		m_pTracker->OnMouseWheel(nFlags, zDelta, pt);
+	}
+
+	return CWnd::OnMouseWheel(nFlags, zDelta, pt);
+}
+
 
 //////////////////////////////////////////////////////////////////////
 // CSpaceView::OnTimer
