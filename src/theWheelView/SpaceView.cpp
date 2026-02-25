@@ -1011,6 +1011,25 @@ void CSpaceView::OnPaint()
 								::SetTextColor(hdc, RGB(255, 255, 255));
 								::DrawText(hdc, pNode->GetName(), -1, &rect,
 									DT_CENTER | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+								// draw description below name for activated nodes
+								if (pNode->GetActivation() > 0.1
+									&& pNode->GetDescription().GetLength() > 0)
+								{
+									RECT descRect = pNV->GetInnerRECT();
+									descRect.top += (descRect.bottom - descRect.top) / 2;
+									descRect.left += 2;
+									descRect.right -= 2;
+									if (descRect.bottom - descRect.top > 12)
+									{
+										HFONT hSmallFont = (HFONT)::GetStockObject(ANSI_VAR_FONT);
+										HFONT hPrev = (HFONT)::SelectObject(hdc, hSmallFont);
+										::SetTextColor(hdc, RGB(200, 200, 200));
+										::DrawText(hdc, pNode->GetDescription(), -1, &descRect,
+											DT_CENTER | DT_TOP | DT_WORDBREAK | DT_END_ELLIPSIS);
+										::SelectObject(hdc, hPrev);
+									}
+								}
 							}
 						}
 					}
@@ -1053,6 +1072,25 @@ void CSpaceView::OnPaint()
 							::SetTextColor(hWndDC, RGB(255, 255, 255));
 							::DrawText(hWndDC, pNode->GetName(), -1, &rect,
 								DT_CENTER | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+							// draw description below name for activated nodes
+							if (pNode->GetActivation() > 0.1
+								&& pNode->GetDescription().GetLength() > 0)
+							{
+								RECT descRect = pNV->GetInnerRECT();
+								descRect.top += (descRect.bottom - descRect.top) / 2;
+								descRect.left += 2;
+								descRect.right -= 2;
+								if (descRect.bottom - descRect.top > 12)
+								{
+									HFONT hSmallFont = (HFONT)::GetStockObject(ANSI_VAR_FONT);
+									HFONT hPrev = (HFONT)::SelectObject(hWndDC, hSmallFont);
+									::SetTextColor(hWndDC, RGB(200, 200, 200));
+									::DrawText(hWndDC, pNode->GetDescription(), -1, &descRect,
+										DT_CENTER | DT_TOP | DT_WORDBREAK | DT_END_ELLIPSIS);
+									::SelectObject(hWndDC, hPrev);
+								}
+							}
 						}
 					}
 				}
