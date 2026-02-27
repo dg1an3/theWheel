@@ -26,6 +26,12 @@
 #include "NodeLayoutManager.h"
 #include "Tracker.h"
 
+#ifdef USE_OPENGL_RENDERER
+#include <GLRenderer.h>
+#include <GLNodeViewSkin.h>
+#include <GLNodeView.h>
+#endif
+
 
 //////////////////////////////////////////////////////////////////////
 // class CSpaceView
@@ -154,6 +160,13 @@ private:
 	// direct3d interfaces
 	LPDIRECT3D9 m_pd3d;
 	LPDIRECT3DDEVICE9 m_pd3dDev;
+
+#ifdef USE_OPENGL_RENDERER
+	// OpenGL ES renderer (via ANGLE)
+	theWheelGL::GLRenderer m_glRenderer;
+	theWheelGL::GLNodeViewSkin m_glSkin;
+	bool m_glInitialized;
+#endif
 
 	// the background color
 	COLORREF m_colorBk;

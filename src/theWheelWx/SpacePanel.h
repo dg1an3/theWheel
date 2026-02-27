@@ -9,6 +9,12 @@
 #pragma once
 
 #include <wx/wx.h>
+#ifdef USE_OPENGL_RENDERER
+#include <wx/glcanvas.h>
+#include <GLRenderer.h>
+#include <GLNodeViewSkin.h>
+#include <GLNodeView.h>
+#endif
 #include <Space.h>
 #include <Node.h>
 #include "Spring.h"
@@ -35,7 +41,11 @@ struct NodeViewData
     }
 };
 
+#ifdef USE_OPENGL_RENDERER
+class SpacePanel : public wxGLCanvas
+#else
 class SpacePanel : public wxPanel
+#endif
 {
 public:
     SpacePanel(wxWindow* parent);
@@ -98,6 +108,19 @@ private:
 
     // Per-node animation data
     std::map<CNode*, NodeViewData> m_nodeViews;
+
+#ifdef USE_OPENGL_RENDERER
+    // OpenGL ES renderer (via ANGLE / wxGLCanvas)
+    wxGLContext* m_glContext;
+    theWheelGL::GLRenderer m_glRenderer;
+    theWheelGL::GLNodeViewSkin m_glSkin;
+    bool m_glInitialized;
+
+    void OnPaintGL(wxPaintEvent& event);
+    void DrawGLLinks();
+    void DrawGLNodes();
+    void DrawGLTextOverlay(wxDC& dc);
+#endif
 
     static const int TIMER_ID = 100;
     static const int TIMER_MS = 30;

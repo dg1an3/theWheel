@@ -11,6 +11,9 @@
 #include <wx/dcbuffer.h>
 #include <NodeLink.h>
 #include <cmath>
+#ifdef USE_OPENGL_RENDERER
+#include <wx/dcclient.h>
+#endif
 
 // Colors matching the original GDI rendering
 static const wxColour BG_COLOR(232, 232, 232);
@@ -25,7 +28,11 @@ static const REAL MIN_NODE_RADIUS = 8.0f;
 static const REAL MAX_NODE_RADIUS = 80.0f;
 static const REAL ACTIVATION_SCALE = 120.0f;
 
+#ifdef USE_OPENGL_RENDERER
+wxBEGIN_EVENT_TABLE(SpacePanel, wxGLCanvas)
+#else
 wxBEGIN_EVENT_TABLE(SpacePanel, wxPanel)
+#endif
     EVT_PAINT(SpacePanel::OnPaint)
     EVT_TIMER(SpacePanel::TIMER_ID, SpacePanel::OnTimer)
     EVT_LEFT_DOWN(SpacePanel::OnLeftDown)
@@ -36,9 +43,26 @@ wxBEGIN_EVENT_TABLE(SpacePanel, wxPanel)
     EVT_SIZE(SpacePanel::OnSize)
 wxEND_EVENT_TABLE()
 
+#ifdef USE_OPENGL_RENDERER
+// wxGLCanvas requires GL attributes
+static int glAttribs[] = {
+    WX_GL_RGBA, WX_GL_DOUBLEBUFFER,
+    WX_GL_DEPTH_SIZE, 16,
+    WX_GL_STENCIL_SIZE, 0,
+    0
+};
+#endif
+
 SpacePanel::SpacePanel(wxWindow* parent)
+#ifdef USE_OPENGL_RENDERER
+    : wxGLCanvas(parent, wxID_ANY, glAttribs, wxDefaultPosition, wxDefaultSize,
+                 wxFULL_REPAINT_ON_RESIZE)
+    , m_glContext(nullptr)
+    , m_glInitialized(false)
+#else
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
               wxFULL_REPAINT_ON_RESIZE)
+#endif
     , m_pSpace(nullptr)
     , m_pTreeView(nullptr)
     , m_timer(this, TIMER_ID)
@@ -49,7 +73,9 @@ SpacePanel::SpacePanel(wxWindow* parent)
     , m_pDragNode(nullptr)
 {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
+#ifndef USE_OPENGL_RENDERER
     SetBackgroundColour(*wxWHITE);
+#endif
 }
 
 void SpacePanel::SetSpace(CSpace* pSpace)
@@ -194,6 +220,9 @@ wxColour SpacePanel::ClassColor(CNode* pNode) const
 
 void SpacePanel::OnPaint(wxPaintEvent& event)
 {
+#ifdef USE_OPENGL_RENDERER
+    OnPaintGL(event);
+#else
     wxBufferedPaintDC dc(this);
     dc.SetBackground(wxBrush(*wxWHITE));
     dc.Clear();
@@ -207,6 +236,7 @@ void SpacePanel::OnPaint(wxPaintEvent& event)
 
     DrawLinks(dc);
     DrawNodes(dc);
+#endif
 }
 
 void SpacePanel::OnTimer(wxTimerEvent& event)
@@ -320,6 +350,12 @@ void SpacePanel::OnMouseWheel(wxMouseEvent& event)
 
 void SpacePanel::OnSize(wxSizeEvent& event)
 {
+#ifdef USE_OPENGL_RENDERER
+    if (m_glInitialized) {
+        wxSize sz = GetClientSize();
+        m_glRenderer.Resize(sz.GetWidth(), sz.GetHeight());
+    }
+#endif
     Refresh();
     event.Skip();
 }
@@ -492,3 +528,170 @@ void SpacePanel::DrawNode(wxDC& dc, CNode* pNode, const NodeViewData& viewData)
         }
     }
 }
+
+#ifdef USE_OPENGL_RENDERER
+
+void SpacePanel::OnPaintGL(wxPaintEvent& event)
+{
+    wxPaintDC paintDC(this); // required even for GL
+
+    if (!m_glContext) {
+        m_glContext = new wxGLContext(this);
+    }
+    SetCurrent(*m_glContext);
+
+    if (!m_glInitialized) {
+        wxSize sz = GetClientSize();
+        // For wxGLCanvas, the GL context is already set by SetCurrent,
+        // so we don't use EGL init. Instead, just init shaders directly.
+        // However, GLRenderer is designed for EGL. On macOS with wxGLCanvas,
+        // we skip EGL and use the native context that wxGLCanvas provides.
+        // Mark as initialized — the wx GL context is already active.
+        m_glInitialized = true;
+        m_glRenderer.Resize(sz.GetWidth(), sz.GetHeight());
+    }
+
+    if (!m_pSpace) {
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        SwapBuffers();
+        return;
+    }
+
+    wxSize sz = GetClientSize();
+    float w = (float)sz.GetWidth();
+    float h = (float)sz.GetHeight();
+
+    m_glRenderer.BeginFrame(232.0f/255.0f, 232.0f/255.0f, 232.0f/255.0f);
+
+    // Set up view/projection
+    theWheelGL::Vec3f eye(0.0f, 0.0f, 5.0f);
+    theWheelGL::Vec3f at(0.0f, 0.0f, 0.0f);
+    theWheelGL::Vec3f up(0.0f, 1.0f, 0.0f);
+    m_glRenderer.SetViewMatrix(theWheelGL::Mat4f::LookAtLH(eye, at, up));
+    m_glRenderer.SetProjectionMatrix(theWheelGL::Mat4f::OrthoLH(w, h, -40.0f, 40.0f));
+
+    // Directional light
+    m_glRenderer.SetLight(theWheelGL::Vec3f(-0.2f, -0.3f, -0.5f),
+                          theWheelGL::Vec3f(1.0f, 1.0f, 1.0f));
+    m_glRenderer.SetAmbientLight(theWheelGL::Vec3f(0.25f, 0.25f, 0.25f));
+
+    DrawGLLinks();
+    DrawGLNodes();
+
+    SwapBuffers();
+
+    // wxDC text overlay after GL swap
+    wxClientDC dc(this);
+    DrawGLTextOverlay(dc);
+}
+
+void SpacePanel::DrawGLLinks()
+{
+    if (!m_pSpace) return;
+
+    for (int i = 0; i < m_pSpace->GetNodeCount(); i++) {
+        CNode* pNode = m_pSpace->GetNodeAt(i);
+        if (pNode->GetIsSubThreshold()) continue;
+
+        auto itFrom = m_nodeViews.find(pNode);
+        if (itFrom == m_nodeViews.end()) continue;
+
+        for (int j = 0; j < pNode->GetLinkCount(); j++) {
+            CNodeLink* pLink = pNode->GetLinkAt(j);
+            CNode* pTarget = pLink->GetTarget();
+            if (pLink->GetIsStabilizer() || pTarget->GetIsSubThreshold()) continue;
+            if (pNode->GetActivation() < pTarget->GetActivation()) continue;
+
+            auto itTo = m_nodeViews.find(pTarget);
+            if (itTo == m_nodeViews.end()) continue;
+
+            wxPoint ptFrom = WorldToScreen(itFrom->second.positionSpring.GetPosition());
+            wxPoint ptTo = WorldToScreen(itTo->second.positionSpring.GetPosition());
+
+            REAL gain = R(0.01) + sqrt(pNode->GetLinkTo(pTarget)->GetGain());
+            theWheelGL::GLNodeView::DrawLink(m_glRenderer,
+                (float)ptFrom.x, (float)ptFrom.y, 0.0f,
+                (float)ptTo.x, (float)ptTo.y, 0.0f,
+                (float)(gain * itFrom->second.springActivation),
+                (float)(gain * itTo->second.springActivation));
+        }
+    }
+}
+
+void SpacePanel::DrawGLNodes()
+{
+    if (!m_pSpace) return;
+
+    for (int i = m_pSpace->GetNodeCount() - 1; i >= 0; i--) {
+        CNode* pNode = m_pSpace->GetNodeAt(i);
+        if (pNode->GetIsSubThreshold()) continue;
+
+        auto it = m_nodeViews.find(pNode);
+        if (it == m_nodeViews.end()) continue;
+
+        float act = (float)it->second.springActivation;
+        if (act <= 0.0f) continue;
+
+        wxPoint center = WorldToScreen(it->second.positionSpring.GetPosition());
+        theWheelGL::GLNodeView::Draw(m_glRenderer, m_glSkin,
+            (float)center.x, (float)center.y, 0.0f, act);
+    }
+}
+
+void SpacePanel::DrawGLTextOverlay(wxDC& dc)
+{
+    if (!m_pSpace) return;
+
+    dc.SetBackgroundMode(wxTRANSPARENT);
+
+    for (int i = 0; i < m_pSpace->GetNodeCount(); i++) {
+        CNode* pNode = m_pSpace->GetNodeAt(i);
+        if (pNode->GetIsSubThreshold()) continue;
+
+        auto it = m_nodeViews.find(pNode);
+        if (it == m_nodeViews.end()) continue;
+
+        float act = (float)it->second.springActivation;
+        REAL radius = MIN_NODE_RADIUS + sqrt(act) * ACTIVATION_SCALE;
+        int r = (int)(radius * m_zoom);
+        if (r < 15) continue;
+
+        wxPoint center = WorldToScreen(it->second.positionSpring.GetPosition());
+
+        if (pNode->GetName().GetLength() > 0) {
+            int fontSize = std::max(8, std::min(r / 3, 14));
+            wxFont font(fontSize, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL,
+                        wxFONTWEIGHT_BOLD);
+            dc.SetFont(font);
+
+            wxString name((const char*)pNode->GetName());
+            wxSize textSize = dc.GetTextExtent(name);
+
+            int tx = center.x - textSize.GetWidth() / 2;
+            int ty = center.y - textSize.GetHeight() / 2;
+
+            // Shadow
+            dc.SetTextForeground(wxColour(0, 0, 0));
+            dc.DrawText(name, tx + 1, ty + 1);
+            // Text
+            dc.SetTextForeground(wxColour(255, 255, 255));
+            dc.DrawText(name, tx, ty);
+        }
+
+        // Description
+        if (act > 0.1f && pNode->GetDescription().GetLength() > 0 && r > 30) {
+            int descFontSize = std::max(7, std::min(r / 4, 11));
+            wxFont descFont(descFontSize, wxFONTFAMILY_SWISS,
+                            wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+            dc.SetFont(descFont);
+            dc.SetTextForeground(wxColour(40, 40, 40));
+
+            wxString desc((const char*)pNode->GetDescription());
+            int descTop = center.y + 8;
+            dc.DrawText(desc, center.x - r + 4, descTop);
+        }
+    }
+}
+
+#endif // USE_OPENGL_RENDERER

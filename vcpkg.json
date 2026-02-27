@@ -1,0 +1,7 @@
+{
+    "name": "thewheel",
+    "version-string": "1.0.0",
+    "dependencies": [
+        "angle"
+    ]
+}

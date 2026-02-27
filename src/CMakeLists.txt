@@ -52,6 +52,9 @@ enable_testing()
 add_subdirectory ("OptimizeN")
 add_subdirectory ("theWheelModel")
 
+# Cross-platform OpenGL ES renderer (via ANGLE)
+add_subdirectory ("theWheelGL")
+
 if(MSVC)
     add_subdirectory ("pybind")
     add_subdirectory ("theWheelView")

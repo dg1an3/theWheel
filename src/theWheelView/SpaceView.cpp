@@ -101,6 +101,9 @@ CSpaceView::CSpaceView()
 		, m_pNLM(NULL)
 		, m_pSkin(NULL)
 		, m_pSpace(NULL)
+#ifdef USE_OPENGL_RENDERER
+		, m_glInitialized(false)
+#endif
 {
 	DWORD dwBkColor = ::AfxGetApp()->GetProfileInt(_T("Settings"), _T("BkColor"), 
 		(DWORD) RGB(115, 158, 206));
@@ -127,6 +130,10 @@ CSpaceView::~CSpaceView()
 		delete m_arrNodeViews[nAt];
 	}
 	m_arrNodeViews.clear(); // RemoveAll();
+
+#ifdef USE_OPENGL_RENDERER
+	m_glRenderer.Shutdown();
+#endif
 
 	if (m_pd3dDev != NULL)
 		m_pd3dDev->Release();
@@ -839,7 +846,7 @@ int CSpaceView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 // 
 // on resize, regenerate the direct draw surface
 //////////////////////////////////////////////////////////////////////
-void CSpaceView::OnSize(UINT nType, int cx, int cy) 
+void CSpaceView::OnSize(UINT nType, int cx, int cy)
 {
 	// AFX_MANAGE_STATE(m_pModuleState);
 
@@ -850,6 +857,12 @@ void CSpaceView::OnSize(UINT nType, int cx, int cy)
 	{
 		return;
 	}
+
+#ifdef USE_OPENGL_RENDERER
+	if (m_glInitialized) {
+		m_glRenderer.Resize(cx, cy);
+	}
+#endif
 
 	// use this to re-initialize for new window size
 	ASSERT_HRESULT(ResetDevice());
@@ -865,8 +878,136 @@ void CSpaceView::OnSize(UINT nType, int cx, int cy)
 // 
 // over-ride to draw to the DDraw surface, then blt to the screen
 //////////////////////////////////////////////////////////////////////
-void CSpaceView::OnPaint() 
+void CSpaceView::OnPaint()
 {
+#ifdef USE_OPENGL_RENDERER
+	// --- OpenGL ES rendering path (via ANGLE) ---
+	if (!m_glInitialized && m_hWnd) {
+		CRect rc;
+		GetClientRect(&rc);
+		m_glInitialized = m_glRenderer.InitFromWindow((void*)m_hWnd, rc.Width(), rc.Height());
+	}
+
+	if (m_glInitialized) {
+		CRect rectOuter;
+		GetClientRect(&rectOuter);
+
+		float bkR = GetRValue(m_colorBk) / 255.0f;
+		float bkG = GetGValue(m_colorBk) / 255.0f;
+		float bkB = GetBValue(m_colorBk) / 255.0f;
+
+		m_glRenderer.BeginFrame(bkR, bkG, bkB);
+
+		// Set up view/projection matching D3D9 path
+		float w = (float)rectOuter.Width();
+		float h = (float)rectOuter.Height();
+
+		theWheelGL::Vec3f eye(-w / 2.0f, -h / 2.0f, 5.0f);
+		theWheelGL::Vec3f at(-w / 2.0f, -h / 2.0f, -5.0f);
+		theWheelGL::Vec3f up(0.0f, 1.0f, 0.0f);
+		m_glRenderer.SetViewMatrix(theWheelGL::Mat4f::LookAtLH(eye, at, up));
+		m_glRenderer.SetProjectionMatrix(theWheelGL::Mat4f::OrthoLH(w, h, -40.0f, 40.0f));
+
+		// Light: directional, matching D3D9
+		theWheelGL::Vec3f lightDir(-0.2f, -0.3f, -0.5f);
+		m_glRenderer.SetLight(lightDir, theWheelGL::Vec3f(1.0f, 1.0f, 1.0f));
+		m_glRenderer.SetAmbientLight(theWheelGL::Vec3f(0.25f, 0.25f, 0.25f));
+
+		// Sort nodes for draw order
+		arrNodeViewsToDraw.resize(__min((UINT)GetVisibleNodeCount() * 2,
+			GetSpace()->m_arrNodes.size()));
+		copy(GetSpace()->m_arrNodes.begin(),
+			GetSpace()->m_arrNodes.begin() + arrNodeViewsToDraw.size(),
+			arrNodeViewsToDraw.begin());
+		sort(arrNodeViewsToDraw.begin(), arrNodeViewsToDraw.end(),
+			&CNodeView::IsActDiffGreater);
+
+		// Draw links
+		for (auto pNode : arrNodeViewsToDraw) {
+			if (pNode->GetIsSubThreshold() || pNode->GetView() == NULL)
+				continue;
+			CNodeView* pNV = (CNodeView*)pNode->GetView();
+			for (int nLink = 0; nLink < pNode->GetLinkCount(); nLink++) {
+				CNodeLink* pLink = pNode->GetLinkAt(nLink);
+				CNodeView* pLinkedView = (CNodeView*)pLink->GetTarget()->GetView();
+				if (!pLink->GetIsStabilizer() && pLinkedView != NULL
+					&& !pLinkedView->GetNode()->GetIsSubThreshold()) {
+					CVectorD<3> vFrom = pNV->GetSpringCenter();
+					CVectorD<3> vTo = pLinkedView->GetSpringCenter();
+					REAL gain = REAL(0.01) + sqrt(pNode->GetLinkTo(pLinkedView->GetNode())->GetGain());
+					theWheelGL::GLNodeView::DrawLink(m_glRenderer,
+						(float)vFrom[0], (float)vFrom[1], (float)vFrom[2],
+						(float)vTo[0], (float)vTo[1], (float)vTo[2],
+						(float)(gain * pNV->GetSpringActivation()),
+						(float)(gain * pLinkedView->GetSpringActivation()));
+				}
+			}
+		}
+
+		// Draw node plaques
+		for (auto pNode : arrNodeViewsToDraw) {
+			if (pNode->GetIsSubThreshold() || pNode->GetView() == NULL)
+				continue;
+			CNodeView* pNV = (CNodeView*)pNode->GetView();
+			float act = (float)pNode->GetActivation();
+			if (act > 0.0f) {
+				RECT ir = pNV->GetInnerRECT();
+				float cx = (float)(ir.left + ir.right) / 2.0f;
+				float cy = (float)(ir.top + ir.bottom) / 2.0f;
+				theWheelGL::GLNodeView::Draw(m_glRenderer, m_glSkin,
+					cx, cy, 0.0f, act);
+			}
+		}
+
+		m_glRenderer.EndFrame();
+
+		// GDI text overlay after GL swap (same pattern as D3D9 post-Present)
+		{
+			HDC hWndDC = ::GetDC(m_hWnd);
+			if (hWndDC) {
+				HFONT hFont = (HFONT)::GetStockObject(DEFAULT_GUI_FONT);
+				HFONT hOldFont = (HFONT)::SelectObject(hWndDC, hFont);
+				::SetBkMode(hWndDC, TRANSPARENT);
+				for (auto pNode : arrNodeViewsToDraw) {
+					if (!pNode->GetIsSubThreshold() && pNode->GetView() != NULL) {
+						CNodeView* pNV = (CNodeView*)pNode->GetView();
+						if (pNV->HasDrawableArea()) {
+							RECT rect = pNV->GetInnerRECT();
+							rect.top += (rect.bottom - rect.top) / 4;
+							RECT rectShadow = { rect.left+1, rect.top+1, rect.right+1, rect.bottom+1 };
+							::SetTextColor(hWndDC, RGB(0, 0, 0));
+							::DrawText(hWndDC, pNode->GetName(), -1, &rectShadow,
+								DT_CENTER | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+							::SetTextColor(hWndDC, RGB(255, 255, 255));
+							::DrawText(hWndDC, pNode->GetName(), -1, &rect,
+								DT_CENTER | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+							if (pNode->GetActivation() > 0.1
+								&& pNode->GetDescription().GetLength() > 0) {
+								RECT descRect = pNV->GetInnerRECT();
+								descRect.top += (descRect.bottom - descRect.top) / 2;
+								descRect.left += 2; descRect.right -= 2;
+								if (descRect.bottom - descRect.top > 12) {
+									HFONT hSmallFont = (HFONT)::GetStockObject(ANSI_VAR_FONT);
+									HFONT hPrev = (HFONT)::SelectObject(hWndDC, hSmallFont);
+									::SetTextColor(hWndDC, RGB(40, 40, 40));
+									::DrawText(hWndDC, pNode->GetDescription(), -1, &descRect,
+										DT_CENTER | DT_TOP | DT_WORDBREAK);
+									::SelectObject(hWndDC, hPrev);
+								}
+							}
+						}
+					}
+				}
+				::SelectObject(hWndDC, hOldFont);
+				::ReleaseDC(m_hWnd, hWndDC);
+			}
+		}
+
+		ValidateRect(NULL);
+		return;
+	}
+#endif // USE_OPENGL_RENDERER
+
 	// check that the device is available
 	if (!m_pd3dDev)
 		ASSERT_HRESULT(ResetDevice());
