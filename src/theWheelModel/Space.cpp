@@ -301,16 +301,24 @@ BOOL
 	pMainNode->SetParent(m_pRootNode);
 	AddNode(pMainNode, NULL);
 
-	auto child1 = new CNode(this, _T("Child1"));
+	auto child1 = new CNode(this, _T("Child1"),
+		_T("Primary node for organizing\r\nrelated concepts and ideas"));
 	AddNode(child1, pMainNode);
-	AddNode(new CNode(this, _T("Child2")), pMainNode);
-	AddNode(new CNode(this, _T("Child3")), pMainNode);
+	auto child2 = new CNode(this, _T("Child2"),
+		_T("Activation propagates through weighted links between nodes"));
+	AddNode(child2, pMainNode);
+	auto child3 = new CNode(this, _T("Child3"),
+		_T("Semantic browsing enables exploration of knowledge networks"));
+	AddNode(child3, pMainNode);
 
-	AddNode(new CNode(this, _T("Child4")), child1);
-	auto child5 = new CNode(this, _T("Child5"));
+	AddNode(new CNode(this, _T("Child4"),
+		_T("Force-directed layout minimizes energy for optimal positioning")), child1);
+	auto child5 = new CNode(this, _T("Child5"),
+		_T("Spring physics provides smooth animation transitions"));
 	AddNode(child5, child1);
 
-	auto child6 = new CNode(this, _T("Child6"));
+	auto child6 = new CNode(this, _T("Child6"),
+		_T("Hierarchical structure supports parent-child node relationships"));
 	AddNode(child6, child1);
 
 	AddNode(new CNode(this, _T("Child7")), child6);

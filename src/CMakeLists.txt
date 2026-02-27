@@ -54,9 +54,10 @@ add_subdirectory ("theWheelModel")
 
 if(MSVC)
     add_subdirectory ("pybind")
+    add_subdirectory ("theWheelView")
+    add_subdirectory ("theWheel")
 endif()
 
-add_subdirectory ("OptimizeND")
 add_subdirectory ("theWheelModelTests")
 
 # wxWidgets application (macOS/Linux)

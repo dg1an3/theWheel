@@ -1024,9 +1024,9 @@ void CSpaceView::OnPaint()
 									{
 										HFONT hSmallFont = (HFONT)::GetStockObject(ANSI_VAR_FONT);
 										HFONT hPrev = (HFONT)::SelectObject(hdc, hSmallFont);
-										::SetTextColor(hdc, RGB(200, 200, 200));
+										::SetTextColor(hdc, RGB(40, 40, 40));
 										::DrawText(hdc, pNode->GetDescription(), -1, &descRect,
-											DT_CENTER | DT_TOP | DT_WORDBREAK | DT_END_ELLIPSIS);
+											DT_CENTER | DT_TOP | DT_WORDBREAK);
 										::SelectObject(hdc, hPrev);
 									}
 								}
@@ -1085,9 +1085,9 @@ void CSpaceView::OnPaint()
 								{
 									HFONT hSmallFont = (HFONT)::GetStockObject(ANSI_VAR_FONT);
 									HFONT hPrev = (HFONT)::SelectObject(hWndDC, hSmallFont);
-									::SetTextColor(hWndDC, RGB(200, 200, 200));
+									::SetTextColor(hWndDC, RGB(40, 40, 40));
 									::DrawText(hWndDC, pNode->GetDescription(), -1, &descRect,
-										DT_CENTER | DT_TOP | DT_WORDBREAK | DT_END_ELLIPSIS);
+										DT_CENTER | DT_TOP | DT_WORDBREAK);
 									::SelectObject(hWndDC, hPrev);
 								}
 							}
@@ -1213,7 +1213,7 @@ void CSpaceView::OnLButtonDblClk(UINT nFlags, CPoint point)
 // 
 // Timer call updates the springs and performs a layout
 //////////////////////////////////////////////////////////////////////
-void CSpaceView::OnTimer(UINT nIDEvent) 
+void CSpaceView::OnTimer(UINT_PTR nIDEvent)
 {
 	// AFX_MANAGE_STATE(m_pModuleState);
 
