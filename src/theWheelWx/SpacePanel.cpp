@@ -466,4 +466,29 @@ void SpacePanel::DrawNode(wxDC& dc, CNode* pNode, const NodeViewData& viewData)
             }
         }
     }
+
+    // Draw description text for sufficiently activated nodes
+    if (r > 30 && act > 0.08f && pNode->GetDescription().GetLength() > 0) {
+        int descFontSize = std::max(7, std::min(r / 4, 11));
+        wxFont descFont(descFontSize, wxFONTFAMILY_SWISS,
+                        wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+        dc.SetFont(descFont);
+        dc.SetTextForeground(wxColour(100, 100, 100));
+
+        wxString desc((const char*)pNode->GetDescription());
+
+        // Position below the name
+        int descTop = center.y + 2;
+        int descWidth = nodeRect.GetWidth() - 8;
+        int descLeft = center.x - descWidth / 2;
+
+        wxRect descRect(descLeft, descTop, descWidth,
+                        nodeRect.GetBottom() - descTop - 4);
+
+        if (descRect.GetHeight() > descFontSize + 2) {
+            dc.SetClippingRegion(descRect);
+            dc.DrawText(desc, descRect.GetLeft(), descRect.GetTop());
+            dc.DestroyClippingRegion();
+        }
+    }
 }
