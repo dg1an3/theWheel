@@ -1,6 +1,13 @@
 # CMakeLists.txt for theWheelWx - wxWidgets-based GUI application
 
-find_package(wxWidgets COMPONENTS core base)
+# OpenGL ES renderer toggle
+option(USE_OPENGL_RENDERER "Use OpenGL ES via ANGLE instead of 2D wxDC for rendering" OFF)
+
+if(USE_OPENGL_RENDERER)
+    find_package(wxWidgets COMPONENTS core base gl)
+else()
+    find_package(wxWidgets COMPONENTS core base)
+endif()
 
 if(NOT wxWidgets_FOUND)
     message(STATUS "wxWidgets not found - skipping theWheelWx build")
@@ -36,6 +43,11 @@ target_link_libraries(theWheelWx
         OptimizeN
         ${wxWidgets_LIBRARIES}
 )
+
+if(USE_OPENGL_RENDERER)
+    target_compile_definitions(theWheelWx PRIVATE USE_OPENGL_RENDERER)
+    target_link_libraries(theWheelWx PRIVATE theWheelGL)
+endif()
 
 target_include_directories(theWheelWx
     PRIVATE

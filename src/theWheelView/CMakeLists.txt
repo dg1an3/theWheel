@@ -67,10 +67,15 @@ target_link_libraries(theWheelView
         winmm.lib
 )
 
+# OpenGL ES renderer toggle: define USE_OPENGL_RENDERER to use ANGLE instead of D3D9
+option(USE_OPENGL_RENDERER "Use OpenGL ES via ANGLE instead of D3D9 for rendering" OFF)
+if(USE_OPENGL_RENDERER)
+    target_compile_definitions(theWheelView PUBLIC USE_OPENGL_RENDERER)
+    target_link_libraries(theWheelView PUBLIC theWheelGL)
+endif()
+
 # MFC in shared DLL
-set_target_properties(theWheelView PROPERTIES
-    COMPILE_DEFINITIONS "_AFXDLL"
-)
+target_compile_definitions(theWheelView PRIVATE _AFXDLL)
 
 # Precompiled headers
 target_precompile_headers(theWheelView PRIVATE stdafx.h)
