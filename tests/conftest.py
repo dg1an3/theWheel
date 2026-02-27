@@ -16,6 +16,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "activation: Tests for activation spreading")
     config.addinivalue_line("markers", "layout: Tests for spatial layout")
     config.addinivalue_line("markers", "slow: Slow-running tests")
+    config.addinivalue_line("markers", "gui: GUI tests requiring pywinauto (Windows only)")
 
 
 @pytest.fixture(scope="session", autouse=True)
