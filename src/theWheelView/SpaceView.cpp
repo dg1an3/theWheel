@@ -1217,13 +1217,18 @@ void CSpaceView::OnLButtonDblClk(UINT nFlags, CPoint point)
 //////////////////////////////////////////////////////////////////////
 BOOL CSpaceView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 {
+	// WM_MOUSEWHEEL delivers screen coordinates; convert to client
+	ScreenToClient(&pt);
+
 	// hit-test: find the node view under the cursor
 	CNodeView *pNodeView = FindNodeViewAt(pt);
 
 	if (pNodeView != NULL)
 	{
-		// scale: WHEEL_DELTA (120) = one notch = 0.3 activation units
-		REAL scale = (REAL)zDelta / (REAL)WHEEL_DELTA * 0.3f;
+		// scale inversely with current activation so large nodes are harder to grow
+		REAL activation = pNodeView->GetNode()->GetActivation();
+		REAL notch = 0.2f / (1.0f + 5.0f * activation);
+		REAL scale = (REAL)zDelta / (REAL)WHEEL_DELTA * notch;
 
 		// activate the node
 		ActivateNodeView(pNodeView, scale);
