@@ -12,174 +12,152 @@ theWheel represents knowledge as a network of **nodes** (information units) conn
 
 - **Spreading Activation Network**: Information propagates through weighted connections with configurable decay
 - **Physics-Based Layout**: Force-directed graph positioning using energy minimization and spring forces
-- **3D Visualization**: DirectX 9-powered rendering with dynamic node sizing and smooth animations
-- **Hierarchical Organization**: Nodes maintain parent-child relationships for structured knowledge
-- **Multi-Implementation**: Available as C++ desktop app, Python library, and web application
-- **20+ Years of Development**: Mature algorithms refined from 2000 to present
+- **3D Visualization**: DirectX 9 (Windows) and wxWidgets/Modern GL (macOS/Cross-platform) rendering
+- **Web Interface**: Modern React/Three.js web application for browser-based exploration
+- **Cross-Platform Support**: Native Windows (MFC) and macOS (wxWidgets) desktop clients
+- **Integrated Help**: Comprehensive documentation via MkDocs static site generator
+- **Mature Algorithms**: 20+ years of refinement in semantic browsing and visualization
 
 ## Repository Structure
 
 ```
 theWheel/
-├── src/                    # C++ implementation (primary codebase)
-│   ├── theWheel/          # MFC desktop application
+├── src/                    # C++ implementations (primary codebase)
+│   ├── theWheel/          # MFC desktop application (Windows)
+│   ├── theWheelWx/        # wxWidgets desktop application (macOS/Cross-platform)
 │   ├── theWheelModel/     # Core data model and spreading activation logic
 │   ├── theWheelView/      # DirectX 9 rendering layer
 │   ├── OptimizeN/         # Multi-dimensional optimization library
-│   └── theWheelModelTests/ # Google Test unit tests
+│   ├── pybind/            # Python bindings (pythewheel) via pybind11
+│   └── theWheelModelTests/ # C++ Google Test unit tests
 │
-├── pyweel/                # Python implementation
-│   ├── space.py          # Space container with activation management
-│   ├── node.py           # Node class with propagation logic
-│   ├── node_link.py      # Weighted link connections
-│   └── space_layout_*.py # Layout optimization algorithms
+├── weel-app/              # React/TypeScript/Three.js web application
 │
-├── weel-app/              # Node.js/web application (in development)
+├── pyweel/                # Legacy Python implementation (pure Python)
 │
-├── docs/                  # Documentation and ontologies
+├── tests/                 # Python pytest suite for pybind11 bindings
+│
+├── scripts/               # Automation scripts (testing, .spx to Markdown)
+│
+├── data/                  # Sample serialized space (.spx) files
+│
+├── docs/                  # Documentation, ontologies, and MkDocs source
+│
+├── antiques/              # Historical source code and legacy projects
 │
 ├── CLAUDE.md              # AI assistant development guide
+├── TESTING.md             # Comprehensive testing documentation
+├── BRANCH_SUMMARY.md      # Recent development and branch status
 └── README.md              # This file
 ```
 
 ## Quick Start
 
-### C++ Desktop Application (Windows)
+### Modern Build (CMake) - Recommended
 
 **Prerequisites:**
-- Visual Studio 2017 or 2022
-- DirectX 9 SDK (June 2010)
-- Windows SDK
+- CMake 3.15+
+- Visual Studio 2022 (Windows) or Xcode/wxWidgets (macOS)
+- Python 3.7+ (for bindings)
 
 **Build:**
 ```bash
-# Open solution in Visual Studio
-cd src
-start theWheel_src.sln
+# Using CMake presets
+cmake --preset x64-debug          # Windows
+cmake --preset macos-debug        # macOS
 
-# Or build from command line
-msbuild theWheel_src.sln /p:Configuration=Release /p:Platform=Win32
+# Build all targets
+cmake --build --preset x64-debug
 ```
 
-**Run:**
+### Desktop Applications
+
+- **Windows (MFC)**: Open `src/theWheel_src.sln` or build via CMake (target `theWheel`).
+- **macOS/Cross-platform (wxWidgets)**: Build via CMake (target `theWheelWx`).
+
+### Web Application (React)
+
 ```bash
-cd src/Release
-theWheel.exe
+cd weel-app
+npm install
+npm start
 ```
 
-### Python Library
+### Python Bindings (pythewheel)
 
-**Install (development mode):**
+The modern Python interface uses `pybind11` to wrap the C++ core.
+
 ```bash
-pip install -e ./pyweel
+# Build with CMake first, then:
+pip install -r requirements.txt
+python scripts/run_tests.py
 ```
 
-**Usage:**
-```python
-from pyweel import Space, Node
+### Documentation (MkDocs)
 
-# Create a space
-space = Space()
-
-# Add nodes and links
-root = Node(name="Root Concept")
-child = Node(name="Related Concept")
-space.add_node(root)
-space.add_node(child)
-
-# Activate and propagate
-root.set_primary_activation(1.0)
-space.propagate_activation()
+```bash
+pip install mkdocs-material
+mkdocs serve
 ```
 
 ## Architecture Highlights
 
-### theWheelModel (C++)
-Core data structures and algorithms:
-- **CNode**: Semantic node with activation, position, links, and metadata
-- **CSpace**: Container managing node hierarchy and activation propagation
-- **CSpaceLayoutManager**: Physics-based optimization using Powell/ConjGrad algorithms
-- **CVectorD/CVectorN**: Template-based linear algebra library
+### Core Model (C++)
+- **CNode**: Semantic node with activation, position, links, and metadata.
+- **CSpace**: Container managing node hierarchy and activation propagation.
+- **CSpaceLayoutManager**: Physics-based optimization using Powell/ConjGrad algorithms.
+- **CVectorD/CVectorN**: Template-based linear algebra library.
 
-### theWheelView (C++)
-DirectX 9 rendering pipeline:
-- **CSpaceView**: Main rendering window with device management
-- **CNodeView**: Visual representation with spring-based animation
-- **NodeViewSkin**: 3D "plaque" mesh generation with level-of-detail caching
-- **Elliptangle**: Custom parametric shape combining ellipse and rectangle
+### Rendering Layers
+- **MFC/DirectX 9**: Legacy high-performance rendering for Windows.
+- **wxWidgets**: Cross-platform GUI and modern rendering for macOS/Linux.
+- **Three.js**: Interactive 3D visualization for the web frontend.
 
-### OptimizeN (C++)
-Numerical optimization framework:
-- **COptimizer**: Abstract base for optimization algorithms
-- **CPowellOptimizer**: Powell's direction set method (primary algorithm)
-- **CConjGradOptimizer**: Conjugate gradient descent
-- **CObjectiveFunction**: Energy function interface for layout optimization
+### Numerical Optimization
+- **OptimizeN**: Framework for multi-dimensional energy minimization.
+- **CPowellOptimizer**: Powell's direction set method (primary algorithm).
+- **CConjGradOptimizer**: Conjugate gradient descent.
 
 ## Technology Stack
 
 | Component | Technologies |
 |-----------|-------------|
-| **C++ Desktop** | C++14/17, MFC, DirectX 9, Visual Studio, CMake |
-| **Python** | Python 3.x, NumPy (for optimization) |
-| **Web** | Node.js, JavaScript (under development) |
-| **Build Tools** | MSBuild, CMake 3.8+, Visual Studio 2017/2022 |
+| **C++ Desktop (Win)** | C++17, MFC, DirectX 9, Visual Studio |
+| **C++ Desktop (macOS)** | C++17, wxWidgets, OpenGL |
+| **Web Frontend** | React 19, Three.js, TypeScript |
+| **Python Interface** | pybind11, pytest, NumPy |
+| **Build System** | CMake 3.15+, MSBuild, VCPKG |
+| **Documentation** | MkDocs, Material for MkDocs, Markdown |
 
-## Use Cases
+## Documentation & Help
 
-- **Knowledge Management**: Organize personal notes, research, and documentation
-- **Semantic Browsing**: Explore large information spaces through associative navigation
-- **Research Visualization**: Map relationships between papers, concepts, and citations
-- **Educational Tools**: Interactive concept mapping and learning paths
-- **Content Discovery**: Surface related content based on user focus and context
+- **[CLAUDE.md](CLAUDE.md)** - Comprehensive developer guide for AI assistants and contributors.
+- **[TESTING.md](TESTING.md)** - Detailed guide for running C++ and Python test suites.
+- **[BRANCH_SUMMARY.md](BRANCH_SUMMARY.md)** - Overview of recent activity and repository structure.
+- **[docs/](docs/)** - Project documentation and reference materials.
 
-## Development
+## Testing
 
-### Contributing
+theWheel includes a robust testing infrastructure:
+- **C++ Tests**: Google Test suite in `src/theWheelModelTests/`.
+- **Python Tests**: pytest suite in `tests/` validating `pybind11` bindings.
 
-See [CLAUDE.md](CLAUDE.md) for comprehensive development guidance including:
-- Detailed architecture documentation
-- Build system configuration
-- Common development tasks
-- Code organization and patterns
-- API reference with file locations
-
-### Build Configurations
-
-**C++ (Visual Studio):**
-- Debug|Win32 - Development with full symbols
-- Release|Win32 - Optimized production build
-
-**CMake (In Progress):**
-- x64-debug / x64-release
-- x86-debug / x86-release
-
-### Testing
-
-Currently, testing is primarily done through:
-- Running the main theWheel.exe application
-- Loading and interacting with .spx (serialized space) files
-- Visual verification of rendering and activation behavior
-
-## Documentation
-
-- **[CLAUDE.md](CLAUDE.md)** - Comprehensive developer guide for AI assistants and new contributors
-- **[node-view-skin-design.md](src/node-view-skin-design.md)** - Detailed rendering design with pseudo-code
-- **[TODO.txt](src/TODO.txt)** - Current refactoring priorities and technical debt
-- **[docs/](docs/)** - Additional documentation and ontologies
+See **[TESTING.md](TESTING.md)** for detailed instructions on running and writing tests.
 
 ## History
 
-theWheel has been in continuous development since approximately 2000, with the core spreading activation and physics-based layout algorithms refined over two decades. Recent efforts focus on modernization (CMake, cross-platform support) while preserving the mature visualization algorithms.
+theWheel has been in continuous development since approximately 2000, with core algorithms refined over two decades.
 
 **Key Milestones:**
-- **2000-2007**: Initial C++ implementation with DirectX and MFC
-- **2008-2015**: .NET web services and ActiveX controls (AxWheel, theWeelNet)
-- **2015-2020**: Python reimplementation for portability
-- **2020-Present**: CMake integration, git workflow, web application development
+- **2000-2007**: Initial C++ implementation with DirectX and MFC.
+- **2008-2015**: .NET web services and ActiveX controls (AxWheel).
+- **2015-2020**: Pure Python reimplementation (pyweel).
+- **2021-2024**: Modernization, CMake integration, and Python bindings (pybind11).
+- **2025-2026**: wxWidgets macOS port, React/Three.js web app, MkDocs integration, and repository reorganization.
 
 ## License
 
-Copyright 1996-2007, 2025 Derek Graham Lane. All rights reserved.
+Copyright 1996-2007, 2025-2026 Derek Graham Lane. All rights reserved.
 
 *Note: U.S. Patent pending (as noted in source code)*
 
@@ -189,10 +167,6 @@ Copyright 1996-2007, 2025 Derek Graham Lane. All rights reserved.
 Email: dg1an3@users.github.com
 GitHub: https://github.com/dg1an3/theWheel
 
-## Related Projects
-
-This repository is part of a larger ecosystem of medical imaging, AI/ML, and knowledge visualization projects developed by the author.
-
 ---
 
-**Status**: Active development with ongoing modernization efforts. The C++ desktop application is mature and functional. Python and web implementations are in various stages of completion.
+**Status**: Active development with modern C++ and web technologies. Desktop clients are functional for Windows and macOS.

@@ -1,4 +1,11 @@
-# CMakeLists.txt for theWheelView library (DirectX 9, MSVC-only)
+# CMakeLists.txt for theWheelView library (Windows/DirectX only)
+
+if(NOT MSVC)
+    return()
+endif()
+
+# DirectX 9 headers and libraries ship with the Windows 10 SDK.
+# The legacy June 2010 DirectX SDK is not required.
 
 # Source files
 set(THEWHEELVIEW_SOURCES
@@ -14,8 +21,8 @@ set(THEWHEELVIEW_SOURCES
     RuntimeTracker.cpp
     SpaceView.cpp
     Spring.cpp
-    Tracker.cpp
     stdafx.cpp
+    Tracker.cpp
 )
 
 # Header files
@@ -39,33 +46,28 @@ set(THEWHEELVIEW_HEADERS
     stdafx.h
 )
 
-# Resource file
-set(THEWHEELVIEW_RESOURCES
-    theWheelView.rc
-)
-
 # Create static library
-add_library(theWheelView STATIC
-    ${THEWHEELVIEW_SOURCES}
-    ${THEWHEELVIEW_HEADERS}
-    ${THEWHEELVIEW_RESOURCES}
-)
+add_library(theWheelView STATIC ${THEWHEELVIEW_SOURCES} ${THEWHEELVIEW_HEADERS})
 
 # Include directories
 target_include_directories(theWheelView
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-    PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# Link with theWheelModel (brings OptimizeN transitively)
+# Link dependencies
 target_link_libraries(theWheelView
     PUBLIC
         theWheelModel
+        OptimizeN
+    PRIVATE
+        d3d9.lib
+        dxguid.lib
+        winmm.lib
 )
 
-# Use MFC in a shared DLL
+# MFC in shared DLL
 set_target_properties(theWheelView PROPERTIES
     COMPILE_DEFINITIONS "_AFXDLL"
 )

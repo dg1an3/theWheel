@@ -239,7 +239,9 @@ HRESULT CRuntimeTracker::OpenUrl(const CString &strUrl)
 
 	// and send to the top
 	HWND hWnd = NULL;
-	CHECK_HRESULT(m_pBrowser->get_HWND((SHANDLE_PTR *) &hWnd));
+	SHANDLE_PTR hWndPtr = 0;
+	CHECK_HRESULT(m_pBrowser->get_HWND(&hWndPtr));
+	hWnd = (HWND)hWndPtr;
 	::SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 	return S_OK;

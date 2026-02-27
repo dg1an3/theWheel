@@ -295,9 +295,26 @@ void SpacePanel::OnMotion(wxMouseEvent& event)
 
 void SpacePanel::OnMouseWheel(wxMouseEvent& event)
 {
-    double factor = event.GetWheelRotation() > 0 ? 1.1 : 0.9;
-    m_zoom *= factor;
-    m_zoom = std::max(0.1, std::min(m_zoom, 20.0));
+    wxPoint pos = event.GetPosition();
+    CNode* pHit = HitTestNode(pos);
+
+    if (pHit && m_pSpace) {
+        // Mouse wheel over a node: adjust activation
+        REAL scale = event.GetWheelRotation() > 0 ? R(0.3) : R(-0.15);
+        m_pSpace->ActivateNode(pHit, scale);
+        m_pSpace->NormalizeNodes();
+
+        // Select this node
+        m_pSpace->SetCurrentNode(pHit);
+        if (m_pTreeView) {
+            m_pTreeView->SelectNode(pHit);
+        }
+    } else {
+        // Mouse wheel over empty space: zoom
+        double factor = event.GetWheelRotation() > 0 ? 1.1 : 0.9;
+        m_zoom *= factor;
+        m_zoom = std::max(0.1, std::min(m_zoom, 20.0));
+    }
     Refresh();
 }
 

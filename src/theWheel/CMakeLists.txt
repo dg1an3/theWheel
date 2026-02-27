@@ -1,4 +1,8 @@
-# CMakeLists.txt for theWheel MFC application (MSVC-only)
+# CMakeLists.txt for theWheel MFC application (Windows only)
+
+if(NOT MSVC)
+    return()
+endif()
 
 # Source files
 set(THEWHEEL_SOURCES
@@ -42,38 +46,38 @@ set(THEWHEEL_RESOURCES
     theWheel.rc
 )
 
-# Create Win32 executable (not console)
-add_executable(theWheel WIN32
+# MFC application (WIN32 = Windows subsystem, not console)
+add_executable(theWheelApp WIN32
     ${THEWHEEL_SOURCES}
     ${THEWHEEL_HEADERS}
     ${THEWHEEL_RESOURCES}
 )
 
+# Use dynamic MFC
+set(CMAKE_MFC_FLAG 2)
+set_target_properties(theWheelApp PROPERTIES
+    COMPILE_DEFINITIONS "_AFXDLL"
+    OUTPUT_NAME "theWheel"
+)
+
 # Include directories
-target_include_directories(theWheel
+target_include_directories(theWheelApp
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# Link with theWheelView (brings theWheelModel + OptimizeN transitively)
-# System libs for DirectX 9 and multimedia (available in Windows SDK)
-target_link_libraries(theWheel
+# Link dependencies
+target_link_libraries(theWheelApp
     PRIVATE
         theWheelView
+        theWheelModel
+        OptimizeN
         d3d9.lib
         ddraw.lib
-        dxguid.lib
         dsound.lib
+        dxguid.lib
         winmm.lib
-        urlmon.lib
-        wininet.lib
-        msacm32.lib
-)
-
-# Use MFC in a shared DLL
-set_target_properties(theWheel PROPERTIES
-    COMPILE_DEFINITIONS "_AFXDLL"
 )
 
 # Precompiled headers
-target_precompile_headers(theWheel PRIVATE stdafx.h)
+target_precompile_headers(theWheelApp PRIVATE stdafx.h)
