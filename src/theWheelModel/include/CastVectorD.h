@@ -29,7 +29,7 @@ public:
 	}
 
 	template<class OTHER_TYPE>
-	explicit CCastVectorD(const CVectorN<OTHER_TYPE>& vFrom)
+	explicit CCastVectorD(const VectorN<OTHER_TYPE>& vFrom)
 	{
 		if (DIM <= vFrom.GetDim())
 		{

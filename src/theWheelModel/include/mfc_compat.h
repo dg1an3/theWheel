@@ -1,9 +1,9 @@
 //////////////////////////////////////////////////////////////////////
 // mfc_compat.h: Linux/non-MSVC compatibility header
 //
-// Provides minimal replacements for MFC types, macros, and classes
-// used by OptimizeN and theWheelModel, allowing these libraries to
-// build on Linux/GCC/Clang without MFC.
+// Provides MFC class stubs (CObject, CString, CDocument, etc.)
+// needed by theWheelModel. Builds on optimize_types.h which provides
+// the basic Windows type aliases and macros.
 //
 // This header is only included on non-MSVC platforms via stdafx.h.
 //////////////////////////////////////////////////////////////////////
@@ -11,95 +11,30 @@
 #ifndef MFC_COMPAT_H
 #define MFC_COMPAT_H
 
-#include <cassert>
-#include <cstdint>
+// Base types and macros shared with OptimizeN
+#include <optimize_types.h>
+
 #include <cstdio>
 #include <cstring>
 #include <string>
 #include <algorithm>
 
 //////////////////////////////////////////////////////////////////////
-// Windows type aliases
+// Additional Windows type aliases (not needed by OptimizeN)
 //////////////////////////////////////////////////////////////////////
 
-typedef int BOOL;
-#define TRUE 1
-#define FALSE 0
-
-typedef uint32_t DWORD;
-typedef unsigned int UINT;
 typedef uint32_t COLORREF;
 typedef const char* LPCTSTR;
 
 //////////////////////////////////////////////////////////////////////
-// MSVC intrinsics / macros
-//////////////////////////////////////////////////////////////////////
-
-#ifndef __max
-#define __max(a, b) (((a) > (b)) ? (a) : (b))
-#endif
-
-#ifndef __min
-#define __min(a, b) (((a) < (b)) ? (a) : (b))
-#endif
-
-// _finite -> std::isfinite
-#include <cmath>
-#ifndef _finite
-#define _finite(x) std::isfinite(x)
-#endif
-
-// __forceinline -> inline (GCC/Clang have __attribute__((always_inline)))
-#ifndef __forceinline
-#define __forceinline inline __attribute__((always_inline))
-#endif
-
-// _T() text macro - no-op on Linux (no wide char)
-#ifndef _T
-#define _T(x) x
-#endif
-
-//////////////////////////////////////////////////////////////////////
-// Debug macros
-//////////////////////////////////////////////////////////////////////
-
-#ifdef _DEBUG
-#define ASSERT(expr) assert(expr)
-#else
-#define ASSERT(expr) ((void)0)
-#endif
-
-#define ATLASSERT(expr) ASSERT(expr)
-#define TRACE(...) ((void)0)
-#define TRACE_VECTOR(...) ((void)0)
-
-// USES_CONVERSION - ATL string conversion macro, no-op on non-MSVC
-#define USES_CONVERSION
-
-// DEBUG_NEW / THIS_FILE - used in #ifdef _DEBUG blocks
-#define DEBUG_NEW new
-
-// VERSIONABLE_SCHEMA - used in IMPLEMENT_SERIAL
-#define VERSIONABLE_SCHEMA 0
-
-//////////////////////////////////////////////////////////////////////
 // CObject - minimal base class stub
 //////////////////////////////////////////////////////////////////////
-
-class CDumpContext;
 
 class CObject
 {
 public:
     virtual ~CObject() {}
 };
-
-//////////////////////////////////////////////////////////////////////
-// CArchive - forward declaration only
-// Serialization methods are guarded with #ifdef _MSC_VER
-//////////////////////////////////////////////////////////////////////
-
-class CArchive;
 
 //////////////////////////////////////////////////////////////////////
 // CString - minimal wrapper around std::string
@@ -197,15 +132,6 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////
-// Serialization macros - no-ops on Linux
-//////////////////////////////////////////////////////////////////////
-
-#define DECLARE_SERIAL(class_name)
-#define IMPLEMENT_SERIAL(class_name, base_class, schema)
-#define IMPLEMENT_DYNAMIC(class_name, base_class)
-#define DECLARE_DYNAMIC(class_name)
-
-//////////////////////////////////////////////////////////////////////
 // CDocument - stub (CSpace inherits from it via IMPLEMENT_SERIAL)
 //////////////////////////////////////////////////////////////////////
 
@@ -237,8 +163,5 @@ typedef long HRESULT;
 #define FAILED(hr) (((HRESULT)(hr)) < 0)
 #define SUCCEEDED(hr) (((HRESULT)(hr)) >= 0)
 #endif
-
-// USES_CONVERSION - ATL string conversion macro, no-op on non-MSVC
-#define USES_CONVERSION
 
 #endif // MFC_COMPAT_H

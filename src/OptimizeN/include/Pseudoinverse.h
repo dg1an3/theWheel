@@ -16,14 +16,14 @@ const REAL PSEUDO_EPS = 1e-8f;
 //////////////////////////////////////////////////////////////////
 template<class TYPE>
 bool 
-	Pseudoinvert(const CMatrixNxM<TYPE>& mFrom, CMatrixNxM<TYPE>& mTo)
+	Pseudoinvert(const MatrixNxM<TYPE>& mFrom, MatrixNxM<TYPE>& mTo)
 	// in-place Moore-Penrose pseudoinversion
 {
 	mTo.Reshape(mFrom.GetCols(), mFrom.GetRows());
 	mTo = mFrom;
 
-	CVectorN<TYPE> w(mTo.GetCols());
-	CMatrixNxM<TYPE> v(mTo.GetCols(), mTo.GetCols());
+	VectorN<TYPE> w(mTo.GetCols());
+	MatrixNxM<TYPE> v(mTo.GetCols(), mTo.GetCols());
 	if (!SVD(mTo, w, v))
 	{
 		return FALSE;
@@ -32,7 +32,7 @@ bool
 	// using the formula (A+)^T = U * {1/w} * V^T
 
 	// form the S matrix (S^T * S)^-1 * S^T
-	CMatrixNxM<TYPE> s(mTo.GetCols(), mTo.GetCols());
+	MatrixNxM<TYPE> s(mTo.GetCols(), mTo.GetCols());
 	for (int nAt = 0; nAt < mTo.GetCols(); nAt++)
 	{
 		s[nAt][nAt] = (w[nAt] > PSEUDO_EPS) ? 1.0 / w[nAt] : 0.0;
@@ -50,7 +50,7 @@ bool
 
 	return TRUE;
 
-}	// CMatrixNxM<TYPE>::Pseudoinvert
+}	// MatrixNxM<TYPE>::Pseudoinvert
 
 
 // maximum iterations for SVD
@@ -83,15 +83,15 @@ TYPE
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
 bool 
-	SVD(CMatrixNxM<>& mFrom, CVectorN<TYPE>& w, CMatrixNxM<TYPE>& v)
+	SVD(MatrixNxM<>& mFrom, VectorN<TYPE>& w, MatrixNxM<TYPE>& v)
 	// computes the singular-valued decomposition of this matrix,
 	//		leaving U in the matrix and returning the singular values
 	//		in w and v (not v^T)
 {
-	BEGIN_LOG_SECTION(CMatrixNxM::SVD);
+	BEGIN_LOG_SECTION(MatrixNxM::SVD);
 
 	// stored reduction vector
-	CVectorN<TYPE> rv1(mFrom.GetCols());
+	VectorN<TYPE> rv1(mFrom.GetCols());
 
 	// perform the householder reduction
 	TYPE anorm = Householder(mFrom, w, rv1);
@@ -252,19 +252,19 @@ bool
 		}
 	}
 
-	END_LOG_SECTION();	// CMatrixNxM::SVD
+	END_LOG_SECTION();	// MatrixNxM::SVD
 
 	return TRUE;
 
-}	// CMatrixNxM<TYPE>::SVD
+}	// MatrixNxM<TYPE>::SVD
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
 TYPE 
-	Householder(CMatrixNxM<TYPE>& m, 
-			CVectorN<TYPE>& w, 
-			CVectorN<TYPE>& rv1)
+	Householder(MatrixNxM<TYPE>& m, 
+			VectorN<TYPE>& w, 
+			VectorN<TYPE>& rv1)
 	// helper function for SVD to perform Householder decomposition
 {
 	TYPE anorm = 0.0;
@@ -370,15 +370,15 @@ TYPE
 
 	return anorm;
 
-}	// CMatrixNxM<TYPE>::Householder
+}	// MatrixNxM<TYPE>::Householder
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
 void 
-	AccumulateRH(const CMatrixNxM<TYPE>& m, 
-			CMatrixNxM<TYPE>& v, 
-			const CVectorN<TYPE>& rv1)
+	AccumulateRH(const MatrixNxM<TYPE>& m, 
+			MatrixNxM<TYPE>& v, 
+			const VectorN<TYPE>& rv1)
 	// helper function for SVD to accumulate right-hand products
 {
 	// Accumulation of right-hand transformations
@@ -415,13 +415,13 @@ void
 		}
 	}
 
-}	// CMatrixNxM<TYPE>::AccumulateRH
+}	// MatrixNxM<TYPE>::AccumulateRH
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
 void 
-	AccumulateLH(CMatrixNxM<TYPE>& m, CVectorN<TYPE>& w)
+	AccumulateLH(MatrixNxM<TYPE>& m, VectorN<TYPE>& w)
 	// helper function for SVD to accumulate left-hand products
 {
 	for (int nI = __min(m.GetRows()-1, m.GetCols()-1); nI >= 0; nI--)
@@ -466,4 +466,4 @@ void
 		++m[nI][nI];
 	}
 
-}	// CMatrixNxM<TYPE>::AccumulateLH
+}	// MatrixNxM<TYPE>::AccumulateLH

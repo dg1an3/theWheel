@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// CGradDescOptimizer.cpp: implementation of the CGradDescOptimizer
+// GradDescOptimizer.cpp: implementation of the GradDescOptimizer
 //
 // Copyright (C) 1996-2001
 // $Id: GradDescOptimizer.cpp,v 1.5 2005/05/12 15:55:48 HP_Administrator Exp $
@@ -23,21 +23,21 @@ const int ITER_MAX = 1500;		// maximum iteration
 
 
 //////////////////////////////////////////////////////////////////////
-// CGradDescOptimizer::CGradDescOptimizer
+// GradDescOptimizer::GradDescOptimizer
 // 
 // constructs a new gradient descent optimizer
 //////////////////////////////////////////////////////////////////////
-CGradDescOptimizer::CGradDescOptimizer(CObjectiveFunction *pFunc)
-	: COptimizer(pFunc)
+GradDescOptimizer::GradDescOptimizer(ObjectiveFunction *pFunc)
+	: Optimizer(pFunc)
 {
 }
 
 //////////////////////////////////////////////////////////////////////
-// CGradDescOptimizer::Optimize
+// GradDescOptimizer::Optimize
 // 
 // performs the optimization given the initial value vector
 //////////////////////////////////////////////////////////////////////
-const CVectorN<>& CGradDescOptimizer::Optimize(const CVectorN<>& vInit)
+const VectorN<>& GradDescOptimizer::Optimize(const VectorN<>& vInit)
 {
 	// initialize starting value
 	m_vFinalParam = vInit;

@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// BrentOptimizer.h: interface for the CBrentOptimizer
+// BrentOptimizer.h: interface for the BrentOptimizer
 //
 // Copyright (C) 1996-2001
 // $Id: BrentOptimizer.h,v 1.2 2004/02/16 15:55:22 default Exp $
@@ -13,23 +13,23 @@
 #include "Optimizer.h"
 
 //////////////////////////////////////////////////////////////////////
-// class CBrentOptimizer
+// class BrentOptimizer
 // 
 // optimizer that implements the Brent algorithm explained in
 //		Numerical Recipes
 //////////////////////////////////////////////////////////////////////
-class CBrentOptimizer : public COptimizer
+class BrentOptimizer : public Optimizer
 {
 public:
 	void SetParams(REAL Bracket, REAL GLimit);
 	// construct a new Brent Optimizer
-	CBrentOptimizer(CObjectiveFunction *pFunc);
+	BrentOptimizer(ObjectiveFunction *pFunc);
 
 	// optimizes the initial input vector
-	virtual const CVectorN<>& Optimize(const CVectorN<>& vInit = m_vBrentInit);
+	virtual const VectorN<>& Optimize(const VectorN<>& vInit = m_vBrentInit);
 
 	// helper function to return an initial Zero vector
-	static const CVectorN<>& GetInitZero();
+	static const VectorN<>& GetInitZero();
 
 protected:
 	// finds a bracket for the minimum value of the objective function
@@ -44,11 +44,11 @@ protected:
 private:
 	// these are "local" variables that are initialized here so that we do not
 	//		need to re-allocate them during optimization
-	CVectorN<> m_vAx, m_vBx, m_vCx;
-	CVectorN<> m_vX, m_vU;
+	VectorN<> m_vAx, m_vBx, m_vCx;
+	VectorN<> m_vX, m_vU;
 
 	// holds the gradient
-	CVectorN<> m_vGrad;
+	VectorN<> m_vGrad;
 
 	// parameters for optimization 
 	REAL m_Bracket;	// initial bracket size
@@ -56,7 +56,10 @@ private:
 
 	// starting value for the brent optimizer
 	//		initialized to 
-	static CVectorN<> m_vBrentInit;
+	static VectorN<> m_vBrentInit;
 };
+
+// Backward compatibility
+using CBrentOptimizer = BrentOptimizer;
 
 #endif

@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// BrentOptimizer.cpp: implementation of the CBrentOptimizer
+// BrentOptimizer.cpp: implementation of the BrentOptimizer
 //
 // Copyright (C) 1996-2001
 // $Id: BrentOptimizer.cpp,v 1.13 2007/05/09 01:53:42 Derek Lane Exp $
@@ -52,16 +52,16 @@ const int ITER_MAX = 1000;		// maximum iteration
 
 
 // holds the initial value for the brent optimization
-CVectorN<> CBrentOptimizer::m_vBrentInit(1);
+VectorN<> BrentOptimizer::m_vBrentInit(1);
 
 
 //////////////////////////////////////////////////////////////////////
-// CBrentOptimizer::CBrentOptimizer
+// BrentOptimizer::BrentOptimizer
 // 
 // constructs a new Brent optimizer
 //////////////////////////////////////////////////////////////////////
-CBrentOptimizer::CBrentOptimizer(CObjectiveFunction *pFunc)
-	: COptimizer(pFunc),
+BrentOptimizer::BrentOptimizer(ObjectiveFunction *pFunc)
+	: Optimizer(pFunc),
 		m_vAx(1), 
 		m_vBx(1), 
 		m_vCx(1),
@@ -79,13 +79,13 @@ CBrentOptimizer::CBrentOptimizer(CObjectiveFunction *pFunc)
 }
 
 //////////////////////////////////////////////////////////////////////
-// CBrentOptimizer::Optimize
+// BrentOptimizer::Optimize
 // 
 // performs the optimization given the initial value vector
 //////////////////////////////////////////////////////////////////////
-const CVectorN<>& CBrentOptimizer::Optimize(const CVectorN<>& vInit)
+const VectorN<>& BrentOptimizer::Optimize(const VectorN<>& vInit)
 {
-	BEGIN_LOG_SECTION(CBrentOptimizer::Optimize);
+	BEGIN_LOG_SECTION(BrentOptimizer::Optimize);
 
 	// find three values the bracket a minimum
 	REAL ax = vInit[0];
@@ -113,14 +113,14 @@ const CVectorN<>& CBrentOptimizer::Optimize(const CVectorN<>& vInit)
 	m_vFinalParam.SetDim(1);	// 1-d for a brent optimizer
 	m_vFinalParam[0] = finalx;
 
-	END_LOG_SECTION();	// CBrentOptimizer::Optimize
+	END_LOG_SECTION();	// BrentOptimizer::Optimize
 
 	// and return it
 	return m_vFinalParam;
 }
 
 //////////////////////////////////////////////////////////////////////
-// CBrentOptimizer<REAL>::BracketMinimum
+// BrentOptimizer<REAL>::BracketMinimum
 // 
 // Given two distinct initial points ax and bx, this routine searches downhill 
 // (defined by the function as evaluated at the initial points) and returns new 
@@ -134,11 +134,11 @@ const CVectorN<>& CBrentOptimizer::Optimize(const CVectorN<>& vInit)
 // Recipes in C, 2nd Ed. 1992.
 //
 //////////////////////////////////////////////////////////////////////
-void CBrentOptimizer::BracketMinimum(REAL& ax, REAL& bx, REAL& cx)
+void BrentOptimizer::BracketMinimum(REAL& ax, REAL& bx, REAL& cx)
 {
 	USES_CONVERSION;
 
-	BEGIN_LOG_SECTION(CBrentOptimizer::BracketMinimum);
+	BEGIN_LOG_SECTION(BrentOptimizer::BracketMinimum);
 
 	REAL fa, fb, fc;
 
@@ -171,7 +171,7 @@ void CBrentOptimizer::BracketMinimum(REAL& ax, REAL& bx, REAL& cx)
 	m_nIteration = 0;
 	while (fb > fc)
 	{
-		BEGIN_LOG_SECTION("CBrentOptimizer::BracketMinimum!Iteration");
+		BEGIN_LOG_SECTION("BrentOptimizer::BracketMinimum!Iteration");
 		LOG(_T("Iteration %i"), m_nIteration);
 
 		// Compute u by parabolic extrapolation from a,b,c.  TINY is used to 
@@ -257,12 +257,12 @@ void CBrentOptimizer::BracketMinimum(REAL& ax, REAL& bx, REAL& cx)
 	}
 
 cleanup:
-	END_LOG_SECTION();		// CBrentOptimizer::BracketMinimum
+	END_LOG_SECTION();		// BrentOptimizer::BracketMinimum
 }
 
 
 //////////////////////////////////////////////////////////////////////
-// CBrentOptimizer<REAL>::FindMinimum
+// BrentOptimizer<REAL>::FindMinimum
 // 
 // Given a function f, and given a bracketing triplet of abscissas
 // ax, bx, cx, (such that bx is between ax and cx, and f(bx) < f(ax)
@@ -279,13 +279,13 @@ cleanup:
 // intertions before stopping 
 //////////////////////////////////////////////////////////////////////
 // template<class REAL>
-REAL CBrentOptimizer::FindMinimum (REAL ax, REAL bx, REAL cx)
+REAL BrentOptimizer::FindMinimum (REAL ax, REAL bx, REAL cx)
 {
 	USES_CONVERSION;
 
 	REAL fx, x;
 
-	BEGIN_LOG_SECTION(CBrentOptimizer::FindMinimum);
+	BEGIN_LOG_SECTION(BrentOptimizer::FindMinimum);
 
 	// The following are intermediate computed values. 
 	REAL a,b,d,etemp,fu,fv,fw,p,q,r,tol1,tol2,u,v,w,xm;
@@ -302,7 +302,7 @@ REAL CBrentOptimizer::FindMinimum (REAL ax, REAL bx, REAL cx)
 	// Main function loop. 
 	for (m_nIteration = 0; m_nIteration < ITER_MAX; m_nIteration++)
 	{
-		BEGIN_LOG_SECTION(CBrentOptimizer::FindMinimum!Iteration);
+		BEGIN_LOG_SECTION(BrentOptimizer::FindMinimum!Iteration);
 		LOG(_T("Iteration %i"), m_nIteration);
 
 		xm = (REAL) 0.5*(a+b);
@@ -387,14 +387,14 @@ REAL CBrentOptimizer::FindMinimum (REAL ax, REAL bx, REAL cx)
 	LOG(_T("Too many iterations = %i"), m_nIteration);
 
 cleanup:
-	END_LOG_SECTION();	// CBrentOptimizer::BracketMinimum
+	END_LOG_SECTION();	// BrentOptimizer::BracketMinimum
 
 	m_finalValue = fx;
 	return x;
 }
 
 //////////////////////////////////////////////////////////////////////
-// CBrentOptimizer<REAL>::FindMinimumGrad
+// BrentOptimizer<REAL>::FindMinimumGrad
 // 
 // Given a function f, and given a bracketing triplet of abscissas
 // ax, bx, cx, (such that bx is between ax and cx, and f(bx) < f(ax)
@@ -410,7 +410,7 @@ cleanup:
 // tol is variable specifing the minimum agreement needed between successive 
 // intertions before stopping 
 ///////////////////////////////////////////////////////////////////////
-REAL CBrentOptimizer::FindMinimumGrad(REAL ax, REAL bx, REAL cx)
+REAL BrentOptimizer::FindMinimumGrad(REAL ax, REAL bx, REAL cx)
 {
 	// a and b must be in ascending order, but input abscissas need not be.
 	REAL a=(ax < cx ? ax : cx);
@@ -580,12 +580,12 @@ REAL CBrentOptimizer::FindMinimumGrad(REAL ax, REAL bx, REAL cx)
 	return 0.0;
 }
 
-const CVectorN<>& CBrentOptimizer::GetInitZero()
+const VectorN<>& BrentOptimizer::GetInitZero()
 {
 	return m_vBrentInit;
 }
 
-void CBrentOptimizer::SetParams(REAL Bracket, REAL GLimit)
+void BrentOptimizer::SetParams(REAL Bracket, REAL GLimit)
 {
 	m_Bracket = Bracket;
 	m_GLimit = GLimit;

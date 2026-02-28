@@ -32,7 +32,7 @@
 
 #else // !_MSC_VER (Linux/GCC/Clang)
 
-#include <mfc_compat.h>
+#include <optimize_types.h>
 
 #include <string>
 #include <vector>

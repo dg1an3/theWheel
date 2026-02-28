@@ -18,7 +18,7 @@
 #define NOMINMAX
 #include <windows.h>
 #else
-#include "mfc_compat.h"
+#include <mfc_compat.h>
 #endif
 
 // VectorD.h uses ASSERT (MFC macro) — provide a stub

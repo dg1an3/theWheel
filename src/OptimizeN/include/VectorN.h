@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// VectorN.h: declaration and definition of the CVectorN dynamic 
+// VectorN.h: declaration and definition of the VectorN dynamic 
 //		vector template class.
 //
 // Copyright (C) 1999-2006 Derek G Lane
@@ -18,13 +18,13 @@
 #include <VectorOps.h>
 
 //////////////////////////////////////////////////////////////////////
-// class CVectorN<TYPE>
+// class VectorN<TYPE>
 //
 // represents a dynamically sizable mathematical vector with element
 //		type given
 //////////////////////////////////////////////////////////////////////
 template<class TYPE = REAL>
-class CVectorN
+class VectorN
 {
 	// dimension of vector
 	int m_nDim;
@@ -37,13 +37,13 @@ class CVectorN
 
 public:
 	// constructors / destructor
-	CVectorN();
-	explicit CVectorN(int nDim);
-	CVectorN(const CVectorN& vFrom);
-	~CVectorN();
+	VectorN();
+	explicit VectorN(int nDim);
+	VectorN(const VectorN& vFrom);
+	~VectorN();
 
 	// assignment operator
-	CVectorN& operator=(const CVectorN& vFrom);
+	VectorN& operator=(const VectorN& vFrom);
 
 	// template helper for element type
 	typedef TYPE ELEM_TYPE;
@@ -69,12 +69,12 @@ public:
 	void Normalize();
 
 	// approximate equality using the epsilon
-	bool IsApproxEqual(const CVectorN& v, TYPE epsilon = DEFAULT_EPSILON) const;
+	bool IsApproxEqual(const VectorN& v, TYPE epsilon = DEFAULT_EPSILON) const;
 
 	// in-place vector arithmetic
-	CVectorN& operator+=(const CVectorN& vRight);
-	CVectorN& operator-=(const CVectorN& vRight);
-	CVectorN& operator*=(const TYPE& scalar);
+	VectorN& operator+=(const VectorN& vRight);
+	VectorN& operator-=(const VectorN& vRight);
+	VectorN& operator*=(const TYPE& scalar);
 
 	//////////////////////////////////////////////////////////////////////
 	// low-level element management
@@ -84,26 +84,26 @@ public:
 
 	// copy elements from v, starting at start, for length elements, 
 	//		and copy them to the destination position
-	int CopyElements(const CVectorN<TYPE>& v, int nStart, int nLength, 
+	int CopyElements(const VectorN<TYPE>& v, int nStart, int nLength, 
 		int nDest = 0);
 
-};	// class CVectorN<TYPE>
+};	// class VectorN<TYPE>
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE>::CVectorN() 
+VectorN<TYPE>::VectorN() 
 	: m_nDim(0),
 		m_pElements(NULL),
 		m_bFreeElements(TRUE)
 	// default constructor
 {
-}	// CVectorN<TYPE>::CVectorN<TYPE>
+}	// VectorN<TYPE>::VectorN<TYPE>
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE>::CVectorN(int nDim) 
+VectorN<TYPE>::VectorN(int nDim) 
 	: m_nDim(0),
 		m_pElements(NULL),
 		m_bFreeElements(TRUE)
@@ -112,12 +112,12 @@ CVectorN<TYPE>::CVectorN(int nDim)
 	// set the dimensionality of the vector
 	SetDim(nDim);
 
-}	// CVectorN<TYPE>::CVectorN<TYPE>(int nDim) 
+}	// VectorN<TYPE>::VectorN<TYPE>(int nDim) 
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE>::CVectorN(const CVectorN<TYPE>& vFrom)
+VectorN<TYPE>::VectorN(const VectorN<TYPE>& vFrom)
 	: m_nDim(0),
 		m_pElements(NULL),
 		m_bFreeElements(TRUE)
@@ -129,12 +129,12 @@ CVectorN<TYPE>::CVectorN(const CVectorN<TYPE>& vFrom)
 	// copy the elements
 	(*this) = vFrom;
 
-}	// CVectorN<TYPE>::CVectorN<TYPE>(const CVectorN<TYPE>& vFrom)
+}	// VectorN<TYPE>::VectorN<TYPE>(const VectorN<TYPE>& vFrom)
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE>::~CVectorN()
+VectorN<TYPE>::~VectorN()
 	// destructor 
 {
 	if (m_bFreeElements 
@@ -144,15 +144,15 @@ CVectorN<TYPE>::~CVectorN()
 		FreeValues(m_pElements);
 	}
 
-}	// CVectorN<TYPE>::~CVectorN<TYPE>
+}	// VectorN<TYPE>::~VectorN<TYPE>
 
 
 //////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE>& 
-	CVectorN<TYPE>::operator=(const CVectorN<TYPE>& vFrom)
+VectorN<TYPE>& 
+	VectorN<TYPE>::operator=(const VectorN<TYPE>& vFrom)
 	// assignment operator
 {
 	// check the dimensionality of the vector
@@ -173,13 +173,13 @@ CVectorN<TYPE>&
 	// return a reference to this
 	return (*this);
 
-}	// CVectorN<TYPE>::operator=
+}	// VectorN<TYPE>::operator=
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 TYPE& 
-	CVectorN<TYPE>::operator[](int nAtRow)
+	VectorN<TYPE>::operator[](int nAtRow)
 	// returns a reference to the specified element.
 {
 	// check dimensions
@@ -187,13 +187,13 @@ TYPE&
 
 	return m_pElements[nAtRow];
 
-}	// CVectorN<TYPE>::operator[]
+}	// VectorN<TYPE>::operator[]
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 const TYPE& 
-	CVectorN<TYPE>::operator[](int nAtRow) const
+	VectorN<TYPE>::operator[](int nAtRow) const
 	// returns a const reference to the specified element.
 {
 	// check dimensions
@@ -201,47 +201,47 @@ const TYPE&
 
 	return m_pElements[nAtRow];
 
-}	// CVectorN<TYPE>::operator[] const
+}	// VectorN<TYPE>::operator[] const
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE>::operator TYPE *()
+VectorN<TYPE>::operator TYPE *()
 	// TYPE * conversion -- returns a pointer to the first element
 	//		WARNING: this allows for no-bounds-checking access
 {
 	return &m_pElements[0];
 
-}	// CVectorN<TYPE>::operator TYPE *
+}	// VectorN<TYPE>::operator TYPE *
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE>::operator const TYPE *() const
+VectorN<TYPE>::operator const TYPE *() const
 	// const TYPE * conversion -- returns a pointer to the first 
 	//		element.
 	//		WARNING: this allows for no-bounds-checking access
 {
 	return &m_pElements[0];
 
-}	// CVectorN<TYPE>::operator const TYPE *
+}	// VectorN<TYPE>::operator const TYPE *
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 int 
-	CVectorN<TYPE>::GetDim() const
+	VectorN<TYPE>::GetDim() const
 	// returns the dimensionality of the vector
 {
 	return m_nDim;
 
-}	// CVectorN<TYPE>::GetDim
+}	// VectorN<TYPE>::GetDim
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE>
 void 
-	CVectorN<TYPE>::SetDim(int nDim)
+	VectorN<TYPE>::SetDim(int nDim)
 	// sets the dimensionality of this vector
 {
 	// do nothing if the dim is already correct
@@ -281,25 +281,25 @@ void
 		}
 	}
 
-}	// CVectorN<TYPE>::SetDim
+}	// VectorN<TYPE>::SetDim
 
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 TYPE 
-	CVectorN<TYPE>::GetLength() const
+	VectorN<TYPE>::GetLength() const
 	// returns the euclidean length of the vector
 {
 	return VectorLength(&(*this)[0], GetDim());
 
-}	// CVectorN<TYPE>::GetLength
+}	// VectorN<TYPE>::GetLength
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 void 
-	CVectorN<TYPE>::Normalize()
+	VectorN<TYPE>::Normalize()
 	// scales the vector so its length is 1.0
 {
 	TYPE len = GetLength();
@@ -308,69 +308,69 @@ void
 		MultValues(&(*this)[0], (TYPE) 1.0 / len, GetDim());
 	}
 
-}	// CVectorN<TYPE>::Normalize
+}	// VectorN<TYPE>::Normalize
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 bool 
-	CVectorN<TYPE>::IsApproxEqual(const CVectorN<TYPE>& v, 
+	VectorN<TYPE>::IsApproxEqual(const VectorN<TYPE>& v, 
 			TYPE epsilon) const
 	// tests for approximate equality using the EPS defined at 
 	//		the top of this file
 {
 	// form the difference vector
-	CVectorN<TYPE> vDiff(*this);
+	VectorN<TYPE> vDiff(*this);
 	vDiff -= v;
 
 	return (vDiff.GetLength() < epsilon);
 
-}	// CVectorN<TYPE>::IsApproxEqual
+}	// VectorN<TYPE>::IsApproxEqual
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE>& 
-	CVectorN<TYPE>::operator+=(const CVectorN<TYPE>& vRight)
+VectorN<TYPE>& 
+	VectorN<TYPE>::operator+=(const VectorN<TYPE>& vRight)
 	// in-place vector addition; returns a reference to this	
 {
 	SumValues(&(*this)[0], &vRight[0], GetDim());
 
 	return (*this);
 
-}	// CVectorN<TYPE>::operator+=
+}	// VectorN<TYPE>::operator+=
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE>& 
-	CVectorN<TYPE>::operator-=(const CVectorN<TYPE>& vRight)
+VectorN<TYPE>& 
+	VectorN<TYPE>::operator-=(const VectorN<TYPE>& vRight)
 	// in-place vector subtraction; returns a reference to this
 {
 	DiffValues(&(*this)[0], &vRight[0], GetDim());
 
 	return (*this);
 
-}	// CVectorN<TYPE>::operator-=
+}	// VectorN<TYPE>::operator-=
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE>& 
-	CVectorN<TYPE>::operator*=(const TYPE& scalar)
+VectorN<TYPE>& 
+	VectorN<TYPE>::operator*=(const TYPE& scalar)
 	// in-place scalar multiplication; returns a reference to this
 {
 	MultValues(&(*this)[0], scalar, GetDim());
 
 	return (*this);
 
-}	// CVectorN<TYPE>::operator*=
+}	// VectorN<TYPE>::operator*=
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE>
 void 
-	CVectorN<TYPE>::SetElements(int nDim, TYPE *pElements,
+	VectorN<TYPE>::SetElements(int nDim, TYPE *pElements,
 			bool bFreeElements)
 	// management for external elements
 {
@@ -385,13 +385,13 @@ void
 	m_pElements = pElements;
 	m_bFreeElements = bFreeElements;
 
-}	// CVectorN<TYPE>::SetElements
+}	// VectorN<TYPE>::SetElements
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE>
 int 
-	CVectorN<TYPE>::CopyElements(const CVectorN<TYPE>& v, 
+	VectorN<TYPE>::CopyElements(const VectorN<TYPE>& v, 
 			int nStart, int nLength, int nDest)
 	// copy elements from v, starting at start, for length elements, 
 	//		and copy them to the destination position
@@ -408,14 +408,14 @@ int
 
 	return nLength;
 
-}	// CVectorN<TYPE>::CopyElements
+}	// VectorN<TYPE>::CopyElements
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 bool 
-	operator==(const CVectorN<TYPE>& vLeft, 
-			const CVectorN<TYPE>& vRight)
+	operator==(const VectorN<TYPE>& vLeft, 
+			const VectorN<TYPE>& vRight)
 	// friend function to provide exact equality comparison for vectors.
 	// use IsApproxEqual for approximate equality.
 {
@@ -430,75 +430,75 @@ bool
 
 	return true;
 
-}	// operator==(const CVectorN, const CVectorN)
+}	// operator==(const VectorN, const VectorN)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 bool 
-	operator!=(const CVectorN<TYPE>& vLeft, 
-			const CVectorN<TYPE>& vRight)
+	operator!=(const VectorN<TYPE>& vLeft, 
+			const VectorN<TYPE>& vRight)
 	// friend function to provide exact inequality comparison for vectors.
 	// use !IsApproxEqual for approximate inequality.
 {
 	return !(vLeft == vRight);
 
-}	// operator!=(const CVectorN, const CVectorN)
+}	// operator!=(const VectorN, const VectorN)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE> 
-	operator+(const CVectorN<TYPE>& vLeft, 
-			const CVectorN<TYPE>& vRight)
+VectorN<TYPE> 
+	operator+(const VectorN<TYPE>& vLeft, 
+			const VectorN<TYPE>& vRight)
 	// friend function to add two vectors, returning the sum as a new 
 	//		vector
 {
-	CVectorN<TYPE> vSum(vLeft);
+	VectorN<TYPE> vSum(vLeft);
 	vSum += vRight;
 
 	return vSum;
 
-}	// operator+(const CVectorN, const CVectorN)
+}	// operator+(const VectorN, const VectorN)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE> 
-	operator-(const CVectorN<TYPE>& vLeft, 
-			const CVectorN<TYPE>& vRight)
+VectorN<TYPE> 
+	operator-(const VectorN<TYPE>& vLeft, 
+			const VectorN<TYPE>& vRight)
 	// friend function to subtract one vector from another, returning 
 	//		the difference as a new vector
 {
-	CVectorN<TYPE> vDiff(vLeft);
+	VectorN<TYPE> vDiff(vLeft);
 	vDiff -= vRight;
 
 	return vDiff;
 
-}	// operator-(const CVectorN, const CVectorN)
+}	// operator-(const VectorN, const VectorN)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 TYPE 
-	operator*(const CVectorN<TYPE>& vLeft, 
-			const CVectorN<TYPE>& vRight)
+	operator*(const VectorN<TYPE>& vLeft, 
+			const VectorN<TYPE>& vRight)
 	// friend function for vector inner product
 {
 	return DotProduct(&vLeft[0], &vRight[0], vLeft.GetDim());
 
-}	// operator*(const CVectorN, const CVectorN)
+}	// operator*(const VectorN, const VectorN)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE> 
+VectorN<TYPE> 
 	operator*(const TYPE& scalar, 
-			const CVectorN<TYPE>& vRight)
+			const VectorN<TYPE>& vRight)
 	// friend function for scalar multiplication of a vector
 {
 	// copy vector to intermediate product value
-	CVectorN<TYPE> vProd(vRight);
+	VectorN<TYPE> vProd(vRight);
 
 	// in-place scalar multiplication
 	vProd *= scalar;
@@ -506,18 +506,18 @@ CVectorN<TYPE>
 	// return the result
 	return vProd;
 
-}	// operator*(TYPE scalar, const CVectorN)
+}	// operator*(TYPE scalar, const VectorN)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CVectorN<TYPE> 
-	operator*(const CVectorN<TYPE>& vLeft, 
+VectorN<TYPE> 
+	operator*(const VectorN<TYPE>& vLeft, 
 			const TYPE& scalar)
 	// friend function for scalar multiplication of a vector
 {
 	// copy vector to intermediate product value
-	CVectorN<TYPE> vProd(vLeft);
+	VectorN<TYPE> vProd(vLeft);
 
 	// in-place scalar multiplication
 	vProd *= scalar;
@@ -525,16 +525,16 @@ CVectorN<TYPE>
 	// return the result
 	return vProd;
 
-}	// operator*(const CVectorN, TYPE scalar)
+}	// operator*(const VectorN, TYPE scalar)
 
 
 ///////////////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 void 
-	CalcBinomialCoeff(CVectorN<TYPE>& vCoeff)
+	CalcBinomialCoeff(VectorN<TYPE>& vCoeff)
 	// calculates the binomial coefficients, returns in the vector
 {
-	CVectorN<TYPE> vAltCoeff;
+	VectorN<TYPE> vAltCoeff;
 	vAltCoeff.SetDim(vCoeff.GetDim());
 
 	for (int nAt = 0; nAt < vCoeff.GetDim()-1; nAt++)
@@ -555,7 +555,7 @@ void
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
 void 
-	TraceVector(const CVectorN<TYPE>& vTrace)
+	TraceVector(const VectorN<TYPE>& vTrace)
 	// helper function to output a vector for debugging
 {
 #ifdef _DEBUG
@@ -592,7 +592,7 @@ void
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
 CArchive& 
-	operator<<(CArchive &ar, CVectorN<TYPE> v)
+	operator<<(CArchive &ar, VectorN<TYPE> v)
 	// CArchive serialization of a vector
 {
 	// store the dimension first
@@ -606,12 +606,12 @@ CArchive&
 
 	return ar;
 
-}	// operator<<(CArchive &ar, CVectorN<TYPE> v)
+}	// operator<<(CArchive &ar, VectorN<TYPE> v)
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
 CArchive& 
-	operator>>(CArchive &ar, CVectorN<TYPE>& v)
+	operator>>(CArchive &ar, VectorN<TYPE>& v)
 	// CArchive de-serialization of a vector
 {
 	// retrieve the dimension first
@@ -627,7 +627,7 @@ CArchive&
 
 	return ar;
 
-}	// operator>>(CArchive &ar, CVectorN<TYPE>& v)
+}	// operator>>(CArchive &ar, VectorN<TYPE>& v)
 
 #endif	// __AFX_H__
 
@@ -636,7 +636,7 @@ CArchive&
 #ifdef _MSC_VER
 template<class TYPE>
 void
-	LogExprExt(const CVectorN<TYPE> & vVec,
+	LogExprExt(const VectorN<TYPE> & vVec,
 			const char *pszName, const char *pszModule)
 	// helper function for XML logging of vectors
 {
@@ -674,5 +674,9 @@ void
 }	// LogExprExt
 #endif // _MSC_VER
 
+
+// Backward compatibility
+template<class TYPE = REAL>
+using CVectorN = VectorN<TYPE>;
 
 #endif	// !defined(VECTORN_H)

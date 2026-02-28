@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// Optimizer.h: interface for the COptimizer template
+// Optimizer.h: interface for the Optimizer template
 //
 // Copyright (C) 1996-2001
 // $Id: Optimizer.h,v 1.3 2006/04/01 16:47:16 HP_Administrator Exp $
@@ -16,24 +16,24 @@
 // include for the objective function
 #include "ObjectiveFunction.h"
 
-class COptimizer;
+class Optimizer;
 
 // callback function
-typedef BOOL OptimizerCallback(COptimizer *pOpt, void *pParam);
+typedef BOOL OptimizerCallback(Optimizer *pOpt, void *pParam);
 
 //////////////////////////////////////////////////////////////////////
-// class COptimizer
+// class Optimizer
 // 
 // base template class for all optimizers
 //////////////////////////////////////////////////////////////////////
-class COptimizer
+class Optimizer
 {
 public:
-	// construct a new COptimizer object
-	COptimizer(CObjectiveFunction *pFunc);
+	// construct a new Optimizer object
+	Optimizer(ObjectiveFunction *pFunc);
 
 	// destroy the optimizer
-	virtual ~COptimizer();
+	virtual ~Optimizer();
 
 	// sets the callback function
 	void SetCallback(OptimizerCallback *pCallback, void *pParam = NULL);
@@ -54,14 +54,14 @@ public:
 	REAL GetFinalValue() const;
 
 	// holds the final value of the parameters for the minimum f
-	const CVectorN<>& GetFinalParameter() const;
+	const VectorN<>& GetFinalParameter() const;
 
 	// function to actually perform the optimization
-	virtual const CVectorN<>& Optimize(const CVectorN<>& vInit) = 0;
+	virtual const VectorN<>& Optimize(const VectorN<>& vInit) = 0;
 
 protected:
 	// the objective function over which optimization is to occur
-	CObjectiveFunction *m_pFunc;
+	ObjectiveFunction *m_pFunc;
 
 	// stores the callback info
 	OptimizerCallback *m_pCallbackFunc;
@@ -78,13 +78,16 @@ protected:
 
 	// holds the final input parameter to the objective function (same as
 	//		returned by Optimize)
-	CVectorN<> m_vFinalParam;
+	VectorN<> m_vFinalParam;
 
 private:
 	// flag to indicate whether gradient information should be used
 	BOOL m_bUseGradientInfo;
 
-};	// class COptimizer
+};	// class Optimizer
 
+
+// Backward compatibility
+using COptimizer = Optimizer;
 
 #endif // !defined(OPTIMIZER_H)

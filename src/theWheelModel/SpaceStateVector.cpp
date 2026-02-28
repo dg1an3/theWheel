@@ -47,7 +47,7 @@ IMPLEMENT_SERIAL(CSpaceStateVector, CObject, VERSIONABLE_SCHEMA | 1);
 
 //////////////////////////////////////////////////////////////////////
 void 
-	CSpaceStateVector::GetActivationsVector(CVectorN<>& vActivations)
+	CSpaceStateVector::GetActivationsVector(VectorN<>& vActivations)
 	// accessor for the activation vector
 {
 	if (m_pSpace) 
@@ -68,7 +68,7 @@ void
 
 //////////////////////////////////////////////////////////////////////
 void 
-	CSpaceStateVector::SetActivationsVector(const CVectorN<>& vActivations)
+	CSpaceStateVector::SetActivationsVector(const VectorN<>& vActivations)
 	// sets the activation part of the state vector
 {
 	if (m_pSpace) 
@@ -89,7 +89,7 @@ void
 
 //////////////////////////////////////////////////////////////////////
 void 
-	CSpaceStateVector::GetPositionsVector(CVectorN<>& vPositions)
+	CSpaceStateVector::GetPositionsVector(VectorN<>& vPositions)
 	// accessor for the positions vector
 	/// TODO: should this be moved to CSpace???
 {
@@ -111,7 +111,7 @@ void
 
 //////////////////////////////////////////////////////////////////////
 void 
-	CSpaceStateVector::SetPositionsVector(const CVectorN<>& vPositions)
+	CSpaceStateVector::SetPositionsVector(const VectorN<>& vPositions)
 	// sets the node positions
 {
 	if (m_pSpace)
@@ -138,7 +138,7 @@ void
 
 //////////////////////////////////////////////////////////////////////
 void 
-	CSpaceStateVector::RotateTranslateTo(const CVectorN<>& vPositions)
+	CSpaceStateVector::RotateTranslateTo(const VectorN<>& vPositions)
 	// called to minimize rotate/translate error between old state
 	//		and new
 {
@@ -228,8 +228,8 @@ void
 
 	// now repopulate
 	m_vNewPositions.SetDim(m_pSpace->GetLayoutManager()->GetSuperNodeCount() * 2);
-	CVectorN<> vOldPos(3);
-	CVectorN<> vNewPos(3);
+	VectorN<> vOldPos(3);
+	VectorN<> vNewPos(3);
 	for (int nAt = 0; nAt < m_pSpace->GetLayoutManager()->GetSuperNodeCount(); nAt++)
 	{
 		// set up HG of previous position
@@ -263,16 +263,16 @@ void
 
 	if (ar.IsLoading())
 	{
-		CVectorN<double> vActivations;
+		VectorN<double> vActivations;
 		ar >> vActivations;
-		CVectorN<> vActReal;
+		VectorN<> vActReal;
 		for (int nAt = 0; nAt < vActivations.GetDim(); nAt++)
 			vActReal[nAt] = REAL(vActivations[nAt]);
 		SetActivationsVector(vActReal);
 
-		CVectorN<double> vPositions;
+		VectorN<double> vPositions;
 		ar >> vPositions;
-		CVectorN<> vPosReal;
+		VectorN<> vPosReal;
 		for (int nAt = 0; nAt < vActivations.GetDim(); nAt++)
 			vPosReal[nAt] = REAL(vActivations[nAt]);
 		SetPositionsVector(vPosReal);
@@ -281,16 +281,16 @@ void
 	}
 	else
 	{
-		CVectorN<> vActReal;
+		VectorN<> vActReal;
 		GetActivationsVector(vActReal);
-		CVectorN<double> vActivations;
+		VectorN<double> vActivations;
 		for (int nAt = 0; nAt < vActReal.GetDim(); nAt++)
 			vActivations[nAt] = vActReal[nAt];
 		ar << vActivations;
 
-		CVectorN<> vPosReal;
+		VectorN<> vPosReal;
 		GetPositionsVector(vPosReal);
-		CVectorN<double> vPositions;
+		VectorN<double> vPositions;
 		for (int nAt = 0; nAt < vPosReal.GetDim(); nAt++)
 			vPositions[nAt] = vPosReal[nAt];
 		ar << vPositions;

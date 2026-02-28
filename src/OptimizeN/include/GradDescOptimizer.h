@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// GradDescOptimizer.h: interface for the CGradDescOptimizer
+// GradDescOptimizer.h: interface for the GradDescOptimizer
 //
 // Copyright (C) 1996-2001
 // $Id: GradDescOptimizer.h,v 1.1 2002/06/11 04:01:01 default Exp $
@@ -13,22 +13,25 @@
 #include "Optimizer.h"
 
 //////////////////////////////////////////////////////////////////////
-// class CGradDescOptimizer
+// class GradDescOptimizer
 // 
 // optimizer that implements 1D gradient optimizer
 //////////////////////////////////////////////////////////////////////
-class CGradDescOptimizer : public COptimizer
+class GradDescOptimizer : public Optimizer
 {
 public:
 	// construct a new Gradient Descent Optimizer
-	CGradDescOptimizer(CObjectiveFunction *pFunc);
+	GradDescOptimizer(ObjectiveFunction *pFunc);
 
 	// optimizes the initial input vector
-	virtual const CVectorN<>& Optimize(const CVectorN<>& vInit);
+	virtual const VectorN<>& Optimize(const VectorN<>& vInit);
 
 private:
 	// holds the gradient
-	CVectorN<> m_vGrad;
+	VectorN<> m_vGrad;
 };
+
+// Backward compatibility
+using CGradDescOptimizer = GradDescOptimizer;
 
 #endif

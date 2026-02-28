@@ -37,15 +37,15 @@ public:
 	int GetNodeCount() const;
 
 	// accessors for the activation vector
-	void GetActivationsVector(CVectorN<>& vActivation);
-	void SetActivationsVector(const CVectorN<>& vActivation);
+	void GetActivationsVector(VectorN<>& vActivation);
+	void SetActivationsVector(const VectorN<>& vActivation);
 
 	// accessors for the positions vector
-	void GetPositionsVector(CVectorN<>& vPositions);
-	void SetPositionsVector(const CVectorN<>& vPositions);
+	void GetPositionsVector(VectorN<>& vPositions);
+	void SetPositionsVector(const VectorN<>& vPositions);
 
 	// lsq fit to the other state vector
-	void RotateTranslateTo(const CVectorN<>& vMatchPositions);
+	void RotateTranslateTo(const VectorN<>& vMatchPositions);
 
 	//////////////////////////////////////////////////////////////////
 	// serialization
@@ -60,25 +60,25 @@ private:
 	CSpace *m_pSpace;
 
 	// old positions vector
-	CVectorN<> m_vOldPositions;
+	VectorN<> m_vOldPositions;
 
 	// form the Nx3 matrix of pre-coordinates (homogeneous)
-	CMatrixNxM<> m_mOldCoords;
+	MatrixNxM<> m_mOldCoords;
 
 	// the Nx3 matrix of post-coordinates
-	CMatrixNxM<> m_mNewCoords;
+	MatrixNxM<> m_mNewCoords;
 
 	// pseudo-inverse of the new coordinates
-	CMatrixNxM<> m_mNewCoords_psinv;
+	MatrixNxM<> m_mNewCoords_psinv;
 
 	// initial transform (calculated from pseudo-inverse)
-	CMatrixNxM<> m_mTransform;
+	MatrixNxM<> m_mTransform;
 
 	// helpers for SVD
-	CVectorN<> m_vSVD_w;
-	CMatrixNxM<> m_mSVD_v;
+	VectorN<> m_vSVD_w;
+	MatrixNxM<> m_mSVD_v;
 
 	// new positions vector
-	CVectorN<> m_vNewPositions;
+	VectorN<> m_vNewPositions;
 
 };	// class CSpaceStateVector

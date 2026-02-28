@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// LineFunction.cpp: implementation of the CLineFunction
+// LineFunction.cpp: implementation of the LineFunction
 //
 // Copyright (C) 1996-2001
 // $Id: LineFunction.cpp,v 1.5 2005/03/19 20:02:49 HP_Administrator Exp $
@@ -13,44 +13,44 @@
 #include "LineFunction.h"
 
 //////////////////////////////////////////////////////////////////////
-// CLineFunction::CLineFunction
+// LineFunction::LineFunction
 // 
 // construct a new line function object, given an DIM-dimensional
 //		objective function
 //////////////////////////////////////////////////////////////////////
-CLineFunction::CLineFunction(CObjectiveFunction *pProjFunc)
-	: CObjectiveFunction(pProjFunc->HasGradientInfo()),
+LineFunction::LineFunction(ObjectiveFunction *pProjFunc)
+	: ObjectiveFunction(pProjFunc->HasGradientInfo()),
 		m_pProjFunc(pProjFunc)
 {
 }
 
 //////////////////////////////////////////////////////////////////////
-// CLineFunction::GetPoint
+// LineFunction::GetPoint
 // 
 // returns the point on the line
 //////////////////////////////////////////////////////////////////////
-const CVectorN<>& CLineFunction::GetPoint() const
+const VectorN<>& LineFunction::GetPoint() const
 {
 	return m_vPoint;
 }
 
 //////////////////////////////////////////////////////////////////////
-// CLineFunction::GetDirection
+// LineFunction::GetDirection
 // 
 // returns the direction of the line
 //////////////////////////////////////////////////////////////////////
-const CVectorN<>& CLineFunction::GetDirection() const
+const VectorN<>& LineFunction::GetDirection() const
 {
 	return m_vDirection;
 }
 
 //////////////////////////////////////////////////////////////////////
-// CLineFunction::SetLine
+// LineFunction::SetLine
 // 
 // sets the line parameters
 //////////////////////////////////////////////////////////////////////
-void CLineFunction::SetLine(const CVectorN<>& vPoint, 
-							const CVectorN<>& vDir)
+void LineFunction::SetLine(const VectorN<>& vPoint, 
+							const VectorN<>& vDir)
 {
 	ASSERT(vPoint.GetDim() == vDir.GetDim());
 
@@ -61,12 +61,12 @@ void CLineFunction::SetLine(const CVectorN<>& vPoint,
 }
 
 //////////////////////////////////////////////////////////////////////
-// CLineFunction::operator()
+// LineFunction::operator()
 // 
 // evaluates the line function
 //////////////////////////////////////////////////////////////////////
-REAL CLineFunction::operator()(const CVectorN<>& vInput, 
-							   CVectorN<> *pGrad) const
+REAL LineFunction::operator()(const VectorN<>& vInput, 
+							   VectorN<> *pGrad) const
 {
 	// ensure this is a one-dimensional input vector
 	ASSERT(vInput.GetDim() == 1);

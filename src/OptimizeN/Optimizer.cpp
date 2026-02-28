@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// Optimizer.cpp: implementation of the COptimizer base class
+// Optimizer.cpp: implementation of the Optimizer base class
 //
 // Copyright (C) 1996-2001
 // $Id: Optimizer.cpp,v 1.2 2004/10/09 17:03:57 default Exp $
@@ -13,11 +13,11 @@
 #include "Optimizer.h"
 
 //////////////////////////////////////////////////////////////////////
-// COptimizer::COptimizer
+// Optimizer::Optimizer
 // 
 // base class for all optimizers
 //////////////////////////////////////////////////////////////////////
-COptimizer::COptimizer(CObjectiveFunction *pFunc)
+Optimizer::Optimizer(ObjectiveFunction *pFunc)
 	: m_tolerance(0.5f),
 		m_nIteration(0),
 		m_pFunc(pFunc),
@@ -25,115 +25,115 @@ COptimizer::COptimizer(CObjectiveFunction *pFunc)
 		m_pCallbackParam(NULL),
 		m_bUseGradientInfo(FALSE)
 {
-}	// COptimizer::COptimizer
+}	// Optimizer::Optimizer
 
 
 //////////////////////////////////////////////////////////////////////
-// COptimizer::~COptimizer
+// Optimizer::~Optimizer
 // 
 // destroy the optimizer
 //////////////////////////////////////////////////////////////////////
-COptimizer::~COptimizer()
+Optimizer::~Optimizer()
 {
-}	// COptimizer::~COptimizer
+}	// Optimizer::~Optimizer
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// COptimizer::SetCallback
+// Optimizer::SetCallback
 // 
 // sets the callback function
 ///////////////////////////////////////////////////////////////////////////////
-void COptimizer::SetCallback(OptimizerCallback *pCallback, void *pParam)
+void Optimizer::SetCallback(OptimizerCallback *pCallback, void *pParam)
 {
 	m_pCallbackFunc = pCallback;
 	m_pCallbackParam = pParam;
 
-}	// COptimizer::SetCallback
+}	// Optimizer::SetCallback
 
 
 //////////////////////////////////////////////////////////////////////
-// COptimizer::UseGradientInfo
+// Optimizer::UseGradientInfo
 // 
 // returns the flag to indicate that gradient information should
 //		be used
 //////////////////////////////////////////////////////////////////////
-BOOL COptimizer::UseGradientInfo() const
+BOOL Optimizer::UseGradientInfo() const
 {
 	return m_bUseGradientInfo;
 
-}	// COptimizer::UseGradientInfo
+}	// Optimizer::UseGradientInfo
 
 
 //////////////////////////////////////////////////////////////////////
-// COptimizer::SetUseGradientInfo
+// Optimizer::SetUseGradientInfo
 // 
 // sets the flag to indicate that gradient information should
 //		be used
 //////////////////////////////////////////////////////////////////////
-void COptimizer::SetUseGradientInfo(BOOL bUseGradientInfo)
+void Optimizer::SetUseGradientInfo(BOOL bUseGradientInfo)
 {
 	m_bUseGradientInfo = bUseGradientInfo;
 
-}	// COptimizer::SetUseGradientInfo
+}	// Optimizer::SetUseGradientInfo
 
 
 //////////////////////////////////////////////////////////////////////
-// COptimizer::GetTolerance
+// Optimizer::GetTolerance
 // 
 // returns the tolerance for exit from optimization loop
 //////////////////////////////////////////////////////////////////////
-REAL COptimizer::GetTolerance() const
+REAL Optimizer::GetTolerance() const
 {
 	return m_tolerance;
 
-}	// COptimizer::GetTolerance
+}	// Optimizer::GetTolerance
 
 
 //////////////////////////////////////////////////////////////////////
-// COptimizer::SetTolerance
+// Optimizer::SetTolerance
 // 
 // sets the tolerance for exit from optimization loop
 //////////////////////////////////////////////////////////////////////
-void COptimizer::SetTolerance(REAL tol)
+void Optimizer::SetTolerance(REAL tol)
 {
 	m_tolerance = tol;
 
-}	// COptimizer::SetTolerance
+}	// Optimizer::SetTolerance
 
 
 //////////////////////////////////////////////////////////////////////
-// COptimizer::GetIterations
+// Optimizer::GetIterations
 // 
 // returns the number of iterations needed for the previous 
 //		optimization
 //////////////////////////////////////////////////////////////////////
-int COptimizer::GetIterations() const
+int Optimizer::GetIterations() const
 {
 	return m_nIteration;
 
-}	// COptimizer::GetIterations
+}	// Optimizer::GetIterations
 
 
 //////////////////////////////////////////////////////////////////////
-// COptimizer::GetFinalValue
+// Optimizer::GetFinalValue
 // 
 // holds the final value of the optimization
 //////////////////////////////////////////////////////////////////////
-REAL COptimizer::GetFinalValue() const
+REAL Optimizer::GetFinalValue() const
 {
 	return m_finalValue;
 
-}	// COptimizer::GetFinalValue
+}	// Optimizer::GetFinalValue
 
 
 //////////////////////////////////////////////////////////////////////
-// COptimizer::GetFinalParameter
+// Optimizer::GetFinalParameter
 // 
 // holds the final value of the parameters for the minimum f
 //////////////////////////////////////////////////////////////////////
-const CVectorN<>& COptimizer::GetFinalParameter() const
+const VectorN<>& Optimizer::GetFinalParameter() const
 {
 	return m_vFinalParam;
 
-}	// COptimizer::GetFinalParameter
+}	// Optimizer::GetFinalParameter
 

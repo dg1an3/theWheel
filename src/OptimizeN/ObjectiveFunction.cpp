@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// ObjectiveFunction.cpp: implementation of the CObjectiveFunction 
+// ObjectiveFunction.cpp: implementation of the ObjectiveFunction 
 //		base class
 //
 // Copyright (C) 1996-2004  Derek G. Lane
@@ -15,75 +15,75 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// CObjectiveFunction::CObjectiveFunction
+// ObjectiveFunction::ObjectiveFunction
 // 
 // <description>
 ///////////////////////////////////////////////////////////////////////////////
-CObjectiveFunction::CObjectiveFunction(BOOL bHasGradientInfo)
+ObjectiveFunction::ObjectiveFunction(BOOL bHasGradientInfo)
 	: m_bHasGradientInfo(bHasGradientInfo)
 	, m_pAV(NULL)
 {
-}	// CObjectiveFunction::CObjectiveFunction
+}	// ObjectiveFunction::ObjectiveFunction
 
 ///////////////////////////////////////////////////////////////////////////////
-// CObjectiveFunction::HasGradientInfo
+// ObjectiveFunction::HasGradientInfo
 // 
 // whether gradient information is available
 ///////////////////////////////////////////////////////////////////////////////
-BOOL CObjectiveFunction::HasGradientInfo() const
+BOOL ObjectiveFunction::HasGradientInfo() const
 {
 	return m_bHasGradientInfo;
 
-}	// CObjectiveFunction::HasGradientInfo
+}	// ObjectiveFunction::HasGradientInfo
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// CObjectiveFunction::Transform
+// ObjectiveFunction::Transform
 // 
 // over-ride for function to transform parameters
 ///////////////////////////////////////////////////////////////////////////////
-void CObjectiveFunction::Transform(CVectorN<> *pvInOut) const
+void ObjectiveFunction::Transform(VectorN<> *pvInOut) const
 {
 	// default is identity transform
 	ASSERT(false);
 
-}	// CObjectiveFunction::Transform
+}	// ObjectiveFunction::Transform
 
 ///////////////////////////////////////////////////////////////////////////////
-// CObjectiveFunction::dTransform
+// ObjectiveFunction::dTransform
 // 
 // over-ride for derivative transform parameters
 ///////////////////////////////////////////////////////////////////////////////
-void CObjectiveFunction::dTransform(CVectorN<> *pvInOut) const
+void ObjectiveFunction::dTransform(VectorN<> *pvInOut) const
 {
 	// set to all 1.0 for identity transform
 	ITERATE_VECTOR((*pvInOut), nAt, (*pvInOut)[nAt] = 1.0);
 
-}	// CObjectiveFunction::dTransform
+}	// ObjectiveFunction::dTransform
 
 ///////////////////////////////////////////////////////////////////////////////
-// CObjectiveFunction::InvTransform
+// ObjectiveFunction::InvTransform
 // 
 // inverse of parameter transform
 ///////////////////////////////////////////////////////////////////////////////
-void CObjectiveFunction::InvTransform(CVectorN<> *pvInOut) const
+void ObjectiveFunction::InvTransform(VectorN<> *pvInOut) const
 {
 	// default is identity transform
 	ASSERT(false);
 
-}	// CObjectiveFunction::InvTransform
+}	// ObjectiveFunction::InvTransform
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// CObjectiveFunction::Gradient
+// ObjectiveFunction::Gradient
 // 
 // approximates gradient using difference method
 ///////////////////////////////////////////////////////////////////////////////
-void CObjectiveFunction::Gradient(const CVectorN<>& vIn, REAL epsilon, 
-				CVectorN<>& vGrad_out) const
+void ObjectiveFunction::Gradient(const VectorN<>& vIn, REAL epsilon, 
+				VectorN<>& vGrad_out) const
 {
 	REAL res = 0.0;
-	BEGIN_LOG_SECTION(CObjectiveFunction::Gradient());
+	BEGIN_LOG_SECTION(ObjectiveFunction::Gradient());
 
 	// get epsilon
 	REAL elem_max = 0.0;
@@ -94,7 +94,7 @@ void CObjectiveFunction::Gradient(const CVectorN<>& vIn, REAL epsilon,
 	epsilon = elem_max * epsilon;
 
 	// numerically evaluate the gradiant
-	CVectorN<> vParam = vIn;
+	VectorN<> vParam = vIn;
 	const REAL fp = (*this)(vParam);
 
 	vGrad_out.SetDim(vParam.GetDim());
@@ -109,25 +109,25 @@ void CObjectiveFunction::Gradient(const CVectorN<>& vIn, REAL epsilon,
 	}
 	LOG_EXPR_EXT(vGrad_out);
 
-	END_LOG_SECTION();	// CObjectiveFunction::Gradient
+	END_LOG_SECTION();	// ObjectiveFunction::Gradient
 
-}	// CObjectiveFunction::Gradient
+}	// ObjectiveFunction::Gradient
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// CObjectiveFunction::Hessian
+// ObjectiveFunction::Hessian
 // 
 // approximates hessian using difference method
 ///////////////////////////////////////////////////////////////////////////////
-void CObjectiveFunction::Hessian(const CVectorN<>& vAtParam, REAL epsilon,
-								CMatrixNxM<>& mHess_out) const
+void ObjectiveFunction::Hessian(const VectorN<>& vAtParam, REAL epsilon,
+								MatrixNxM<>& mHess_out) const
 {
-	BEGIN_LOG_SECTION(CObjectiveFunction::Hessian());
+	BEGIN_LOG_SECTION(ObjectiveFunction::Hessian());
 
 	const REAL fp = (*this)(vAtParam);
 
 	// numerically evaluate the hessian
-	CVectorN<> vParam = vAtParam;
+	VectorN<> vParam = vAtParam;
 	mHess_out.Reshape(vParam.GetDim(), vParam.GetDim());
 	for (int nAtCol = 0; nAtCol < vParam.GetDim(); nAtCol++)
 	{
@@ -158,14 +158,14 @@ void CObjectiveFunction::Hessian(const CVectorN<>& vAtParam, REAL epsilon,
 	}
 	LOG_EXPR_EXT(mHess_out);
 
-	END_LOG_SECTION();	// CObjectiveFunction::Hessian
+	END_LOG_SECTION();	// ObjectiveFunction::Hessian
 
-}	// CObjectiveFunction::Hessian
+}	// ObjectiveFunction::Hessian
 
 
 //////////////////////////////////////////////////////////////////////////////
 void 
-	CObjectiveFunction::SetAdaptiveVariance(CVectorN<> *pAV, REAL varMin, REAL varMax)
+	ObjectiveFunction::SetAdaptiveVariance(VectorN<> *pAV, REAL varMin, REAL varMax)
 	// sets the OF to use adaptive variance
 {
 	// store pointer to the AV vector
@@ -175,5 +175,5 @@ void
 	m_varMin = varMin;
 	m_varMax = varMax;
 
-}	// CObjectiveFunction::SetAdaptiveVariance
+}	// ObjectiveFunction::SetAdaptiveVariance
 
