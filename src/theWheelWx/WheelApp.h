@@ -23,6 +23,7 @@ public:
 // Main frame
 class WheelFrame : public wxFrame
 {
+    friend class WheelFrameTestAccessor;
 public:
     WheelFrame();
     ~WheelFrame();

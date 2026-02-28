@@ -12,7 +12,9 @@
 #include "PropertyDialogs.h"
 #include <SpaceLayoutManager.h>
 
+#ifndef THEWHEEL_WX_TESTING
 wxIMPLEMENT_APP(WheelApp);
+#endif
 
 bool WheelApp::OnInit()
 {

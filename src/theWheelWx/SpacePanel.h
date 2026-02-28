@@ -47,6 +47,8 @@ class SpacePanel : public wxGLCanvas
 class SpacePanel : public wxPanel
 #endif
 {
+    friend class SpacePanelTestAccessor;
+    friend class SpacePanelTestAccessor2;
 public:
     SpacePanel(wxWindow* parent);
 

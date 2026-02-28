@@ -17,6 +17,7 @@ class SpacePanel;
 
 class SpaceTreeView : public wxPanel
 {
+    friend class SpaceTreeViewTestAccessor;
 public:
     SpaceTreeView(wxWindow* parent);
 
@@ -50,12 +51,14 @@ private:
     // Map from tree item data to CNode*
     std::map<wxTreeItemId, CNode*> m_itemNodeMap;
 
+public:
     enum {
         ID_TREE = 1000,
         ID_NEW_NODE,
         ID_DELETE_NODE,
         ID_RENAME_NODE,
     };
+private:
 
     wxDECLARE_EVENT_TABLE();
 };
