@@ -12,11 +12,13 @@
 #include <cassert>
 
 // On MSVC, Extent.h uses RECT from windows.h.
-// On other platforms, wxcompat.h provides mfc_compat stubs.
+// On other platforms, wxcompat.h/mfc_compat.h provides stubs.
 #ifdef _MSC_VER
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#else
+#include "mfc_compat.h"
 #endif
 
 // VectorD.h uses ASSERT (MFC macro) — provide a stub

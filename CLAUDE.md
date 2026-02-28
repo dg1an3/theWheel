@@ -47,11 +47,16 @@ ctest --output-on-failure
 
 Build output goes to `build/<preset-name>/` at the repo root.
 
-### macOS Build (wxWidgets)
+### macOS Build (wxWidgets + ANGLE)
 
 Prerequisites:
 ```bash
 brew install wxwidgets cmake
+
+# Install vcpkg (provides ANGLE for OpenGL ES rendering)
+git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+~/vcpkg/bootstrap-vcpkg.sh
+export VCPKG_ROOT=~/vcpkg  # add to ~/.zshrc for persistence
 ```
 
 Build and run:
@@ -59,15 +64,16 @@ Build and run:
 cmake --preset macos-debug
 cmake --build build/macos-debug
 # Launch the app
-open build/macos-debug/theWheelWx/theWheelWx.app
+open build/macos-debug/src/theWheelWx/theWheelWx.app
 ```
 
 The macOS build produces:
 - **OptimizeN** and **theWheelModel** static libraries (fully portable)
+- **theWheelGL** static library (OpenGL ES renderer via ANGLE from vcpkg)
 - **theWheelModelTests** (85 Google Test unit tests)
 - **theWheelWx** (wxWidgets GUI application with 2D rendering)
 
-**Note**: The Windows build also produces theWheelView (DirectX 9), theWheel (MFC app), and pythewheel (Python bindings) which are not yet ported to macOS.
+**Note**: If `VCPKG_ROOT` is not set, theWheelGL is skipped and the build still succeeds (theWheelWx uses wxDC rendering independently). The Windows build also produces theWheelView (DirectX 9), theWheel (MFC app), and pythewheel (Python bindings) which are not yet ported to macOS.
 
 ## High-Level Architecture
 
@@ -77,6 +83,8 @@ The macOS build produces:
 theWheel (MFC Application)     theWheelWx (wxWidgets Application)
     ↓                               ↓
 theWheelView (DirectX 9)       [2D wxDC Rendering]
+    ↓                               ↓
+    ├── theWheelGL (OpenGL ES via ANGLE, cross-platform)
     ↓                               ↓
 theWheelModel (Core Data & Logic)
     ↓

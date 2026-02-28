@@ -52,8 +52,13 @@ enable_testing()
 add_subdirectory ("OptimizeN")
 add_subdirectory ("theWheelModel")
 
-# Cross-platform OpenGL ES renderer (via ANGLE)
-add_subdirectory ("theWheelGL")
+# Cross-platform OpenGL ES renderer (via ANGLE) — optional
+find_package(unofficial-angle CONFIG QUIET)
+if(unofficial-angle_FOUND OR (OpenGL_EGL_FOUND AND OpenGL_GLESv2_FOUND))
+    add_subdirectory ("theWheelGL")
+else()
+    message(STATUS "Skipping theWheelGL — no ANGLE or EGL/GLESv2 available")
+endif()
 
 if(MSVC)
     add_subdirectory ("pybind")

@@ -83,9 +83,4 @@ if(MSVC)
 else()
     target_compile_options(theWheelGL PRIVATE
         -include "${CMAKE_CURRENT_SOURCE_DIR}/StdAfx.h")
-    # The wxcompat.h provides mfc_compat stubs needed by theWheelModel headers
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../theWheelWx/wxcompat.h")
-        target_compile_options(theWheelGL PRIVATE
-            -include "${CMAKE_CURRENT_SOURCE_DIR}/../theWheelWx/wxcompat.h")
-    endif()
 endif()

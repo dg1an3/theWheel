@@ -59,6 +59,17 @@ theWheel/
 - CMake 3.15+
 - Visual Studio 2022 (Windows) or Xcode/wxWidgets (macOS)
 - Python 3.7+ (for bindings)
+- vcpkg (optional, provides ANGLE for OpenGL ES rendering on macOS)
+
+**macOS setup:**
+```bash
+brew install wxwidgets cmake
+
+# Optional: install vcpkg for ANGLE (OpenGL ES renderer)
+git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+~/vcpkg/bootstrap-vcpkg.sh
+export VCPKG_ROOT=~/vcpkg  # add to ~/.zshrc for persistence
+```
 
 **Build:**
 ```bash
@@ -67,8 +78,17 @@ cmake --preset x64-debug          # Windows
 cmake --preset macos-debug        # macOS
 
 # Build all targets
-cmake --build --preset x64-debug
+cmake --build build/x64-debug     # Windows
+cmake --build build/macos-debug   # macOS
+
+# Run tests
+build/macos-debug/src/theWheelModelTests/theWheelModelTests
+
+# Launch the macOS app
+open build/macos-debug/src/theWheelWx/theWheelWx.app
 ```
+
+**Note:** On macOS without vcpkg, the theWheelGL (ANGLE) target is skipped automatically. The wxWidgets app still builds and runs using 2D rendering.
 
 ### Desktop Applications
 

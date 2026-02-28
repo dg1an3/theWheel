@@ -215,6 +215,16 @@ typedef CObject CDocument;
 // Misc stubs
 //////////////////////////////////////////////////////////////////////
 
+// RECT structure (used by CExtent)
+#ifndef _WINDEF_
+struct RECT {
+    long left;
+    long top;
+    long right;
+    long bottom;
+};
+#endif
+
 // RGB macro
 #ifndef RGB
 #define RGB(r,g,b) ((COLORREF)(((uint8_t)(r)|((uint16_t)((uint8_t)(g))<<8))|(((uint32_t)(uint8_t)(b))<<16)))

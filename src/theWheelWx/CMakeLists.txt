@@ -3,6 +3,21 @@
 # OpenGL ES renderer toggle
 option(USE_OPENGL_RENDERER "Use OpenGL ES via ANGLE instead of 2D wxDC for rendering" OFF)
 
+# When using vcpkg toolchain, wxWidgets may not be found via system paths.
+# Hint the Homebrew location on macOS.
+if(APPLE AND NOT wxWidgets_ROOT_DIR)
+    execute_process(
+        COMMAND wx-config --prefix
+        OUTPUT_VARIABLE _wx_prefix
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if(_wx_prefix)
+        set(wxWidgets_ROOT_DIR "${_wx_prefix}")
+        set(wxWidgets_CONFIG_EXECUTABLE "${_wx_prefix}/bin/wx-config")
+    endif()
+endif()
+
 if(USE_OPENGL_RENDERER)
     find_package(wxWidgets COMPONENTS core base gl)
 else()
