@@ -752,7 +752,7 @@ void
 {
 	// reset all node link propagation flags
 	for_each(m_arrLinks.begin(), m_arrLinks.end(),
-		[](CNodeLink* pLink) { pLink->SetHasPropagated(FALSE); });
+		[](auto pLink) { pLink->SetHasPropagated(FALSE); });
 
 	// reset new activation
 	m_newSecondaryActivation = m_secondaryActivation;
@@ -763,7 +763,7 @@ void
 
 	// recursively call for children
 	for_each(m_arrChildren.begin(), m_arrChildren.end(),
-		[](CNode* pNode) { pNode->ResetForPropagation(); });
+		[](auto pLink) { pLink->ResetForPropagation(); });
 
 
 }	// CNode::ResetForPropagation
@@ -786,7 +786,7 @@ void
 
 	// recursively call for children
 	for_each(m_arrChildren.begin(), m_arrChildren.end(),
-		[](CNode* pNode) { pNode->UpdateFromNewActivation(); });
+		[](auto pChild) { pChild->UpdateFromNewActivation(); });
 }
 
 

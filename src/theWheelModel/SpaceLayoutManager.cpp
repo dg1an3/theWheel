@@ -28,6 +28,7 @@
 
 // header files for the class
 #include "SpaceLayoutManager.h"
+#include <CastVectorD.h>
 
 /////////////////////////////////////////////////////////////////////////////
 // Constants for the CSpaceLayoutManager
@@ -37,7 +38,7 @@
 const REAL TOLERANCE = (REAL) 1e+3;
 
 // scale for the sizes of the nodes
-const REAL SIZE_SCALE = 150.0;
+const REAL SIZE_SCALE = 100.0;
 
 // constants for the distance scale vs. activation curve
 const REAL DIST_SCALE_MIN = 1.0f;
@@ -62,6 +63,11 @@ const REAL RELAX_SIGMOID_FACTOR = 1.5f; // 4.0; // 1.5; // 8.0;
 
 const REAL RELAX_NEW_GAIN_FACTOR = 0.4f;
 const REAL RELAX_NEW_GAIN_FACTOR_SUBTHRESHOLD = 0.8f;
+
+const REAL WRAP_SPACE_SIZE_X = 1000;
+const REAL WRAP_SPACE_SIZE_Y = 1000;
+
+const CVectorD<3, REAL> WRAP_SPACE_EXTENT(WRAP_SPACE_SIZE_X, WRAP_SPACE_SIZE_Y, 0);
 
 
 //////////////////////////////////////////////////////////////////////
@@ -204,28 +210,31 @@ REAL
 
 	// CVectorD<3> vSizeAvg = (REAL) 0.5 * (vSizeFrom + vSizeTo);
 	REAL sizeAvg = 0.5f * (sizeFrom + sizeTo);
-	CVectorD<3> vOffset = pFrom->GetPosition() - pTo->GetPosition();
 
-	for (int shiftX = -1; shiftX <= 1; shiftX ++) {
-		auto pNewTo = pFrom->GetPosition();
-		pNewTo[0] += shiftX * 800;
-		auto vNewOffset = pFrom->GetPosition() - pNewTo;
+	auto [minDistance, vFromMin, vToMin] = WrapDistance(pFrom->GetPosition(), pTo->GetPosition(), WRAP_SPACE_EXTENT, true);
 
-		if (vNewOffset.GetLength() < vOffset.GetLength())
-		{
-			vOffset = vNewOffset;
-		}
-	}
+	CVectorD<3> vOffset = vFromMin - vToMin; // pFrom->GetPosition() - pTo->GetPosition();
 
-	for (int shiftY = -1; shiftY <= 1; shiftY++) {
-		auto pNewTo = pFrom->GetPosition();
-		pNewTo[1] += shiftY * 400;
-		auto vNewOffset = pFrom->GetPosition() - pNewTo;
-		if (vNewOffset.GetLength() < vOffset.GetLength())
-		{
-			vOffset = vNewOffset;
-		}
-	}
+	//for (int shiftX = 0; shiftX <= 0; shiftX ++) {
+	//	auto pNewTo = pTo->GetPosition();
+	//	pNewTo[0] += shiftX * WRAP_SPACE_SIZE_X;
+	//	auto vNewOffset = pFrom->GetPosition() - pNewTo;
+
+	//	if (vNewOffset.GetLength() < vOffset.GetLength())
+	//	{
+	//		vOffset = vNewOffset;
+	//	}
+	//}
+
+	//for (int shiftY = 0; shiftY <= 0; shiftY++) {
+	//	auto pNewTo = pTo->GetPosition();
+	//	pNewTo[1] += shiftY * WRAP_SPACE_SIZE_Y;
+	//	auto vNewOffset = pFrom->GetPosition() - pNewTo;
+	//	if (vNewOffset.GetLength() < vOffset.GetLength())
+	//	{
+	//		vOffset = vNewOffset;
+	//	}
+	//}
 
 
 	// compute the relative actual distance
@@ -257,7 +266,7 @@ void
 	LayoutNodesPartial(0);
 
 	// relax
-	Relax();
+	// Relax();
 
 	// perform xlate-rotate
 	// set the resulting positions, rotate-translating in the process
@@ -352,7 +361,7 @@ void
 		LayoutNodesPartial(nHighestNewSuper);
 
 		// now relax the new super nodes
-		Relax(true);
+		// Relax(true);
 	}
 
 	// finish post processing of super-threshold nodes 
@@ -411,9 +420,9 @@ void
 					REAL new_gain = 1.0f
 						- Sigmoid(distErr - RELAX_SIGMOID_SHIFT, RELAX_SIGMOID_FACTOR);
 
-					// and set, based on percentage of current
-					pLink->SetGain(pLink->GetGain() * (1.0f - NEW_GAIN_FACTOR)
-						+ new_gain * NEW_GAIN_FACTOR);
+					//// and set, based on percentage of current
+					//pLink->SetGain(pLink->GetGain() * (1.0f - NEW_GAIN_FACTOR)
+					//	+ new_gain * NEW_GAIN_FACTOR);
 				}
 			}
 		}
@@ -473,7 +482,7 @@ void
 			REAL weight =
 				((*iterNode)->GetActivation() / avgAct * (*iterNode)->GetLinkGainWeight(*iterLinked)
 					+ (*iterLinked)->GetActivation() / avgAct * (*iterLinked)->GetLinkGainWeight((*iterNode))) 
-						+ (REAL) 1e-6;
+						+ (REAL) 1e-9;
 
 			// store the link weight
 			m_mLinks[nAtLinkedNode][nAtNode] =
@@ -555,8 +564,37 @@ REAL
 			// set up some common values
 
 			// compute the x- and y-offset between the views
-			const REAL x = m_vState[nAtNode*2 + 0] - m_vState[nAtLinked*2 + 0];
-			const REAL y = m_vState[nAtNode*2 + 1] - m_vState[nAtLinked*2 + 1];
+			//REAL x = m_vState[nAtNode*2 + 0] - m_vState[nAtLinked*2 + 0];
+			//REAL y = m_vState[nAtNode*2 + 1] - m_vState[nAtLinked*2 + 1];
+			//auto dist = sqrtf(x * x + y * y);
+
+			//for (int shiftX = 0; shiftX <= 0; shiftX++) {
+			//	auto xTo = m_vState[nAtLinked * 2 + 0] + shiftX * WRAP_SPACE_SIZE_X;
+			//	auto xNew = m_vState[nAtNode * 2 + 0] - xTo;
+			//	auto distNew = sqrtf(xNew * xNew + y * y);
+			//	if (distNew < dist)
+			//	{
+			//		x = xNew;
+			//		dist = distNew;
+			//	}
+			//}
+
+			//for (int shiftY = 0; shiftY <= 0; shiftY++) {
+			//	auto yTo = m_vState[nAtLinked * 2 + 1] + shiftY * WRAP_SPACE_SIZE_Y;
+			//	auto yNew = m_vState[nAtNode * 2 + 1] - yTo;
+			//	auto distNew = sqrtf(x * x + yNew * yNew);
+			//	if (distNew < dist)
+			//	{
+			//		y = yNew;
+			//		dist = distNew;
+			//	}
+			//}
+
+			CVectorD<3, REAL> atPos(m_vState[nAtNode * 2], m_vState[nAtNode * 2 + 1], 0);
+			CVectorD<3, REAL> linkedPos(m_vState[nAtLinked * 2], m_vState[nAtLinked * 2 + 1], 0);
+			auto [minDistance, atMin, linkedMin] = WrapDistance(atPos, linkedPos, WRAP_SPACE_EXTENT, true);
+			auto x = atMin[0] - linkedMin[0];
+			auto y = atMin[1] - linkedMin[1];
 
 			// compute the x- and y-scales for the fields -- average of
 			//		two rectangles
