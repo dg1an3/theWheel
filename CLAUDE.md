@@ -8,29 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-### Visual Studio Build (Primary Method)
-
-Open and build the main solution:
-```bash
-# Open in Visual Studio
-start theWheel_src.sln
-
-# Or build from command line using MSBuild
-msbuild theWheel_src.sln /p:Configuration=Debug /p:Platform=Win32
-msbuild theWheel_src.sln /p:Configuration=Release /p:Platform=Win32
-```
-
-**Build order** (dependencies are configured correctly in solution):
-1. OptimizeN (static library)
-2. theWheelModel (static library, depends on OptimizeN)
-3. theWheelView (static library, depends on theWheelModel)
-4. theWheel (executable, depends on all above)
-
 ### CMake Build (Cross-Platform)
 
-The CMake build system supports both Windows and macOS:
+CMake is the primary build system. Presets are defined in `CMakePresets.json`:
 
-Presets are defined in `CMakePresets.json` at the repo root:
 ```bash
 # Windows (Visual Studio)
 cmake --preset x64-debug
@@ -47,33 +28,64 @@ ctest --output-on-failure
 
 Build output goes to `build/<preset-name>/` at the repo root.
 
-### macOS Build (wxWidgets + ANGLE)
+**Available presets:** `x64-debug`, `x64-release`, `x86-debug`, `x86-release`, `macos-debug`, `macos-release`. All presets use the vcpkg toolchain.
 
-Prerequisites:
+### CMake Build Targets
+
+**Libraries:**
+
+| Target | Type | Platform | Dependencies | Description |
+|--------|------|----------|-------------|-------------|
+| **OptimizeN** | Static library | All | None | Numerical optimization (Powell, Conjugate Gradient, Brent) and linear algebra (CVectorN, CMatrixNxM) |
+| **theWheelModel** | Static library | All | OptimizeN | Core data model: CNode, CNodeLink, CSpace, spreading activation, force-directed layout |
+| **theWheelGL** | Static library | All (optional) | theWheelModel, OptimizeN | OpenGL ES renderer via ANGLE; only built if ANGLE (vcpkg) or system EGL/GLESv2 is found |
+| **theWheelView** | Static library | Windows | theWheelModel, OptimizeN, D3D9 | DirectX 9 rendering: CSpaceView, CNodeView, Plaque meshes, spring animation |
+| **pythewheel** | Python module | Windows | theWheelModel, pybind11 | Python bindings for theWheelModel via pybind11 (v2.13.6, fetched) |
+
+**Applications:**
+
+| Target | Platform | Dependencies | Description |
+|--------|----------|-------------|-------------|
+| **theWheel** | Windows | theWheelView, theWheelModel, OptimizeN | MFC Document/View GUI application; loads/saves `.spx` files |
+| **theWheelWx** | macOS/Linux | theWheelModel, OptimizeN, wxWidgets | wxWidgets GUI application with 2D wxDC rendering and JSON file I/O |
+
+**Tests:**
+
+| Target | Platform | Dependencies | Description |
+|--------|----------|-------------|-------------|
+| **theWheelModelTests** | All | theWheelModel, GTest | 85 Google Test unit tests for core model classes |
+| **theWheelWxTests** | macOS/Linux | theWheelModel, OptimizeN, wxWidgets, GTest | GUI regression tests for wxWidgets application |
+
+**Dependency graph:**
+```
+theWheel (MFC exe)          theWheelWx (wxWidgets exe)
+├── theWheelView (D3D9)     ├── theWheelModel
+│   ├── theWheelModel       ├── OptimizeN
+│   └── OptimizeN           └── [theWheelGL] (optional)
+├── theWheelModel
+└── OptimizeN
+
+pythewheel (Python module)  theWheelGL (OpenGL ES, optional)
+└── theWheelModel           ├── theWheelModel
+    └── OptimizeN           └── OptimizeN
+
+theWheelModelTests          theWheelWxTests
+└── theWheelModel           ├── theWheelModel + theWheelWx sources
+    └── OptimizeN           └── OptimizeN
+```
+
+### macOS Prerequisites
+
 ```bash
 brew install wxwidgets cmake
 
-# Install vcpkg (provides ANGLE for OpenGL ES rendering)
+# Optional: Install vcpkg for ANGLE (OpenGL ES rendering)
 git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
 ~/vcpkg/bootstrap-vcpkg.sh
 export VCPKG_ROOT=~/vcpkg  # add to ~/.zshrc for persistence
 ```
 
-Build and run:
-```bash
-cmake --preset macos-debug
-cmake --build build/macos-debug
-# Launch the app
-open build/macos-debug/src/theWheelWx/theWheelWx.app
-```
-
-The macOS build produces:
-- **OptimizeN** and **theWheelModel** static libraries (fully portable)
-- **theWheelGL** static library (OpenGL ES renderer via ANGLE from vcpkg)
-- **theWheelModelTests** (85 Google Test unit tests)
-- **theWheelWx** (wxWidgets GUI application with 2D rendering)
-
-**Note**: If `VCPKG_ROOT` is not set, theWheelGL is skipped and the build still succeeds (theWheelWx uses wxDC rendering independently). The Windows build also produces theWheelView (DirectX 9), theWheel (MFC app), and pythewheel (Python bindings) which are not yet ported to macOS.
+If `VCPKG_ROOT` is not set, theWheelGL is skipped and the build still succeeds (theWheelWx uses wxDC rendering independently).
 
 ## High-Level Architecture
 
@@ -153,13 +165,15 @@ src/
 ├── theWheelView/       # DirectX 9 rendering layer [Windows only]
 │   ├── include/        # Public headers (SpaceView.h, NodeView.h, etc.)
 │   └── *.cpp           # Rendering implementation
+├── theWheelGL/         # OpenGL ES renderer via ANGLE [cross-platform, optional]
+│   ├── include/        # Public headers (GLRenderer.h, GLNodeView.h, etc.)
+│   └── *.cpp           # Rendering implementation
 ├── OptimizeN/          # Numerical optimization library
 │   ├── include/        # Public headers (Optimizer.h, VectorN.h, etc.)
 │   └── *.cpp           # Optimization algorithms
-├── OptimizeND/         # CMake test project
+├── pybind/             # Python bindings via pybind11 [Windows only]
 ├── theWheelModelTests/ # Google Test suite (85 tests)
-├── pythewheel/         # Python bindings via pybind11 [Windows only]
-├── node-view-skin-design.md  # Detailed rendering design doc
+├── theWheelWxTests/    # wxWidgets GUI tests (Google Test) [macOS/Linux]
 └── TODO.txt            # Refactoring plans
 ```
 
@@ -276,7 +290,7 @@ These enable consistent serialization and reduce boilerplate.
 
 ## Historical Context
 
-- **Copyright**: 1996-2007 (main codebase), with 2025 updates
+- **Copyright**: 1996-2007 (main codebase), with 2025-2026 updates
 - **Author**: Derek Graham Lane
 - **Patent**: U.S. Patent pending notation in code
 - **Evolution**: Started in 2000, modernization ongoing (CMake, git)
@@ -288,31 +302,26 @@ These enable consistent serialization and reduce boilerplate.
 
 ## Active Development Branches
 
-Five independent workstreams, each on a separate branch:
+### `feature/wrap-distance` — Wrap distance calculations
+Distance calculation improvements for the layout system.
 
-### `feature/cmake-mfc-build` — Add MFC apps to CMake build
-Add CMakeLists.txt for theWheelView (static lib) and theWheel (MFC exe) so the full Windows app builds via CMake alongside the existing portable targets. Also fixes x64 compilation issues (UINT_PTR for OnTimer, SHANDLE_PTR for get_HWND). DirectX 9 headers/libs come from the Windows SDK — the legacy June 2010 DirectX SDK is not required.
+### `feature/gui-tests` — Automated GUI tests
+Automated GUI tests with pywinauto for regression coverage.
 
-### `feature/upgrade-d3d11` — Upgrade DirectX 9 to Direct3D 11
-Replace all D3D9 API usage in theWheelView with D3D11. Key changes: fixed-function pipeline → HLSL shaders, FVF → input layouts, SetTransform/SetMaterial → constant buffers, triangle fan → triangle list (D3D11 has no TRIANGLEFAN). Eliminates the legacy DirectX SDK dependency entirely since D3D11 ships with the Windows SDK. New files: D3D11Renderer.h/.cpp (device management), Shaders.hlsl (vertex + pixel shaders).
-
-### `feature/mouse-wheel-activation` — Mouse wheel activates nodes
-Add WM_MOUSEWHEEL handling to CSpaceView: hit-test the node under the cursor via FindNodeViewAt(), then call ActivateNodeView() with a scale proportional to wheel delta. Also extend CTracker with a virtual OnMouseWheel. In the wxWidgets SpacePanel, change the existing OnMouseWheel from zoom-only to: wheel over a node → activate, wheel over empty space → zoom.
-
-### `feature/node-body-text` — Display node Description field on canvas
-CNode already has a Description field (serialized since schema 5, editable in wxWidgets property dialogs). Render it visually below the node name when activation exceeds a threshold. In theWheelView: GDI DrawText with DT_WORDBREAK in the text overlay pass. In SpacePanel: smaller font below the name, clipped to node bounds. Only shown when the node is large enough on screen.
-
-### `data/extract-thewheel-data` — Extract data from Google Drive
-Parse .spx files and .jpg images from `G:\My Drive\00 DATA\theWheel_data`. New scripts: spx_to_json.py (converts SpxNode tree to the JSON format matching SpaceSerializer::Save), extract_thewheel_data.py (batch conversion). Implement SpaceSerializer::Load() with a simple recursive-descent JSON parser. Deferred until the Google Drive path is accessible.
+### `feature/remove-optimizen-mfc` — Remove MFC from OptimizeN
+Remove MFC dependency from the OptimizeN library to improve portability.
 
 ## Architecture References
 
-- `docs/node-view-skin-design.md`: Comprehensive rendering design with pseudo-code for Plaque/Elliptangle/RadialShape classes
+- `docs/user-guide/node-view-skin-design.md`: Comprehensive rendering design with pseudo-code for Plaque/Elliptangle/RadialShape classes
 
 ## Running Tests
 
-No formal unit test framework is currently integrated. Testing is primarily done through:
-- Building and running the main theWheel.exe application
-- Loading .spx test files
-- Verifying visual rendering and activation behavior
-- theWheelModelTests (Google Test) provides unit test coverage for core model classes
+```bash
+# Run all tests via CTest
+cd build/x64-debug  # or build/macos-debug
+ctest --output-on-failure
+```
+
+- **theWheelModelTests**: 85 Google Test unit tests for core model classes (CNode, CSpace, CVectorD, etc.) — runs on all platforms
+- **theWheelWxTests**: GUI regression tests for wxWidgets application (SpacePanel, SpaceTreeView, WheelFrame) — macOS/Linux only
