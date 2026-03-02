@@ -155,9 +155,9 @@ void GLPlaque::calcVertsForSection(float theta, const Vec3f& offset,
         angle += step;
     }
 
-    // Pie-wedge tip vertex
+    // Pie-wedge tip vertex — at plaque center, matching D3D9 Plaque::CalcVertsForSection
     Vertex tipVert;
-    tipVert.px = offset.x; tipVert.py = offset.y; tipVert.pz = m_borderRadius;
+    tipVert.px = 0.0f; tipVert.py = 0.0f; tipVert.pz = m_borderRadius;
     // Reuse last normal for the tip
     if (!verts.empty()) {
         auto& last = verts.back();
