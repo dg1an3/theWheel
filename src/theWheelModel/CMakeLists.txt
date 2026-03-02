@@ -26,6 +26,7 @@ set(THEWHEELMODEL_HEADERS
     include/SpaceStateVector.h
     include/UpdateStamp.h
     include/VectorD.h
+    include/mfc_compat.h
     stdafx.h
 )
 

@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// LineFunction.h: interface for the CLineFunction
+// LineFunction.h: interface for the LineFunction
 //
 // Copyright (C) 1996-2001
 // $Id: LineFunction.h,v 1.3 2004/02/16 15:56:09 default Exp $
@@ -13,47 +13,50 @@
 #include "ObjectiveFunction.h"
 
 //////////////////////////////////////////////////////////////////////
-// class CLineFunction
+// class LineFunction
 // 
 // defines a line function given another objective function and
 //		a line in the vector-space domain of that objective function
 //////////////////////////////////////////////////////////////////////
-class CLineFunction : public CObjectiveFunction
+class LineFunction : public ObjectiveFunction
 {
 public:
 	// construct a new line function object, given an DIM-dimensional
 	//		objective function
-	CLineFunction(CObjectiveFunction *pProjFunc);
+	LineFunction(ObjectiveFunction *pProjFunc);
 
 	// returns the point on the line
-	const CVectorN<>& GetPoint() const;
+	const VectorN<>& GetPoint() const;
 
 	// returns the direction of the line
-	const CVectorN<>& GetDirection() const;
+	const VectorN<>& GetDirection() const;
 
 	// sets the line parameters
-	void SetLine(const CVectorN<>& vPoint, const CVectorN<>& vDir);
+	void SetLine(const VectorN<>& vPoint, const VectorN<>& vDir);
 
 	// evaluates the line function
-	virtual REAL operator()(const CVectorN<>& vInput,
-		CVectorN<> *pGrad = NULL) const;
+	virtual REAL operator()(const VectorN<>& vInput,
+		VectorN<> *pGrad = NULL) const;
 
 private:
 	// pointer to the objective function upon which this line function
 	//		is based
-	CObjectiveFunction *m_pProjFunc;
+	ObjectiveFunction *m_pProjFunc;
 
 	// stores a point on the line
-	CVectorN<> m_vPoint;
+	VectorN<> m_vPoint;
 
 	// stores the direction of the line
-	CVectorN<> m_vDirection;
+	VectorN<> m_vDirection;
 
 	// temporary store of evaluation point
-	mutable CVectorN<> m_vEvalPoint;
+	mutable VectorN<> m_vEvalPoint;
 
 	// stores the gradient at the last evaluated point
-	mutable CVectorN<> m_vGrad;
+	mutable VectorN<> m_vGrad;
 };
+
+// Backward compatibility
+using CLineFunction = LineFunction;
 
 #endif

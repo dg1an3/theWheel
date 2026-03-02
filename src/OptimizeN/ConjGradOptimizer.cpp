@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// ConjGradOptimizer.cpp: implementation of the CBrentOptimizer
+// ConjGradOptimizer.cpp: implementation of the BrentOptimizer
 //
 // Copyright (C) 1996-2001
 // $Id: ConjGradOptimizer.cpp,v 1.19 2007/05/28 18:28:30 Derek Lane Exp $
@@ -24,12 +24,12 @@ const int ITER_MAX = 500;
 const REAL ZEPS = (REAL) 1.0e-10;	
 
 ///////////////////////////////////////////////////////////////////////////////
-// CConjGradOptimizer::CConjGradOptimizer
+// ConjGradOptimizer::ConjGradOptimizer
 // 
 // construct a gradient optimizer for an objective function
 ///////////////////////////////////////////////////////////////////////////////
-CConjGradOptimizer::CConjGradOptimizer(CObjectiveFunction *pFunc)
-	: COptimizer(pFunc),
+ConjGradOptimizer::ConjGradOptimizer(ObjectiveFunction *pFunc)
+	: Optimizer(pFunc),
 		m_lineFunction(pFunc),
 		m_pLineOptimizer(&m_optimizeBrent),
 		m_optimizeBrent(&m_lineFunction),
@@ -39,31 +39,31 @@ CConjGradOptimizer::CConjGradOptimizer(CObjectiveFunction *pFunc)
 	// set the Brent optimizer to use the gradient information
 	m_optimizeBrent.SetUseGradientInfo(FALSE);
 
-}	// CConjGradOptimizer::CConjGradOptimizer
+}	// ConjGradOptimizer::ConjGradOptimizer
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// CConjGradOptimizer::GetBrentOptimizer
+// ConjGradOptimizer::GetBrentOptimizer
 // 
 // returns the embedded line optimizer
 ///////////////////////////////////////////////////////////////////////////////
-CBrentOptimizer& CConjGradOptimizer::GetBrentOptimizer()
+BrentOptimizer& ConjGradOptimizer::GetBrentOptimizer()
 {
 	return m_optimizeBrent;
 
-}	// CConjGradOptimizer::GetBrentOptimizer
+}	// ConjGradOptimizer::GetBrentOptimizer
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// CConjGradOptimizer::Optimize
+// ConjGradOptimizer::Optimize
 // 
 // performs the optimization given the initial value vector
 ///////////////////////////////////////////////////////////////////////////////
-const CVectorN<>& CConjGradOptimizer::Optimize(const CVectorN<>& vInit)
+const VectorN<>& ConjGradOptimizer::Optimize(const VectorN<>& vInit)
 {
 	USES_CONVERSION;
 
-	BEGIN_LOG_SECTION(CConjGradOptimizer::Optimize);
+	BEGIN_LOG_SECTION(ConjGradOptimizer::Optimize);
 	LOG_EXPR_EXT(vInit);
 
 	// set the tolerance for the line optimizer
@@ -122,13 +122,13 @@ const CVectorN<>& CConjGradOptimizer::Optimize(const CVectorN<>& vInit)
 		///////////////////////////////////////////////////////////////////////////////
 		// line minimization
 
-		BEGIN_LOG_SECTION(CConjGradOptimizer::Optimize!Line_Minimization);
+		BEGIN_LOG_SECTION(ConjGradOptimizer::Optimize!Line_Minimization);
 
 		// set up the direction for the line minimization
 		m_lineFunction.SetLine(m_vFinalParam, m_vDir); // m_vGrad);
 
 		// now launch a line optimization
-		REAL lambda = m_pLineOptimizer->Optimize(CBrentOptimizer::GetInitZero())[0];
+		REAL lambda = m_pLineOptimizer->Optimize(BrentOptimizer::GetInitZero())[0];
 		LOG_EXPR(lambda);
 
 		// update the final parameter value
@@ -172,7 +172,7 @@ const CVectorN<>& CConjGradOptimizer::Optimize(const CVectorN<>& vInit)
 			m_mOrthoBasis[m_nIteration].Normalize();
 
 			// stores the projection vector
-			static CVectorN<> vProj;
+			static VectorN<> vProj;
 			vProj.SetDim(m_mOrthoBasis[m_nIteration].GetDim());
 
 			// now use GSO to make sure basis is orthogonal to already searched directions
@@ -228,7 +228,7 @@ const CVectorN<>& CConjGradOptimizer::Optimize(const CVectorN<>& vInit)
 		///////////////////////////////////////////////////////////////////////////////
 		// Update Direction
 
-		BEGIN_LOG_SECTION(CConjGradOptimizer::Optimize!Update_Direction);
+		BEGIN_LOG_SECTION(ConjGradOptimizer::Optimize!Update_Direction);
 		
 		// compute denominator for gamma
 		REAL gg = m_vGrad * m_vGrad;
@@ -285,17 +285,17 @@ const CVectorN<>& CConjGradOptimizer::Optimize(const CVectorN<>& vInit)
 		m_nIteration = -1;
 	}
 
-	END_LOG_SECTION();	// CConjGradOptimizer
+	END_LOG_SECTION();	// ConjGradOptimizer
 
 	// return the last parameter vector
 	return m_vFinalParam;
 
-}	// CConjGradOptimizer::Optimize
+}	// ConjGradOptimizer::Optimize
 
 
 //////////////////////////////////////////////////////////////////////////////
 void 
-	CConjGradOptimizer::SetAdaptiveVariance(bool bCalcVar, REAL varMin, REAL varMax)
+	ConjGradOptimizer::SetAdaptiveVariance(bool bCalcVar, REAL varMin, REAL varMax)
 	// used to set up the variance min / max calculation
 {
 	// set the flag
@@ -308,4 +308,4 @@ void
 	// set up for the objective function
 	m_pFunc->SetAdaptiveVariance(&m_vAdaptVariance, m_varMin, m_varMax);
 
-}	// CConjGradOptimizer::SetAdaptiveVariance
+}	// ConjGradOptimizer::SetAdaptiveVariance

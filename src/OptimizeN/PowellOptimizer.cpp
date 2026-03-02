@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// PowellOptimizer.cpp: implementation of the CBrentOptimizer
+// PowellOptimizer.cpp: implementation of the BrentOptimizer
 //
 // Copyright (C) 1996-2001
 // $Id: PowellOptimizer.cpp,v 1.8 2007/05/09 01:53:42 Derek Lane Exp $
@@ -15,39 +15,39 @@
 const int ITER_MAX = 1000;		// maximum iteration
 
 //////////////////////////////////////////////////////////////////////
-// CPowellOptimizer::CPowellOptimizer
+// PowellOptimizer::PowellOptimizer
 // 
 // performs the optimization given the initial value vector
 //////////////////////////////////////////////////////////////////////
-CPowellOptimizer::CPowellOptimizer(CObjectiveFunction *pFunc)
-	: COptimizer(pFunc),
+PowellOptimizer::PowellOptimizer(ObjectiveFunction *pFunc)
+	: Optimizer(pFunc),
 		m_lineFunction(pFunc),
 		m_optimizeBrent(&m_lineFunction)
 {
 	// set the Brent optimizer to not use the gradient information
 	m_optimizeBrent.SetUseGradientInfo(FALSE);
 
-}	// CPowellOptimizer::CPowellOptimizer
+}	// PowellOptimizer::PowellOptimizer
 
 
 //////////////////////////////////////////////////////////////////////
-// CPowellOptimizer::~CPowellOptimizer
+// PowellOptimizer::~PowellOptimizer
 // 
 // destroy the optimizer
 //////////////////////////////////////////////////////////////////////
-CPowellOptimizer::~CPowellOptimizer()
+PowellOptimizer::~PowellOptimizer()
 {
-}	// CPowellOptimizer::~CPowellOptimizer
+}	// PowellOptimizer::~PowellOptimizer
 
 
 //////////////////////////////////////////////////////////////////////
-// CPowellOptimizer::Optimize
+// PowellOptimizer::Optimize
 // 
 // performs the optimization given the initial value vector
 //////////////////////////////////////////////////////////////////////
-const CVectorN<>& CPowellOptimizer::Optimize(const CVectorN<>& vInit)
+const VectorN<>& PowellOptimizer::Optimize(const VectorN<>& vInit)
 {
-	BEGIN_LOG_SECTION(CPowellOptimizer::Optimize);
+	BEGIN_LOG_SECTION(PowellOptimizer::Optimize);
 
 	LOG_EXPR_EXT(vInit);
 	LOG_EXPR(GetTolerance());
@@ -84,13 +84,13 @@ const CVectorN<>& CPowellOptimizer::Optimize(const CVectorN<>& vInit)
 		if (2.0 * fabs(fp - m_finalValue) >
 			m_optimizeBrent.GetTolerance() * (fabs(fp) + fabs(m_finalValue)))
 		{
-			// static CVectorN<> ptt = 2.0f * m_vFinalParam - pt;
+			// static VectorN<> ptt = 2.0f * m_vFinalParam - pt;
 			m_vPtt = m_vFinalParam;
 			m_vPtt *= (REAL) 2.0;
 			m_vPtt -= m_vPt;
 			LOG_EXPR_EXT_DESC(m_vPtt, "m_vPtt = 2.0 * m_vFinalParam - m_vPt");
 
-			// static CVectorN<> xit = m_vFinalParam - pt;
+			// static VectorN<> xit = m_vFinalParam - pt;
 			m_vXit = m_vFinalParam;
 			m_vXit -= m_vPt;
 			LOG_EXPR_EXT_DESC(m_vXit, "m_vXit = m_vFinalParam - m_vPt");
@@ -117,27 +117,27 @@ const CVectorN<>& CPowellOptimizer::Optimize(const CVectorN<>& vInit)
 		END_LOG_SECTION();	// Iteration
 	}
 	
-	END_LOG_SECTION();	// CPowellOptimizer::Optimize
+	END_LOG_SECTION();	// PowellOptimizer::Optimize
 
 	return m_vFinalParam;
 
-}	// CPowellOptimizer::Optimize
+}	// PowellOptimizer::Optimize
 
 
 
 //////////////////////////////////////////////////////////////////////
-// CPowellOptimizer::IterateOverDirectionSet
+// PowellOptimizer::IterateOverDirectionSet
 // 
 // iterates over direction set once, returning the direction of
 //		biggest change
 // 
 //////////////////////////////////////////////////////////////////////
-int CPowellOptimizer::IterateOverDirectionSet(REAL &del)
+int PowellOptimizer::IterateOverDirectionSet(REAL &del)
 {
 	int nBigDir = 0;
 	del = 0.0;
 
-	BEGIN_LOG_SECTION_("CPowellOptimizer::IterateOverDirectionSet");
+	BEGIN_LOG_SECTION_("PowellOptimizer::IterateOverDirectionSet");
 
 	// in each iteration, loop over all directions in the set
 	int nDim = m_mDirections.GetCols();
@@ -154,7 +154,7 @@ int CPowellOptimizer::IterateOverDirectionSet(REAL &del)
 		LOG_EXPR_EXT_DESC(m_mDirections[nAtDir], "Line direction");
 
 		// now launch a Brent optimization
-		REAL lambda = m_optimizeBrent.Optimize(CBrentOptimizer::GetInitZero())[0];
+		REAL lambda = m_optimizeBrent.Optimize(BrentOptimizer::GetInitZero())[0];
 		LOG_EXPR(lambda);
 
 		// set the final value
@@ -162,7 +162,7 @@ int CPowellOptimizer::IterateOverDirectionSet(REAL &del)
 
 		// update the current point
 		// m_vFinalParam += lambda * m_lineFunction.GetDirection();
-		// static CVectorN<> m_vScaledDir;
+		// static VectorN<> m_vScaledDir;
 		m_vScaledDir = m_lineFunction.GetDirection();
 		m_vScaledDir *= (fabs(lambda) > DEFAULT_EPSILON) 
 			? lambda : DEFAULT_EPSILON;
@@ -186,17 +186,17 @@ int CPowellOptimizer::IterateOverDirectionSet(REAL &del)
 
 	return nBigDir;
 
-}	// CPowellOptimizer::IterateOverDirectionSet
+}	// PowellOptimizer::IterateOverDirectionSet
 
 
 //////////////////////////////////////////////////////////////////////
-// CPowellOptimizer::FindNewDirection
+// PowellOptimizer::FindNewDirection
 // 
 // determines a new direction to add to the direction set
 //////////////////////////////////////////////////////////////////////
-void CPowellOptimizer::FindNewDirection(REAL fp, REAL fptt, REAL del, int nBigDir)
+void PowellOptimizer::FindNewDirection(REAL fp, REAL fptt, REAL del, int nBigDir)
 {
-	BEGIN_LOG_SECTION_("CPowellOptimizer::FindNewDirection");
+	BEGIN_LOG_SECTION_("PowellOptimizer::FindNewDirection");
 
 	// compute the t parameter to determine the brent optimization parameter
 	REAL t = (REAL) 2.0 
@@ -214,7 +214,7 @@ void CPowellOptimizer::FindNewDirection(REAL fp, REAL fptt, REAL del, int nBigDi
 		LOG_EXPR_EXT_DESC(m_vXit, "Line direction (t &lt; 0.0)");
 
 		// now launch a Brent optimization
-		REAL lambda = m_optimizeBrent.Optimize(CBrentOptimizer::GetInitZero())[0];
+		REAL lambda = m_optimizeBrent.Optimize(BrentOptimizer::GetInitZero())[0];
 		LOG_EXPR(lambda);
 
 		// update the current point
@@ -237,5 +237,5 @@ void CPowellOptimizer::FindNewDirection(REAL fp, REAL fptt, REAL del, int nBigDi
 
 	END_LOG_SECTION();
 
-}	// CPowellOptimizer::FindNewDirection
+}	// PowellOptimizer::FindNewDirection
 

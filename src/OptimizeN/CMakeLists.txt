@@ -32,7 +32,7 @@ set(OPTIMIZEN_HEADERS
     include/UtilMacros.h
     include/VectorN.h
     include/VectorOps.h
-    include/mfc_compat.h
+    include/optimize_types.h
     stdafx.h
 )
 

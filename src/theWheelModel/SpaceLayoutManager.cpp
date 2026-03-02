@@ -68,7 +68,7 @@ const REAL RELAX_NEW_GAIN_FACTOR_SUBTHRESHOLD = 0.8f;
 CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 	// constructs an energy function object for the associated space 
 	//		view
-	: CObjectiveFunction(TRUE)
+	: ObjectiveFunction(TRUE)
 	, m_pSpace(pSpace)
 
 	, m_KPos(K_POS)
@@ -95,11 +95,11 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 	m_pStateVector = new CSpaceStateVector(this->m_pSpace);
 
 	// create and initialize the Powell optimizer
-	m_pPowellOptimizer = new CPowellOptimizer(this);
+	m_pPowellOptimizer = new PowellOptimizer(this);
 	m_pPowellOptimizer->SetTolerance(TOLERANCE);
 
 	// create and initialize the conjugate gradient optimizer
-	CConjGradOptimizer *pCGO = new CConjGradOptimizer(this);
+	ConjGradOptimizer *pCGO = new ConjGradOptimizer(this);
 	pCGO->SetLineToleranceEqual(false);
 	pCGO->SetTolerance(1e-3f);
 	pCGO->GetBrentOptimizer().SetTolerance(1e-4f);
@@ -108,7 +108,7 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 	m_pConjGradOptimizer = pCGO;
 
 	// create and initialize the gradient descent optimizer
-	m_pGradDescOptimizer = new CGradDescOptimizer(this);
+	m_pGradDescOptimizer = new GradDescOptimizer(this);
 	m_pGradDescOptimizer->SetTolerance(TOLERANCE);
 
 	// create and initialize the dfp optimizer
@@ -293,7 +293,7 @@ void
 	m_nEvaluations = 0;
 
 	// form the partial state vector
-	CVectorN<> vPartState;
+	VectorN<> vPartState;
 	vPartState.SetElements(GetStateDim() - m_nConstNodes * 2,
 		&m_vState[m_nConstNodes * 2], FALSE);
 
@@ -514,8 +514,8 @@ void
 
 //////////////////////////////////////////////////////////////////////
 REAL 
-	CSpaceLayoutManager::operator()(const CVectorN<REAL>& vInput,
-			CVectorN<> *pGrad) const
+	CSpaceLayoutManager::operator()(const VectorN<REAL>& vInput,
+			VectorN<> *pGrad) const
 	// evaluates the energy function at the given point
 {
 	// reset the energy

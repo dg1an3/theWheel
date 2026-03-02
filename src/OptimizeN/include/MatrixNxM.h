@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// MatrixNxM.h: declaration and definition of the CMatrixNxM template class.
+// MatrixNxM.h: declaration and definition of the MatrixNxM template class.
 //
 // Copyright (C) 1999-2006 Derek G Lane
 // $Id: MatrixNxM.h,v 1.1 2007/05/09 01:45:49 Derek Lane Exp $
@@ -12,12 +12,12 @@
 #include "MatrixOps.h"
 
 //////////////////////////////////////////////////////////////////////
-// class CMatrixNxM<TYPE>
+// class MatrixNxM<TYPE>
 //
 // represents a non-square matrix with type given.
 //////////////////////////////////////////////////////////////////////
 template<class TYPE = REAL>
-class CMatrixNxM
+class MatrixNxM
 {
 	// counts number of columns
 	int m_nColumns;
@@ -33,13 +33,13 @@ class CMatrixNxM
 
 public:
 	// constructors / destructor
-	CMatrixNxM();
-	explicit CMatrixNxM(int nCols, int nRows);
-	CMatrixNxM(const CMatrixNxM& fromMatrix);
-	~CMatrixNxM();
+	MatrixNxM();
+	explicit MatrixNxM(int nCols, int nRows);
+	MatrixNxM(const MatrixNxM& fromMatrix);
+	~MatrixNxM();
 
 	// assignment operator
-	CMatrixNxM& operator=(const CMatrixNxM<TYPE>& fromMatrix);
+	MatrixNxM& operator=(const MatrixNxM<TYPE>& fromMatrix);
 
 	// SetIdentity -- sets the matrix to an identity matrix
 	void SetIdentity();
@@ -67,13 +67,13 @@ public:
 
 	// IsApproxEqual -- tests for approximate equality using the EPS
 	//		defined at the top of this file
-	bool IsApproxEqual(const CMatrixNxM& m, TYPE epsilon = DEFAULT_EPSILON) const;
+	bool IsApproxEqual(const MatrixNxM& m, TYPE epsilon = DEFAULT_EPSILON) const;
 
 	// in-place operators
-	CMatrixNxM& operator+=(const CMatrixNxM& mRight);
-	CMatrixNxM& operator-=(const CMatrixNxM& mRight);
-	CMatrixNxM& operator*=(const TYPE& scale);
-	CMatrixNxM& operator*=(const CMatrixNxM& mRight);
+	MatrixNxM& operator+=(const MatrixNxM& mRight);
+	MatrixNxM& operator-=(const MatrixNxM& mRight);
+	MatrixNxM& operator*=(const TYPE& scale);
+	MatrixNxM& operator*=(const MatrixNxM& mRight);
 
 	// Transpose -- transposes elements of the matrix
 	void Transpose();
@@ -90,24 +90,24 @@ protected:
 	// SetElements -- sets the elements to an external pointer
 	void SetElements(int nCols, int nRows, TYPE *pElements, bool bFreeElements);
 
-};	// class CMatrixNxM
+};	// class MatrixNxM
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE>::CMatrixNxM()
+MatrixNxM<TYPE>::MatrixNxM()
 	// default constructor -- initializes to 0x0 matrix
 	: m_nColumns(0),
 		m_pColumns(NULL),
 		m_pElements(NULL),
 		m_bFreeElements(TRUE)
 {
-}	// CMatrixNxM<TYPE>::CMatrixNxM<TYPE>
+}	// MatrixNxM<TYPE>::MatrixNxM<TYPE>
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE>::CMatrixNxM(int nCols, int nRows)
+MatrixNxM<TYPE>::MatrixNxM(int nCols, int nRows)
 	// constructs a specific-dimensioned matrix
 	: m_nColumns(0),
 		m_pColumns(NULL),
@@ -116,12 +116,12 @@ CMatrixNxM<TYPE>::CMatrixNxM(int nCols, int nRows)
 {
 	Reshape(nCols, nRows);
 
-}	// CMatrixNxM<TYPE>::CMatrixNxM<TYPE>(int nCols, int nRows)
+}	// MatrixNxM<TYPE>::MatrixNxM<TYPE>(int nCols, int nRows)
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE>::CMatrixNxM(const CMatrixNxM<TYPE>& fromMatrix)
+MatrixNxM<TYPE>::MatrixNxM(const MatrixNxM<TYPE>& fromMatrix)
 	// copy constructor
 	: m_nColumns(0),
 		m_pColumns(NULL),
@@ -133,25 +133,25 @@ CMatrixNxM<TYPE>::CMatrixNxM(const CMatrixNxM<TYPE>& fromMatrix)
 
 	(*this) = fromMatrix;
 
-}	// CMatrixNxM<TYPE>::CMatrixNxM<TYPE>(
-	//		const CMatrixNxM<TYPE>& fromMatrix)
+}	// MatrixNxM<TYPE>::MatrixNxM<TYPE>(
+	//		const MatrixNxM<TYPE>& fromMatrix)
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE>::~CMatrixNxM()
+MatrixNxM<TYPE>::~MatrixNxM()
 	// destructor
 {
 	// frees any elements, if needed
 	SetElements(0, 0, NULL, TRUE);
 
-}	// CMatrixNxM<TYPE>::~CMatrixNxM<TYPE>
+}	// MatrixNxM<TYPE>::~MatrixNxM<TYPE>
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE>& 
-	CMatrixNxM<TYPE>::operator=(const CMatrixNxM<TYPE>& fromMatrix)
+MatrixNxM<TYPE>& 
+	MatrixNxM<TYPE>::operator=(const MatrixNxM<TYPE>& fromMatrix)
 	// assignment operator
 {
 	// checks the dimensions
@@ -166,13 +166,13 @@ CMatrixNxM<TYPE>&
 
 	return (*this);
 
-}	// CMatrixNxM<TYPE>::operator=
+}	// MatrixNxM<TYPE>::operator=
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 void 
-	CMatrixNxM<TYPE>::SetIdentity()
+	MatrixNxM<TYPE>::SetIdentity()
 	// sets the matrix to an identity matrix
 {
 	ZeroValues(&(*this)[0][0], GetRows() * GetCols());
@@ -189,7 +189,7 @@ void
 //////////////////////////////////////////////////////////////////
 template<class TYPE>
 void 
-	CMatrixNxM<TYPE>::Reshape(int nCols, int nRows, bool bPreserve)
+	MatrixNxM<TYPE>::Reshape(int nCols, int nRows, bool bPreserve)
 	// sets the dimension of the matrix
 {
 	// check if we need to reshape
@@ -234,7 +234,7 @@ void
 		ZeroValues(pNewElements, nCols * nRows);
 
 		// create a temporary matrix to hold the old elements
-		CMatrixNxM<TYPE> mTemp;
+		MatrixNxM<TYPE> mTemp;
 		mTemp.SetElements(nOldCols, nOldRows, pOldElements, TRUE);
 
 		// and assign
@@ -252,13 +252,13 @@ void
 		SetIdentity();
 	}
 
-}	// CMatrixNxM<TYPE>::Reshape
+}	// MatrixNxM<TYPE>::Reshape
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 CVectorN<TYPE>& 
-	CMatrixNxM<TYPE>::operator[](int nAtCol)
+	MatrixNxM<TYPE>::operator[](int nAtCol)
 	// retrieves a reference to a column vector
 {
 	// bounds check on the index
@@ -267,13 +267,13 @@ CVectorN<TYPE>&
 	// return a reference to the column vector
 	return m_pColumns[nAtCol];
 
-}	// CMatrixNxM<TYPE>::operator[]
+}	// MatrixNxM<TYPE>::operator[]
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 const CVectorN<TYPE>& 
-	CMatrixNxM<TYPE>::operator[](int nAtCol) const
+	MatrixNxM<TYPE>::operator[](int nAtCol) const
 	// retrieves a reference to a column vector
 {
 	// bounds check on the index
@@ -282,24 +282,24 @@ const CVectorN<TYPE>&
 	// return a reference to the column vector
 	return m_pColumns[nAtCol];
 
-}	// CMatrixNxM<TYPE>::operator[]
+}	// MatrixNxM<TYPE>::operator[]
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 int 
-	CMatrixNxM<TYPE>::GetCols() const
+	MatrixNxM<TYPE>::GetCols() const
 	// returns the number of columns of the matrix
 {
 	return m_nColumns;
 
-}	// CMatrixNxM<TYPE>::GetCols
+}	// MatrixNxM<TYPE>::GetCols
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 int 
-	CMatrixNxM<TYPE>::GetRows() const
+	MatrixNxM<TYPE>::GetRows() const
 	// returns the number of rows of the matrix
 {
 	if (m_pColumns)
@@ -309,37 +309,37 @@ int
 
 	return 0;
 
-}	// CMatrixNxM<TYPE>::GetRows
+}	// MatrixNxM<TYPE>::GetRows
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE>::operator TYPE *()
+MatrixNxM<TYPE>::operator TYPE *()
 	// TYPE * conversion -- returns a pointer to the first element
 	//		WARNING: this allows for no-bounds-checking access
 
 {
 	return &m_pElements[0];
 
-}	// CMatrixNxM<TYPE>::operator TYPE *
+}	// MatrixNxM<TYPE>::operator TYPE *
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE>::operator const TYPE *() const
+MatrixNxM<TYPE>::operator const TYPE *() const
 	// const TYPE * conversion -- returns a pointer to the first 
 	//		element.
 	//		WARNING: this allows for no-bounds-checking access
 {
 	return &m_pElements[0];
 
-}	// CMatrixNxM<TYPE>::operator const TYPE *
+}	// MatrixNxM<TYPE>::operator const TYPE *
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE>
 void 
-	CMatrixNxM<TYPE>::GetRow(int nAtRow, CVectorN<TYPE>& vRow) const
+	MatrixNxM<TYPE>::GetRow(int nAtRow, CVectorN<TYPE>& vRow) const
 	// constructs and returns a row vector
 {
 	// make the row vector the same size
@@ -351,13 +351,13 @@ void
 		vRow[nAtCol] = (*this)[nAtCol][nAtRow];
 	}
 
-}	// CMatrixNxM<TYPE>::GetRow
+}	// MatrixNxM<TYPE>::GetRow
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE>
 void 
-	CMatrixNxM<TYPE>::SetRow(int nAtRow, const CVectorN<TYPE>& vRow)
+	MatrixNxM<TYPE>::SetRow(int nAtRow, const CVectorN<TYPE>& vRow)
 	// sets the rows vector
 {
 	if (vRow.GetDim() == GetCols())
@@ -369,13 +369,13 @@ void
 		}
 	}
 
-}	// CMatrixNxM<TYPE>::SetRow
+}	// MatrixNxM<TYPE>::SetRow
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 bool 
-	CMatrixNxM<TYPE>::IsApproxEqual(const CMatrixNxM& m, TYPE epsilon) const
+	MatrixNxM<TYPE>::IsApproxEqual(const MatrixNxM& m, TYPE epsilon) const
 	// tests for approximate equality using the EPS 
 {
 	ASSERT(GetCols() == m.GetCols());
@@ -390,13 +390,13 @@ bool
 
 	return TRUE;
 
-}	// CMatrixNxM<TYPE>::IsApproxEqual
+}	// MatrixNxM<TYPE>::IsApproxEqual
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE>& 
-	CMatrixNxM<TYPE>::operator+=(const CMatrixNxM<TYPE>& mRight)
+MatrixNxM<TYPE>& 
+	MatrixNxM<TYPE>::operator+=(const MatrixNxM<TYPE>& mRight)
 	// in-place matrix addition; returns a reference to this
 {
 	ASSERT(GetCols() == mRight.GetCols());
@@ -407,13 +407,13 @@ CMatrixNxM<TYPE>&
 	// return a reference to this
 	return (*this);
 
-}	// CMatrixNxM<TYPE>::operator+=
+}	// MatrixNxM<TYPE>::operator+=
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE>& 
-	CMatrixNxM<TYPE>::operator-=(const CMatrixNxM<TYPE>& mRight)
+MatrixNxM<TYPE>& 
+	MatrixNxM<TYPE>::operator-=(const MatrixNxM<TYPE>& mRight)
 	// in-place matrix subtraction; returns a reference to 	this
 {
 	ASSERT(GetCols() == mRight.GetCols());
@@ -424,16 +424,16 @@ CMatrixNxM<TYPE>&
 	// return a reference to this
 	return (*this);
 
-}	// CMatrixNxM<TYPE>::operator-=
+}	// MatrixNxM<TYPE>::operator-=
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE>& 
-	CMatrixNxM<TYPE>::operator*=(const CMatrixNxM<TYPE>& mRight)
+MatrixNxM<TYPE>& 
+	MatrixNxM<TYPE>::operator*=(const MatrixNxM<TYPE>& mRight)
 	// in-place matrix multiplication; returns a reference to this
 {
-	CMatrixNxM<TYPE> mProduct = (*this) * mRight;
+	MatrixNxM<TYPE> mProduct = (*this) * mRight;
 
 	// and assign
 	Reshape(mProduct.GetCols(), mProduct.GetRows());
@@ -442,13 +442,13 @@ CMatrixNxM<TYPE>&
 	// return a reference to this
 	return (*this);
 
-}	// CMatrixNxM<TYPE>::operator*=
+}	// MatrixNxM<TYPE>::operator*=
 
 
 //////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE>& 
-	CMatrixNxM<TYPE>::operator*=(const TYPE& scale)
+MatrixNxM<TYPE>& 
+	MatrixNxM<TYPE>::operator*=(const TYPE& scale)
 	// in-place matrix multiplication; returns a reference to this
 {
 	MultValues(&(*this)[0][0], scale, GetCols() * GetRows());
@@ -456,13 +456,13 @@ CMatrixNxM<TYPE>&
 	// return a reference to this
 	return (*this);
 
-}	// CMatrixNxM<TYPE>::operator*=
+}	// MatrixNxM<TYPE>::operator*=
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 void 
-	CMatrixNxM<TYPE>::Transpose()
+	MatrixNxM<TYPE>::Transpose()
 	// transposes the matrix
 {
 	// allocate the elements of the transposed matrix
@@ -470,7 +470,7 @@ void
 	AllocValues(GetRows() * GetCols(), pElements);
 
 	// make the transposed matrix
-	CMatrixNxM<TYPE> mTranspose;
+	MatrixNxM<TYPE> mTranspose;
 	mTranspose.SetElements(GetRows(), GetCols(), pElements, FALSE);
 	
 	for (int nCol = 0; nCol < GetCols(); nCol++)
@@ -492,7 +492,7 @@ void
 //////////////////////////////////////////////////////////////////////
 template<> INLINE									
 void 
-	CMatrixNxM<float>::Transpose()					
+	MatrixNxM<float>::Transpose()					
 	// transposes the matrix
 {													
 	float *pElements = NULL;							
@@ -505,12 +505,12 @@ void
 
 	SetElements(GetRows(), GetCols(), pElements, true);
 
-}	// CMatrixNxM<TYPE>::Transpose
+}	// MatrixNxM<TYPE>::Transpose
 
 //////////////////////////////////////////////////////////////////////
 template<> INLINE									
 void 
-	CMatrixNxM<double>::Transpose()					
+	MatrixNxM<double>::Transpose()					
 	// transposes the matrix
 {							
 	double *pElements = NULL;							
@@ -523,7 +523,7 @@ void
 
 	SetElements(GetRows(), GetCols(), pElements, true);
 
-}	// CMatrixNxM<TYPE>::Transpose
+}	// MatrixNxM<TYPE>::Transpose
 
 #endif
 
@@ -533,7 +533,7 @@ void
 //////////////////////////////////////////////////////////////////////
 template<> INLINE
 bool 
-	CMatrixNxM<float>::Invert(bool bFlag)					
+	MatrixNxM<float>::Invert(bool bFlag)					
 	// invert the matrix, with full pivot or not???
 {															
 	ASSERT(GetRows() == GetCols());							
@@ -562,12 +562,12 @@ bool
 
 	return (stat == ippStsOk);								
 
-}	// CMatrixNxM<TYPE>::Invert
+}	// MatrixNxM<TYPE>::Invert
 
 //////////////////////////////////////////////////////////////////////
 template<> INLINE
 bool 
-	CMatrixNxM<double>::Invert(bool bFlag)					
+	MatrixNxM<double>::Invert(bool bFlag)					
 	// invert the matrix, with full pivot or not???
 {															
 	ASSERT(GetRows() == GetCols());							
@@ -596,14 +596,14 @@ bool
 
 	return (stat == ippStsOk);								
 
-}	// CMatrixNxM<TYPE>::Invert
+}	// MatrixNxM<TYPE>::Invert
 
 #endif
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
 void 
-	CMatrixNxM<TYPE>::SetElements(int nCols, int nRows, 
+	MatrixNxM<TYPE>::SetElements(int nCols, int nRows, 
 		TYPE *pElements, bool bFreeElements)
 	// sets the elements of the matrix
 {
@@ -645,14 +645,14 @@ void
 
 	m_bFreeElements = bFreeElements;
 
-}	// CMatrixNxM<TYPE>::SetElements
+}	// MatrixNxM<TYPE>::SetElements
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 bool 
-	operator==(const CMatrixNxM<TYPE>& mLeft, 
-		const CMatrixNxM<TYPE>& mRight)
+	operator==(const MatrixNxM<TYPE>& mLeft, 
+		const MatrixNxM<TYPE>& mRight)
 	// exact matrix equality
 {
 	// element-by-element comparison
@@ -669,91 +669,91 @@ bool
 
 	return true;
 
-}	// operator==(const CMatrixNxM<TYPE>&, const CMatrixNxM<TYPE>&)
+}	// operator==(const MatrixNxM<TYPE>&, const MatrixNxM<TYPE>&)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> __forceinline
 bool 
-	operator!=(const CMatrixNxM<TYPE>& mLeft, 
-		const CMatrixNxM<TYPE>& mRight)
+	operator!=(const MatrixNxM<TYPE>& mLeft, 
+		const MatrixNxM<TYPE>& mRight)
 	// exact matrix inequality
 {
 	return !(mLeft == mRight);
 
-}	// operator!=(const CMatrixNxM<TYPE>&, const CMatrixNxM<TYPE>&)
+}	// operator!=(const MatrixNxM<TYPE>&, const MatrixNxM<TYPE>&)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE> 
-	operator+(const CMatrixNxM<TYPE>& mLeft, 
-		const CMatrixNxM<TYPE>& mRight)
+MatrixNxM<TYPE> 
+	operator+(const MatrixNxM<TYPE>& mLeft, 
+		const MatrixNxM<TYPE>& mRight)
 	// matrix addition
 {
 	// create the product
-	CMatrixNxM<TYPE> mSum(mLeft);
+	MatrixNxM<TYPE> mSum(mLeft);
 	mSum += mRight;
 
 	// return the product
 	return mSum;
 
-}	// operator+(const CMatrixNxM<TYPE>&, const CMatrixNxM<TYPE>&)
+}	// operator+(const MatrixNxM<TYPE>&, const MatrixNxM<TYPE>&)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE> 
-	operator-(const CMatrixNxM<TYPE>& mLeft, 
-		const CMatrixNxM<TYPE>& mRight)
+MatrixNxM<TYPE> 
+	operator-(const MatrixNxM<TYPE>& mLeft, 
+		const MatrixNxM<TYPE>& mRight)
 	// matrix subtraction
 {
 	// create the difference
-	CMatrixNxM<TYPE> mDiff(mLeft);
+	MatrixNxM<TYPE> mDiff(mLeft);
 	mDiff -= mRight;
 
 	// return the difference
 	return mDiff;
 
-}	// operator-(const CMatrixNxM<TYPE>&, const CMatrixNxM<TYPE>&)
+}	// operator-(const MatrixNxM<TYPE>&, const MatrixNxM<TYPE>&)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE> 
-	operator*(const CMatrixNxM<TYPE>& mat, double scale)
+MatrixNxM<TYPE> 
+	operator*(const MatrixNxM<TYPE>& mat, double scale)
 	// matrix scalar multiplication
 {
 	// stored the product
-	CMatrixNxM<TYPE> mProduct(mat);
+	MatrixNxM<TYPE> mProduct(mat);
 	mProduct *= scale;
 
 	// return product
 	return mProduct;
 
-}	// operator*(const CMatrixNxM<TYPE>&, double scale)
+}	// operator*(const MatrixNxM<TYPE>&, double scale)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE> 
-	operator*(double scale, const CMatrixNxM<TYPE>& mat)
+MatrixNxM<TYPE> 
+	operator*(double scale, const MatrixNxM<TYPE>& mat)
 	// matrix scalar multiplication, contrariwise
 {
 	// stored the product
-	CMatrixNxM<TYPE> mProduct(mat);
+	MatrixNxM<TYPE> mProduct(mat);
 	mProduct *= scale;
 
 	// return product
 	return mProduct;
 
-}	// operator*(double scale, const CMatrixNxM<TYPE>&)
+}	// operator*(double scale, const MatrixNxM<TYPE>&)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
 CVectorN<TYPE> 
-	operator*(const CMatrixNxM<TYPE>& mat, const CVectorN<TYPE>& v)
+	operator*(const MatrixNxM<TYPE>& mat, const CVectorN<TYPE>& v)
 	// matrix-vector multiplication
 {
 	// stored the product
@@ -765,7 +765,7 @@ CVectorN<TYPE>
 	// return the product
 	return vProduct;
 
-}	// operator*(const CMatrixNxM<TYPE>&, const CVectorN<TYPE>&)
+}	// operator*(const MatrixNxM<TYPE>&, const CVectorN<TYPE>&)
 
 
 #ifdef NEVER // USE_IPP
@@ -773,7 +773,7 @@ CVectorN<TYPE>
 //////////////////////////////////////////////////////////////////////
 template<> INLINE
 CVectorN<float> 
-	operator*(const CMatrixNxM<float>& mat,
+	operator*(const MatrixNxM<float>& mat,
 			const CVectorN<float>& v)
 	// matrix-vector multiplication for float override
 {											
@@ -789,12 +789,12 @@ CVectorN<float>
 	// return the product
 	return vProduct;
 
-}	// operator*(const CMatrixNxM<TYPE>&, const CVectorN<TYPE>&)
+}	// operator*(const MatrixNxM<TYPE>&, const CVectorN<TYPE>&)
 
 //////////////////////////////////////////////////////////////////////
 template<> INLINE
 CVectorN<double> 
-	operator*(const CMatrixNxM<double>& mat,
+	operator*(const MatrixNxM<double>& mat,
 			const CVectorN<double>& v)
 	// matrix-vector multiplication for float override
 {											
@@ -810,30 +810,30 @@ CVectorN<double>
 	// return the product
 	return vProduct;
 
-}	// operator*(const CMatrixNxM<TYPE>&, const CVectorN<TYPE>&)
+}	// operator*(const MatrixNxM<TYPE>&, const CVectorN<TYPE>&)
 
 #endif
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE> INLINE
-CMatrixNxM<TYPE> operator*(const CMatrixNxM<TYPE>& mLeft, 
-									const CMatrixNxM<TYPE>& mRight)
+MatrixNxM<TYPE> operator*(const MatrixNxM<TYPE>& mLeft, 
+									const MatrixNxM<TYPE>& mRight)
 	// matrix multiplication
 {
 	// create the product
-	CMatrixNxM<TYPE> mProduct(mRight.GetCols(), mLeft.GetRows());
+	MatrixNxM<TYPE> mProduct(mRight.GetCols(), mLeft.GetRows());
 	MultMatrixMatrix(mProduct, mLeft, mRight);
 
 	// return the product
 	return mProduct;
 
-}	// operator*(const CMatrixNxM<TYPE>&, const CMatrixNxM<TYPE>&)
+}	// operator*(const MatrixNxM<TYPE>&, const MatrixNxM<TYPE>&)
 
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
-TYPE Determinant(const CMatrixNxM<TYPE>& mMat) 
+TYPE Determinant(const MatrixNxM<TYPE>& mMat) 
 	// computes the determinant of the matrix, for square matrices
 	// TODO: move this to MatrixOps
 	// TODO: implement IPP determinant
@@ -845,7 +845,7 @@ TYPE Determinant(const CMatrixNxM<TYPE>& mMat)
 		TYPE det = 0.0;
 		for (int nAtCol = 0; nAtCol < mMat.GetCols(); nAtCol++) 
 		{
-			CMatrixNxM<TYPE> mMinor(mMat.GetCols()-1, mMat.GetRows()-1);
+			MatrixNxM<TYPE> mMinor(mMat.GetCols()-1, mMat.GetRows()-1);
 			for (int nAtRow = 1; nAtRow < mMat.GetRows(); nAtRow++) 
 			{
 				int nAtMinorCol = 0;
@@ -871,7 +871,7 @@ TYPE Determinant(const CMatrixNxM<TYPE>& mMat)
 	
 	return mMat[0][0];
 
-}	// CMatrixNxM<TYPE>::Determinant
+}	// MatrixNxM<TYPE>::Determinant
 
 
 // operator overloads for serialization
@@ -880,7 +880,7 @@ TYPE Determinant(const CMatrixNxM<TYPE>& mMat)
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
 CArchive& 
-	operator<<(CArchive &ar, CMatrixNxM<TYPE> m)
+	operator<<(CArchive &ar, MatrixNxM<TYPE> m)
 	// matrix serialization in
 {
 	// serialize the dimension
@@ -893,12 +893,12 @@ CArchive&
 	// return the archive object
 	return ar;
 
-}	// operator<<(CArchive &ar, CMatrixNxM<TYPE> m)
+}	// operator<<(CArchive &ar, MatrixNxM<TYPE> m)
 
 //////////////////////////////////////////////////////////////////////
 template<class TYPE>
 CArchive& 
-	operator>>(CArchive &ar, CMatrixNxM<TYPE>& m)
+	operator>>(CArchive &ar, MatrixNxM<TYPE>& m)
 	// matrix serialization out
 {
 	// serialize the dimension
@@ -912,7 +912,7 @@ CArchive&
 	// return the archive object
 	return ar;
 
-}	// operator>>(CArchive &ar, CMatrixNxM<TYPE>& m)
+}	// operator>>(CArchive &ar, MatrixNxM<TYPE>& m)
 
 #endif	// __AFX_H__
 
@@ -922,7 +922,7 @@ CArchive&
 ////////////////////////////////////////////////////////////////////////
 //template<typename TYPE>
 //void 
-//	LogExprExt(const CMatrixNxM<TYPE>& mMat, 
+//	LogExprExt(const MatrixNxM<TYPE>& mMat, 
 //			const char *pszName, const char *pszModule)
 //	// helper function for XML logging of matrices
 //{
@@ -959,3 +959,7 @@ CArchive&
 //}	// LogExprExt
 //
 //#endif	// USE_XMLLOGGING
+
+// Backward compatibility
+template<class TYPE = REAL>
+using CMatrixNxM = MatrixNxM<TYPE>;

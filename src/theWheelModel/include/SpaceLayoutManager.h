@@ -29,7 +29,7 @@ const int MAX_STATE_DIM = 100;
 // class that represents the energy function for a CSpaceView given
 //		its state vector
 //////////////////////////////////////////////////////////////////////
-class CSpaceLayoutManager : public CObjectiveFunction
+class CSpaceLayoutManager : public ObjectiveFunction
 {
 public:
 	// construct the energy function, given the CSpaceView to which it
@@ -79,8 +79,8 @@ public:
 	virtual void LoadSizesLinks(int nConstNodes, int nNodeCount);
 
 	// evaluates the energy function
-	virtual REAL operator()(const CVectorN<>& vInput, 
-		CVectorN<> *pGrad = NULL) const;
+	virtual REAL operator()(const VectorN<>& vInput, 
+		VectorN<> *pGrad = NULL) const;
 
 protected:
 	// pointer to the energy function's space
@@ -90,26 +90,26 @@ protected:
 	int m_nConstNodes;
 
 	// the optimizer for the layout
-	COptimizer *m_pPowellOptimizer;
-	COptimizer *m_pConjGradOptimizer;
-	COptimizer *m_pGradDescOptimizer;
-	COptimizer *m_pDFPOptimizer;
+	Optimizer *m_pPowellOptimizer;
+	Optimizer *m_pConjGradOptimizer;
+	Optimizer *m_pGradDescOptimizer;
+	Optimizer *m_pDFPOptimizer;
 
 	// pointer to the optimizer to be used
-	COptimizer *m_pOptimizer;
+	Optimizer *m_pOptimizer;
 
 	// caches energy value for the previous input vector
 	mutable REAL m_energy;
 	mutable REAL m_energyConst;
 
 	// holds the current state
-	mutable CVectorN<> m_vState;
+	mutable VectorN<> m_vState;
 
 	// holds constant positions
-	mutable CVectorN<> m_vConstPositions;
+	mutable VectorN<> m_vConstPositions;
 
 	// caches the gradient for the previous input vector
-	mutable CVectorN<> m_vGrad;
+	mutable VectorN<> m_vGrad;
 
 	// stores the view sizes for quick access
 	REAL (*m_mSS)[MAX_STATE_DIM];

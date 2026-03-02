@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// ObjectiveFunction.h: interface for the CObjectiveFunction
+// ObjectiveFunction.h: interface for the ObjectiveFunction
 //		template base class
 //
 // Copyright (C) 1996-2001
@@ -16,45 +16,48 @@
 #include <MatrixNxM.h>
 
 //////////////////////////////////////////////////////////////////////
-// class CObjectiveFunction
+// class ObjectiveFunction
 // 
 // base class template for all objective functions.  allows the 
 //		objective function to define a gradient, but a flag is provided
 //		in the case that no gradient is available
 //////////////////////////////////////////////////////////////////////
-class CObjectiveFunction : public CObject
+class ObjectiveFunction
 {
 public:
 	// constructs an objective function; gets flag to indicate
 	//		whether gradient information is available
-	CObjectiveFunction(BOOL bHasGradientInfo);
+	ObjectiveFunction(BOOL bHasGradientInfo);
+
+	// virtual destructor
+	virtual ~ObjectiveFunction() = default;
 
 	// evaluates the objective function
-	virtual REAL operator()(const CVectorN<>& vInput, 
-		CVectorN<> *pGrad = NULL) const = 0;
+	virtual REAL operator()(const VectorN<>& vInput, 
+		VectorN<> *pGrad = NULL) const = 0;
 
 	// whether gradient information is available
 	BOOL HasGradientInfo() const;
 
 	// transform function from linear to other parameter space
-	virtual void Transform(CVectorN<> *pvInOut) const;
-	virtual void dTransform(CVectorN<> *pvInOut) const;
-	virtual void InvTransform(CVectorN<> *pvInOut) const;
+	virtual void Transform(VectorN<> *pvInOut) const;
+	virtual void dTransform(VectorN<> *pvInOut) const;
+	virtual void InvTransform(VectorN<> *pvInOut) const;
 
 	// function to evaluate gradiant at a point (uses difference method)
-	void Gradient(const CVectorN<>& vIn, REAL epsilon, 
-				CVectorN<>& vGrad_out) const;
+	void Gradient(const VectorN<>& vIn, REAL epsilon, 
+				VectorN<>& vGrad_out) const;
 
 	// function to evaluate hessian at a point (uses difference method)
-	void Hessian(const CVectorN<>& vIn, REAL epsilon, 
-				CMatrixNxM<>& mHess_out) const;
+	void Hessian(const VectorN<>& vIn, REAL epsilon, 
+				MatrixNxM<>& mHess_out) const;
 
 	// sets the OF to use adaptive variance
-	void SetAdaptiveVariance(CVectorN<> *pAV, REAL varMin, REAL varMax);
+	void SetAdaptiveVariance(VectorN<> *pAV, REAL varMin, REAL varMax);
 
 protected:
 	// pointer to adaptive variance vector, if enabled
-	CVectorN<> *m_pAV;
+	VectorN<> *m_pAV;
 
 	// min and max for AV
 	REAL m_varMin;
@@ -64,6 +67,9 @@ private:
 	// flag to indicate that gradient information is available
 	BOOL m_bHasGradientInfo;
 
-};	// class CObjectiveFunction
+};	// class ObjectiveFunction
+
+// Backward compatibility
+using CObjectiveFunction = ObjectiveFunction;
 
 #endif
