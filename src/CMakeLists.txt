@@ -66,9 +66,6 @@ if(MSVC)
     add_subdirectory ("theWheel")
 endif()
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/OptimizeND")
-    add_subdirectory ("OptimizeND")
-endif()
 add_subdirectory ("theWheelModelTests")
 
 # wxWidgets application (macOS/Linux)
