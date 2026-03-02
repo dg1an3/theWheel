@@ -66,6 +66,11 @@ if(MSVC)
     add_subdirectory ("theWheel")
 endif()
 
+# ANGLE test harness (Windows only, requires theWheelGL)
+if(MSVC AND TARGET theWheelGL)
+    add_subdirectory ("theWheelGLTest")
+endif()
+
 add_subdirectory ("theWheelModelTests")
 
 # wxWidgets application (macOS/Linux)
