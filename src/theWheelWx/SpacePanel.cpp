@@ -39,6 +39,7 @@ wxBEGIN_EVENT_TABLE(SpacePanel, wxPanel)
     EVT_LEFT_DCLICK(SpacePanel::OnLeftDClick)
     EVT_LEFT_UP(SpacePanel::OnLeftUp)
     EVT_MOTION(SpacePanel::OnMotion)
+    EVT_LEAVE_WINDOW(SpacePanel::OnLeaveWindow)
     EVT_MOUSEWHEEL(SpacePanel::OnMouseWheel)
     EVT_SIZE(SpacePanel::OnSize)
 wxEND_EVENT_TABLE()
@@ -71,6 +72,8 @@ SpacePanel::SpacePanel(wxWindow* parent)
     , m_dragging(false)
     , m_panning(false)
     , m_pDragNode(nullptr)
+    , m_currentMousePos(0, 0)
+    , m_mouseInWindow(false)
 {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
 #ifndef USE_OPENGL_RENDERER
@@ -139,6 +142,42 @@ void SpacePanel::UpdateSprings()
         nv.activationSpring.Update(dt, 2);
         nv.springActivation = nv.activationSpring.GetPosition();
         if (nv.springActivation < 0.0f) nv.springActivation = 0.0f;
+    }
+
+    // Proximity hover: activate nearest node when mouse is in the window
+    // but not over any node
+    if (m_mouseInWindow && !m_dragging && !m_panning &&
+        !HitTestNode(m_currentMousePos))
+    {
+        CNode* pNearest = nullptr;
+        double minDist = 1e9;
+
+        for (int i = 0; i < m_pSpace->GetNodeCount(); i++) {
+            CNode* pNode = m_pSpace->GetNodeAt(i);
+            if (pNode->GetIsSubThreshold()) continue;
+
+            auto it = m_nodeViews.find(pNode);
+            if (it == m_nodeViews.end()) continue;
+
+            wxPoint nodeScreen = WorldToScreen(it->second.positionSpring.GetPosition());
+            double dx = m_currentMousePos.x - nodeScreen.x;
+            double dy = m_currentMousePos.y - nodeScreen.y;
+            double dist = sqrt(dx * dx + dy * dy);
+            if (dist < minDist) {
+                minDist = dist;
+                pNearest = pNode;
+            }
+        }
+
+        if (pNearest) {
+            // Activation falls off linearly over HOVER_RADIUS screen pixels
+            const double HOVER_RADIUS = 200.0;
+            double proximity = std::max(0.0, (HOVER_RADIUS - minDist) / HOVER_RADIUS);
+            if (proximity > 0.0) {
+                m_pSpace->ActivateNode(pNearest, R(proximity * 0.008));
+                m_pSpace->NormalizeNodes();
+            }
+        }
     }
 }
 
@@ -299,9 +338,16 @@ void SpacePanel::OnLeftUp(wxMouseEvent& event)
     }
 }
 
+void SpacePanel::OnLeaveWindow(wxMouseEvent& event)
+{
+    m_mouseInWindow = false;
+}
+
 void SpacePanel::OnMotion(wxMouseEvent& event)
 {
     wxPoint pos = event.GetPosition();
+    m_currentMousePos = pos;
+    m_mouseInWindow = true;
 
     if (m_dragging && m_pDragNode) {
         // Move the node
@@ -473,8 +519,8 @@ void SpacePanel::DrawNode(wxDC& dc, CNode* pNode, const NodeViewData& viewData)
     if (r > 15 && pNode->GetName().GetLength() > 0) {
         dc.SetTextForeground(TEXT_COLOR);
 
-        // Scale font size with node size
-        int fontSize = std::max(8, std::min(r / 3, 14));
+        // Scale font size with node size (proportional, no upper cap)
+        int fontSize = std::max(8, r / 3);
         wxFont font(fontSize, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
         dc.SetFont(font);
 
@@ -505,7 +551,7 @@ void SpacePanel::DrawNode(wxDC& dc, CNode* pNode, const NodeViewData& viewData)
 
     // Draw description text for sufficiently activated nodes
     if (r > 30 && act > 0.08f && pNode->GetDescription().GetLength() > 0) {
-        int descFontSize = std::max(7, std::min(r / 4, 11));
+        int descFontSize = std::max(7, r / 4);
         wxFont descFont(descFontSize, wxFONTFAMILY_SWISS,
                         wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
         dc.SetFont(descFont);
@@ -660,7 +706,7 @@ void SpacePanel::DrawGLTextOverlay(wxDC& dc)
         wxPoint center = WorldToScreen(it->second.positionSpring.GetPosition());
 
         if (pNode->GetName().GetLength() > 0) {
-            int fontSize = std::max(8, std::min(r / 3, 14));
+            int fontSize = std::max(8, r / 3);
             wxFont font(fontSize, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL,
                         wxFONTWEIGHT_BOLD);
             dc.SetFont(font);
@@ -681,7 +727,7 @@ void SpacePanel::DrawGLTextOverlay(wxDC& dc)
 
         // Description
         if (act > 0.1f && pNode->GetDescription().GetLength() > 0 && r > 30) {
-            int descFontSize = std::max(7, std::min(r / 4, 11));
+            int descFontSize = std::max(7, r / 4);
             wxFont descFont(descFontSize, wxFONTFAMILY_SWISS,
                             wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
             dc.SetFont(descFont);

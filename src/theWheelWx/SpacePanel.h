@@ -68,6 +68,7 @@ private:
     void OnLeftDClick(wxMouseEvent& event);
     void OnLeftUp(wxMouseEvent& event);
     void OnMotion(wxMouseEvent& event);
+    void OnLeaveWindow(wxMouseEvent& event);
     void OnMouseWheel(wxMouseEvent& event);
     void OnSize(wxSizeEvent& event);
 
@@ -107,6 +108,8 @@ private:
     bool m_panning;
     CNode* m_pDragNode;
     wxPoint m_lastMousePos;
+    wxPoint m_currentMousePos;
+    bool m_mouseInWindow;
 
     // Per-node animation data
     std::map<CNode*, NodeViewData> m_nodeViews;
