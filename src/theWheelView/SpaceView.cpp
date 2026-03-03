@@ -965,15 +965,19 @@ void CSpaceView::OnPaint()
 		{
 			HDC hWndDC = ::GetDC(m_hWnd);
 			if (hWndDC) {
-				HFONT hFont = (HFONT)::GetStockObject(DEFAULT_GUI_FONT);
-				HFONT hOldFont = (HFONT)::SelectObject(hWndDC, hFont);
+				HFONT hOldFont = (HFONT)::GetCurrentObject(hWndDC, OBJ_FONT);
 				::SetBkMode(hWndDC, TRANSPARENT);
 				for (auto pNode : arrNodeViewsToDraw) {
 					if (!pNode->GetIsSubThreshold() && pNode->GetView() != NULL) {
 						CNodeView* pNV = (CNodeView*)pNode->GetView();
 						if (pNV->HasDrawableArea()) {
-							RECT rect = pNV->GetInnerRECT();
-							rect.top += (rect.bottom - rect.top) / 4;
+							RECT inner = pNV->GetInnerRECT();
+							int nodeH = inner.bottom - inner.top;
+							int titleFontH = __max(9, nodeH / 3);
+							HFONT hFont = (HFONT)*pNV->GetTitleFont(titleFontH);
+							HFONT hPrev = (HFONT)::SelectObject(hWndDC, hFont);
+							RECT rect = inner;
+							rect.top += nodeH / 4;
 							RECT rectShadow = { rect.left+1, rect.top+1, rect.right+1, rect.bottom+1 };
 							::SetTextColor(hWndDC, RGB(0, 0, 0));
 							::DrawText(hWndDC, pNode->GetName(), -1, &rectShadow,
@@ -981,18 +985,20 @@ void CSpaceView::OnPaint()
 							::SetTextColor(hWndDC, RGB(255, 255, 255));
 							::DrawText(hWndDC, pNode->GetName(), -1, &rect,
 								DT_CENTER | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+							::SelectObject(hWndDC, hPrev);
 							if (pNode->GetActivation() > 0.1
 								&& pNode->GetDescription().GetLength() > 0) {
-								RECT descRect = pNV->GetInnerRECT();
-								descRect.top += (descRect.bottom - descRect.top) / 2;
+								RECT descRect = inner;
+								descRect.top += nodeH / 2;
 								descRect.left += 2; descRect.right -= 2;
 								if (descRect.bottom - descRect.top > 12) {
-									HFONT hSmallFont = (HFONT)::GetStockObject(ANSI_VAR_FONT);
-									HFONT hPrev = (HFONT)::SelectObject(hWndDC, hSmallFont);
+									int descFontH = __max(8, nodeH / 4);
+									HFONT hDescFont = (HFONT)*pNV->GetTitleFont(descFontH);
+									HFONT hPrevDesc = (HFONT)::SelectObject(hWndDC, hDescFont);
 									::SetTextColor(hWndDC, RGB(40, 40, 40));
 									::DrawText(hWndDC, pNode->GetDescription(), -1, &descRect,
 										DT_CENTER | DT_TOP | DT_WORDBREAK);
-									::SelectObject(hWndDC, hPrev);
+									::SelectObject(hWndDC, hPrevDesc);
 								}
 							}
 						}
@@ -1131,8 +1137,7 @@ void CSpaceView::OnPaint()
 				HDC hdc = NULL;
 				if (SUCCEEDED(lpd3dSurf->GetDC(&hdc)))
 				{
-					HFONT hFont = (HFONT)::GetStockObject(DEFAULT_GUI_FONT);
-					HFONT hOldFont = (HFONT)::SelectObject(hdc, hFont);
+					HFONT hOldFont = (HFONT)::GetCurrentObject(hdc, OBJ_FONT);
 					::SetBkMode(hdc, TRANSPARENT);
 
 					for (auto pNode : arrNodeViewsToDraw)
@@ -1142,8 +1147,13 @@ void CSpaceView::OnPaint()
 							CNodeView *pNV = (CNodeView *) pNode->GetView();
 							if (pNV->HasDrawableArea())
 							{
-								RECT rect = pNV->GetInnerRECT();
-								rect.top += (rect.bottom - rect.top) / 4;
+								RECT inner = pNV->GetInnerRECT();
+								int nodeH = inner.bottom - inner.top;
+								int titleFontH = __max(9, nodeH / 3);
+								HFONT hFont = (HFONT)*pNV->GetTitleFont(titleFontH);
+								HFONT hPrev = (HFONT)::SelectObject(hdc, hFont);
+								RECT rect = inner;
+								rect.top += nodeH / 4;
 								// draw black shadow
 								RECT rectShadow = { rect.left+1, rect.top+1, rect.right+1, rect.bottom+1 };
 								::SetTextColor(hdc, RGB(0, 0, 0));
@@ -1153,23 +1163,25 @@ void CSpaceView::OnPaint()
 								::SetTextColor(hdc, RGB(255, 255, 255));
 								::DrawText(hdc, pNode->GetName(), -1, &rect,
 									DT_CENTER | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+								::SelectObject(hdc, hPrev);
 
 								// draw description below name for activated nodes
 								if (pNode->GetActivation() > 0.1
 									&& pNode->GetDescription().GetLength() > 0)
 								{
-									RECT descRect = pNV->GetInnerRECT();
-									descRect.top += (descRect.bottom - descRect.top) / 2;
+									RECT descRect = inner;
+									descRect.top += nodeH / 2;
 									descRect.left += 2;
 									descRect.right -= 2;
 									if (descRect.bottom - descRect.top > 12)
 									{
-										HFONT hSmallFont = (HFONT)::GetStockObject(ANSI_VAR_FONT);
-										HFONT hPrev = (HFONT)::SelectObject(hdc, hSmallFont);
+										int descFontH = __max(8, nodeH / 4);
+										HFONT hDescFont = (HFONT)*pNV->GetTitleFont(descFontH);
+										HFONT hPrevDesc = (HFONT)::SelectObject(hdc, hDescFont);
 										::SetTextColor(hdc, RGB(40, 40, 40));
 										::DrawText(hdc, pNode->GetDescription(), -1, &descRect,
 											DT_CENTER | DT_TOP | DT_WORDBREAK);
-										::SelectObject(hdc, hPrev);
+										::SelectObject(hdc, hPrevDesc);
 									}
 								}
 							}
@@ -1194,8 +1206,7 @@ void CSpaceView::OnPaint()
 			HDC hWndDC = ::GetDC(m_hWnd);
 			if (hWndDC)
 			{
-				HFONT hFont = (HFONT) ::GetStockObject(DEFAULT_GUI_FONT);
-				HFONT hOldFont = (HFONT) ::SelectObject(hWndDC, hFont);
+				HFONT hOldFont = (HFONT)::GetCurrentObject(hWndDC, OBJ_FONT);
 				::SetBkMode(hWndDC, TRANSPARENT);
 
 				for (auto pNode : arrNodeViewsToDraw)
@@ -1205,8 +1216,13 @@ void CSpaceView::OnPaint()
 						CNodeView *pNV = (CNodeView *) pNode->GetView();
 						if (pNV->HasDrawableArea())
 						{
-							RECT rect = pNV->GetInnerRECT();
-							rect.top += (rect.bottom - rect.top) / 4;
+							RECT inner = pNV->GetInnerRECT();
+							int nodeH = inner.bottom - inner.top;
+							int titleFontH = __max(9, nodeH / 3);
+							HFONT hFont = (HFONT)*pNV->GetTitleFont(titleFontH);
+							HFONT hPrev = (HFONT)::SelectObject(hWndDC, hFont);
+							RECT rect = inner;
+							rect.top += nodeH / 4;
 							RECT rectShadow = { rect.left+1, rect.top+1, rect.right+1, rect.bottom+1 };
 							::SetTextColor(hWndDC, RGB(0, 0, 0));
 							::DrawText(hWndDC, pNode->GetName(), -1, &rectShadow,
@@ -1214,23 +1230,25 @@ void CSpaceView::OnPaint()
 							::SetTextColor(hWndDC, RGB(255, 255, 255));
 							::DrawText(hWndDC, pNode->GetName(), -1, &rect,
 								DT_CENTER | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+							::SelectObject(hWndDC, hPrev);
 
 							// draw description below name for activated nodes
 							if (pNode->GetActivation() > 0.1
 								&& pNode->GetDescription().GetLength() > 0)
 							{
-								RECT descRect = pNV->GetInnerRECT();
-								descRect.top += (descRect.bottom - descRect.top) / 2;
+								RECT descRect = inner;
+								descRect.top += nodeH / 2;
 								descRect.left += 2;
 								descRect.right -= 2;
 								if (descRect.bottom - descRect.top > 12)
 								{
-									HFONT hSmallFont = (HFONT)::GetStockObject(ANSI_VAR_FONT);
-									HFONT hPrev = (HFONT)::SelectObject(hWndDC, hSmallFont);
+									int descFontH = __max(8, nodeH / 4);
+									HFONT hDescFont = (HFONT)*pNV->GetTitleFont(descFontH);
+									HFONT hPrevDesc = (HFONT)::SelectObject(hWndDC, hDescFont);
 									::SetTextColor(hWndDC, RGB(40, 40, 40));
 									::DrawText(hWndDC, pNode->GetDescription(), -1, &descRect,
 										DT_CENTER | DT_TOP | DT_WORDBREAK);
-									::SelectObject(hWndDC, hPrev);
+									::SelectObject(hWndDC, hPrevDesc);
 								}
 							}
 						}

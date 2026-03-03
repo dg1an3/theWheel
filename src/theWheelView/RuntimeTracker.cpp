@@ -96,8 +96,16 @@ void CRuntimeTracker::OnMouseMove(UINT nFlags, CPoint point)
 		// find the nearest node view
 		pSelectedView = m_pView->FindNearestNodeView(point);
 
-		// set to lower activation
-		deltaAct *= 0.5f;
+		// scale activation inversely with distance to nearest node
+		if (pSelectedView != NULL)
+		{
+			CPoint nodeCenter = (CPoint)(pSelectedView->GetSpringCenter());
+			CSize sz = nodeCenter - point;
+			double dist = sqrt((double)(sz.cx * sz.cx + sz.cy * sz.cy));
+			const double HOVER_RADIUS = 300.0;
+			double proximity = max(0.0, (HOVER_RADIUS - dist) / HOVER_RADIUS);
+			deltaAct *= (REAL)proximity;
+		}
 
 		// set to an arrow
 		::SetCursor(::LoadCursor(NULL, IDC_ARROW));

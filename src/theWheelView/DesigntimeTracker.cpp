@@ -182,11 +182,11 @@ void CDesigntimeTracker::OnButtonUp(UINT nFlags, CPoint point)
 // 
 // processes mouse move by changing the cursor
 //////////////////////////////////////////////////////////////////////
-void CDesigntimeTracker::OnMouseMove(UINT nFlags, CPoint point)  
-{ 
+void CDesigntimeTracker::OnMouseMove(UINT nFlags, CPoint point)
+{
 	if (m_pView->FindNodeViewAt(point) != NULL)
 	{
-		::SetCursor(::LoadCursor(GetModuleHandle(NULL), 
+		::SetCursor(::LoadCursor(GetModuleHandle(NULL),
 			MAKEINTRESOURCE(IDC_HANDPOINT)));
 	}
 	else
@@ -195,6 +195,44 @@ void CDesigntimeTracker::OnMouseMove(UINT nFlags, CPoint point)
 	}
 
 }	// CDesigntimeTracker::OnMouseMove
+
+
+//////////////////////////////////////////////////////////////////////
+// CDesigntimeTracker::OnMouseWheel
+//
+// applies proximity activation on wheel scroll
+//////////////////////////////////////////////////////////////////////
+void CDesigntimeTracker::OnMouseWheel(UINT nFlags, short zDelta, CPoint point)
+{
+	// find the node view containing the point
+	CNodeView *pSelectedView = m_pView->FindNodeViewAt(point);
+
+	// initialize the pending activation for an on-node wheel
+	REAL deltaAct = 0.1f;
+
+	if (pSelectedView == NULL)
+	{
+		// find the nearest node view
+		pSelectedView = m_pView->FindNearestNodeView(point);
+
+		// scale activation inversely with distance to nearest node
+		if (pSelectedView != NULL)
+		{
+			CPoint nodeCenter = (CPoint)(pSelectedView->GetSpringCenter());
+			CSize sz = nodeCenter - point;
+			double dist = sqrt((double)(sz.cx * sz.cx + sz.cy * sz.cy));
+			const double HOVER_RADIUS = 300.0;
+			double proximity = max(0.0, (HOVER_RADIUS - dist) / HOVER_RADIUS);
+			deltaAct *= (REAL)proximity;
+		}
+	}
+
+	if (pSelectedView != NULL)
+	{
+		pSelectedView->AddPendingActivation(deltaAct);
+	}
+
+}	// CDesigntimeTracker::OnMouseWheel
 
 
 //////////////////////////////////////////////////////////////////////

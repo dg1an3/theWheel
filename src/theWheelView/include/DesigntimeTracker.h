@@ -39,6 +39,7 @@ public:
 	// handlers for mouse move events
 	virtual void OnMouseMove(UINT nFlags, CPoint point);
 	virtual void OnMouseDrag(UINT nFlags, CPoint point);
+	virtual void OnMouseWheel(UINT nFlags, short zDelta, CPoint point);
 
 	// drawing function for special annotations
 	virtual void OnDraw(CDC *pDC);
