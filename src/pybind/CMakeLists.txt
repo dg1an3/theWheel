@@ -35,3 +35,19 @@ else()
     target_compile_definitions(pythewheel PRIVATE NOMINMAX)
     target_compile_options(pythewheel PRIVATE -Wall -Wno-unused-variable -Wno-sign-compare)
 endif()
+
+# Cross-language validation: pythewheel_torch (PyTorch port) tests against
+# the C++ pythewheel module built above. Invokes the same Python interpreter
+# pybind11 linked against so the modules are mutually importable; the test
+# itself skips gracefully if torch is not installed in that interpreter.
+if(Python3_EXECUTABLE)
+    add_test(
+        NAME pythewheel_torch_vs_cpp
+        COMMAND ${Python3_EXECUTABLE} -m pytest -v
+                ${CMAKE_CURRENT_SOURCE_DIR}/python/tests/test_vs_cpp.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(pythewheel_torch_vs_cpp PROPERTIES
+        ENVIRONMENT "PYTHONPATH=$<TARGET_FILE_DIR:pythewheel>:${CMAKE_CURRENT_SOURCE_DIR}/python"
+    )
+endif()
