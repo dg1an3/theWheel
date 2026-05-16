@@ -14,6 +14,7 @@
 // Base types and macros shared with OptimizeN
 #include <optimize_types.h>
 
+#include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #include <string>

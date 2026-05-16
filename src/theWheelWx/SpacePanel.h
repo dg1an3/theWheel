@@ -9,6 +9,7 @@
 #pragma once
 
 #include <wx/wx.h>
+#include <wx/bitmap.h>
 #ifdef USE_OPENGL_RENDERER
 #include <wx/glcanvas.h>
 #include <GLRenderer.h>
@@ -31,8 +32,16 @@ struct NodeViewData
     Spring1D activationSpring;
     REAL springActivation;
 
+    // Cached node image (loaded lazily from CNode::GetImageFilename()).
+    // imageLoadAttempted is true once we've tried; image.IsOk() tells us
+    // whether the load succeeded.
+    wxBitmap image;
+    wxString loadedImageFilename;
+    bool imageLoadAttempted;
+
     NodeViewData()
         : springActivation(0.0f)
+        , imageLoadAttempted(false)
     {
         positionSpring.SetK(3.0f);
         positionSpring.SetB(10.0f);
@@ -94,6 +103,10 @@ private:
     // Color helpers
     wxColour ActivationColor(REAL activation) const;
     wxColour ClassColor(CNode* pNode) const;
+
+    // Lazily load the image referenced by pNode->GetImageFilename() into
+    // viewData.image. Returns true if a usable bitmap is available.
+    bool EnsureNodeImage(CNode* pNode, NodeViewData& viewData);
 
     CSpace* m_pSpace;
     SpaceTreeView* m_pTreeView;
