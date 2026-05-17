@@ -27,15 +27,18 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Python bindings are only available on Windows for now
-if(MSVC)
-    # Find Python before pybind11 to use modern CMake Python finding
-    find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+# Build static libraries with -fPIC so they can be linked into the Python
+# extension module (pythewheel) on Linux. No effect on MSVC.
+if(NOT MSVC)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
 
-    # Configure pybind11 to use modern Python finding
+# Python bindings (pythewheel): available on Windows and on platforms where
+# Python and pybind11 can be located. pybind11 is fetched via FetchContent.
+find_package(Python3 COMPONENTS Interpreter Development QUIET)
+if(Python3_FOUND)
     set(PYBIND11_FINDPYTHON ON)
 
-    # Fetch pybind11 for Python bindings
     include(FetchContent)
     FetchContent_Declare(
       pybind11
@@ -43,6 +46,10 @@ if(MSVC)
       GIT_TAG v2.13.6
     )
     FetchContent_MakeAvailable(pybind11)
+    set(PYTHEWHEEL_AVAILABLE ON)
+else()
+    message(STATUS "Skipping pythewheel — Python3 development headers not found")
+    set(PYTHEWHEEL_AVAILABLE OFF)
 endif()
 
 # Enable testing
@@ -60,8 +67,11 @@ else()
     message(STATUS "Skipping theWheelGL — no ANGLE or EGL/GLESv2 available")
 endif()
 
-if(MSVC)
+if(PYTHEWHEEL_AVAILABLE)
     add_subdirectory ("pybind")
+endif()
+
+if(MSVC)
     add_subdirectory ("theWheelView")
     add_subdirectory ("theWheel")
 endif()

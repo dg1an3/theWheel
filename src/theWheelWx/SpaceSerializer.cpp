@@ -129,9 +129,21 @@ void SpaceSerializer::CreateSampleSpace(CSpace* pSpace)
     CNode* pRoot = pSpace->GetRootNode();
     if (!pRoot) return;
 
-    // The CreateSimpleSpace already creates nodes - let's set some positions
-    // for a nice initial layout
+    // Seed the class-color map with a few legacy theWheel colors so the
+    // title bands on sample nodes render in distinct colors.
+    auto& colorMap = pSpace->GetClassColorMap();
+    colorMap["Concept"] = RGB(166, 190, 191);  // DEFAULT_TITLE
+    colorMap["Process"] = RGB(190, 165, 140);  // warm sand
+    colorMap["Module"]  = RGB(140, 165, 190);  // cool slate
+    colorMap["Goal"]    = RGB(180, 150, 165);  // mauve
+
+    // Cycle the three classes across non-root nodes so they get colored
+    // title bands by default.
+    static const char* kClasses[] = { "Concept", "Process", "Module", "Goal" };
+    int classCount = (int)(sizeof(kClasses) / sizeof(kClasses[0]));
+
     srand(42);
+    int assignIdx = 0;
     for (int i = 0; i < pSpace->GetNodeCount(); i++) {
         CNode* pNode = pSpace->GetNodeAt(i);
         CVectorD<3> pos;
@@ -141,5 +153,12 @@ void SpaceSerializer::CreateSampleSpace(CSpace* pSpace)
         pos[1] = radius * sin(angle);
         pos[2] = R(0.0);
         pNode->SetPosition(pos);
+
+        // Skip the hidden root and the visible root; assign classes to the
+        // remaining nodes so the title bands are visually distinct.
+        CString name = pNode->GetName();
+        if (name == "%%hiddenroot%%" || name == "root") continue;
+        pNode->SetClass(kClasses[assignIdx % classCount]);
+        assignIdx++;
     }
 }
