@@ -50,11 +50,11 @@ public:
 
 // Operations
 public:
-	// blts the skin, if a surface has been prepared
+	// blts the skin, if a bitmap has been prepared
 	void BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView);
 
-	// finds (or creates) the DDS for the skin of the specified width
-	LPDIRECTDRAWSURFACE GetSkinDDS(CNodeView *pNodeView, CRect& rect);
+	// finds (or creates) the bitmap for the skin of the specified width
+	HBITMAP GetSkinBitmap(CNodeView *pNodeView, CRect& rect);
 
 	// draw the skin, using the direct-draw surface if available
 	void DrawSkinGDI(CDC *pDC, CNodeView *pNodeView);
@@ -105,8 +105,13 @@ private:
 	LPDIRECT3D2 m_lpD3D;
 #endif
 
-	// pointer to the skin drawing surface for blt
-	CArray<LPDIRECTDRAWSURFACE, LPDIRECTDRAWSURFACE&> m_arrlpSkinDDS;
+	// cached skin bitmaps for blt, indexed by skin width.  the skins are
+	//		drawn purely with GDI (see DrawSkinGDI), so they live in GDI
+	//		bitmaps and are composited with TransparentBlt; they used to be
+	//		held in DirectDraw surfaces solely so the blt could colour-key
+	//		them, which the emulated DirectDraw of modern Windows accepts
+	//		and then silently ignores for video-memory surfaces
+	CArray<HBITMAP, HBITMAP> m_arrSkinBitmaps;
 
 };	// class CNodeViewSkin
 
