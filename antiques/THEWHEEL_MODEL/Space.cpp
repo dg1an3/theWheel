@@ -448,10 +448,14 @@ void CSpace::Relax(bool bSubThreshold)
 				// check that the exponential is finite
 				if (_finite(exp_dist))
 				{
-					// compute the gain and set it
-					REAL new_gain = 1.0 - Sigmoid(distErr - 6.0, 8.0);
-					// exp_dist / (exp_dist + 
-					//	20.0); // 12.0); 
+					// compute the gain and set it.  the centre and
+					//		steepness are tunable from the layout property
+					//		page; they were hardcoded at 6.0 and 8.0, which
+					//		placed the entire graded region of the curve
+					//		beyond any distance error the layout reaches
+					REAL new_gain = 1.0 - Sigmoid(
+						distErr - m_pLayoutManager->GetGainCenter(),
+						m_pLayoutManager->GetGainSteepness());
 					pLink->SetGain(new_gain);
 				}
 				else

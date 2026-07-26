@@ -44,6 +44,19 @@ public:
 	DECLARE_ATTRIBUTE(KRep, REAL);
 	DECLARE_ATTRIBUTE(Tolerance, REAL);
 
+	// the relaxation gain curve used by CSpace::Relax:
+	//
+	//		gain = 1 - Sigmoid(distErr - GainCenter, GainSteepness)
+	//
+	//		GainCenter is the distance error at which a link's gain passes
+	//		through 0.5, and GainSteepness how sharply it turns.  the curve
+	//		wants centring on the range the layout actually occupies:
+	//		GetDistError is a normalised distance and the optimizer drives
+	//		it toward zero, so a centre far above that pins every gain at
+	//		1.0 and the relaxation does nothing
+	DECLARE_ATTRIBUTE(GainCenter, REAL);
+	DECLARE_ATTRIBUTE(GainSteepness, REAL);
+
 	// dimension of the state vector
 	DECLARE_ATTRIBUTE_GI(StateDim, int);
 

@@ -33,6 +33,18 @@ const int SPRING_SCALE = 100;
 const int SPRING_MIN = 1;
 const int SPRING_MAX = 200;
 
+// the relaxation gain curve.  the centre is a distance error, which
+//		GetDistError reports as a normalised distance, so useful values sit
+//		within a few node-widths of zero; the steepness runs from a gentle
+//		ramp to the near-step the constant 8.0 used to give
+const int GAINCENTER_SCALE = 10;
+const int GAINCENTER_MIN = -50;
+const int GAINCENTER_MAX = 100;
+
+const int GAINSTEEP_SCALE = 100;
+const int GAINSTEEP_MIN = 5;
+const int GAINSTEEP_MAX = 800;
+
 // timer that refreshes the energy readout
 const UINT ENERGY_TIMER_ID = 1;
 const UINT ENERGY_TIMER_ELAPSED = 250;
@@ -49,6 +61,8 @@ CSpaceLayoutPropPage::CSpaceLayoutPropPage()
 	, m_kRepOrig(0.0)
 	, m_springOrig(0.0)
 	, m_toleranceOrig(0.0)
+	, m_gainCenterOrig(0.0)
+	, m_gainSteepOrig(0.0)
 	, m_superNodesOrig(0)
 	, m_bInitialized(FALSE)
 	, m_bUpdating(FALSE)
@@ -68,6 +82,8 @@ void CSpaceLayoutPropPage::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_SLIDER_KREP, m_sliderKRep);
 	DDX_Control(pDX, IDC_SLIDER_SUPERNODES, m_sliderSuperNodes);
 	DDX_Control(pDX, IDC_SLIDER_SPRING, m_sliderSpring);
+	DDX_Control(pDX, IDC_SLIDER_GAINCENTER, m_sliderGainCenter);
+	DDX_Control(pDX, IDC_SLIDER_GAINSTEEP, m_sliderGainSteep);
 }
 
 
@@ -80,6 +96,8 @@ BEGIN_MESSAGE_MAP(CSpaceLayoutPropPage, CPropertyPage)
 	ON_EN_CHANGE(IDC_EDIT_SUPERNODES, &CSpaceLayoutPropPage::OnChangeSuperNodes)
 	ON_EN_CHANGE(IDC_EDIT_SPRING, &CSpaceLayoutPropPage::OnChangeSpring)
 	ON_EN_CHANGE(IDC_EDIT_TOLERANCE, &CSpaceLayoutPropPage::OnChangeTolerance)
+	ON_EN_CHANGE(IDC_EDIT_GAINCENTER, &CSpaceLayoutPropPage::OnChangeGainCenter)
+	ON_EN_CHANGE(IDC_EDIT_GAINSTEEP, &CSpaceLayoutPropPage::OnChangeGainSteep)
 	ON_BN_CLICKED(IDC_BUTTON_REVERT, &CSpaceLayoutPropPage::OnBnClickedRevert)
 END_MESSAGE_MAP()
 
@@ -99,6 +117,8 @@ BOOL CSpaceLayoutPropPage::OnInitDialog()
 	m_sliderKRep.SetRange(KREP_MIN, KREP_MAX);
 	m_sliderSuperNodes.SetRange(NODES_MIN, NODES_MAX);
 	m_sliderSpring.SetRange(SPRING_MIN, SPRING_MAX);
+	m_sliderGainCenter.SetRange(GAINCENTER_MIN, GAINCENTER_MAX);
+	m_sliderGainSteep.SetRange(GAINSTEEP_MIN, GAINSTEEP_MAX);
 
 	// without a space there is nothing to edit
 	if (NULL == m_pSpace)
@@ -108,11 +128,15 @@ BOOL CSpaceLayoutPropPage::OnInitDialog()
 		GetDlgItem(IDC_EDIT_SUPERNODES)->EnableWindow(FALSE);
 		GetDlgItem(IDC_EDIT_SPRING)->EnableWindow(FALSE);
 		GetDlgItem(IDC_EDIT_TOLERANCE)->EnableWindow(FALSE);
+		GetDlgItem(IDC_EDIT_GAINCENTER)->EnableWindow(FALSE);
+		GetDlgItem(IDC_EDIT_GAINSTEEP)->EnableWindow(FALSE);
 		GetDlgItem(IDC_BUTTON_REVERT)->EnableWindow(FALSE);
 		m_sliderKPos.EnableWindow(FALSE);
 		m_sliderKRep.EnableWindow(FALSE);
 		m_sliderSuperNodes.EnableWindow(FALSE);
 		m_sliderSpring.EnableWindow(FALSE);
+		m_sliderGainCenter.EnableWindow(FALSE);
+		m_sliderGainSteep.EnableWindow(FALSE);
 		return TRUE;
 	}
 
@@ -123,6 +147,8 @@ BOOL CSpaceLayoutPropPage::OnInitDialog()
 	m_toleranceOrig = pLayout->GetTolerance();
 	m_superNodesOrig = pLayout->GetStateDim() / 2;
 	m_springOrig = m_pSpace->GetSpringConst();
+	m_gainCenterOrig = pLayout->GetGainCenter();
+	m_gainSteepOrig = pLayout->GetGainSteepness();
 
 	m_bInitialized = TRUE;
 	LoadFromSpace();
@@ -181,6 +207,10 @@ void CSpaceLayoutPropPage::LoadFromSpace()
 	SetDlgItemText(IDC_EDIT_SPRING, str);
 	str.Format(_T("%g"), (double) pLayout->GetTolerance());
 	SetDlgItemText(IDC_EDIT_TOLERANCE, str);
+	str.Format(_T("%g"), (double) pLayout->GetGainCenter());
+	SetDlgItemText(IDC_EDIT_GAINCENTER, str);
+	str.Format(_T("%g"), (double) pLayout->GetGainSteepness());
+	SetDlgItemText(IDC_EDIT_GAINSTEEP, str);
 
 	m_bUpdating = FALSE;
 
@@ -188,6 +218,10 @@ void CSpaceLayoutPropPage::LoadFromSpace()
 	m_sliderKRep.SetPos(Round<int>(kRep));
 	m_sliderSuperNodes.SetPos(nNodes);
 	m_sliderSpring.SetPos(Round<int>(spring * SPRING_SCALE));
+	m_sliderGainCenter.SetPos(
+		Round<int>(pLayout->GetGainCenter() * GAINCENTER_SCALE));
+	m_sliderGainSteep.SetPos(
+		Round<int>(pLayout->GetGainSteepness() * GAINSTEEP_SCALE));
 
 	UpdateEnergy();
 
@@ -242,6 +276,22 @@ void CSpaceLayoutPropPage::OnHScroll(UINT nSBCode, UINT nPos,
 		m_pSpace->SetSpringConst(spring);
 		str.Format(_T("%g"), (double) spring);
 		SetDlgItemText(IDC_EDIT_SPRING, str);
+	}
+	else if (pScrollBar == (CScrollBar *) &m_sliderGainCenter)
+	{
+		const REAL centre = (REAL) m_sliderGainCenter.GetPos()
+			/ (REAL) GAINCENTER_SCALE;
+		pLayout->SetGainCenter(centre);
+		str.Format(_T("%g"), (double) centre);
+		SetDlgItemText(IDC_EDIT_GAINCENTER, str);
+	}
+	else if (pScrollBar == (CScrollBar *) &m_sliderGainSteep)
+	{
+		const REAL steep = (REAL) m_sliderGainSteep.GetPos()
+			/ (REAL) GAINSTEEP_SCALE;
+		pLayout->SetGainSteepness(steep);
+		str.Format(_T("%g"), (double) steep);
+		SetDlgItemText(IDC_EDIT_GAINSTEEP, str);
 	}
 
 	m_bUpdating = FALSE;
@@ -310,6 +360,16 @@ void CSpaceLayoutPropPage::ApplyEdit(UINT nEditID)
 	case IDC_EDIT_TOLERANCE:
 		pLayout->SetTolerance((REAL) value);
 		break;
+
+	case IDC_EDIT_GAINCENTER:
+		pLayout->SetGainCenter((REAL) value);
+		m_sliderGainCenter.SetPos(Round<int>(value * GAINCENTER_SCALE));
+		break;
+
+	case IDC_EDIT_GAINSTEEP:
+		pLayout->SetGainSteepness((REAL) value);
+		m_sliderGainSteep.SetPos(Round<int>(value * GAINSTEEP_SCALE));
+		break;
 	}
 
 }	// CSpaceLayoutPropPage::ApplyEdit
@@ -340,6 +400,16 @@ void CSpaceLayoutPropPage::OnChangeTolerance()
 	ApplyEdit(IDC_EDIT_TOLERANCE);
 }
 
+void CSpaceLayoutPropPage::OnChangeGainCenter()
+{
+	ApplyEdit(IDC_EDIT_GAINCENTER);
+}
+
+void CSpaceLayoutPropPage::OnChangeGainSteep()
+{
+	ApplyEdit(IDC_EDIT_GAINSTEEP);
+}
+
 
 //////////////////////////////////////////////////////////////////////
 // CSpaceLayoutPropPage::OnBnClickedRevert
@@ -357,6 +427,8 @@ void CSpaceLayoutPropPage::OnBnClickedRevert()
 	pLayout->SetKPos((REAL) m_kPosOrig);
 	pLayout->SetKRep((REAL) m_kRepOrig);
 	pLayout->SetTolerance((REAL) m_toleranceOrig);
+	pLayout->SetGainCenter((REAL) m_gainCenterOrig);
+	pLayout->SetGainSteepness((REAL) m_gainSteepOrig);
 	m_pSpace->SetMaxSuperNodeCount(m_superNodesOrig);
 	m_pSpace->SetSpringConst((REAL) m_springOrig);
 

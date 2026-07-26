@@ -63,6 +63,15 @@ const REAL K_POS = 600.0;
 // constant for weighting the repulsion energy
 const REAL K_REP = 3200.0;
 
+// defaults for the relaxation gain curve.  these were 6.0 and 8.0, which
+//		put the whole graded region of the sigmoid at a distance error
+//		between 5.5 and 6.5 -- a link stretched six node-widths past
+//		optimal.  the optimizer drives the error toward zero, so the curve
+//		saturated and every gain sat at exactly 1.0, making the relaxation
+//		inert and GetGainWeight() degenerate to the stored weight
+const REAL GAIN_CENTER = 0.0;
+const REAL GAIN_STEEPNESS = 0.5;
+
 // constants for center repulsion
 const REAL CSpaceLayoutManager::CENTER_REP_MAX_ACT = 0.01;
 const REAL CSpaceLayoutManager::CENTER_REP_SCALE = SIZE_SCALE / 8.0;
@@ -81,6 +90,8 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 		m_KPos(K_POS),
 		m_KRep(K_REP),
 		m_Tolerance(TOLERANCE),
+		m_GainCenter(GAIN_CENTER),
+		m_GainSteepness(GAIN_STEEPNESS),
 		m_lastLayoutMS(0.0),
 
 		m_energy(0.0),

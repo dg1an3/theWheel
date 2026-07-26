@@ -36,6 +36,8 @@ protected:
 	afx_msg void OnChangeSuperNodes();
 	afx_msg void OnChangeSpring();
 	afx_msg void OnChangeTolerance();
+	afx_msg void OnChangeGainCenter();
+	afx_msg void OnChangeGainSteep();
 	afx_msg void OnBnClickedRevert();
 
 	DECLARE_MESSAGE_MAP()
@@ -55,6 +57,8 @@ private:
 	CSliderCtrl m_sliderKRep;
 	CSliderCtrl m_sliderSuperNodes;
 	CSliderCtrl m_sliderSpring;
+	CSliderCtrl m_sliderGainCenter;
+	CSliderCtrl m_sliderGainSteep;
 
 	// parameters as they stood when the page was first shown, for Revert;
 	//		held as double so this header need not pull in the REAL typedef
@@ -62,6 +66,8 @@ private:
 	double m_kRepOrig;
 	double m_springOrig;
 	double m_toleranceOrig;
+	double m_gainCenterOrig;
+	double m_gainSteepOrig;
 	int m_superNodesOrig;
 
 	// set once the controls exist, so the EN_CHANGE handlers know the
