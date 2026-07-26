@@ -141,6 +141,8 @@ BEGIN
         MENUITEM "&Node Properties",            ID_VIEW_NODEPROPERTIES
         MENUITEM SEPARATOR
         MENUITEM "&Designtime",                 ID_VIEW_DESIGNTIME, CHECKED
+        MENUITEM SEPARATOR
+        MENUITEM "&WebView2 Space...",          ID_VIEW_WEBSPACE
     END
     POPUP "&Space"
     BEGIN

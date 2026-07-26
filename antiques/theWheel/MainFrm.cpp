@@ -8,6 +8,7 @@
 #include "LeftView.h"
 #include "theWheelView.h"
 #include "theWheelDoc.h"
+#include "WebSpaceView.h"
 
 #include <SpaceView.h>
 #include <SpaceTreeView.h>
@@ -32,7 +33,33 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_COMMAND(ID_DEFAULT_HELP, &CFrameWnd::OnHelpFinder)
 	ON_COMMAND(ID_VIEW_DESIGNTIME, &CMainFrame::OnViewDesigntime)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_DESIGNTIME, &CMainFrame::OnUpdateViewDesigntime)
+	ON_COMMAND(ID_VIEW_WEBSPACE, &CMainFrame::OnViewWebSpace)
 END_MESSAGE_MAP()
+
+
+//////////////////////////////////////////////////////////////////////
+// CMainFrame::OnViewWebSpace
+//
+// opens the WebView2 rendering of the current space, alongside the
+//		existing GDI view rather than replacing it
+//////////////////////////////////////////////////////////////////////
+void CMainFrame::OnViewWebSpace()
+{
+	CtheWheelDoc *pDoc = DYNAMIC_DOWNCAST(CtheWheelDoc, GetActiveDocument());
+	if (NULL == pDoc)
+	{
+		return;
+	}
+
+	if (NULL == CWebSpaceView::ShowPopup(this, &pDoc->m_space))
+	{
+		::AfxMessageBox(_T("Could not create the WebView2 view.\n\n")
+			_T("It needs the Microsoft Edge WebView2 Runtime, which ships ")
+			_T("with Windows 11 and is otherwise available from Microsoft."),
+			MB_OK | MB_ICONINFORMATION);
+	}
+
+}	// CMainFrame::OnViewWebSpace
 
 static UINT indicators[] =
 {

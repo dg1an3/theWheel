@@ -7,8 +7,15 @@
 
 #pragma once
 
-#include <wrl/client.h>
-#include <WebView2.h>
+// the WebView2 headers pull in WRL, which demands NTDDI_VISTA or later.
+//		the rest of the app compiles against an XP target through stdafx.h,
+//		so they stay inside WebSpaceView.cpp and this header names the
+//		interfaces only
+#include <EventToken.h>
+
+struct ICoreWebView2;
+struct ICoreWebView2Controller;
+struct ICoreWebView2Environment;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -34,6 +41,11 @@ public:
 
 // Attributes
 public:
+	// creates (or re-shows) the view as a top-level window on the given
+	//		space.  a popup keeps this out of the main frame's splitter, so
+	//		it can be compared side by side with the GDI CSpaceView
+	static CWebSpaceView *ShowPopup(CWnd *pParent, CSpace *pSpace);
+
 	// the space being displayed
 	void SetSpace(CSpace *pSpace);
 	CSpace *GetSpace() { return m_pSpace; }
@@ -48,6 +60,8 @@ public:
 
 // Implementation
 protected:
+	virtual void PostNcDestroy();
+
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnDestroy();
@@ -73,8 +87,10 @@ private:
 	// the space being displayed
 	CSpace *m_pSpace;
 
-	Microsoft::WRL::ComPtr<ICoreWebView2Controller> m_pController;
-	Microsoft::WRL::ComPtr<ICoreWebView2> m_pWebView;
+	// held as raw pointers so this header need not include WRL; they are
+	//		AddRef'd on assignment and released in OnDestroy
+	ICoreWebView2Controller *m_pController;
+	ICoreWebView2 *m_pWebView;
 
 	// set once the document has loaded and will accept frames
 	BOOL m_bReady;

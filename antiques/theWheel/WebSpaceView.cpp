@@ -30,7 +30,10 @@
 #include <Space.h>
 #include <Node.h>
 
+// the SDK proper lives here, and nowhere else in the app
+#include <wrl/client.h>
 #include <wrl/event.h>
+#include <WebView2.h>
 #include <shlobj.h>
 
 using namespace Microsoft::WRL;
@@ -114,6 +117,8 @@ END_MESSAGE_MAP()
 //////////////////////////////////////////////////////////////////////
 CWebSpaceView::CWebSpaceView()
 	: m_pSpace(NULL)
+	, m_pController(NULL)
+	, m_pWebView(NULL)
 	, m_bReady(FALSE)
 	, m_nTimerID(0)
 {
@@ -132,6 +137,20 @@ CWebSpaceView::~CWebSpaceView()
 
 
 //////////////////////////////////////////////////////////////////////
+// CWebSpaceView::PostNcDestroy
+//
+// the popup is heap-allocated and owns itself
+//////////////////////////////////////////////////////////////////////
+void CWebSpaceView::PostNcDestroy()
+{
+	CWnd::PostNcDestroy();
+
+	delete this;
+
+}	// CWebSpaceView::PostNcDestroy
+
+
+//////////////////////////////////////////////////////////////////////
 // CWebSpaceView::SetSpace
 //////////////////////////////////////////////////////////////////////
 void CWebSpaceView::SetSpace(CSpace *pSpace)
@@ -139,6 +158,50 @@ void CWebSpaceView::SetSpace(CSpace *pSpace)
 	m_pSpace = pSpace;
 
 }	// CWebSpaceView::SetSpace
+
+
+//////////////////////////////////////////////////////////////////////
+// the single popup instance, so repeated menu invocations re-show the
+//		existing window rather than stacking up browsers
+//////////////////////////////////////////////////////////////////////
+static CWebSpaceView *g_pPopup = NULL;
+
+
+//////////////////////////////////////////////////////////////////////
+// CWebSpaceView::ShowPopup
+//////////////////////////////////////////////////////////////////////
+CWebSpaceView *CWebSpaceView::ShowPopup(CWnd *pParent, CSpace *pSpace)
+{
+	// re-use the existing window if it is still alive
+	if (NULL != g_pPopup && ::IsWindow(g_pPopup->m_hWnd))
+	{
+		g_pPopup->SetSpace(pSpace);
+		g_pPopup->ShowWindow(SW_SHOW);
+		g_pPopup->SetForegroundWindow();
+		return g_pPopup;
+	}
+
+	g_pPopup = new CWebSpaceView();
+	g_pPopup->SetSpace(pSpace);
+
+	LPCTSTR pszClass = ::AfxRegisterWndClass(CS_HREDRAW | CS_VREDRAW,
+		::LoadCursor(NULL, IDC_ARROW), NULL, NULL);
+
+	if (!g_pPopup->CreateEx(0, pszClass, _T("theWheel -- WebView2 Space"),
+			WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+			CRect(80, 80, 1080, 780), pParent, 0))
+	{
+		delete g_pPopup;
+		g_pPopup = NULL;
+		return NULL;
+	}
+
+	g_pPopup->ShowWindow(SW_SHOW);
+	g_pPopup->UpdateWindow();
+
+	return g_pPopup;
+
+}	// CWebSpaceView::ShowPopup
 
 
 //////////////////////////////////////////////////////////////////////
@@ -219,15 +282,17 @@ HRESULT CWebSpaceView::OnControllerCreated(HRESULT hr,
 	}
 
 	m_pController = pCtl;
+	m_pController->AddRef();
+
 	m_pController->get_CoreWebView2(&m_pWebView);
-	if (!m_pWebView)
+	if (NULL == m_pWebView)
 	{
 		return E_FAIL;
 	}
 
 	// this is a rendering surface, not a browser: drop the chrome
 	ComPtr<ICoreWebView2Settings> pSettings;
-	if (SUCCEEDED(m_pWebView->get_Settings(&pSettings)))
+	if (SUCCEEDED(m_pWebView->get_Settings(&pSettings)) && pSettings)
 	{
 		pSettings->put_AreDefaultContextMenusEnabled(FALSE);
 		pSettings->put_IsZoomControlEnabled(FALSE);
@@ -345,7 +410,7 @@ CStringA CWebSpaceView::BuildFrameJson()
 //////////////////////////////////////////////////////////////////////
 void CWebSpaceView::PostFrame()
 {
-	if (!m_bReady || !m_pWebView)
+	if (!m_bReady || NULL == m_pWebView)
 	{
 		return;
 	}
@@ -381,7 +446,7 @@ void CWebSpaceView::OnTimer(UINT_PTR nIDEvent)
 //////////////////////////////////////////////////////////////////////
 void CWebSpaceView::ResizeBrowser()
 {
-	if (!m_pController || !::IsWindow(m_hWnd))
+	if (NULL == m_pController || !::IsWindow(m_hWnd))
 	{
 		return;
 	}
@@ -418,19 +483,35 @@ void CWebSpaceView::OnDestroy()
 
 	m_bReady = FALSE;
 
-	if (m_pWebView && m_tokMessage.value != 0)
+	if (NULL != m_pWebView && m_tokMessage.value != 0)
 	{
 		m_pWebView->remove_WebMessageReceived(m_tokMessage);
 		m_tokMessage.value = 0;
 	}
 
-	if (m_pController)
+	if (NULL != m_pController)
 	{
 		m_pController->Close();
 	}
 
-	m_pWebView.Reset();
-	m_pController.Reset();
+	if (NULL != m_pWebView)
+	{
+		m_pWebView->Release();
+		m_pWebView = NULL;
+	}
+
+	if (NULL != m_pController)
+	{
+		m_pController->Release();
+		m_pController = NULL;
+	}
+
+	// the popup owns itself; drop the cached pointer so the next menu
+	//		invocation creates a fresh one
+	if (g_pPopup == this)
+	{
+		g_pPopup = NULL;
+	}
 
 	CWnd::OnDestroy();
 
