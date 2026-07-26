@@ -126,6 +126,50 @@ const int TIMER_ID = 7;			// luck 7
 // initialize to the main module state, or to static module state
 AFX_MODULE_STATE *CSpaceView::m_pModuleState = NULL;
 
+// per-phase render timings for the most recent frame
+CSpaceView::CRenderTimings CSpaceView::s_render = { 0 };
+
+
+//////////////////////////////////////////////////////////////////////
+// CPhaseTimer
+//
+// reports the milliseconds elapsed between successive Mark() calls, for
+//		attributing frame time to the phases of OnPaint
+//////////////////////////////////////////////////////////////////////
+namespace {
+
+class CPhaseTimer
+{
+public:
+	CPhaseTimer()
+	{
+		m_liFreq.QuadPart = 0;
+		::QueryPerformanceFrequency(&m_liFreq);
+		::QueryPerformanceCounter(&m_liLast);
+	}
+
+	// milliseconds since construction or since the previous Mark
+	REAL Mark()
+	{
+		LARGE_INTEGER liNow;
+		::QueryPerformanceCounter(&liNow);
+
+		const REAL ms = m_liFreq.QuadPart
+			? (REAL) (1000.0 * (double) (liNow.QuadPart - m_liLast.QuadPart)
+				/ (double) m_liFreq.QuadPart)
+			: (REAL) 0.0;
+
+		m_liLast = liNow;
+		return ms;
+	}
+
+private:
+	LARGE_INTEGER m_liFreq;
+	LARGE_INTEGER m_liLast;
+};
+
+}	// namespace
+
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -145,6 +189,9 @@ CSpaceView::CSpaceView()
 		, m_bDragging(FALSE)
 		, m_pNLM(NULL)
 		, m_pSpace(NULL)
+		, m_pbmpMemOld(NULL)
+		, m_nMemWidth(0)
+		, m_nMemHeight(0)
 {
 	DWORD dwBkColor = ::AfxGetApp()->GetProfileInt("Settings", "BkColor", 
 		(DWORD) RGB(115, 158, 206));
@@ -171,6 +218,18 @@ CSpaceView::~CSpaceView()
 		delete m_arrNodeViews[nAt];
 	}
 	m_arrNodeViews.RemoveAll();
+
+	// release the memory back buffer
+	if (m_pbmpMemOld != NULL)
+	{
+		m_dcMem.SelectObject(m_pbmpMemOld);
+		m_pbmpMemOld = NULL;
+	}
+	m_bmpMem.DeleteObject();
+	if (m_dcMem.GetSafeHdc() != NULL)
+	{
+		m_dcMem.DeleteDC();
+	}
 
 	// delete the DirectDraw surfaces
 	if (m_lpDDSOne != NULL)
@@ -912,10 +971,63 @@ void CSpaceView::OnSize(UINT nType, int cx, int cy)
     ddsd.dwHeight = cy;
     ASSERT_HRESULT(m_lpDD->CreateSurface(&ddsd, &m_lpDDSOne, NULL));
 
+	// (re)create the memory back buffer at the new size
+	CreateMemBuffer(cx, cy);
+
 	// tell the skin the new client area
 	m_skin.SetClientArea(cx, cy, m_colorBk);
 
 }	// CSpaceView::OnSize
+
+
+//////////////////////////////////////////////////////////////////////
+// CSpaceView::CreateMemBuffer
+//
+// (re)creates the GDI memory bitmap the frame is composed into
+//////////////////////////////////////////////////////////////////////
+BOOL CSpaceView::CreateMemBuffer(int cx, int cy)
+{
+	if (cx <= 0 || cy <= 0)
+	{
+		return FALSE;
+	}
+
+	// nothing to do if it is already the right size
+	if (m_dcMem.GetSafeHdc() != NULL
+		&& cx == m_nMemWidth && cy == m_nMemHeight)
+	{
+		return TRUE;
+	}
+
+	CClientDC dcClient(this);
+
+	if (m_dcMem.GetSafeHdc() == NULL
+		&& !m_dcMem.CreateCompatibleDC(&dcClient))
+	{
+		return FALSE;
+	}
+
+	// unselect and drop the previous bitmap
+	if (m_pbmpMemOld != NULL)
+	{
+		m_dcMem.SelectObject(m_pbmpMemOld);
+		m_pbmpMemOld = NULL;
+	}
+	m_bmpMem.DeleteObject();
+
+	// screen-compatible, so the final blt to the window is a straight copy
+	if (!m_bmpMem.CreateCompatibleBitmap(&dcClient, cx, cy))
+	{
+		return FALSE;
+	}
+
+	m_pbmpMemOld = m_dcMem.SelectObject(&m_bmpMem);
+	m_nMemWidth = cx;
+	m_nMemHeight = cy;
+
+	return TRUE;
+
+}	// CSpaceView::CreateMemBuffer
 
 
 //////////////////////////////////////////////////////////////////////
@@ -927,19 +1039,23 @@ void CSpaceView::OnPaint()
 {
 	// AFX_MANAGE_STATE(m_pModuleState);
 
-	if (m_lpDDSOne)
-	{
-		// get the inner rectangle for drawing the text
-		CRect rectClient;
-		GetClientRect(&rectClient);
+	// get the inner rectangle for drawing the text
+	CRect rectClient;
+	GetClientRect(&rectClient);
 
-		// fill the surface
-		DDBLTFX ddBltFx;
-		ddBltFx.dwSize = sizeof(DDBLTFX);
-		ddBltFx.dwFillColor = (DWORD) RGB(GetBValue(m_colorBk),
-			GetGValue(m_colorBk), GetRValue(m_colorBk));
-		ASSERT_HRESULT(m_lpDDSOne->Blt(rectClient, NULL,
-			rectClient, DDBLT_COLORFILL, &ddBltFx));
+	if (CreateMemBuffer(rectClient.Width(), rectClient.Height()))
+	{
+		// attribute this frame's time to each phase of the render
+		CPhaseTimer timer;
+		ZeroMemory(&s_render, sizeof(s_render));
+
+		// the frame is composed here, then transferred in one blt
+		CDC& dc = m_dcMem;
+
+		// fill the background
+		dc.FillSolidRect(rectClient, m_colorBk);
+
+		s_render.msClear = timer.Mark();
 
 		static BOOL bDrawNodes = FALSE;
 		static BOOL bReadFlagFromRegistry = TRUE;
@@ -954,11 +1070,6 @@ void CSpaceView::OnPaint()
 		// extract the flag from the registry
 		if (bDrawNodes)
 		{
-
-			// get a DC for the drawing surface
-			CDC dc;
-			GET_ATTACH_DC(m_lpDDSOne, dc);
-
 			// draw the node view links
 			int nAtNodeView;
 			for (nAtNodeView = __min(GetVisibleNodeCount() * 2, m_arrNodeViews.GetSize() - 1); 
@@ -975,18 +1086,19 @@ void CSpaceView::OnPaint()
 				}
 			}
 
-			// release the DC
-			RELEASE_DETACH_DC(m_lpDDSOne, dc);
+			s_render.msLinks = timer.Mark();
 
 			// now create an array to hold the drawing-order for the nodeviews
 			CObArray arrNodeViewsToDraw;
 			arrNodeViewsToDraw.SetSize(__min(GetVisibleNodeCount() * 2, m_arrNodeViews.GetSize()));
-			memcpy(arrNodeViewsToDraw.GetData(), m_arrNodeViews.GetData(), 
+			memcpy(arrNodeViewsToDraw.GetData(), m_arrNodeViews.GetData(),
 				arrNodeViewsToDraw.GetSize() * sizeof(CObject *));
 
 			// sort by activation difference comparison
-			qsort(arrNodeViewsToDraw.GetData(), arrNodeViewsToDraw.GetSize(), 
+			qsort(arrNodeViewsToDraw.GetData(), arrNodeViewsToDraw.GetSize(),
 				sizeof(CObject *), CompareNodeViewActDiff);
+
+			s_render.msSort = timer.Mark();
 
 			// see if there is a maximized view
 			if (m_pMaximizedView)
@@ -1089,29 +1201,28 @@ void CSpaceView::OnPaint()
 					|| pNodeView->GetNode()->GetIsPostSuper())
 				{
 					// draw the min_diff node view
-					pNodeView->Draw(m_lpDDSOne);
+					pNodeView->Draw(&dc);
+					s_render.nNodesDrawn++;
 				}
-			} 
+			}
 
-			// get a DC for the drawing surface
-			GET_ATTACH_DC(m_lpDDSOne, dc);
+			s_render.msNodes = timer.Mark();
 
 			// now draw the space
 			OnDraw(&dc);
 
-			// release the DC
-			RELEASE_DETACH_DC(m_lpDDSOne, dc);
+			s_render.msOverlay = timer.Mark();
 		}
 
-		// form the destination (screen) rectangle
-		CRect rectDest = rectClient;
-		CPoint ptOrigin(0, 0);
-		ClientToScreen(&ptOrigin);
-		rectDest.OffsetRect(ptOrigin);
+		// transfer the finished frame to the window in one blt
+		CClientDC dcClient(this);
+		dcClient.BitBlt(0, 0, rectClient.Width(), rectClient.Height(),
+			&dc, 0, 0, SRCCOPY);
 
-		// now blit the buffer to the screen
-		ASSERT_HRESULT(m_lpDDSPrimary->Blt(&rectDest, m_lpDDSOne, 
-			&rectClient, 0, NULL));
+		s_render.msPresent = timer.Mark();
+		s_render.msTotal = s_render.msClear + s_render.msLinks
+			+ s_render.msSort + s_render.msNodes + s_render.msOverlay
+			+ s_render.msPresent;
 	}
 
 	// validate the client rectangle

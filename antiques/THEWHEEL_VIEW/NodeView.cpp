@@ -73,7 +73,8 @@ CNodeView::CNodeView(CNode *pNode, CSpaceView *pParent)
 	m_pParent(pParent),
 	m_bBackgroundImage(FALSE),
 	m_pendingActivation(0.0f),
-	m_bMaximized(FALSE)
+	m_bMaximized(FALSE),
+	m_bShapeValid(FALSE)
 {
 	// set the view pointer for the node
 	GetNode()->SetView(this);
@@ -414,14 +415,17 @@ void CNodeView::SetMaximized(BOOL bMax)
 // 
 // draws the entire node view
 //////////////////////////////////////////////////////////////////////
-void CNodeView::Draw(LPDIRECTDRAWSURFACE lpDDS)
+void CNodeView::Draw(CDC *pDC)
 {
-	// render the skin
-	m_pParent->m_skin.BltSkin(lpDDS, this);
+	// draw into the caller's DC.  this used to take the DirectDraw back
+	//		buffer and GetDC it, which locks video memory; every GDI call
+	//		below then read-modify-wrote uncached memory a pixel at a time,
+	//		costing milliseconds per node.  the caller now hands us a plain
+	//		memory DC and transfers the finished frame in one blt
+	CDC& dc = *pDC;
 
-	// get a DC for the drawing surface
-	CDC dc;
-	GET_ATTACH_DC(lpDDS, dc);
+	// render the skin
+	m_pParent->m_skin.BltSkin(&dc, this);
 
 	// only draw if it has a substantial area
 	if (m_extOuter.Height() >= 3)
@@ -522,9 +526,6 @@ void CNodeView::Draw(LPDIRECTDRAWSURFACE lpDDS)
 			*/
 		}
 	}
-
-	// release the DC
-	RELEASE_DETACH_DC(lpDDS, dc);
 
 }	// CNodeView::Draw
 

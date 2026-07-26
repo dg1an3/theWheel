@@ -50,8 +50,8 @@ public:
 
 // Operations
 public:
-	// blts the skin, if a bitmap has been prepared
-	void BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView);
+	// blts the skin into the caller's DC, if a bitmap has been prepared
+	void BltSkin(CDC *pDC, CNodeView *pNodeView);
 
 	// finds (or creates) the bitmap for the skin of the specified width
 	HBITMAP GetSkinBitmap(CNodeView *pNodeView, CRect& rect);
