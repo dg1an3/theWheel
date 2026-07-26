@@ -81,6 +81,7 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 		m_KPos(K_POS),
 		m_KRep(K_REP),
 		m_Tolerance(TOLERANCE),
+		m_lastLayoutMS(0.0),
 
 		m_energy(0.0),
 		m_energyConst(0.0),
@@ -566,8 +567,21 @@ void CSpaceLayoutManager::LayoutNodes(CSpaceStateVector *pSSV,
 	vPartState.SetElements(GetStateDim() - m_nConstNodes * 2,
 		&m_vState[m_nConstNodes * 2], FALSE);
 
+	// time the optimization, so the cost of the layout can be compared
+	//		against the cost of the render for the same frame
+	LARGE_INTEGER liFreq, liStart, liEnd;
+	const BOOL bTimed = ::QueryPerformanceFrequency(&liFreq)
+		&& ::QueryPerformanceCounter(&liStart);
+
 	// perform the optimization
 	vPartState = m_pOptimizer->Optimize(vPartState);
+
+	if (bTimed && ::QueryPerformanceCounter(&liEnd) && liFreq.QuadPart)
+	{
+		m_lastLayoutMS = (REAL) (1000.0
+			* (double) (liEnd.QuadPart - liStart.QuadPart)
+			/ (double) liFreq.QuadPart);
+	}
 
 	if (	// FALSE) // 
 		m_nConstNodes == 0)

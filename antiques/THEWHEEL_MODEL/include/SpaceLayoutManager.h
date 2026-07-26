@@ -50,6 +50,17 @@ public:
 	// total energy for current configuration
 	REAL GetEnergy();
 
+	// instrumentation for the most recent LayoutNodes call: how many times
+	//		the objective function was evaluated, how many iterations the
+	//		optimizer needed, and how long the optimization took.  the
+	//		objective is O(n^2) in the node count and the optimizer is
+	//		strictly sequential, so these are the numbers that decide whether
+	//		layout or rendering is the frame-time bottleneck
+	int GetEvaluations() const { return m_nEvaluations; }
+	int GetLastIterations() const
+		{ return m_pOptimizer ? m_pOptimizer->GetIterations() : 0; }
+	REAL GetLastLayoutMS() const { return m_lastLayoutMS; }
+
 	// returns the distance error between two nodes
 	REAL GetDistError(CNode *pFrom, CNode *pTo);
 
@@ -114,6 +125,9 @@ protected:
 
 	// holds the number of evaluations that have been done
 	mutable int m_nEvaluations;
+
+	// wall-clock milliseconds spent in the most recent optimization
+	REAL m_lastLayoutMS;
 
 };	// class CSpaceLayoutManager
 

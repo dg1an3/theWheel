@@ -7,6 +7,7 @@
 
 #include <Space.h>
 #include <SpaceLayoutManager.h>
+#include <SpaceView.h>
 
 
 //////////////////////////////////////////////////////////////////////
@@ -376,12 +377,33 @@ void CSpaceLayoutPropPage::UpdateEnergy()
 		return;
 	}
 
+	CSpaceLayoutManager *pLayout = m_pSpace->GetLayoutManager();
+
 	CString str;
 	str.Format(_T("%.1f    (%d of %d nodes)"),
-		(double) m_pSpace->GetLayoutManager()->GetEnergy(),
+		(double) pLayout->GetEnergy(),
 		m_pSpace->GetSuperNodeCount(),
 		m_pSpace->GetNodeCount());
 	SetDlgItemText(IDC_STATIC_ENERGY, str);
+
+	// what one LayoutNodes call actually cost.  the view lays out on a 20ms
+	//		timer, so anything approaching that figure is the frame budget
+	const int nEvals = pLayout->GetEvaluations();
+	const double ms = (double) pLayout->GetLastLayoutMS();
+	str.Format(_T("%.2f ms   %d evals, %d iters   (%.0f%% of 20ms tick)"),
+		ms, nEvals, pLayout->GetLastIterations(), ms * 100.0 / 20.0);
+	SetDlgItemText(IDC_STATIC_PERF, str);
+
+	// the same breakdown for the render half of the frame
+	const CSpaceView::CRenderTimings& r = CSpaceView::s_render;
+	str.Format(_T("%.2f ms total   (%.0f%% of 20ms tick), %d nodes"),
+		(double) r.msTotal, (double) r.msTotal * 100.0 / 20.0, r.nNodesDrawn);
+	SetDlgItemText(IDC_STATIC_RENDER1, str);
+
+	str.Format(_T("clr %.2f  lnk %.2f  srt %.2f  nod %.2f  ovl %.2f  pre %.2f"),
+		(double) r.msClear, (double) r.msLinks, (double) r.msSort,
+		(double) r.msNodes, (double) r.msOverlay, (double) r.msPresent);
+	SetDlgItemText(IDC_STATIC_RENDER2, str);
 
 }	// CSpaceLayoutPropPage::UpdateEnergy
 

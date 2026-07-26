@@ -27,6 +27,9 @@
 #define IDC_EDIT_TOLERANCE              1018
 #define IDC_STATIC_ENERGY               1019
 #define IDC_BUTTON_REVERT               1020
+#define IDC_STATIC_PERF                 1021
+#define IDC_STATIC_RENDER1              1022
+#define IDC_STATIC_RENDER2              1023
 #define ID_SPACE_SCALELINKWEIGHTS       32771
 #define ID_SPACE_PERTURBLINKWEIGHTS     32772
 #define ID_SPACE_PROPERTIES             32773
@@ -40,7 +43,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        133
 #define _APS_NEXT_COMMAND_VALUE         32777
-#define _APS_NEXT_CONTROL_VALUE         1021
+#define _APS_NEXT_CONTROL_VALUE         1024
 #define _APS_NEXT_SYMED_VALUE           104
 #endif
 #endif
