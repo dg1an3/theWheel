@@ -14,13 +14,24 @@
 
 // Modify the following defines if you have to target a platform prior to the ones specified below.
 // Refer to MSDN for the latest info on corresponding values for different platforms.
-#ifndef WINVER				// Allow use of features specific to Windows XP or later.
-#define WINVER 0x0501		// Change this to the appropriate value to target other versions of Windows.
+// Vista or later.  this was 0x0501 (XP), but WebSpaceView.cpp must compile
+//		against at least NTDDI_VISTA for WRL, which the WebView2 SDK is built
+//		on.  having that one translation unit define a different target from
+//		the rest is an ODR hazard: the Windows and MFC headers gate structure
+//		layouts and inline function bodies on these macros, so two objects
+//		can disagree about the same type.  the whole app now targets one
+//		version so every translation unit agrees
+#ifndef WINVER
+#define WINVER 0x0600
 #endif
 
-#ifndef _WIN32_WINNT		// Allow use of features specific to Windows XP or later.                   
-#define _WIN32_WINNT 0x0501	// Change this to the appropriate value to target other versions of Windows.
-#endif						
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
+
+#ifndef NTDDI_VERSION
+#define NTDDI_VERSION 0x06000000
+#endif
 
 #ifndef _WIN32_WINDOWS		// Allow use of features specific to Windows 98 or later.
 #define _WIN32_WINDOWS 0x0410 // Change this to the appropriate value to target Windows Me or later.
