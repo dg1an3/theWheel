@@ -16,6 +16,7 @@
 #include "Space.h"
 #include "SpaceTreeView.h"
 #include "SpaceView.h"
+#include "SpaceAndBrowserView.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -72,11 +73,7 @@ BOOL CtheWheelApp::InitInstance()
 	//  of your final executable, you should remove from the following
 	//  the specific initialization routines you do not need.
 
-#ifdef _AFXDLL
-	Enable3dControls();			// Call this when using MFC in a shared DLL
-#else
-	Enable3dControlsStatic();	// Call this when linking to MFC statically
-#endif
+	// Enable3dControls() is no longer needed in modern MFC
 
 	// Change the registry key under which our settings are stored.
 	// TODO: You should modify this string to be something appropriate
@@ -96,7 +93,7 @@ BOOL CtheWheelApp::InitInstance()
 		IDR_MAINFRAME,
 		RUNTIME_CLASS(CSpace),
 		RUNTIME_CLASS(CMainFrame),       // main SDI frame window
-		RUNTIME_CLASS(CSpaceTreeView));
+		RUNTIME_CLASS(CSpaceAndBrowserView));
 	AddDocTemplate(pDocTemplate);
 
 	// Enable DDE Execute open

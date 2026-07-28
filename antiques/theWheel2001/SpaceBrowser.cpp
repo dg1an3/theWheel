@@ -70,10 +70,10 @@ void CSpaceBrowser::OnBeforeNavigate2(LPCTSTR lpszURL, DWORD nFlags, LPCTSTR lps
 	CHtmlView::OnBeforeNavigate2(lpszURL, nFlags,	lpszTargetFrameName, baPostedData, lpszHeaders, pbCancel);
 }
 
-void CSpaceBrowser::OnNavigateComplete2(LPCTSTR strURL) 
+void CSpaceBrowser::OnNavigateComplete2(LPCTSTR strURL)
 {
 	// completed the navigation, so now see if we should create a node in the space view
-	CSpace *pSpace = m_pSpaceView->GetDocument();
+	CSpace *pSpace = m_pSpaceView->GetSpace();
 /*	CNode *pNode = pSpace->GetNodeForUrl(m_strNavigatingToUrl);
 	if (pNode)
 	{

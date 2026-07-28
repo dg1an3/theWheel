@@ -7,6 +7,7 @@
 #define HID_VIEW_RUNTIME                        0x18006
 #define HID_VIEW_NODEPROPERTIES                 0x18007
 #define HID_VIEW_DESIGNTIME                     0x18008
+#define HID_VIEW_WEBSPACE                       0x18009
  
 // Prompts (IDP_*) 
 #define HIDP_OLE_INIT_FAILED                    0x30064
