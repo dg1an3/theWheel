@@ -52,6 +52,9 @@ message(STATUS "Configuring OPTIMIZER_BASE...")
 add_subdirectory(OptimizeN)
 
 message(STATUS "Configuring THEWHEEL_MODEL...")
+if(BUILD_TESTS)
+    enable_testing()
+endif()
 add_subdirectory(THEWHEEL_MODEL)
 
 # Build Python bindings if requested

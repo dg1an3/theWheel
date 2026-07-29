@@ -84,3 +84,7 @@ endif()
 if(WIN32)
     target_link_libraries(THEWHEEL_MODEL PRIVATE dsound dxguid)
 endif()
+
+if(BUILD_TESTS)
+    add_subdirectory(test)
+endif()
