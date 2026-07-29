@@ -11,6 +11,7 @@
 #include "SpaceSerializer.h"
 #include "PropertyDialogs.h"
 #include <SpaceLayoutManager.h>
+#include <wx/image.h>
 
 #ifndef THEWHEEL_WX_TESTING
 wxIMPLEMENT_APP(WheelApp);
@@ -18,6 +19,10 @@ wxIMPLEMENT_APP(WheelApp);
 
 bool WheelApp::OnInit()
 {
+    // Enable PNG/JPG/GIF/BMP decoders so CNode::GetImageFilename() can be
+    // rendered into each node's image area.
+    wxInitAllImageHandlers();
+
     WheelFrame* frame = new WheelFrame();
     frame->Show(true);
     return true;

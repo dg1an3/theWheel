@@ -44,11 +44,35 @@ public:
 	DECLARE_ATTRIBUTE(KRep, REAL);
 	DECLARE_ATTRIBUTE(Tolerance, REAL);
 
+	// the relaxation gain curve used by CSpace::Relax:
+	//
+	//		gain = 1 - Sigmoid(distErr - GainCenter, GainSteepness)
+	//
+	//		GainCenter is the distance error at which a link's gain passes
+	//		through 0.5, and GainSteepness how sharply it turns.  the curve
+	//		wants centring on the range the layout actually occupies:
+	//		GetDistError is a normalised distance and the optimizer drives
+	//		it toward zero, so a centre far above that pins every gain at
+	//		1.0 and the relaxation does nothing
+	DECLARE_ATTRIBUTE(GainCenter, REAL);
+	DECLARE_ATTRIBUTE(GainSteepness, REAL);
+
 	// dimension of the state vector
 	DECLARE_ATTRIBUTE_GI(StateDim, int);
 
 	// total energy for current configuration
 	REAL GetEnergy();
+
+	// instrumentation for the most recent LayoutNodes call: how many times
+	//		the objective function was evaluated, how many iterations the
+	//		optimizer needed, and how long the optimization took.  the
+	//		objective is O(n^2) in the node count and the optimizer is
+	//		strictly sequential, so these are the numbers that decide whether
+	//		layout or rendering is the frame-time bottleneck
+	int GetEvaluations() const { return m_nEvaluations; }
+	int GetLastIterations() const
+		{ return m_pOptimizer ? m_pOptimizer->GetIterations() : 0; }
+	REAL GetLastLayoutMS() const { return m_lastLayoutMS; }
 
 	// returns the distance error between two nodes
 	REAL GetDistError(CNode *pFrom, CNode *pTo);
@@ -114,6 +138,9 @@ protected:
 
 	// holds the number of evaluations that have been done
 	mutable int m_nEvaluations;
+
+	// wall-clock milliseconds spent in the most recent optimization
+	REAL m_lastLayoutMS;
 
 };	// class CSpaceLayoutManager
 

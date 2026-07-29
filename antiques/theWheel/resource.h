@@ -16,20 +16,39 @@
 #define IDC_EDIT3                       1002
 #define IDC_EDIT_CURR_MAXLINKWGT        1002
 #define IDC_EDIT_NEW_MAXLINKWGT         1003
+#define IDC_EDIT_KPOS                   1010
+#define IDC_SLIDER_KPOS                 1011
+#define IDC_EDIT_KREP                   1012
+#define IDC_SLIDER_KREP                 1013
+#define IDC_EDIT_SUPERNODES             1014
+#define IDC_SLIDER_SUPERNODES           1015
+#define IDC_EDIT_SPRING                 1016
+#define IDC_SLIDER_SPRING               1017
+#define IDC_EDIT_TOLERANCE              1018
+#define IDC_STATIC_ENERGY               1019
+#define IDC_BUTTON_REVERT               1020
+#define IDC_STATIC_PERF                 1021
+#define IDC_STATIC_RENDER1              1022
+#define IDC_STATIC_RENDER2              1023
+#define IDC_EDIT_GAINCENTER             1024
+#define IDC_SLIDER_GAINCENTER           1025
+#define IDC_EDIT_GAINSTEEP              1026
+#define IDC_SLIDER_GAINSTEEP            1027
 #define ID_SPACE_SCALELINKWEIGHTS       32771
 #define ID_SPACE_PERTURBLINKWEIGHTS     32772
 #define ID_SPACE_PROPERTIES             32773
 #define ID_VIEW_RUNTIME                 32774
 #define ID_VIEW_NODEPROPERTIES          32775
 #define ID_VIEW_DESIGNTIME              32776
+#define ID_VIEW_WEBSPACE                32777
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        133
-#define _APS_NEXT_COMMAND_VALUE         32777
-#define _APS_NEXT_CONTROL_VALUE         1004
+#define _APS_NEXT_COMMAND_VALUE         32778
+#define _APS_NEXT_CONTROL_VALUE         1028
 #define _APS_NEXT_SYMED_VALUE           104
 #endif
 #endif

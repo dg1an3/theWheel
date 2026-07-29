@@ -3,7 +3,7 @@
 
 
 #pragma once
-#include "c:\projects\thewheel\src\thewheel_model\include\space.h"
+#include <Space.h>
 
 
 class CtheWheelDoc : public CDocument

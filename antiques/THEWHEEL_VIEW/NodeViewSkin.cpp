@@ -50,7 +50,12 @@ const COLORREF UPPER_LIGHT_COLOR = RGB(255, 255, 255);
 const COLORREF LOWER_LIGHT_COLOR = RGB(160, 160, 160);
 const COLORREF LOWER_DARK_COLOR = RGB(128, 128, 128);
 
+// the colour a skin bitmap is flooded with, and which TransparentBlt keys
+//		out when the skin is composited
 const COLORREF COLORKEY = RGB(0, 255, 0);
+
+// TransparentBlt lives in msimg32
+#pragma comment(lib, "msimg32.lib")
 
 const REAL BORDER_RADIUS = 10.0;
 
@@ -122,7 +127,9 @@ CNodeViewSkin::CNodeViewSkin()
 : m_nWidth(0),
 	m_nHeight(0),
 	m_lpDD(NULL),
+#ifdef SKIN_RENDER_3D
 	m_lpD3D(NULL),
+#endif
 	m_colorBk(RGB(192, 192, 192))
 {
 }	// CNodeViewSkin::CNodeViewSkin
@@ -138,8 +145,10 @@ CNodeViewSkin::~CNodeViewSkin()
 	// sets the client area to 0, 0 (frees surfaces)
 	SetClientArea(0, 0, m_colorBk);
 
+#ifdef SKIN_RENDER_3D
 	if (m_lpD3D)
 		m_lpD3D->Release();
+#endif
 
 	if (m_lpDD)
 		m_lpDD->Release();
@@ -159,7 +168,9 @@ BOOL CNodeViewSkin::InitDDraw(LPDIRECTDRAW lpDD)
 	m_lpDD->AddRef();
 
 	// get the Direct3D2 interface
+#ifdef SKIN_RENDER_3D
 	CHECK_HRESULT(m_lpDD->QueryInterface(IID_IDirect3D2, (void**)&m_lpD3D));
+#endif
 
 	return TRUE;
 
@@ -177,20 +188,20 @@ void CNodeViewSkin::SetClientArea(int nWidth, int nHeight, COLORREF colorBk)
 	m_nWidth = nWidth;
 	m_nHeight = nHeight;
 
-	// destroy the surfaces
-	for (int nAt = 0; nAt < m_arrlpSkinDDS.GetSize(); nAt++)
+	// destroy the cached skin bitmaps
+	for (int nAt = 0; nAt < m_arrSkinBitmaps.GetSize(); nAt++)
 	{
-		if (m_arrlpSkinDDS[nAt] != NULL)
+		if (m_arrSkinBitmaps[nAt] != NULL)
 		{
-			m_arrlpSkinDDS[nAt]->Release();
+			::DeleteObject(m_arrSkinBitmaps[nAt]);
 		}
 	}
 
 	// remove all elements
-	m_arrlpSkinDDS.RemoveAll();
+	m_arrSkinBitmaps.RemoveAll();
 
 	// size to max client area
-	m_arrlpSkinDDS.SetSize(m_nWidth);
+	m_arrSkinBitmaps.SetSize(m_nWidth);
 
 	// set background color
 	m_colorBk = colorBk;
@@ -337,6 +348,7 @@ CExtent<REAL> CNodeViewSkin::CalcTopBottomEllipseExtent(CNodeView *pNodeView)
 
 
 /////////////////////////////////////////////////////////////////////////////
+#ifdef SKIN_RENDER_3D
 // CNodeViewSkin::InitD3DDevice
 //
 // initializes the D3D device upon which rendering will occur
@@ -362,9 +374,11 @@ BOOL CNodeViewSkin::InitD3DDevice(LPDIRECTDRAWSURFACE lpDDS,
 	return TRUE;
 
 }	// CNodeViewSkin::InitD3DDevice
+#endif // SKIN_RENDER_3D
 
 
 /////////////////////////////////////////////////////////////////////////////
+#ifdef SKIN_RENDER_3D
 // CNodeViewSkin::InitViewport
 //
 // initializes the viewport within which rendering will occur
@@ -398,9 +412,11 @@ BOOL CNodeViewSkin::InitViewport(LPDIRECT3DDEVICE2 lpD3DDev, CRect rect,
 	return TRUE;
 
 }	// CNodeViewSkin::InitViewport
+#endif // SKIN_RENDER_3D
 
     
 /////////////////////////////////////////////////////////////////////////////
+#ifdef SKIN_RENDER_3D
 // CNodeViewSkin::InitLights
 //
 // initializes the viewport within which rendering will occur
@@ -444,9 +460,11 @@ BOOL CNodeViewSkin::InitLights(LPDIRECT3DVIEWPORT2 lpViewport,
 	return TRUE;
 
 }	// CNodeViewSkin::InitLights
+#endif // SKIN_RENDER_3D
 
 
 /////////////////////////////////////////////////////////////////////////////
+#ifdef SKIN_RENDER_3D
 // CNodeViewSkin::InitMaterial
 //
 // initializes the material for rendering
@@ -476,102 +494,96 @@ BOOL CNodeViewSkin::InitMaterial(LPDIRECT3DMATERIAL2 *lppD3DMat)
     return TRUE;
 
 }	// CNodeViewSkin::InitMaterial
+#endif // SKIN_RENDER_3D
 
 
 //////////////////////////////////////////////////////////////////////
 // CNodeViewSkin::BltSkin
 // 
-// blts the skin for the node view from the prepared surface
+// blts the skin for the node view from the prepared bitmap
+//
+// takes the caller's DC rather than opening its own: IDirectDrawSurface::
+//		GetDC locks the surface and is by far the most expensive thing done
+//		per node per frame, and CNodeView::Draw already holds one open to
+//		draw the node's text over the skin
 //////////////////////////////////////////////////////////////////////
-void CNodeViewSkin::BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView)
+void CNodeViewSkin::BltSkin(CDC *pDC, CNodeView *pNodeView)
 {
 	// calculate the rectangles
 	CRect rectOuter = (CRect) pNodeView->m_extOuter; // GetOuterRect(); // CalcOuterRect(pNodeView);
 	CRect rectInner = (CRect) pNodeView->m_extInner; // GetInnerRect(); // CalcInnerRect(pNodeView);
 
-	// calculate the node-views shape rgn, for hit-testing
-	CalcShape(pNodeView, pNodeView->GetShape(), THICK_PEN_WIDTH);
-	CalcShape(pNodeView, pNodeView->m_shapeHit, -10);
-	
+	// calculate the node-views shape rgn, for hit-testing.  both regions are
+	//		derived from the same pair of pixel rectangles, so they are rebuilt
+	//		together and only when those rectangles actually change; they used
+	//		to be rebuilt unconditionally every frame, which at 60 nodes and a
+	//		20ms timer meant tens of thousands of GDI region constructions a
+	//		second for nodes that had come to rest
+	if (!pNodeView->m_bShapeValid
+		|| pNodeView->m_rectShapeOuter != rectOuter
+		|| pNodeView->m_rectShapeInner != rectInner)
+	{
+		CalcShape(pNodeView, pNodeView->GetShape(), THICK_PEN_WIDTH);
+		CalcShape(pNodeView, pNodeView->m_shapeHit, -10);
+
+		pNodeView->m_rectShapeOuter = rectOuter;
+		pNodeView->m_rectShapeInner = rectInner;
+		pNodeView->m_bShapeValid = TRUE;
+	}
+
+
 	if (rectOuter.Height() < 6)
 	{
 		return;
 	}
 
-// #define RENDER_3D
-#ifdef RENDER_3D
-
-	// Direct3D rendering -- initialize the objects first
-	LPDIRECT3DDEVICE2 lpD3DDev = NULL;
-	ASSERT_BOOL(InitD3DDevice(lpDDS, &lpD3DDev));
-
-	LPDIRECT3DVIEWPORT2	lpViewport = NULL;
-	ASSERT_BOOL(InitViewport(lpD3DDev, rectOuter, &lpViewport));
-
-	// set up the zoom transform, accounting for rectangle
-	//		inflation
-	D3DMATRIX mat;
-	ZeroMemory(&mat, sizeof(D3DMATRIX));
-	mat(0, 0) = (D3DVALUE) 1.0 / (rectOuter.Width() + 10.0);
-	mat(1, 1) = (D3DVALUE) 1.0 / (rectOuter.Width() + 10.0);
-	mat(2, 2) = (D3DVALUE) 1.0;
-	mat(3, 0) = (D3DVALUE) 1.0; // rectOuter.left / (rectOuter.Width() + 10.0);
-	mat(3, 1) = (D3DVALUE) 1.0; // rectOuter.top / (rectOuter.Width() + 10.0);
-	mat(3, 3) = (D3DVALUE) 1.0;
-	ASSERT_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_VIEW, &mat));
-
-	LPDIRECT3DLIGHT lpLights[2];
-	ASSERT_BOOL(InitLights(lpViewport, lpLights));
-
-	// create the material and attach to the device's state
-	LPDIRECT3DMATERIAL2	lpMaterial = NULL;
-	ASSERT_BOOL(InitMaterial(&lpMaterial));
-
-	D3DTEXTUREHANDLE hMat;
-	ASSERT_HRESULT(lpMaterial->GetHandle(lpD3DDev, &hMat));
-	ASSERT_HRESULT(lpD3DDev->SetLightState(D3DLIGHTSTATE_MATERIAL, hMat));
-
-	// render the skin
-	ASSERT_HRESULT(lpD3DDev->BeginScene());
-	DrawSkinD3D(lpD3DDev, pNodeView);
-	ASSERT_HRESULT(lpD3DDev->EndScene());
-
-	// release the interface
-	ASSERT_HRESULT(lpMaterial->Release());
-	ASSERT_HRESULT(lpLights[0]->Release());
-	ASSERT_HRESULT(lpLights[1]->Release());
-	ASSERT_HRESULT(lpViewport->Release());
-	ASSERT_HRESULT(lpD3DDev->Release());
-
-#else
+	// NOTE: the RENDER_3D path that stood here rendered through a Direct3D
+	//		device attached to the destination DirectDraw surface. It was dead
+	//		(RENDER_3D is never defined) and does not apply now that the skins
+	//		are GDI bitmaps composited into a DC, so it has been dropped along
+	//		with its counterpart in GetSkinBitmap
 
 	// gets the skin, plus the actual rectangle for the skin
 	CRect rectDest;
-	LPDIRECTDRAWSURFACE lpSkinDDS = GetSkinDDS(pNodeView, rectDest);
+	HBITMAP hbmSkin = GetSkinBitmap(pNodeView, rectDest);
+	if (NULL == hbmSkin)
+	{
+		return;
+	}
 
 	// form the client rectangle
 	CRect rectClient(0, 0, m_nWidth, m_nHeight);
 
-	// form the intersection of the destination and client
+	// form the intersection of the destination and client, and bail if the
+	//		skin lies entirely outside the view
 	CRect rectDestIntersect;
-	BOOL bIntersect = rectDestIntersect.IntersectRect(rectClient, rectDest);
+	if (!rectDestIntersect.IntersectRect(rectClient, rectDest))
+	{
+		return;
+	}
 
-	// if the destination is completely within the client,
-	if (rectDestIntersect == rectDest)
+	// composite the skin through GDI.  TransparentBlt honours the key colour
+	//		on every Windows version; the DirectDraw colour key this replaced
+	//		is accepted and then ignored by the modern emulation, which left
+	//		the key fill visible as a green rectangle behind every node
+	CDC dcSkin;
+	if (dcSkin.CreateCompatibleDC(pDC))
 	{
-		// perform a fast blt
-		ASSERT_HRESULT(lpDDS->BltFast(rectDest.left, rectDest.top, 
-			lpSkinDDS, rectDest - rectDest.TopLeft(),
-			DDBLTFAST_SRCCOLORKEY));
+		HBITMAP hbmOld = (HBITMAP) dcSkin.SelectObject(hbmSkin);
+
+		// the clipped region, in the skin bitmap's own coordinates
+		const CRect rectSrc = rectDestIntersect - rectDest.TopLeft();
+
+		::TransparentBlt(pDC->GetSafeHdc(),
+			rectDestIntersect.left, rectDestIntersect.top,
+			rectDestIntersect.Width(), rectDestIntersect.Height(),
+			dcSkin.GetSafeHdc(),
+			rectSrc.left, rectSrc.top,
+			rectSrc.Width(), rectSrc.Height(),
+			COLORKEY);
+
+		dcSkin.SelectObject(hbmOld);
 	}
-	// was there at least some intersection?
-	else if (bIntersect)
-	{
-		// perform a slower blt
-		ASSERT_HRESULT(lpDDS->Blt(rectDestIntersect, lpSkinDDS,
-			rectDestIntersect - rectDest.TopLeft(), DDBLT_KEYSRC, NULL));
-	}
-#endif
 
 }	// CNodeViewSkin::BltSkin
 
@@ -583,8 +595,8 @@ void CNodeViewSkin::BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView)
 // assumes the node view's outer and inner rectangles have been
 //		computed
 //////////////////////////////////////////////////////////////////////
-LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView, 
-											  CRect& rectSrc)
+HBITMAP CNodeViewSkin::GetSkinBitmap(CNodeView *pNodeView,
+									 CRect& rectSrc)
 {
 	// get the skin rectangle
 	rectSrc = (CRect) pNodeView->m_extOuter; // GetOuterRect();
@@ -592,119 +604,104 @@ LPDIRECTDRAWSURFACE CNodeViewSkin::GetSkinDDS(CNodeView *pNodeView,
 	// compute width (= index into cache)
 	int nWidth = rectSrc.Width();
 
-	// stores the new DDS
-	LPDIRECTDRAWSURFACE lpDDS = m_arrlpSkinDDS.GetAt(nWidth);
+	// stores the new bitmap
+	HBITMAP hbmSkin = m_arrSkinBitmaps.GetAt(nWidth);
 
-	// generate it, if needed 
-	if (!lpDDS)
+	// the cache is indexed by width alone, but a skin's height varies with
+	//		activation independently of its width -- the elliptangle gets
+	//		rounder as a node activates. a cached entry of the wrong height
+	//		was reused anyway, and since the rectangle is then taken from the
+	//		bitmap rather than the node, the plaque was drawn at the stale
+	//		size while the text was still laid out to the node's real extent,
+	//		leaving text spilling outside the plaque on slim nodes
+	if (hbmSkin != NULL)
+	{
+		BITMAP bm;
+		::GetObject(hbmSkin, sizeof(BITMAP), &bm);
+
+		// the cached bitmap holds the outer rect inflated by the margin
+		if (bm.bmHeight != rectSrc.Height() + 40)
+		{
+			::DeleteObject(hbmSkin);
+			hbmSkin = NULL;
+			m_arrSkinBitmaps.SetAt(nWidth, NULL);
+		}
+	}
+
+	// generate it, if needed
+	if (!hbmSkin)
 	{
 		// inflate rectangle to account for margin
-		rectSrc.InflateRect(20, 20, 20, 20); 
+		rectSrc.InflateRect(20, 20, 20, 20);
 
-		// create a new drawing surface
-		DDSURFACEDESC	ddsd;
-		ZeroMemory(&ddsd, sizeof(ddsd));
-		ddsd.dwSize = sizeof(ddsd);
-		ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT |DDSD_WIDTH;
-		ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_3DDEVICE;
-		ddsd.dwWidth = rectSrc.Width();
-		ddsd.dwHeight = rectSrc.Height();
-		ASSERT_HRESULT(m_lpDD->CreateSurface(&ddsd, &lpDDS, NULL));
-
-		// fill the surface
-		DDBLTFX ddBltFx;
-		ddBltFx.dwSize = sizeof(DDBLTFX);
-		ddBltFx.dwFillColor = (DWORD) COLORKEY; 
-		ASSERT_HRESULT(lpDDS->Blt(rectSrc - rectSrc.TopLeft(), NULL, 
-			rectSrc - rectSrc.TopLeft(), DDBLT_COLORFILL, &ddBltFx));
-
-		// set the color key
-		ASSERT_HRESULT(DDSetColorKey(lpDDS, COLORKEY));
-
-		// use GDI calls for small
-		if (rectSrc.Height() < MAX_HEIGHT_GDI)
+		// create a screen-compatible bitmap to hold the skin
+		HDC hdcScreen = ::GetDC(NULL);
+		if (NULL == hdcScreen)
 		{
-			// form a CDC for the surface
-			CDC dc;
-			GET_ATTACH_DC(lpDDS, dc);
-
-			// offset to the top of the rectangle
-			dc.OffsetWindowOrg(rectSrc.left, rectSrc.top);
-
-			// draw the skin
-			DrawSkinGDI(&dc, pNodeView);
-
-			// release and detach
-			RELEASE_DETACH_DC(lpDDS, dc);
-		}
-		else
-		{
-			// Direct3D rendering -- initialize the objects first
-			LPDIRECT3DDEVICE2 lpD3DDev = NULL;
-			ASSERT_BOOL(InitD3DDevice(lpDDS, &lpD3DDev));
-
-			LPDIRECT3DVIEWPORT2	lpViewport = NULL;
-			ASSERT_BOOL(InitViewport(lpD3DDev, rectSrc, &lpViewport));
-
-			// set up the zoom transform, accounting for rectangle
-			//		inflation
-			D3DMATRIX mat;
-			ZeroMemory(&mat, sizeof(D3DMATRIX));
-			mat(0, 0) = (D3DVALUE) (1.0 / (rectSrc.Width() + 10.0));
-			mat(1, 1) = (D3DVALUE) (1.0 / (rectSrc.Width() + 10.0));
-			mat(2, 2) = (D3DVALUE) 1.0; 
-			mat(3, 3) = (D3DVALUE) 1.0;
-			CHECK_HRESULT(lpD3DDev->SetTransform(D3DTRANSFORMSTATE_VIEW, &mat));
-
-			LPDIRECT3DLIGHT lpLights[2];
-			ASSERT_BOOL(InitLights(lpViewport, lpLights));
-
-			// create the material and attach to the device's state
-			LPDIRECT3DMATERIAL2	lpMaterial = NULL;
-			ASSERT_BOOL(InitMaterial(&lpMaterial));
-
-			D3DTEXTUREHANDLE hMat;
-			ASSERT_HRESULT(lpMaterial->GetHandle(lpD3DDev, &hMat));
-			ASSERT_HRESULT(lpD3DDev->SetLightState(D3DLIGHTSTATE_MATERIAL, hMat));
-
-			// render the skin
-			ASSERT_HRESULT(lpD3DDev->BeginScene());
-			DrawSkinD3D(lpD3DDev, pNodeView);
-			ASSERT_HRESULT(lpD3DDev->EndScene());
-
-			// release the interface
-			ASSERT_HRESULT(lpMaterial->Release());
-			ASSERT_HRESULT(lpLights[0]->Release());
-			ASSERT_HRESULT(lpLights[1]->Release());
-			ASSERT_HRESULT(lpViewport->Release());
-			ASSERT_HRESULT(lpD3DDev->Release());
+			return NULL;
 		}
 
-		// store the newly-formed DDS
-		m_arrlpSkinDDS.SetAt(nWidth, lpDDS);
+		CDC dcSkin;
+		BOOL bDC = dcSkin.CreateCompatibleDC(CDC::FromHandle(hdcScreen));
+		hbmSkin = ::CreateCompatibleBitmap(hdcScreen,
+			rectSrc.Width(), rectSrc.Height());
+		::ReleaseDC(NULL, hdcScreen);
+
+		if (!bDC || NULL == hbmSkin)
+		{
+			if (hbmSkin)
+			{
+				::DeleteObject(hbmSkin);
+			}
+			return NULL;
+		}
+
+		HBITMAP hbmOld = (HBITMAP) dcSkin.SelectObject(hbmSkin);
+
+		// flood the bitmap with the key colour; whatever DrawSkinGDI does
+		//		not paint over stays keyed out at blt time
+		dcSkin.FillSolidRect(CRect(0, 0, rectSrc.Width(), rectSrc.Height()),
+			COLORKEY);
+
+		// offset to the top of the rectangle, so the skin can be drawn in
+		//		the node view's own coordinates
+		dcSkin.OffsetWindowOrg(rectSrc.left, rectSrc.top);
+
+		// draw the skin
+		DrawSkinGDI(&dcSkin, pNodeView);
+
+		dcSkin.SelectObject(hbmOld);
+
+		// NOTE: the SKIN_RENDER_3D path rendered through a Direct3D device
+		//		attached to a DirectDraw surface, and has no counterpart for a
+		//		GDI bitmap.  It has been dead for as long as MAX_HEIGHT_GDI has
+		//		been 1, which routed every skin through DrawSkinGDI regardless
+		//		of size, so nothing is lost by dropping it here
+
+		// store the newly-formed bitmap
+		m_arrSkinBitmaps.SetAt(nWidth, hbmSkin);
 	}
 	else
 	{
 		// make sure rectSrc is the correct size
-		DDSURFACEDESC sd;
-		sd.dwSize = sizeof(DDSURFACEDESC);
-		lpDDS->GetSurfaceDesc(&sd);
+		BITMAP bm;
+		::GetObject(hbmSkin, sizeof(BITMAP), &bm);
 
 		// store the current center point
 		CPoint ptCenter = rectSrc.CenterPoint();
 
 		// initialize to a correctly sized rectangle
-		rectSrc = CRect(0, 0, sd.dwWidth, sd.dwHeight);
+		rectSrc = CRect(0, 0, bm.bmWidth, bm.bmHeight);
 
 		// offset to correct center point
 		rectSrc.OffsetRect(ptCenter - rectSrc.CenterPoint());
 		// ASSERT(rectSrc.CenterPoint() == ptCenter);
 	}
 
-	// return the DDS
-	return lpDDS;
+	// return the bitmap
+	return hbmSkin;
 
-}	// CNodeViewSkin::GetSkinDDS
+}	// CNodeViewSkin::GetSkinBitmap
 
 
 //////////////////////////////////////////////////////////////////////
@@ -799,6 +796,7 @@ void CNodeViewSkin::DrawSkinGDI(CDC *pDC, CNodeView *pNodeView)
 
 
 //////////////////////////////////////////////////////////////////////
+#ifdef SKIN_RENDER_3D
 // CNodeViewSkin::DrawSkinD3D
 // 
 // draws the skin for the node view using Direct3D calls
@@ -845,6 +843,7 @@ void CNodeViewSkin::DrawSkinD3D(IDirect3DDevice2 *lpD3DDev,
 }	// CNodeViewSkin::DrawSkinD3D
 
 
+#endif // SKIN_RENDER_3D
 //////////////////////////////////////////////////////////////////////
 // CNodeViewSkin::DrawLink
 // 

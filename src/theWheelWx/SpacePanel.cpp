@@ -9,17 +9,24 @@
 #include "SpacePanel.h"
 #include "SpaceTreeView.h"
 #include <wx/dcbuffer.h>
+#include <wx/image.h>
+#include <wx/filename.h>
 #include <NodeLink.h>
 #include <cmath>
 #ifdef USE_OPENGL_RENDERER
 #include <wx/dcclient.h>
 #endif
 
-// Colors matching the original GDI rendering
-static const wxColour BG_COLOR(232, 232, 232);
-static const wxColour LINK_COLOR(100, 100, 160);
-static const wxColour NODE_BORDER_LIGHT(255, 255, 255);
-static const wxColour NODE_BORDER_DARK(128, 128, 128);
+// Legacy theWheel color palette (mirrors NodeViewSkin.cpp / NodeView.cpp).
+// These match the original GDI renderer: a light gray body with a beveled
+// outline (light upper-left, dark lower-right) and a class-colored title
+// band, with DEFAULT_TITLE as the fallback when no class color is set.
+static const wxColour BACKGROUND_COLOR(232, 232, 232);
+static const wxColour UPPER_DARK_COLOR(240, 240, 240);
+static const wxColour UPPER_LIGHT_COLOR(255, 255, 255);
+static const wxColour LOWER_LIGHT_COLOR(160, 160, 160);
+static const wxColour LOWER_DARK_COLOR(128, 128, 128);
+static const wxColour DEFAULT_TITLE(166, 190, 191);
 static const wxColour TEXT_COLOR(40, 40, 40);
 static const wxColour SELECTED_COLOR(255, 200, 60);
 
@@ -27,6 +34,14 @@ static const wxColour SELECTED_COLOR(255, 200, 60);
 static const REAL MIN_NODE_RADIUS = 8.0f;
 static const REAL MAX_NODE_RADIUS = 80.0f;
 static const REAL ACTIVATION_SCALE = 120.0f;
+
+// Returns true if the given title-band color is "dark enough" that white
+// text reads better than the default dark text color.
+static bool TitleBandIsDark(const wxColour& c)
+{
+    int luma = (299 * c.Red() + 587 * c.Green() + 114 * c.Blue()) / 1000;
+    return luma < 150;
+}
 
 #ifdef USE_OPENGL_RENDERER
 wxBEGIN_EVENT_TABLE(SpacePanel, wxGLCanvas)
@@ -263,7 +278,12 @@ void SpacePanel::OnPaint(wxPaintEvent& event)
     OnPaintGL(event);
 #else
     wxBufferedPaintDC dc(this);
-    dc.SetBackground(wxBrush(*wxWHITE));
+    // Use a slightly lighter shade than the legacy node background so the
+    // BACKGROUND_COLOR-filled node bodies are visually distinct from the
+    // canvas. The legacy MFC view used the same gray for both and relied on
+    // beveled outlines for separation — we keep the bevels but lift the
+    // canvas to near-white for clarity.
+    dc.SetBackground(wxBrush(wxColour(248, 248, 248)));
     dc.Clear();
 
     if (!m_pSpace) {
@@ -443,11 +463,16 @@ void SpacePanel::DrawLink(wxDC& dc, CNode* pFrom, CNode* pTo, REAL weight)
     // Line width based on weight
     int penWidth = std::max(1, (int)(weight * 3.0f));
 
-    // Alpha based on average activation
+    // Brightness based on average activation — strongly activated links
+    // appear darker (closer to LOWER_DARK_COLOR), weak links fade toward the
+    // page background (BACKGROUND_COLOR), mirroring NodeViewSkin::DrawLink.
     REAL avgAct = (itFrom->second.springActivation + itTo->second.springActivation) * 0.5f;
-    int alpha = std::min(255, (int)(avgAct * 500.0f + 30.0f));
+    REAL t = std::min(1.0f, avgAct * 6.0f);
+    int rC = (int)(BACKGROUND_COLOR.Red()   * (1.0f - t) + LOWER_DARK_COLOR.Red()   * t);
+    int gC = (int)(BACKGROUND_COLOR.Green() * (1.0f - t) + LOWER_DARK_COLOR.Green() * t);
+    int bC = (int)(BACKGROUND_COLOR.Blue()  * (1.0f - t) + LOWER_DARK_COLOR.Blue()  * t);
 
-    wxPen pen(wxColour(100, 100, 180, alpha), penWidth);
+    wxPen pen(wxColour(rC, gC, bC), penWidth);
     dc.SetPen(pen);
     dc.DrawLine(ptFrom, ptTo);
 }
@@ -479,100 +504,267 @@ void SpacePanel::DrawNode(wxDC& dc, CNode* pNode, const NodeViewData& viewData)
 
     bool isSelected = (m_pSpace && m_pSpace->GetCurrentNode() == pNode);
 
-    // Compute elliptangle-like shape: blend between ellipse and rounded rect
-    // For simplicity in 2D, use rounded rectangle for high activation, ellipse for low
+    // Outer rectangle for the node (a bit wider than tall, "elliptangle"-ish).
     wxRect nodeRect(center.x - r, center.y - (int)(r * 0.7),
                     r * 2, (int)(r * 1.4));
 
-    // Fill color based on activation
-    wxColour fillColor = ActivationColor(act);
-    dc.SetBrush(wxBrush(fillColor));
-
-    // Border
-    if (isSelected) {
-        dc.SetPen(wxPen(SELECTED_COLOR, 3));
-    } else {
-        // Beveled look: light top-left, dark bottom-right
-        dc.SetPen(wxPen(NODE_BORDER_LIGHT, 2));
-    }
-
-    // Draw the shape
-    if (r > 20) {
-        // Rounded rectangle for larger nodes (like elliptangle)
-        int cornerRadius = std::min(r / 3, 15);
-        dc.DrawRoundedRectangle(nodeRect, cornerRadius);
-
-        // Draw a second border for bevel effect
-        if (!isSelected) {
-            dc.SetPen(wxPen(NODE_BORDER_DARK, 1));
-            wxRect innerRect = nodeRect;
-            innerRect.Deflate(1);
-            dc.SetBrush(*wxTRANSPARENT_BRUSH);
-            dc.DrawRoundedRectangle(innerRect, cornerRadius - 1);
-        }
-    } else {
-        // Ellipse for smaller nodes
+    // For very small nodes fall back to a simple ellipse — the title-band
+    // layout is not legible at that size.
+    if (r <= 20) {
+        wxColour fillColor = ActivationColor(act);
+        dc.SetBrush(wxBrush(fillColor));
+        dc.SetPen(isSelected ? wxPen(SELECTED_COLOR, 2)
+                             : wxPen(LOWER_DARK_COLOR, 1));
         dc.DrawEllipse(nodeRect);
+        return;
     }
 
-    // Draw node name
-    if (r > 15 && pNode->GetName().GetLength() > 0) {
-        dc.SetTextForeground(TEXT_COLOR);
+    int cornerRadius = std::min(r / 3, 15);
 
-        // Scale font size with node size (proportional, no upper cap)
-        int fontSize = std::max(8, r / 3);
-        wxFont font(fontSize, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
-        dc.SetFont(font);
+    // 1. Body: light gray legacy background.
+    dc.SetBrush(wxBrush(BACKGROUND_COLOR));
+    dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.DrawRoundedRectangle(nodeRect, cornerRadius);
 
-        wxString name((const char*)pNode->GetName());
-        wxSize textSize = dc.GetTextExtent(name);
+    // 2. Title band: clipped to the rounded body so the colored band
+    //    sits flush against the upper bevel.
+    int titleHeight = std::max(14, r / 3);
+    if (titleHeight > nodeRect.GetHeight() - 6) {
+        titleHeight = nodeRect.GetHeight() - 6;
+    }
+    wxRect titleRect(nodeRect.GetLeft(), nodeRect.GetTop(),
+                     nodeRect.GetWidth(), titleHeight);
 
-        // Center the text in the node
-        int tx = center.x - textSize.GetWidth() / 2;
-        int ty = center.y - textSize.GetHeight() / 2;
+    wxColour titleColor = ClassColor(pNode);
+    {
+        dc.SetBrush(wxBrush(titleColor));
+        dc.SetPen(*wxTRANSPARENT_PEN);
+        // Clip to the rounded body so the band follows the corners.
+        dc.SetClippingRegion(nodeRect);
+        // Draw a slightly oversized rectangle so it tucks under the bevel.
+        dc.DrawRectangle(titleRect.GetLeft(), titleRect.GetTop(),
+                         titleRect.GetWidth(), titleRect.GetHeight());
+        dc.DestroyClippingRegion();
+    }
 
-        // Clip to node bounds
-        if (textSize.GetWidth() < nodeRect.GetWidth() - 4) {
-            dc.DrawText(name, tx, ty);
-        } else {
-            // Truncate with ellipsis
-            wxString truncated = name;
-            while (truncated.Length() > 1) {
-                truncated = truncated.Left(truncated.Length() - 1);
-                wxSize ts = dc.GetTextExtent(truncated + "...");
-                if (ts.GetWidth() < nodeRect.GetWidth() - 4) {
-                    dc.DrawText(truncated + "...",
-                                center.x - ts.GetWidth() / 2, ty);
-                    break;
+    // 3. Beveled outline: upper-left light highlight, then a darker inset
+    //    rounded rectangle offset down/right for the lower-right shadow,
+    //    mirroring the legacy GDI bevel.
+    dc.SetBrush(*wxTRANSPARENT_BRUSH);
+    dc.SetPen(wxPen(UPPER_LIGHT_COLOR, 1));
+    {
+        wxRect outerHi = nodeRect;
+        outerHi.Deflate(1, 1);
+        dc.DrawRoundedRectangle(outerHi, std::max(0, cornerRadius - 1));
+    }
+    dc.SetPen(wxPen(LOWER_LIGHT_COLOR, 1));
+    {
+        wxRect inner = nodeRect;
+        inner.Deflate(2, 2);
+        inner.x += 1;
+        inner.y += 1;
+        dc.DrawRoundedRectangle(inner, std::max(1, cornerRadius - 2));
+    }
+
+    // 4. Selection / outline pen — drawn last so it sits on top.
+    dc.SetBrush(*wxTRANSPARENT_BRUSH);
+    if (isSelected) {
+        int penWidth = std::max(2, r / 20);
+        dc.SetPen(wxPen(SELECTED_COLOR, penWidth));
+    } else {
+        dc.SetPen(wxPen(LOWER_DARK_COLOR, 1));
+    }
+    dc.DrawRoundedRectangle(nodeRect, cornerRadius);
+
+    // 5. Image (if any) on the left of the body region.
+    wxRect bodyRect(nodeRect.GetLeft() + 3,
+                    titleRect.GetBottom() + 2,
+                    nodeRect.GetWidth() - 6,
+                    nodeRect.GetBottom() - titleRect.GetBottom() - 4);
+
+    auto& mutableNV = m_nodeViews[pNode];
+    if (EnsureNodeImage(pNode, mutableNV) && bodyRect.GetHeight() > 8) {
+        const wxBitmap& bmp = mutableNV.image;
+        if (bmp.IsOk()) {
+            // Fit image into a square area on the left of the body, preserving
+            // aspect ratio.
+            int targetH = bodyRect.GetHeight() - 2;
+            int targetW = std::min(targetH, bodyRect.GetWidth() / 2);
+            if (targetW > 4 && targetH > 4) {
+                wxImage img = bmp.ConvertToImage();
+                int srcW = img.GetWidth();
+                int srcH = img.GetHeight();
+                // Preserve aspect ratio inside (targetW x targetH).
+                int drawW = targetW;
+                int drawH = targetH;
+                if (srcW > 0 && srcH > 0) {
+                    double sa = (double)srcW / (double)srcH;
+                    double ta = (double)targetW / (double)targetH;
+                    if (sa > ta) {
+                        drawH = (int)(targetW / sa);
+                    } else {
+                        drawW = (int)(targetH * sa);
+                    }
                 }
+                if (drawW < 1) drawW = 1;
+                if (drawH < 1) drawH = 1;
+                wxImage scaled = img.Scale(drawW, drawH, wxIMAGE_QUALITY_NORMAL);
+                wxBitmap scaledBmp(scaled);
+                int ix = bodyRect.GetLeft() + (targetW - drawW) / 2;
+                int iy = bodyRect.GetTop() + (targetH - drawH) / 2;
+                dc.DrawBitmap(scaledBmp, ix, iy, true);
+                // Shrink body region so text starts to the right of the image.
+                bodyRect.x += targetW + 4;
+                bodyRect.width -= targetW + 4;
             }
         }
     }
 
-    // Draw description text for sufficiently activated nodes
-    if (r > 30 && act > 0.08f && pNode->GetDescription().GetLength() > 0) {
-        int descFontSize = std::max(7, r / 4);
+    // 6. Title text inside the title band.
+    if (pNode->GetName().GetLength() > 0 && titleRect.GetHeight() > 8) {
+        int fontSize = std::max(8, titleHeight - 6);
+        wxFont font(fontSize, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL,
+                    wxFONTWEIGHT_BOLD);
+        dc.SetFont(font);
+        dc.SetTextForeground(TitleBandIsDark(titleColor)
+                             ? wxColour(255, 255, 255)
+                             : TEXT_COLOR);
+
+        wxString name((const char*)pNode->GetName());
+
+        // Truncate with ellipsis to fit the title band.
+        int avail = titleRect.GetWidth() - 8;
+        wxString display = name;
+        wxSize ts = dc.GetTextExtent(display);
+        while (ts.GetWidth() > avail && display.Length() > 1) {
+            display = display.Left(display.Length() - 1);
+            ts = dc.GetTextExtent(display + "...");
+            if (ts.GetWidth() <= avail) {
+                display += "...";
+                break;
+            }
+        }
+
+        dc.SetClippingRegion(titleRect);
+        int tx = titleRect.GetLeft() + 4;
+        int ty = titleRect.GetTop() + (titleRect.GetHeight() - ts.GetHeight()) / 2;
+        dc.DrawText(display, tx, ty);
+        dc.DestroyClippingRegion();
+    }
+
+    // 7. Description text in the body region (skipping over the image, if any).
+    if (bodyRect.GetHeight() > 10 && bodyRect.GetWidth() > 10 &&
+        pNode->GetDescription().GetLength() > 0)
+    {
+        int descFontSize = std::max(7, r / 5);
         wxFont descFont(descFontSize, wxFONTFAMILY_SWISS,
                         wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
         dc.SetFont(descFont);
-        dc.SetTextForeground(wxColour(100, 100, 100));
+        dc.SetTextForeground(TEXT_COLOR);
 
         wxString desc((const char*)pNode->GetDescription());
 
-        // Position below the name
-        int descTop = center.y + 2;
-        int descWidth = nodeRect.GetWidth() - 8;
-        int descLeft = center.x - descWidth / 2;
+        dc.SetClippingRegion(bodyRect);
+        // Simple word-wrap: emit space-delimited words on as many lines as fit.
+        int yCursor = bodyRect.GetTop();
+        int lineHeight = dc.GetCharHeight();
+        wxString line;
+        size_t i = 0;
+        while (i <= desc.length() && yCursor + lineHeight <= bodyRect.GetBottom()) {
+            bool atEnd = (i == desc.length());
+            wxChar ch = atEnd ? wxT('\n') : desc[i];
+            if (ch == wxT('\n') || ch == wxT('\r') || ch == wxT(' ') || atEnd) {
+                if (ch == wxT('\n') || ch == wxT('\r')) {
+                    dc.DrawText(line, bodyRect.GetLeft(), yCursor);
+                    yCursor += lineHeight;
+                    line.Clear();
+                } else {
+                    // word boundary
+                    size_t j = i;
+                    while (j < desc.length() && desc[j] != wxT(' ') &&
+                           desc[j] != wxT('\n') && desc[j] != wxT('\r')) {
+                        j++;
+                    }
+                    wxString word = desc.SubString(i, j - 1);
+                    wxString trial = line.empty() ? word : (line + wxT(' ') + word);
+                    if (dc.GetTextExtent(trial).GetWidth() <= bodyRect.GetWidth()) {
+                        line = trial;
+                    } else {
+                        if (!line.empty()) {
+                            dc.DrawText(line, bodyRect.GetLeft(), yCursor);
+                            yCursor += lineHeight;
+                        }
+                        line = word;
+                    }
+                    i = j;
+                    continue;
+                }
+            }
+            i++;
+        }
+        if (!line.empty() && yCursor + lineHeight <= bodyRect.GetBottom()) {
+            dc.DrawText(line, bodyRect.GetLeft(), yCursor);
+        }
+        dc.DestroyClippingRegion();
+    }
+}
 
-        wxRect descRect(descLeft, descTop, descWidth,
-                        nodeRect.GetBottom() - descTop - 4);
+bool SpacePanel::EnsureNodeImage(CNode* pNode, NodeViewData& viewData)
+{
+    wxString filename((const char*)pNode->GetImageFilename());
 
-        if (descRect.GetHeight() > descFontSize + 2) {
-            dc.SetClippingRegion(descRect);
-            dc.DrawText(desc, descRect.GetLeft(), descRect.GetTop());
-            dc.DestroyClippingRegion();
+    if (filename.IsEmpty()) {
+        // No image set; nothing to load.
+        viewData.image = wxBitmap();
+        viewData.loadedImageFilename.Clear();
+        viewData.imageLoadAttempted = true;
+        return false;
+    }
+
+    // If we already attempted to load this exact filename, return cached result.
+    if (viewData.imageLoadAttempted && viewData.loadedImageFilename == filename) {
+        return viewData.image.IsOk();
+    }
+
+    viewData.imageLoadAttempted = true;
+    viewData.loadedImageFilename = filename;
+    viewData.image = wxBitmap();
+
+    // Build a list of candidate paths to try. Mirrors the MFC version's
+    // <space-path-dir>/images/<filename> convention plus some saner fallbacks.
+    wxArrayString candidates;
+    candidates.Add(filename);
+
+    if (m_pSpace) {
+        wxString spacePath((const char*)m_pSpace->GetPathName());
+        if (!spacePath.IsEmpty()) {
+            wxFileName fn(spacePath);
+            wxString dir = fn.GetPath();
+            if (!dir.IsEmpty()) {
+                candidates.Add(dir + wxFileName::GetPathSeparator()
+                               + "images" + wxFileName::GetPathSeparator()
+                               + filename);
+                candidates.Add(dir + wxFileName::GetPathSeparator() + filename);
+            }
         }
     }
+
+    candidates.Add("images" + wxString(wxFileName::GetPathSeparator()) + filename);
+    candidates.Add("data" + wxString(wxFileName::GetPathSeparator())
+                   + "images" + wxString(wxFileName::GetPathSeparator())
+                   + filename);
+
+    for (size_t i = 0; i < candidates.GetCount(); i++) {
+        const wxString& path = candidates[i];
+        if (!wxFileName::FileExists(path)) continue;
+        wxImage img;
+        if (img.LoadFile(path)) {
+            viewData.image = wxBitmap(img);
+            return viewData.image.IsOk();
+        }
+    }
+
+    return false;
 }
 
 #ifdef USE_OPENGL_RENDERER

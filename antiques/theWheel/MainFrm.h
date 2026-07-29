@@ -57,6 +57,9 @@ public:
 	afx_msg void OnViewDesigntime();
 public:
 	afx_msg void OnUpdateViewDesigntime(CCmdUI *pCmdUI);
+public:
+	// opens the WebView2 rendering of the current space
+	afx_msg void OnViewWebSpace();
 };
 
 

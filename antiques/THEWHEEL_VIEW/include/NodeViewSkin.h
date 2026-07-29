@@ -15,7 +15,9 @@
 #endif // _MSC_VER > 1000
 
 // Direct3D includes
+#ifdef SKIN_RENDER_3D
 #include <D3D.h>
+#endif
 
 // vector class for position calculations
 #include <VectorD.h>
@@ -48,17 +50,19 @@ public:
 
 // Operations
 public:
-	// blts the skin, if a surface has been prepared
-	void BltSkin(LPDIRECTDRAWSURFACE lpDDS, CNodeView *pNodeView);
+	// blts the skin into the caller's DC, if a bitmap has been prepared
+	void BltSkin(CDC *pDC, CNodeView *pNodeView);
 
-	// finds (or creates) the DDS for the skin of the specified width
-	LPDIRECTDRAWSURFACE GetSkinDDS(CNodeView *pNodeView, CRect& rect);
+	// finds (or creates) the bitmap for the skin of the specified width
+	HBITMAP GetSkinBitmap(CNodeView *pNodeView, CRect& rect);
 
 	// draw the skin, using the direct-draw surface if available
 	void DrawSkinGDI(CDC *pDC, CNodeView *pNodeView);
 
+#ifdef SKIN_RENDER_3D
 	// draw the skin, using the direct-draw surface if available
 	void DrawSkinD3D(IDirect3DDevice2 *lpD3DDev2, CNodeView *pNodeView);
+#endif
 
 	// draw a link
 	void DrawLink(CDC *pDC, CVectorD<3>& vFrom, REAL actFrom,
@@ -76,14 +80,16 @@ public:
 	CExtent<REAL> CalcTopBottomEllipseExtent(CNodeView *pNodeView);
 	CExtent<REAL> CalcLeftRightEllipseExtent(CNodeView *pNodeView);
 
+#ifdef SKIN_RENDER_3D
 	// Direct3D initialization
-	BOOL InitD3DDevice(LPDIRECTDRAWSURFACE lpDDS, 
+	BOOL InitD3DDevice(LPDIRECTDRAWSURFACE lpDDS,
 		LPDIRECT3DDEVICE2 *lpD3DDev);
 	BOOL InitViewport(LPDIRECT3DDEVICE2 lpD3DDev, CRect rect,
 		LPDIRECT3DVIEWPORT2 *lpD3DViewport);
-	BOOL InitLights(LPDIRECT3DVIEWPORT2 lpD3DDev, 
+	BOOL InitLights(LPDIRECT3DVIEWPORT2 lpD3DDev,
 		LPDIRECT3DLIGHT *lpD3DLights);
 	BOOL InitMaterial(LPDIRECT3DMATERIAL2 *lpD3DMat);
+#endif
 
 private:
 	// stores the current client area
@@ -95,10 +101,17 @@ private:
 
 	// stores pointer to the main DirectDraw object
 	LPDIRECTDRAW m_lpDD;
+#ifdef SKIN_RENDER_3D
 	LPDIRECT3D2 m_lpD3D;
+#endif
 
-	// pointer to the skin drawing surface for blt
-	CArray<LPDIRECTDRAWSURFACE, LPDIRECTDRAWSURFACE&> m_arrlpSkinDDS;
+	// cached skin bitmaps for blt, indexed by skin width.  the skins are
+	//		drawn purely with GDI (see DrawSkinGDI), so they live in GDI
+	//		bitmaps and are composited with TransparentBlt; they used to be
+	//		held in DirectDraw surfaces solely so the blt could colour-key
+	//		them, which the emulated DirectDraw of modern Windows accepts
+	//		and then silently ignores for video-memory surfaces
+	CArray<HBITMAP, HBITMAP> m_arrSkinBitmaps;
 
 };	// class CNodeViewSkin
 

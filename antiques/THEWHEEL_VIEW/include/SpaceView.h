@@ -73,6 +73,45 @@ public:
 	// initialize if a different module state is needed for context switch
 	static AFX_MODULE_STATE *m_pModuleState;
 
+	//////////////////////////////////////////////////////////////////////
+	// milliseconds spent in each phase of the most recent OnPaint, so the
+	//		render cost can be compared against the layout cost for the same
+	//		frame.  static because there is one space view per frame window
+	//		and this is diagnostic only
+	//////////////////////////////////////////////////////////////////////
+	struct CRenderTimings
+	{
+		REAL msClear;		// back-buffer colour fill
+		REAL msLinks;		// the link lines between node views
+		REAL msSort;		// copy + qsort of the draw order
+		REAL msNodes;		// per-node skin blt and text
+		REAL msOverlay;		// OnDraw over the finished nodes
+		REAL msPresent;		// blt of the back buffer to the primary
+		REAL msTotal;
+		int nNodesDrawn;
+	};
+
+	static CRenderTimings s_render;
+
+private:
+	//////////////////////////////////////////////////////////////////////
+	// the frame is composed in a plain GDI memory bitmap and transferred to
+	//		the window in one blt.  everything drawn per frame -- links, node
+	//		skins, text, the overlay -- is GDI, and GDI onto a DirectDraw
+	//		surface DC read-modify-writes uncached video memory a pixel at a
+	//		time, which cost milliseconds per node
+	//////////////////////////////////////////////////////////////////////
+	CDC m_dcMem;
+	CBitmap m_bmpMem;
+	CBitmap *m_pbmpMemOld;
+	int m_nMemWidth;
+	int m_nMemHeight;
+
+	// (re)creates the memory bitmap for the given client size
+	BOOL CreateMemBuffer(int cx, int cy);
+
+public:
+
 // Operations
 public:
 	// activates a particular node by a particular scale factor

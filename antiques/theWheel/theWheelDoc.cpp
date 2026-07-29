@@ -92,7 +92,12 @@ void CtheWheelDoc::OnSpaceProperties()
 	if (!m_pSpacePropSheet)
 	{
 		m_pSpacePropSheet = new CPropertySheet(_T("Space Properties"));
-		m_pSpacePropSheet->AddPage(new CSpaceLayoutPropPage());
+
+		// the layout page edits this document's space directly
+		CSpaceLayoutPropPage *pLayoutPage = new CSpaceLayoutPropPage();
+		pLayoutPage->m_pSpace = &m_space;
+		m_pSpacePropSheet->AddPage(pLayoutPage);
+
 		m_pSpacePropSheet->AddPage(new CSpacePropagationPropPage());
 	}
 

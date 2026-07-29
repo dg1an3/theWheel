@@ -3,7 +3,7 @@
 
 
 #pragma once
-#include "c:\projects\thewheel\src\thewheel_view\include\spaceview.h"
+#include <SpaceView.h>
 
 
 class CtheWheelView : public CView

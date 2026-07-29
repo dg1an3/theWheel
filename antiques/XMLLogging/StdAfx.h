@@ -14,6 +14,13 @@
 #define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS	// some CString constructors will be explicit
 
 #ifndef VC_EXTRALEAN
+#ifndef WINVER
+#define WINVER 0x0501
+#endif
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0501
+#endif
+
 #define VC_EXTRALEAN		// Exclude rarely-used stuff from Windows headers
 #endif
 

@@ -62,8 +62,8 @@ public:
 	void UpdateSpringPosition(REAL springConst = 0.95);
 	void UpdateSpringActivation(REAL springConst = 0.95);
 
-    // draws the node view
-    void Draw(LPDIRECTDRAWSURFACE lpDDS);
+    // draws the node view into the caller's DC
+    void Draw(CDC *pDC);
 
     // draws the links for this nodeview
     void DrawLinks(CDC *pDC, CNodeViewSkin *pSkin);
@@ -117,6 +117,14 @@ public:
 
     CRgn m_shape;
 	CRgn m_shapeHit;
+
+	// the pixel rectangles m_shape and m_shapeHit were last built from, and
+	//		whether they have been built at all.  CalcShape rounds the extents
+	//		to whole pixels, so spring motion finer than a pixel leaves both
+	//		regions identical and they need not be rebuilt
+	CRect m_rectShapeOuter;
+	CRect m_rectShapeInner;
+	BOOL m_bShapeValid;
 
     // flags to indicate dragging state
     BOOL m_bDragging;

@@ -3,6 +3,14 @@
 //      are changed infrequently
 //
 
+#ifndef WINVER
+#define WINVER 0x0501
+#endif
+
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0501
+#endif
+
 #if !defined(AFX_STDAFX_H__70763E23_0829_11D5_9E4C_00B0D0609AB0__INCLUDED_)
 #define AFX_STDAFX_H__70763E23_0829_11D5_9E4C_00B0D0609AB0__INCLUDED_
 
