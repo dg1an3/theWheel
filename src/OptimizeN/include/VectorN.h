@@ -631,6 +631,7 @@ CArchive&
 
 #endif	// __AFX_H__
 
+#if EXT_LOGGING
 
 //////////////////////////////////////////////////////////////////////
 #ifdef _MSC_VER
@@ -672,8 +673,7 @@ void
 	}
 
 }	// LogExprExt
-#endif // _MSC_VER
-
+#endif
 
 // Backward compatibility
 template<class TYPE = REAL>

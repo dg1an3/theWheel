@@ -36,7 +36,12 @@ public:
 	REAL GetWeight() const;
 
 	// accessors for gain setting
-	DECLARE_ATTRIBUTE(Gain, REAL);
+	// DECLARE_ATTRIBUTE(Gain, REAL);
+private:									
+	REAL m_Gain;
+public:										
+	const REAL& GetGain() const	{ return m_Gain; }
+	void SetGain(const REAL& value) { m_Gain = value; }
 
 	// gets the weight adjusted for gain
 	REAL GetGainWeight() const;

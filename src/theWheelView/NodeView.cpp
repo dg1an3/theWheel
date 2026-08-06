@@ -57,6 +57,11 @@ const COLORREF BACK_COLOR = RGB(228, 228, 228);
 // TODO: get this from NodeViewSkin
 const int THICK_PEN_WIDTH = 4;
 
+const REAL WRAP_SPACE_SIZE_X = 1000;
+const REAL WRAP_SPACE_SIZE_Y = 1000;
+
+const CVectorD<3, REAL> WRAP_SPACE_EXTENT(WRAP_SPACE_SIZE_X, WRAP_SPACE_SIZE_Y, 0);
+
 //////////////////////////////////////////////////////////////////////
 // statics for storing the font for smooth text
 
@@ -492,15 +497,18 @@ void CNodeView::SetMaximized(BOOL bMax)
 //////////////////////////////////////////////////////////////////////
 void CNodeView::Draw(LPDIRECT3DDEVICE9 lpDDS)
 {
-	D3DXMATRIX mat;
-	D3DXMatrixTranslation(&mat,
-		-m_extInner.GetCenter()[0],
-		-m_extInner.GetCenter()[1],
-		 m_extInner.GetCenter()[2]);
-	ASSERT_HRESULT(lpDDS->SetTransform(D3DTS_WORLD, (D3DMATRIX*) & mat));
+	for (auto position : WrapPositions(m_extInner.GetCenter(), WRAP_SPACE_EXTENT)) {
 
-	// render the skin (D3D only; GDI overlay done in DrawOverlay)
-	m_pParent->m_pSkin->Render(this);
+		D3DXMATRIX mat;
+		D3DXMatrixTranslation(&mat,
+			-position[0],
+			-position[1],
+			position[2]);
+		ASSERT_HRESULT(lpDDS->SetTransform(D3DTS_WORLD, (D3DMATRIX*) & mat));
+
+		// render the skin (D3D only; GDI overlay done in DrawOverlay)
+		m_pParent->m_pSkin->Render(this);
+	}
 
 }	// CNodeView::Draw
 
@@ -585,9 +593,12 @@ void CNodeView::DrawLinks(LPDIRECT3DDEVICE9 lpDDS, CNodeViewSkin *pSkin)
 				CVectorD<3> vTo = pLinkedView->GetSpringCenter();
 				REAL gain = REAL(0.01) + sqrt(GetNode()->GetLinkTo(pLinkedView->GetNode())->GetGain());
 
-				pSkin->DrawLink(pDC, vFrom, 
+
+				auto [minDist, vMinFrom, vMinTo] = WrapDistance(vFrom, vTo, WRAP_SPACE_EXTENT, false);
+
+				pSkin->DrawLink(pDC, vMinFrom,
 					gain * GetSpringActivation(), 
-					vTo,
+					vMinTo,
 					gain * pLinkedView->GetSpringActivation());
 			}
 
@@ -602,6 +613,7 @@ void CNodeView::DrawLinks(LPDIRECT3DDEVICE9 lpDDS, CNodeViewSkin *pSkin)
 					// draw the link
 					CVectorD<3> vFrom = GetSpringCenter();
 					CVectorD<3> vTo = pLinkedView->GetSpringCenter();
+
 					REAL gain = GetNode()->GetLinkTo(pLinkedView->GetNode())->GetGain();
 
 					CVectorD<3> vMid = (REAL) 0.5 * (vFrom + vTo);
