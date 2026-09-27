@@ -1,5 +1,8 @@
 # Python dependencies for theWheel testing
 
+# Numerics (scripts/efe_policy.py)
+numpy>=1.23
+
 # Testing framework
 pytest>=7.0.0
 pytest-cov>=4.0.0
