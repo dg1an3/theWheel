@@ -249,3 +249,36 @@ TEST(Node, RadiusForActivation)
     CNode node;
     EXPECT_NEAR(node.GetRadiusForActivation(0.16f), sqrt(0.16), 1e-4);
 }
+
+// ===== Activation variance =====
+
+TEST(Node, ActivationVarianceStartsAtPrior)
+{
+    CNode node;
+    EXPECT_FLOAT_EQ(node.GetActivationVariance(), CNode::GetActivationVariancePrior());
+}
+
+TEST(Node, ObserveActivationAddsPrecision)
+{
+    CNode node;
+    const REAL prior = CNode::GetActivationVariancePrior();
+    node.ObserveActivation(20.0f);
+    EXPECT_FLOAT_EQ(node.GetActivationVariance(), 1.0f / (1.0f / prior + 20.0f));
+
+    // zero or negative precision is not an observation
+    const REAL before = node.GetActivationVariance();
+    node.ObserveActivation(0.0f);
+    node.ObserveActivation(-5.0f);
+    EXPECT_FLOAT_EQ(node.GetActivationVariance(), before);
+}
+
+TEST(Node, DiffuseActivationVarianceCappedAtPrior)
+{
+    CNode node;
+    node.SetActivationVariance(0.05f);
+    node.DiffuseActivationVariance(0.01f);
+    EXPECT_FLOAT_EQ(node.GetActivationVariance(), 0.06f);
+
+    node.DiffuseActivationVariance(10.0f);
+    EXPECT_FLOAT_EQ(node.GetActivationVariance(), CNode::GetActivationVariancePrior());
+}

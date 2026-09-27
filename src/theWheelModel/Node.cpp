@@ -38,6 +38,9 @@ const REAL PROPAGATE_THRESHOLD_WEIGHT = 0.01f;		// TODO: move to CNodeLink
 //////////////////////////////////////////////////////////////////////
 const REAL PRIM_FRAC = 0.5f;
 
+// prior variance of the activation belief (std dev ~ activation range)
+const REAL ACTIVATION_VARIANCE_PRIOR = 0.25f;
+
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -58,6 +61,7 @@ CNode::CNode(CSpace *pSpace,
 		, m_secondaryActivation((REAL) 0.005)		// small activation
 
 		, m_pMaxActivator(NULL)
+		, m_ActivationVariance(ACTIVATION_VARIANCE_PRIOR)
 		, m_maxDeltaActivation((REAL) 0.0)
 
 		, m_IsSubThreshold(TRUE)
@@ -596,6 +600,45 @@ void
 	}
 
 }	// CNode::SetActivation
+
+
+//////////////////////////////////////////////////////////////////////
+REAL 
+	CNode::GetActivationVariancePrior()
+	// returns the prior (maximum) activation variance
+{
+	return ACTIVATION_VARIANCE_PRIOR;
+
+}	// CNode::GetActivationVariancePrior
+
+
+//////////////////////////////////////////////////////////////////////
+void 
+	CNode::DiffuseActivationVariance(REAL amount)
+	// diffusion step: uncertainty grows by the amount, up to the prior
+{
+	if (amount > 0.0)
+	{
+		m_ActivationVariance = __min(m_ActivationVariance + amount,
+			ACTIVATION_VARIANCE_PRIOR);
+	}
+
+}	// CNode::DiffuseActivationVariance
+
+
+//////////////////////////////////////////////////////////////////////
+void 
+	CNode::ObserveActivation(REAL precision)
+	// observation step: precisions add, so the posterior variance is
+	//		1 / (1 / variance + precision)
+{
+	if (precision > 0.0)
+	{
+		m_ActivationVariance = 1.0f 
+			/ (1.0f / m_ActivationVariance + precision);
+	}
+
+}	// CNode::ObserveActivation
 
 
 //////////////////////////////////////////////////////////////////////

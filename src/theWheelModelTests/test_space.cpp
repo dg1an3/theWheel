@@ -228,3 +228,53 @@ TEST(Space, DeleteContentsClearsEverything)
 
     delete space;
 }
+
+// ===== Activation variance =====
+
+TEST(Space, ActivateNodeReducesVarianceOfActivatedNode)
+{
+    CSpace* space = CreateSpaceWithRoot();
+
+    CNode* a = new CNode();
+    a->SetParent(space->GetRootNode());
+    space->AddNode(a, nullptr);
+    CNode* b = new CNode();
+    b->SetParent(space->GetRootNode());
+    space->AddNode(b, nullptr);
+
+    space->ActivateNode(a, 0.5f);
+
+    EXPECT_LT(a->GetActivationVariance(), CNode::GetActivationVariancePrior());
+    EXPECT_FLOAT_EQ(b->GetActivationVariance(), CNode::GetActivationVariancePrior());
+
+    delete space;
+}
+
+TEST(Space, VarianceGrowsBackWhenAttentionMovesElsewhere)
+{
+    CSpace* space = CreateSpaceWithRoot();
+
+    CNode* a = new CNode();
+    a->SetParent(space->GetRootNode());
+    space->AddNode(a, nullptr);
+    CNode* b = new CNode();
+    b->SetParent(space->GetRootNode());
+    space->AddNode(b, nullptr);
+
+    space->ActivateNode(a, 0.5f);
+    const REAL afterClick = a->GetActivationVariance();
+
+    // clicking elsewhere lets the belief about a relax
+    space->ActivateNode(b, 0.5f);
+    EXPECT_GT(a->GetActivationVariance(), afterClick);
+
+    // and it returns to the prior after enough clicks elsewhere
+    for (int i = 0; i < 50; i++)
+    {
+        space->ActivateNode(b, 0.5f);
+    }
+    EXPECT_FLOAT_EQ(a->GetActivationVariance(), CNode::GetActivationVariancePrior());
+    EXPECT_LT(b->GetActivationVariance(), a->GetActivationVariance());
+
+    delete space;
+}

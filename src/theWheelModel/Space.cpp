@@ -50,6 +50,12 @@ const REAL DEFAULT_SPRING_CONST = 0.95f;
 const REAL PROPAGATE_SCALE = 0.40f; // 0.25; // 0.40; // 0.80; // 1.0;
 const REAL PROPAGATE_ALPHA = 0.99f; // 1.00; // 0.90; // 0.98;
 
+// precision gained by the activated node, per unit of activation scale
+const REAL OBSERVATION_PRECISION = 40.0f;
+
+// variance diffused to every node, per unit of activation scale
+const REAL VARIANCE_DIFFUSION = 0.02f;
+
 //////////////////////////////////////////////////////////////////////
 REAL 
 	GenerateRandom(REAL min, REAL max)
@@ -218,6 +224,14 @@ void
 	CSpace::ActivateNode(CNode *pNode, REAL scale)
 	// activates a particular node
 {
+	// update the uncertainty: all beliefs diffuse, then the activated
+	//		node is observed
+	for (auto pAtNode : m_arrNodes)
+	{
+		pAtNode->DiffuseActivationVariance(VARIANCE_DIFFUSION * scale);
+	}
+	pNode->ObserveActivation(OBSERVATION_PRECISION * scale);
+
 	// first, compute the new activation of the node up to the max
 	REAL oldActivation = pNode->GetActivation();
 	REAL newActivation = oldActivation // + scale;

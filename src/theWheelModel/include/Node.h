@@ -150,6 +150,23 @@ public:
 	//		propagation cycle
 	DECLARE_ATTRIBUTE_PTR(MaxActivator, CNode);
 
+	//////////////////////////////////////////////////////////////////
+	// activation uncertainty
+
+	// variance of the belief about this node's activation, i.e. how
+	//		uncertain the space is about the user's interest in it
+	DECLARE_ATTRIBUTE(ActivationVariance, REAL);
+
+	// prior (maximum) activation variance
+	static REAL GetActivationVariancePrior();
+
+	// diffusion step: uncertainty grows by the amount, up to the prior
+	void DiffuseActivationVariance(REAL amount);
+
+	// observation step: kalman update of the variance for an 
+	//		observation of the node with the given precision
+	void ObserveActivation(REAL precision);
+
 protected:
 
 	// declares CSpace and CNodeLink as friend classes, to access the helper functions
