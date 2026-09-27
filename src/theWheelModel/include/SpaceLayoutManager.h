@@ -57,6 +57,16 @@ public:
 	// total energy for current configuration
 	REAL GetEnergy();
 
+	// Laplace-approximated variational free energy from the most 
+	//		recent layout:  F = E + 1/2 ln|H + lambda I|
+	REAL GetFreeEnergy();
+
+	// log-determinant of the energy hessian (the "complexity" term)
+	REAL GetLogDetHessian();
+
+	// computes the free energy at the current state
+	void UpdateFreeEnergy();
+
 	// returns the distance error between two nodes
 	REAL GetDistError(CNode *pFrom, CNode *pTo);
 
@@ -101,6 +111,10 @@ protected:
 	// caches energy value for the previous input vector
 	mutable REAL m_energy;
 	mutable REAL m_energyConst;
+
+	// free energy and log-determinant from the most recent layout
+	REAL m_freeEnergy;
+	REAL m_logDetHessian;
 
 	// holds the current state
 	mutable VectorN<> m_vState;

@@ -17,6 +17,9 @@
 // for least-squares
 #include <MatrixNxM.h>
 
+// for the free energy log-determinant
+#include <vector>
+
 // optimizer for the layout
 #include <PowellOptimizer.h>
 #include <ConjGradOptimizer.h>
@@ -56,6 +59,17 @@ const REAL K_POS = 600.0f;
 // constant for weighting the repulsion energy
 const REAL K_REP = 3200.0f;
 
+// extents of the wrapped space used by GetDistError
+const REAL WRAP_WIDTH = 800.0f;
+const REAL WRAP_HEIGHT = 400.0f;
+
+// weak gaussian prior precision on positions for the laplace free
+//		energy; regularizes the translation/rotation zero modes
+const REAL FREE_ENERGY_PRIOR_PRECISION = 1e-3f;
+
+// step size (in position units) for the finite-difference hessian
+const REAL HESSIAN_STEP = 0.1f;
+
 
 const REAL RELAX_SIGMOID_SHIFT = 1.20f; // 1.5; // 0.30; 
 const REAL RELAX_SIGMOID_FACTOR = 1.5f; // 4.0; // 1.5; // 8.0; 
@@ -79,6 +93,8 @@ CSpaceLayoutManager::CSpaceLayoutManager(CSpace *pSpace)
 
 	, m_energy(0.0)
 	, m_energyConst(0.0)
+	, m_freeEnergy(0.0)
+	, m_logDetHessian(0.0)
 
 	, m_mSS(NULL)
 	, m_mAvgAct(NULL)
@@ -206,24 +222,19 @@ REAL
 	REAL sizeAvg = 0.5f * (sizeFrom + sizeTo);
 	CVectorD<3> vOffset = pFrom->GetPosition() - pTo->GetPosition();
 
-	for (int shiftX = -1; shiftX <= 1; shiftX ++) {
-		auto pNewTo = pFrom->GetPosition();
-		pNewTo[0] += shiftX * 800;
-		auto vNewOffset = pFrom->GetPosition() - pNewTo;
-
-		if (vNewOffset.GetLength() < vOffset.GetLength())
+	// use the nearest wrapped image of the target node
+	for (int shiftX = -1; shiftX <= 1; shiftX++)
+	{
+		for (int shiftY = -1; shiftY <= 1; shiftY++)
 		{
-			vOffset = vNewOffset;
-		}
-	}
-
-	for (int shiftY = -1; shiftY <= 1; shiftY++) {
-		auto pNewTo = pFrom->GetPosition();
-		pNewTo[1] += shiftY * 400;
-		auto vNewOffset = pFrom->GetPosition() - pNewTo;
-		if (vNewOffset.GetLength() < vOffset.GetLength())
-		{
-			vOffset = vNewOffset;
+			auto vNewTo = pTo->GetPosition();
+			vNewTo[0] += shiftX * WRAP_WIDTH;
+			vNewTo[1] += shiftY * WRAP_HEIGHT;
+			auto vNewOffset = pFrom->GetPosition() - vNewTo;
+			if (vNewOffset.GetLength() < vOffset.GetLength())
+			{
+				vOffset = vNewOffset;
+			}
 		}
 	}
 
@@ -256,6 +267,9 @@ void
 	// layout the nodes
 	LayoutNodesPartial(0);
 
+	// evaluate the free energy at the optimum
+	UpdateFreeEnergy();
+
 	// relax
 	Relax();
 
@@ -267,6 +281,173 @@ void
 	m_pStateVector->GetPositionsVector(m_vState);
 
 }	// CSpace::LayoutNodes
+
+
+//////////////////////////////////////////////////////////////////////
+static void 
+	SymmetricEigenvalues(std::vector<double> mA, int nDim, 
+			std::vector<double>& vEigen)
+	// cyclic jacobi eigenvalues of the symmetric part of the 
+	//		nDim x nDim matrix mA (row-major)
+{
+	// symmetrize
+	for (int nAtRow = 0; nAtRow < nDim; nAtRow++)
+	{
+		for (int nAtCol = nAtRow + 1; nAtCol < nDim; nAtCol++)
+		{
+			const double avg = 0.5 * (mA[nAtRow * nDim + nAtCol] 
+				+ mA[nAtCol * nDim + nAtRow]);
+			mA[nAtRow * nDim + nAtCol] = avg;
+			mA[nAtCol * nDim + nAtRow] = avg;
+		}
+	}
+
+	for (int nSweep = 0; nSweep < 50; nSweep++)
+	{
+		// stop when the off-diagonal part is negligible
+		double offDiag = 0.0;
+		double diag = 0.0;
+		for (int nAtRow = 0; nAtRow < nDim; nAtRow++)
+		{
+			diag += mA[nAtRow * nDim + nAtRow] * mA[nAtRow * nDim + nAtRow];
+			for (int nAtCol = nAtRow + 1; nAtCol < nDim; nAtCol++)
+			{
+				offDiag += mA[nAtRow * nDim + nAtCol] * mA[nAtRow * nDim + nAtCol];
+			}
+		}
+		if (offDiag <= 1e-24 * diag || offDiag == 0.0)
+		{
+			break;
+		}
+
+		for (int p = 0; p < nDim; p++)
+		{
+			for (int q = p + 1; q < nDim; q++)
+			{
+				const double apq = mA[p * nDim + q];
+				if (apq == 0.0)
+				{
+					continue;
+				}
+
+				// rotation angle that zeros element (p, q)
+				const double theta = (mA[q * nDim + q] - mA[p * nDim + p]) 
+					/ (2.0 * apq);
+				const double t = (theta >= 0.0 ? 1.0 : -1.0) 
+					/ (fabs(theta) + sqrt(theta * theta + 1.0));
+				const double c = 1.0 / sqrt(t * t + 1.0);
+				const double sn = t * c;
+
+				// apply the rotation to rows/columns p and q
+				for (int k = 0; k < nDim; k++)
+				{
+					const double akp = mA[k * nDim + p];
+					const double akq = mA[k * nDim + q];
+					mA[k * nDim + p] = c * akp - sn * akq;
+					mA[k * nDim + q] = sn * akp + c * akq;
+				}
+				for (int k = 0; k < nDim; k++)
+				{
+					const double apk = mA[p * nDim + k];
+					const double aqk = mA[q * nDim + k];
+					mA[p * nDim + k] = c * apk - sn * aqk;
+					mA[q * nDim + k] = sn * apk + c * aqk;
+				}
+			}
+		}
+	}
+
+	vEigen.resize(nDim);
+	for (int nAt = 0; nAt < nDim; nAt++)
+	{
+		vEigen[nAt] = mA[nAt * nDim + nAt];
+	}
+
+}	// SymmetricEigenvalues
+
+
+//////////////////////////////////////////////////////////////////////
+REAL 
+	CSpaceLayoutManager::GetFreeEnergy()
+	// returns the laplace free energy from the most recent layout
+{
+	return m_freeEnergy;
+
+}	// CSpaceLayoutManager::GetFreeEnergy
+
+
+//////////////////////////////////////////////////////////////////////
+REAL 
+	CSpaceLayoutManager::GetLogDetHessian()
+	// returns ln|H| from the most recent layout
+{
+	return m_logDetHessian;
+
+}	// CSpaceLayoutManager::GetLogDetHessian
+
+
+//////////////////////////////////////////////////////////////////////
+void 
+	CSpaceLayoutManager::UpdateFreeEnergy()
+	// computes the laplace-approximated free energy at the current
+	//		state:  F = E(mu) + 1/2 ln|H(mu) + lambda I|
+	//		where the energy E is read as -ln p(x, o), H is its hessian,
+	//		and lambda is a weak prior precision on positions
+{
+	const int nDim = 
+		2 * __min(GetStateDim() / 2, m_pSpace->GetNodeCount());
+	if (nDim == 0 || m_nConstNodes != 0)
+	{
+		m_logDetHessian = 0.0;
+		m_freeEnergy = m_energy;
+		return;
+	}
+
+	// copy the current (optimal) state
+	VectorN<> vAt;
+	vAt.SetDim(nDim);
+	vAt.CopyElements(m_vState, 0, nDim, 0);
+
+	// hessian by central differences of the analytic gradient
+	std::vector<double> mHess(nDim * nDim);
+	VectorN<> vParam = vAt;
+	VectorN<> vGradPlus;
+	VectorN<> vGradMinus;
+	for (int nAtCol = 0; nAtCol < nDim; nAtCol++)
+	{
+		vParam[nAtCol] = vAt[nAtCol] + HESSIAN_STEP;
+		(*this)(vParam, &vGradPlus);
+		vParam[nAtCol] = vAt[nAtCol] - HESSIAN_STEP;
+		(*this)(vParam, &vGradMinus);
+		vParam[nAtCol] = vAt[nAtCol];
+
+		for (int nAtRow = 0; nAtRow < nDim; nAtRow++)
+		{
+			mHess[nAtCol * nDim + nAtRow] = 
+				(vGradPlus[nAtRow] - vGradMinus[nAtRow]) / (2.0 * HESSIAN_STEP);
+		}
+	}
+
+	// ln|H + lambda I|; the layout optimizer stops at a loose 
+	//		tolerance, so use |eigenvalue| for any residual negative 
+	//		curvature
+	std::vector<double> vEigen;
+	SymmetricEigenvalues(mHess, nDim, vEigen);
+	double logDet = 0.0;
+	for (int nAt = 0; nAt < nDim; nAt++)
+	{
+		logDet += log(fabs(vEigen[nAt]) + FREE_ENERGY_PRIOR_PRECISION);
+	}
+	m_logDetHessian = (REAL) logDet;
+
+	// re-evaluate at the optimum, restoring m_energy and m_vState
+	const REAL energy = (*this)(vAt);
+	m_freeEnergy = energy + 0.5f * m_logDetHessian;
+
+	TRACE(_T("Layout energy = %f, free energy = %f, ln|H| = %f\n"),
+		energy, m_freeEnergy, m_logDetHessian);
+
+}	// CSpaceLayoutManager::UpdateFreeEnergy
 
 
 //////////////////////////////////////////////////////////////////////

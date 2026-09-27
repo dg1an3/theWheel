@@ -53,7 +53,7 @@ Build output goes to `build/<preset-name>/` at the repo root.
 
 | Target | Platform | Dependencies | Description |
 |--------|----------|-------------|-------------|
-| **theWheelModelTests** | All | theWheelModel, GTest | 85 Google Test unit tests for core model classes |
+| **theWheelModelTests** | All | theWheelModel, GTest | 89 Google Test unit tests for core model classes |
 | **theWheelWxTests** | macOS/Linux | theWheelModel, OptimizeN, wxWidgets, GTest | GUI regression tests for wxWidgets application |
 
 **Dependency graph:**
@@ -172,7 +172,7 @@ src/
 │   ├── include/        # Public headers (Optimizer.h, VectorN.h, etc.)
 │   └── *.cpp           # Optimization algorithms
 ├── pybind/             # Python bindings via pybind11 [Windows only]
-├── theWheelModelTests/ # Google Test suite (85 tests)
+├── theWheelModelTests/ # Google Test suite (89 tests)
 ├── theWheelWxTests/    # wxWidgets GUI tests (Google Test) [macOS/Linux]
 └── TODO.txt            # Refactoring plans
 ```
@@ -323,5 +323,5 @@ cd build/x64-debug  # or build/macos-debug
 ctest --output-on-failure
 ```
 
-- **theWheelModelTests**: 85 Google Test unit tests for core model classes (CNode, CSpace, CVectorD, etc.) — runs on all platforms
+- **theWheelModelTests**: 89 Google Test unit tests for core model classes (CNode, CSpace, CVectorD, etc.) — runs on all platforms
 - **theWheelWxTests**: GUI regression tests for wxWidgets application (SpacePanel, SpaceTreeView, WheelFrame) — macOS/Linux only
