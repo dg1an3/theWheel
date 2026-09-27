@@ -142,6 +142,12 @@ public:
 	REAL GetPrimaryActivation() const;
 	REAL GetSecondaryActivation() const;
 
+	// value used to sort nodes (and so choose which are shown): 
+	//		activation (pragmatic value), plus a bonus for recently 
+	//		shown nodes, plus the space's epistemic weight times the 
+	//		expected information gain of showing the node
+	REAL GetSortValue() const;
+
 	// helper to sort nodes
 	bool IsActivationGreater(CNode *pThanNode);
   static bool IsActivationGreaterStatic(CNode *, CNode*);

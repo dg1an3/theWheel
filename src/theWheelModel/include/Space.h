@@ -78,8 +78,19 @@ public:
 	// adjusts nodes so that sum of all activations = sum
 	void NormalizeNodes(REAL sum = 1.0);
 
-	// helper function to sort the nodes by activation
+	// helper function to sort the nodes by activation (plus the 
+	//		epistemic bonus, see CNode::GetSortValue)
 	void SortNodes();
+
+	// weight of the epistemic value (expected information gain) 
+	//		relative to activation when choosing which nodes to show;
+	//		0.0 sorts by activation alone
+	REAL GetEpistemicWeight() const;
+	void SetEpistemicWeight(REAL weight);
+
+	// expected information gain from the user clicking the node:
+	//		1/2 ln(1 + variance * click precision)
+	REAL GetExpectedInformationGain(const CNode *pNode) const;
 
 	// returns the total activation of the space
 	REAL GetTotalActivation(BOOL bCompute = FALSE);
@@ -151,6 +162,9 @@ private:
 
 	// flag to indicate sorting
 	BOOL m_bNodesSorted;
+
+	// weight of the epistemic value in the sort
+	REAL m_epistemicWeight;
 
 	// the mapping from classes to colors
 	map<CString, COLORREF> m_mapClassColors;

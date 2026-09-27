@@ -278,3 +278,110 @@ TEST(Space, VarianceGrowsBackWhenAttentionMovesElsewhere)
 
     delete space;
 }
+
+// ===== Epistemic value =====
+
+// adds a node directly under the hidden root
+static CNode* AddTestNode(CSpace* space, REAL activation, REAL variance)
+{
+    CNode* node = new CNode();
+    node->SetParent(space->GetRootNode());
+    space->AddNode(node, nullptr);
+    node->SetActivation(activation);
+    node->SetActivationVariance(variance);
+    return node;
+}
+
+TEST(Space, ExpectedInformationGainFallsWithVariance)
+{
+    CSpace* space = CreateSpaceWithRoot();
+    CNode* unexplored = AddTestNode(space, 0.1f, CNode::GetActivationVariancePrior());
+    CNode* explored = AddTestNode(space, 0.1f, 0.01f);
+    CNode* certain = AddTestNode(space, 0.1f, 0.0f);
+
+    EXPECT_GT(space->GetExpectedInformationGain(unexplored),
+        space->GetExpectedInformationGain(explored));
+    EXPECT_GT(space->GetExpectedInformationGain(explored), 0.0f);
+    EXPECT_FLOAT_EQ(space->GetExpectedInformationGain(certain), 0.0f);
+
+    delete space;
+}
+
+TEST(Space, EpistemicWeightDefaultAndSet)
+{
+    CSpace* space = CreateSpaceWithRoot();
+    EXPECT_FLOAT_EQ(space->GetEpistemicWeight(), 0.05f);
+    space->SetEpistemicWeight(0.0f);
+    EXPECT_FLOAT_EQ(space->GetEpistemicWeight(), 0.0f);
+    delete space;
+}
+
+TEST(Space, SortPrefersUncertainNodeWhenActivationsTie)
+{
+    CSpace* space = CreateSpaceWithRoot();
+    CNode* explored = AddTestNode(space, 0.1f, 0.01f);
+    CNode* unexplored = AddTestNode(space, 0.1f, CNode::GetActivationVariancePrior());
+
+    space->SetEpistemicWeight(0.02f);
+    space->SortNodes();
+    EXPECT_EQ(space->GetNodeAt(0), unexplored);
+    EXPECT_EQ(space->GetNodeAt(1), explored);
+
+    delete space;
+}
+
+TEST(Space, SortByActivationAloneWhenEpistemicWeightZero)
+{
+    CSpace* space = CreateSpaceWithRoot();
+    CNode* unexplored = AddTestNode(space, 0.10f, CNode::GetActivationVariancePrior());
+    CNode* explored = AddTestNode(space, 0.11f, 0.01f);
+
+    // a small activation lead loses to the epistemic bonus...
+    space->SetEpistemicWeight(0.02f);
+    space->SortNodes();
+    EXPECT_EQ(space->GetNodeAt(0), unexplored);
+
+    // ...but wins with the epistemic value turned off
+    space->SetEpistemicWeight(0.0f);
+    space->SortNodes();
+    EXPECT_EQ(space->GetNodeAt(0), explored);
+
+    delete space;
+}
+
+TEST(Space, SortStillFollowsLargeActivationDifferences)
+{
+    CSpace* space = CreateSpaceWithRoot();
+    CNode* unexplored = AddTestNode(space, 0.05f, CNode::GetActivationVariancePrior());
+    CNode* relevant = AddTestNode(space, 0.30f, 0.01f);
+
+    space->SetEpistemicWeight(0.02f);
+    space->SortNodes();
+    EXPECT_EQ(space->GetNodeAt(0), relevant);
+    EXPECT_EQ(space->GetNodeAt(1), unexplored);
+
+    delete space;
+}
+
+TEST(Space, DisplayedNodesPassedOverLoseSomeUncertainty)
+{
+    CSpace* space = CreateSpaceWithRoot();
+    const REAL prior = CNode::GetActivationVariancePrior();
+    CNode* clicked = AddTestNode(space, 0.1f, prior);
+    CNode* displayed = AddTestNode(space, 0.1f, prior);
+    CNode* hidden = AddTestNode(space, 0.1f, prior);
+    clicked->SetIsSubThreshold(FALSE);
+    displayed->SetIsSubThreshold(FALSE);
+    hidden->SetIsSubThreshold(TRUE);
+
+    space->ActivateNode(clicked, 0.5f);
+
+    // seeing a node and not choosing it is weaker evidence than a click
+    EXPECT_LT(displayed->GetActivationVariance(), prior);
+    EXPECT_LT(clicked->GetActivationVariance(), displayed->GetActivationVariance());
+
+    // a node that was not displayed gives no evidence
+    EXPECT_FLOAT_EQ(hidden->GetActivationVariance(), prior);
+
+    delete space;
+}

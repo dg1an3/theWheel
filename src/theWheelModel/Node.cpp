@@ -662,18 +662,33 @@ REAL
 
 
 //////////////////////////////////////////////////////////////////////
+REAL 
+	CNode::GetSortValue() const
+	// value used to sort nodes: pragmatic + epistemic value
+{
+	REAL value = GetActivation();
+
+	// now add additional factor for post-super count: max 40 adds 0.1 to activation
+	value += 0.1f * GetPostSuperCount() / 40.0f;
+
+	// and the epistemic value of showing the node
+	if (m_pSpace != NULL)
+	{
+		value += m_pSpace->GetEpistemicWeight() 
+			* m_pSpace->GetExpectedInformationGain(this);
+	}
+
+	return value;
+
+}	// CNode::GetSortValue
+
+
+//////////////////////////////////////////////////////////////////////
 bool 
 	CNode::IsActivationGreater(CNode *pThanNode)
 	// helper to sort nodes
 {
-	REAL act1 = GetActivation();
-	// now add additional factor for post-super count: max 40 adds 0.1 to activation
-	act1 += 0.1f * GetPostSuperCount() / 40.0f;
-
-	REAL act2 = pThanNode->GetActivation();
-	act2 += 0.1f * pThanNode->GetPostSuperCount() / 40.0f;
-
-	return act1 > act2;
+	return GetSortValue() > pThanNode->GetSortValue();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -681,14 +696,7 @@ bool
 	CNode::IsActivationGreaterStatic(CNode *pLeft, CNode *pRight)
 	// helper to sort nodes
 {
-	REAL act1 = pLeft->GetActivation();
-	// now add additional factor for post-super count: max 40 adds 0.1 to activation
-	act1 += 0.1f * pLeft->GetPostSuperCount() / 40.0f;
-
-	REAL act2 = pRight->GetActivation();
-	act2 += 0.1f * pRight->GetPostSuperCount() / 40.0f;
-
-	return act1 > act2;
+	return pLeft->GetSortValue() > pRight->GetSortValue();
 }
 
 

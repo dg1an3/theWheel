@@ -56,6 +56,16 @@ const REAL OBSERVATION_PRECISION = 40.0f;
 // variance diffused to every node, per unit of activation scale
 const REAL VARIANCE_DIFFUSION = 0.02f;
 
+// precision gained by displayed nodes that were not activated (the
+//		user saw them and chose something else), per unit of scale
+const REAL IGNORED_PRECISION = 4.0f;
+
+// activation scale of a click, the observation used for epistemic value
+const REAL CLICK_SCALE = 0.5f;
+
+// default weight of epistemic value vs. activation in the node sort
+const REAL DEFAULT_EPISTEMIC_WEIGHT = 0.05f;
+
 //////////////////////////////////////////////////////////////////////
 REAL 
 	GenerateRandom(REAL min, REAL max)
@@ -97,6 +107,7 @@ CSpace::CSpace()
 	, m_totalSecondaryActivation(0.0)
 
 	, m_SpringConst(DEFAULT_SPRING_CONST)
+	, m_epistemicWeight(DEFAULT_EPISTEMIC_WEIGHT)
 {
 	// construct layout manager
 	m_pLayoutManager = new CSpaceLayoutManager(this);
@@ -224,11 +235,16 @@ void
 	CSpace::ActivateNode(CNode *pNode, REAL scale)
 	// activates a particular node
 {
-	// update the uncertainty: all beliefs diffuse, then the activated
-	//		node is observed
+	// update the uncertainty: all beliefs diffuse, displayed nodes
+	//		that were passed over give weak evidence, and the activated
+	//		node gives strong evidence
 	for (auto pAtNode : m_arrNodes)
 	{
 		pAtNode->DiffuseActivationVariance(VARIANCE_DIFFUSION * scale);
+		if (pAtNode != pNode && !pAtNode->GetIsSubThreshold())
+		{
+			pAtNode->ObserveActivation(IGNORED_PRECISION * scale);
+		}
 	}
 	pNode->ObserveActivation(OBSERVATION_PRECISION * scale);
 
@@ -396,6 +412,41 @@ void
 	}
 
 }	// CSpace::SortNodes
+
+
+//////////////////////////////////////////////////////////////////////
+REAL 
+	CSpace::GetEpistemicWeight() const
+	// returns the weight of epistemic value in the node sort
+{
+	return m_epistemicWeight;
+
+}	// CSpace::GetEpistemicWeight
+
+
+//////////////////////////////////////////////////////////////////////
+void 
+	CSpace::SetEpistemicWeight(REAL weight)
+	// sets the weight of epistemic value in the node sort
+{
+	m_epistemicWeight = weight;
+
+	// the sort order depends on the weight
+	m_bNodesSorted = FALSE;
+
+}	// CSpace::SetEpistemicWeight
+
+
+//////////////////////////////////////////////////////////////////////
+REAL 
+	CSpace::GetExpectedInformationGain(const CNode *pNode) const
+	// mutual information between the node's activation belief and a
+	//		click on it: 1/2 ln(1 + variance * precision of a click)
+{
+	return 0.5f * (REAL) log(1.0 + pNode->GetActivationVariance() 
+		* OBSERVATION_PRECISION * CLICK_SCALE);
+
+}	// CSpace::GetExpectedInformationGain
 
 
 //////////////////////////////////////////////////////////////////////
