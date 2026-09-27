@@ -62,6 +62,7 @@ CNode::CNode(CSpace *pSpace,
 
 		, m_pMaxActivator(NULL)
 		, m_ActivationVariance(ACTIVATION_VARIANCE_PRIOR)
+		, m_ClickEvidence(0.0)
 		, m_maxDeltaActivation((REAL) 0.0)
 
 		, m_IsSubThreshold(TRUE)

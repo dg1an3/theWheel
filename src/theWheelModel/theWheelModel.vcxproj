@@ -80,6 +80,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Dib.cpp" />
+    <ClCompile Include="DisplayPolicy.cpp" />
     <ClCompile Include="Node.cpp" />
     <ClCompile Include="NodeLink.cpp" />
     <ClCompile Include="Space.cpp" />
@@ -93,6 +94,7 @@
   <ItemGroup>
     <ClInclude Include="include\CastVectorD.h" />
     <ClInclude Include="include\Dib.h" />
+    <ClInclude Include="include\DisplayPolicy.h" />
     <ClInclude Include="include\MatrixD.h" />
     <ClInclude Include="include\Node.h" />
     <ClInclude Include="include\NodeLink.h" />

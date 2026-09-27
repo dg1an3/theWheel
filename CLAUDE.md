@@ -53,7 +53,7 @@ Build output goes to `build/<preset-name>/` at the repo root.
 
 | Target | Platform | Dependencies | Description |
 |--------|----------|-------------|-------------|
-| **theWheelModelTests** | All | theWheelModel, GTest | 100 Google Test unit tests for core model classes |
+| **theWheelModelTests** | All | theWheelModel, GTest | 109 Google Test unit tests for core model classes |
 | **theWheelWxTests** | macOS/Linux | theWheelModel, OptimizeN, wxWidgets, GTest | GUI regression tests for wxWidgets application |
 
 **Dependency graph:**
@@ -110,6 +110,7 @@ OptimizeN (Numerical Optimization)
 - **CSpace**: Container managing the node network hierarchy, activation propagation, layout optimization via CSpaceLayoutManager
 - **CNodeLink**: Directed weighted edge with gain property; propagates activation between nodes
 - **CSpaceLayoutManager**: Physics-based force-directed layout using energy minimization (extends CObjectiveFunction)
+- **CDisplayPolicy**: Chooses which nodes are displayed (super-threshold) by minimizing expected free energy over a belief of activation × click evidence; used by `CSpace::SortNodes` (toggle with `CSpace::SetEfeDisplay`). Python prototype and evaluation: `scripts/efe_policy.py`
 - **Spreading Activation**: Nodes propagate activation through weighted links with decay over time; supports primary and secondary activation values
 
 #### theWheelView - Rendering Layer
@@ -172,7 +173,7 @@ src/
 │   ├── include/        # Public headers (Optimizer.h, VectorN.h, etc.)
 │   └── *.cpp           # Optimization algorithms
 ├── pybind/             # Python bindings via pybind11 [Windows only]
-├── theWheelModelTests/ # Google Test suite (100 tests)
+├── theWheelModelTests/ # Google Test suite (109 tests)
 ├── theWheelWxTests/    # wxWidgets GUI tests (Google Test) [macOS/Linux]
 └── TODO.txt            # Refactoring plans
 ```
@@ -323,5 +324,5 @@ cd build/x64-debug  # or build/macos-debug
 ctest --output-on-failure
 ```
 
-- **theWheelModelTests**: 100 Google Test unit tests for core model classes (CNode, CSpace, CVectorD, etc.) — runs on all platforms
+- **theWheelModelTests**: 109 Google Test unit tests for core model classes (CNode, CSpace, CVectorD, etc.) — runs on all platforms
 - **theWheelWxTests**: GUI regression tests for wxWidgets application (SpacePanel, SpaceTreeView, WheelFrame) — macOS/Linux only

@@ -2,6 +2,7 @@
 
 # Collect all source files
 set(THEWHEELMODEL_SOURCES
+    DisplayPolicy.cpp
     Node.cpp
     NodeLink.cpp
     Space.cpp
@@ -18,6 +19,7 @@ endif()
 # Collect all header files
 set(THEWHEELMODEL_HEADERS
     include/CastVectorD.h
+    include/DisplayPolicy.h
     include/MatrixD.h
     include/Node.h
     include/NodeLink.h

@@ -163,6 +163,10 @@ public:
 	//		uncertain the space is about the user's interest in it
 	DECLARE_ATTRIBUTE(ActivationVariance, REAL);
 
+	// log of the click evidence for this node being the user's target
+	//		(relative; see CDisplayPolicy::ObserveClick)
+	DECLARE_ATTRIBUTE(ClickEvidence, REAL);
+
 	// prior (maximum) activation variance
 	static REAL GetActivationVariancePrior();
 

@@ -12,6 +12,7 @@
 #include "Node.h"
 #include "SpaceLayoutManager.h"
 #include "SpaceStateVector.h"
+#include "DisplayPolicy.h"
 
 
 #ifdef _MSC_VER
@@ -87,6 +88,15 @@ public:
 	//		0.0 sorts by activation alone
 	REAL GetEpistemicWeight() const;
 	void SetEpistemicWeight(REAL weight);
+
+	// when true (the default), the displayed (super-threshold) nodes
+	//		are chosen by minimizing expected free energy; see 
+	//		CDisplayPolicy.  when false, by the sort value alone
+	bool GetEfeDisplay() const;
+	void SetEfeDisplay(bool bEfeDisplay);
+
+	// the expected-free-energy display policy
+	CDisplayPolicy& GetDisplayPolicy() { return m_displayPolicy; }
 
 	// expected information gain from the user clicking the node:
 	//		1/2 ln(1 + variance * click precision)
@@ -165,6 +175,15 @@ private:
 
 	// weight of the epistemic value in the sort
 	REAL m_epistemicWeight;
+
+	// the expected-free-energy display policy and whether it is used
+	CDisplayPolicy m_displayPolicy;
+	bool m_bEfeDisplay;
+
+	// the most recent displayed set, and the click evidence (in units
+	//		of full clicks) observed since it was chosen
+	std::vector<CNode *> m_arrEfeSelected;
+	REAL m_efeEvidenceSinceSelect;
 
 	// the mapping from classes to colors
 	map<CString, COLORREF> m_mapClassColors;

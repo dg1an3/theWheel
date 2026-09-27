@@ -19,6 +19,7 @@ set(TEST_SOURCES
     test_node.cpp
     test_space.cpp
     test_space_layout_manager.cpp
+    test_display_policy.cpp
 )
 
 # Create test executable

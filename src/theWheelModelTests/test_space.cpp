@@ -310,7 +310,7 @@ TEST(Space, ExpectedInformationGainFallsWithVariance)
 TEST(Space, EpistemicWeightDefaultAndSet)
 {
     CSpace* space = CreateSpaceWithRoot();
-    EXPECT_FLOAT_EQ(space->GetEpistemicWeight(), 0.05f);
+    EXPECT_FLOAT_EQ(space->GetEpistemicWeight(), 0.0f);
     space->SetEpistemicWeight(0.0f);
     EXPECT_FLOAT_EQ(space->GetEpistemicWeight(), 0.0f);
     delete space;

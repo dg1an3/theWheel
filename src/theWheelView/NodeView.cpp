@@ -249,10 +249,6 @@ REAL CNodeView::GetThresholdedActivation()
 	
 	if (nSuperNodeCount > 0)
 	{
-		CNode *pLastSuperNode = 
-			m_pParent->GetSpace()->GetNodeAt(nSuperNodeCount-1);
-		REAL activationThreshold = pLastSuperNode->GetActivation();
-
 		// compute the normalization factor for super-threshold node views
 		REAL superThresholdScale = TOTAL_ACTIVATION // * 1.1
 			/ m_pParent->GetSpace()->GetTotalActivation();
@@ -260,8 +256,10 @@ REAL CNodeView::GetThresholdedActivation()
 		// get this node's activation
 		REAL activation = GetNode()->GetActivation();
 
-		// for super-threshold nodes,
-		if (activation >= activationThreshold
+		// for super-threshold (displayed) nodes; the displayed set is
+		//		chosen by the space's display policy, so it can include
+		//		nodes below the activation threshold
+		if (!GetNode()->GetIsSubThreshold()
 			|| GetNode()->GetPostSuperCount() > 0)
 		{
 			// return the scaled, thresholded activation

@@ -11,6 +11,7 @@
 
 #include <math.h>
 #include <float.h>
+#include <algorithm>
 
 // the class definition
 #include "Space.h"
@@ -64,7 +65,12 @@ const REAL IGNORED_PRECISION = 4.0f;
 const REAL CLICK_SCALE = 0.5f;
 
 // default weight of epistemic value vs. activation in the node sort
-const REAL DEFAULT_EPISTEMIC_WEIGHT = 0.05f;
+//		(superseded by the expected-free-energy display policy)
+const REAL DEFAULT_EPISTEMIC_WEIGHT = 0.0f;
+
+// click evidence (in full clicks) after which the displayed set is 
+//		re-chosen; hover evidence accumulates until it gets there
+const REAL EFE_RESELECT_EVIDENCE = 0.5f;
 
 //////////////////////////////////////////////////////////////////////
 REAL 
@@ -108,6 +114,8 @@ CSpace::CSpace()
 
 	, m_SpringConst(DEFAULT_SPRING_CONST)
 	, m_epistemicWeight(DEFAULT_EPISTEMIC_WEIGHT)
+	, m_bEfeDisplay(true)
+	, m_efeEvidenceSinceSelect(0.0)
 {
 	// construct layout manager
 	m_pLayoutManager = new CSpaceLayoutManager(this);
@@ -216,6 +224,8 @@ void
 
 	auto iter = remove(m_arrNodes.begin(), m_arrNodes.end(), pMarkedNode);
 	m_arrNodes.erase(iter, m_arrNodes.end());
+	m_displayPolicy.Invalidate();
+	m_arrEfeSelected.clear();
 
 }	// CSpace::RemoveNode
 
@@ -247,6 +257,19 @@ void
 		}
 	}
 	pNode->ObserveActivation(OBSERVATION_PRECISION * scale);
+
+	// and the click evidence for the display policy
+	std::vector<CNode *> arrDisplayed;
+	for (auto pAtNode : m_arrNodes)
+	{
+		if (!pAtNode->GetIsSubThreshold())
+		{
+			arrDisplayed.push_back(pAtNode);
+		}
+	}
+	m_displayPolicy.ObserveClick(m_arrNodes, arrDisplayed, pNode, 
+		scale / CLICK_SCALE);
+	m_efeEvidenceSinceSelect += scale / CLICK_SCALE;
 
 	// first, compute the new activation of the node up to the max
 	REAL oldActivation = pNode->GetActivation();
@@ -407,6 +430,34 @@ void
 		sort(&m_arrNodes[0], &m_arrNodes[0]+m_arrNodes.size(), 
 			&CNode::IsActivationGreaterStatic);
 
+		// choose the displayed nodes by expected free energy, and move
+		//		them to the front, keeping the sort order within each part
+		const int nNumDisplayed = GetLayoutManager()->GetSuperNodeCount();
+		if (m_bEfeDisplay && nNumDisplayed < (int) m_arrNodes.size())
+		{
+			// re-choose the set only when enough evidence has arrived
+			if ((int) m_arrEfeSelected.size() != nNumDisplayed
+				|| m_efeEvidenceSinceSelect >= EFE_RESELECT_EVIDENCE)
+			{
+				std::vector<int> arrSelected;
+				m_displayPolicy.Select(m_arrNodes, nNumDisplayed, arrSelected);
+				m_arrEfeSelected.clear();
+				for (auto nAt : arrSelected)
+				{
+					m_arrEfeSelected.push_back(m_arrNodes[nAt]);
+				}
+				m_efeEvidenceSinceSelect = 0.0;
+			}
+
+			// stable partition: selected nodes first
+			std::stable_partition(m_arrNodes.begin(), m_arrNodes.end(),
+				[this](CNode *pNode) 
+				{ 
+					return std::find(m_arrEfeSelected.begin(), 
+						m_arrEfeSelected.end(), pNode) != m_arrEfeSelected.end(); 
+				});
+		}
+
 		// flag as sorted
 		m_bNodesSorted = TRUE;
 	}
@@ -438,6 +489,30 @@ void
 
 
 //////////////////////////////////////////////////////////////////////
+bool 
+	CSpace::GetEfeDisplay() const
+	// whether displayed nodes are chosen by expected free energy
+{
+	return m_bEfeDisplay;
+
+}	// CSpace::GetEfeDisplay
+
+
+//////////////////////////////////////////////////////////////////////
+void 
+	CSpace::SetEfeDisplay(bool bEfeDisplay)
+	// sets whether displayed nodes are chosen by expected free energy
+{
+	m_bEfeDisplay = bEfeDisplay;
+	m_arrEfeSelected.clear();
+
+	// the sort order depends on it
+	m_bNodesSorted = FALSE;
+
+}	// CSpace::SetEfeDisplay
+
+
+//////////////////////////////////////////////////////////////////////
 REAL 
 	CSpace::GetExpectedInformationGain(const CNode *pNode) const
 	// mutual information between the node's activation belief and a
@@ -456,6 +531,10 @@ void
 {
 	// set the pointer to the space
 	pNode->m_pSpace = this;
+
+	// the node set changed
+	m_displayPolicy.Invalidate();
+	m_arrEfeSelected.clear();
 	pNode->m_pSpace->m_totalPrimaryActivation += pNode->GetPrimaryActivation();
 	pNode->m_pSpace->m_totalSecondaryActivation += pNode->GetSecondaryActivation();
 
@@ -481,6 +560,8 @@ void
 {
 	// remove existing nodes from the array
 	m_arrNodes.clear();
+	m_displayPolicy.Invalidate();
+	m_arrEfeSelected.clear();
 
 	// delete the current root node
 	delete m_pRootNode;
